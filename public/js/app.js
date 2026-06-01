@@ -52,6 +52,11 @@ let authMode = 'login';
 let lang = localStorage.getItem('tl_lang') || 'tr';
 let lastOsmHint = false;
 let searchTimer;
+const PAGE_SIZE = 12;
+let placesTotal = 0;
+let placesOffset = 0;
+let cardsLoaded = false;
+let currentFilterParams = {};
 
 const CITYDB = {
   'Turkey 🇹🇷': { Istanbul: ['Sultanahmet', 'Beyoğlu', 'Karaköy'], Ankara: ['Çankaya'], 'İzmir': ['Selçuk'], Denizli: ['Pamukkale'], Nevşehir: ['Göreme'] },
@@ -116,6 +121,123 @@ function updateSeoForPlace(p) {
   if (ogT) ogT.content = title;
   if (ogD) ogD.content = desc;
   if (ogI && p.imageUrl) ogI.content = p.imageUrl.startsWith('http') ? p.imageUrl : (location.origin + placeImg(p));
+  injectPlaceJsonLd(p);
+}
+
+function injectPlaceJsonLd(p) {
+  document.querySelectorAll('script[data-tl-jsonld]').forEach((s) => s.remove());
+  const faqList = lang === 'en' ? (p.faqEN || []) : (p.faqTR || []);
+  const origin = location.origin;
+  const blocks = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'TouristDestination',
+      name: p.name,
+      description: placeField(p, 'overview') || placeField(p, 'description'),
+      geo: p.lat != null ? { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng } : undefined,
+      address: { '@type': 'PostalAddress', addressLocality: p.city, addressCountry: p.country },
+      image: placeImg(p),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Touristlio', item: origin },
+        { '@type': 'ListItem', position: 2, name: p.country, item: `${origin}/search?country=${encodeURIComponent(p.country)}` },
+        { '@type': 'ListItem', position: 3, name: p.name, item: `${origin}/?place=${p.id}` },
+      ],
+    },
+  ];
+  if (faqList.length) {
+    blocks.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqList.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    });
+  }
+  blocks.forEach((data) => {
+    const s = document.createElement('script');
+    s.type = 'application/ld+json';
+    s.dataset.tlJsonld = '1';
+    s.textContent = JSON.stringify(data);
+    document.head.appendChild(s);
+  });
+}
+
+function renderFaqAccordion(p) {
+  const box = document.getElementById('pdFaq');
+  if (!box) return;
+  const faq = lang === 'en' ? (p.faqEN || []) : (p.faqTR || []);
+  if (!faq.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = `<h2 data-i18n="faqTitle">❓ SSS</h2>` + faq.map((item, i) => `
+    <div class="faq-item">
+      <button type="button" class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}" id="faq-q-${i}" onclick="toggleFaq(${i})">${escapeHtml(item.q)}</button>
+      <div class="faq-a" id="faq-a-${i}" role="region" aria-labelledby="faq-q-${i}" hidden>${escapeHtml(item.a)}</div>
+    </div>`).join('');
+  window.TL_I18N.apply(lang);
+}
+
+function toggleFaq(i) {
+  const btn = document.getElementById('faq-q-' + i);
+  const panel = document.getElementById('faq-a-' + i);
+  if (!btn || !panel) return;
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+  panel.hidden = open;
+  btn.classList.toggle('open', !open);
+}
+
+function renderNearbyCards(list) {
+  const el = document.getElementById('nearbyList');
+  if (!el) return;
+  el.innerHTML = (list || []).map((x) => `
+    <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail(${x.id})">
+      <img class="ni-img" src="${placeImg(x)}" alt="" loading="lazy" onerror="imgFallback(this,'${x.category}',${x.id})"/>
+      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${x.distanceKm != null ? ` · ${x.distanceKm} km` : ''}</div></div>
+    </div>`).join('') || `<p class="empty-hint">${t('nearbyEmpty')}</p>`;
+}
+
+function renderSimilarCards(list) {
+  const el = document.getElementById('similarList');
+  if (!el) return;
+  el.innerHTML = (list || []).map((x) => `
+    <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0">
+      <img class="ni-img" src="${placeImg(x)}" alt="" loading="lazy" onerror="imgFallback(this,'${x.category}',${x.id})"/>
+      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}</div></div>
+    </div>`).join('') || `<p class="empty-hint">${t('similarEmpty')}</p>`;
+}
+
+function renderDetailWidgets(data) {
+  const wBox = document.getElementById('pdWeather');
+  if (wBox && data.weather) {
+    const w = data.weather;
+    wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
+      <div class="weather-row"><span>${w.label || '—'}</span><strong>${w.tempC != null ? w.tempC + '°C' : '—'}</strong></div>
+      ${w.fallback ? `<small class="weather-fallback">${t('weatherEstimate')}</small>` : ''}`;
+  }
+  const lBox = document.getElementById('pdLocalInfo');
+  if (lBox && data.localInfo) {
+    const li = data.localInfo;
+    lBox.innerHTML = `<div class="ac-title">🕐 ${t('localInfoTitle')}</div>
+      <div class="ic-row"><span class="ic-lbl">${t('localTime')}</span><span class="ic-val">${escapeHtml(li.localTime || '—')}</span></div>
+      <div class="ic-row"><span class="ic-lbl">${t('localCurrency')}</span><span class="ic-val">${li.currency?.code || '—'} ${li.currency?.symbol || ''}</span></div>
+      ${li.entryTryEstimate ? `<div class="ic-row"><span class="ic-lbl">${t('entryTry')}</span><span class="ic-val">~${li.entryTryEstimate} ₺</span></div>` : ''}`;
+  }
+  const liveBox = document.getElementById('pdLiveData');
+  if (liveBox && data.liveData) {
+    const ld = data.liveData;
+    const b = ld.budget || {};
+    liveBox.innerHTML = `<div class="ac-title">💰 ${t('liveBudgetTitle')}</div>
+      <div class="ic-row"><span class="ic-lbl">${t('budgetLow')}</span><span class="ic-val">~${b.low || '—'} ₺</span></div>
+      <div class="ic-row"><span class="ic-lbl">${t('budgetMid')}</span><span class="ic-val">~${b.mid || '—'} ₺</span></div>
+      <div class="ic-row"><span class="ic-lbl">${t('hotelAvg')}</span><span class="ic-val">~${ld.hotel?.avgPriceTry || '—'} ₺</span></div>
+      ${ld.fallback ? `<small class="weather-fallback">${t('liveEstimate')}</small>` : ''}`;
+  }
 }
 
 function statusLabel(status) {
@@ -149,9 +271,13 @@ async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(API + path, { ...opts, headers });
+  const res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || t('requestFailed'));
+  if (!res.ok) {
+    const msg = data.error || t('requestFailed');
+    if (window.TL_TOAST) window.TL_TOAST.error(msg);
+    throw new Error(msg);
+  }
   return data;
 }
 
@@ -183,12 +309,16 @@ function updateAuthUI() {
   }
 }
 
-async function loadPlaces(params = {}) {
-  const qs = new URLSearchParams(params).toString();
+async function loadPlaces(params = {}, append = false) {
+  const qs = new URLSearchParams({ ...params, limit: PAGE_SIZE, offset: append ? placesOffset : 0 }).toString();
   const data = await api('/places?' + qs);
-  places = data.places;
+  if (append) places = places.concat(data.places);
+  else places = data.places;
+  placesTotal = data.total ?? data.count ?? places.length;
+  placesOffset = append ? places.length : data.places.length;
   lastOsmHint = !!data.osmHint;
-  return places;
+  cardsLoaded = true;
+  return data;
 }
 
 function stars(n) {
@@ -200,22 +330,21 @@ function showGridSkeleton() {
   const grid = document.getElementById('pgrid');
   if (!grid) return;
   grid.classList.add('skeleton');
-  grid.innerHTML = Array(8).fill(0).map(() => `
-    <div class="pc sk">
-      <div class="pc-img" style="background:var(--l2);min-height:160px"></div>
-      <div class="pc-body"><div style="height:12px;background:var(--l2);border-radius:4px;width:70%;margin-bottom:8px"></div>
-      <div style="height:14px;background:var(--l2);border-radius:4px;width:90%"></div></div>
-    </div>`).join('');
+  grid.innerHTML = window.TL_SKELETON ? window.TL_SKELETON.card(8) : Array(8).fill(0).map(() => `
+    <div class="pc sk"><div class="pc-img" style="background:var(--l2);min-height:160px"></div>
+    <div class="pc-body"><div style="height:12px;background:var(--l2);border-radius:4px;width:70%;margin-bottom:8px"></div></div></div>`).join('');
 }
 
-function renderGrid(list) {
+function renderGrid(list, append = false) {
   const grid = document.getElementById('pgrid');
   if (grid) grid.classList.remove('skeleton');
-  document.getElementById('resCnt').textContent = list.length;
-  document.getElementById('noRes').style.display = list.length ? 'none' : 'block';
+  document.getElementById('resCnt').textContent = placesTotal || list.length;
+  const browseHint = document.getElementById('browseHint');
+  if (browseHint) browseHint.style.display = cardsLoaded ? 'none' : 'block';
+  document.getElementById('noRes').style.display = cardsLoaded && !list.length ? 'block' : 'none';
   const hintEl = document.getElementById('osmHint');
   if (hintEl) {
-    if (!list.length && lastOsmHint) {
+    if (cardsLoaded && !list.length && lastOsmHint) {
       hintEl.style.display = 'block';
       hintEl.innerHTML = `<p>${t('osmHint')}</p><button type="button" class="btn bo bsm" onclick="showOsmComingSoon()">${t('osmSearchSoon')}</button>`;
     } else {
@@ -223,7 +352,7 @@ function renderGrid(list) {
       hintEl.innerHTML = '';
     }
   }
-  document.getElementById('pgrid').innerHTML = list.map((p) => `
+  const html = list.map((p) => `
     <div class="pc" onclick="openDetail(${p.id})">
       <div class="pc-img">
         <img src="${placeImg(p)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="imgFallback(this,'${p.category}',${p.id})"/>
@@ -240,6 +369,29 @@ function renderGrid(list) {
         <div class="pc-foot"><div class="pc-type">${catLabel(p.category)}</div><div style="font-size:.61rem;color:var(--t3)">${escapeHtml(p.country)}</div></div>
       </div>
     </div>`).join('');
+  if (append && grid) grid.insertAdjacentHTML('beforeend', html);
+  else if (grid) grid.innerHTML = html;
+  const loadMore = document.getElementById('loadMoreBtn');
+  if (loadMore) loadMore.style.display = places.length < placesTotal ? 'inline-flex' : 'none';
+}
+
+function buildFilterParams() {
+  const q = document.getElementById('heroSearch')?.value.trim() || '';
+  const cnt = document.getElementById('cntSel')?.value.replace(/\s[\u{1F1E0}-\u{1F1FF}]{2}/gu, '').trim() || '';
+  const cit = document.getElementById('citSel')?.value || '';
+  const dis = document.getElementById('disSel')?.value || '';
+  return {
+    q,
+    category: activeFilterGroup !== 'all' ? '' : activeCat,
+    group: activeFilterGroup !== 'all' ? activeFilterGroup : '',
+    country: cnt,
+    city: cit,
+    district: dis,
+    minTiola: activeStar || '',
+    localOnly: activeLocal === 'local' ? '1' : '',
+    entry: activeEntry === 'all' ? '' : activeEntry,
+    sort: sortMode,
+  };
 }
 
 async function loadMapMarkers() {
@@ -264,27 +416,25 @@ async function loadMapMarkers() {
 }
 
 async function applyFilters() {
-  const q = document.getElementById('heroSearch').value.trim();
-  const cnt = document.getElementById('cntSel')?.value.replace(/\s[\u{1F1E0}-\u{1F1FF}]{2}/gu, '').trim() || '';
-  const cit = document.getElementById('citSel')?.value || '';
-  const dis = document.getElementById('disSel')?.value || '';
   if (!placesLoading) showGridSkeleton();
   placesLoading = true;
+  placesOffset = 0;
+  currentFilterParams = buildFilterParams();
   try {
-    await loadPlaces({
-      q,
-      category: activeFilterGroup !== 'all' ? '' : activeCat,
-      group: activeFilterGroup !== 'all' ? activeFilterGroup : '',
-      country: cnt,
-      city: cit,
-      district: dis,
-      minTiola: activeStar || '',
-      localOnly: activeLocal === 'local' ? '1' : '',
-      entry: activeEntry === 'all' ? '' : activeEntry,
-      sort: sortMode,
-    });
+    await loadPlaces(currentFilterParams, false);
     renderGrid(places);
     await loadMapMarkers();
+  } finally {
+    placesLoading = false;
+  }
+}
+
+async function loadMorePlaces() {
+  if (placesLoading || places.length >= placesTotal) return;
+  placesLoading = true;
+  try {
+    await loadPlaces(currentFilterParams, true);
+    renderGrid(places, true);
   } finally {
     placesLoading = false;
   }
@@ -296,8 +446,8 @@ function onSearch(val) {
   if (!val.trim()) { drop.classList.remove('show'); return; }
   searchTimer = setTimeout(async () => {
     try {
-      const data = await api('/places?q=' + encodeURIComponent(val.trim()));
-      const res = data.places.slice(0, 7);
+      const data = await api('/places/search?q=' + encodeURIComponent(val.trim()) + '&limit=7');
+      const res = data.places;
       if (!res.length) {
         drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="showOsmComingSoon()">${t('osmSearchSoon')}</button></div>`;
       } else {
@@ -365,6 +515,13 @@ function showExploreTab(name, el) {
   document.querySelectorAll('.etab').forEach((e) => e.classList.remove('on'));
   el.classList.add('on');
   if (name === 'tiolas') loadTiolaFeed();
+  if (name === 'categories') loadCategoryStats();
+  if (name === 'map' && window.TL_MAP) {
+    setTimeout(() => {
+      window.TL_MAP.invalidateExplore('exploreMapFull');
+      loadMapMarkers();
+    }, 200);
+  }
   if (name === 'discover' && window.TL_MAP) {
     setTimeout(() => window.TL_MAP.invalidateExplore(), 200);
   }
@@ -425,6 +582,19 @@ function setCatAndSwitch(cat) {
   activeCat = cat;
   showExploreTab('discover', document.getElementById('et-discover'));
   applyFilters();
+  document.getElementById('es-discover')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function loadCategoryStats() {
+  if (placesTotal > 0) { updateCategoryCounts(); return; }
+  try {
+    const data = await api('/places?limit=1&offset=0&sort=popularity');
+    placesTotal = data.total || 0;
+    document.getElementById('stat-places').textContent = String(placesTotal);
+    const meta = await api('/places?limit=500&offset=0&sort=az');
+    places = meta.places;
+    updateCategoryCounts();
+  } catch (e) { console.warn(e); }
 }
 
 function setStar(el, v) {
@@ -492,11 +662,7 @@ function updateDistrictList(city) {
 function renderDetailGallery(p) {
   const gal = document.getElementById('pdGallery');
   if (!gal) return;
-  const imgs = [placeImg(p)];
-  (p.tags || []).slice(0, 2).forEach((_, i) => {
-    const alt = fallbackImgUrl(p.category, (p.id || 0) + i + 1);
-    if (!imgs.includes(alt)) imgs.push(alt);
-  });
+  const imgs = (p.photos && p.photos.length ? p.photos : [placeImg(p)]).slice(0, 5);
   if (imgs.length <= 1) {
     gal.style.display = 'none';
     gal.innerHTML = '';
@@ -514,45 +680,75 @@ function renderDetailGallery(p) {
   });
 }
 
+function showDetailTab(name, el) {
+  document.querySelectorAll('.dtab').forEach((t) => t.classList.remove('on'));
+  if (el) el.classList.add('on');
+  document.querySelectorAll('.dtab-panel').forEach((p) => p.classList.remove('active'));
+  document.getElementById('dtab-' + name)?.classList.add('active');
+}
+
 async function openDetail(id) {
-  const data = await api('/places/' + id);
-  const p = data.place;
-  activePlace = p;
-  updateSeoForPlace(p);
-  const imgEl = document.getElementById('pdImg');
-  imgEl.src = placeImg(p);
-  imgEl.loading = 'lazy';
-  imgEl.onerror = function () { imgFallback(this, p.category, p.id); };
-  renderDetailGallery(p);
-  document.getElementById('pdCat').textContent = catLabel(p.category);
-  document.getElementById('pdTitle').textContent = p.name;
-  document.getElementById('pdLoc').textContent = '📍 ' + p.location + ' · ' + p.country;
-  setCollapsibleText(document.getElementById('pdOverview'), document.getElementById('pdOverviewMore'), placeField(p, 'overview') || placeField(p, 'description'));
-  setCollapsibleText(document.getElementById('pdHist'), document.getElementById('pdHistMore'), placeField(p, 'history'));
-  const things = placeListField(p, 'thingsToDo');
-  document.getElementById('pdThings').innerHTML = things.length
-    ? things.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
-    : `<li>${escapeHtml(placeField(p, 'tips') || '—')}</li>`;
-  setCollapsibleText(document.getElementById('pdCulture'), document.getElementById('pdCultureMore'), placeField(p, 'cultureFood'));
-  setCollapsibleText(document.getElementById('pdTips'), document.getElementById('pdTipsMore'), placeField(p, 'travelTips') || placeField(p, 'tips'));
-  document.getElementById('pdTags').innerHTML = (p.tags || []).map((tag) => `<span class="pd-tag">${escapeHtml(tag)}</span>`).join('');
-  if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
-  document.getElementById('pdTS').textContent = stars(p.tiolaRating);
-  document.getElementById('pdTR').textContent = (p.tiolaRating || '—') + ' / 5';
-  document.getElementById('pdTC').textContent = (p.tiolaCount || 0) + ' ' + t('tiolaCount');
-  document.getElementById('icCountry').textContent = p.country;
-  document.getElementById('icCity').textContent = p.city;
-  document.getElementById('icCat').textContent = catLabel(p.category);
-  document.getElementById('icEntry').textContent = placeField(p, 'entryFee') || '—';
-  document.getElementById('icBest').textContent = placeField(p, 'bestTime') || '—';
-  document.getElementById('nearbyList').innerHTML = (data.nearby || []).map((x) => `
-    <div class="nearby-item" onclick="openDetail(${x.id})">
-      <img class="ni-img" src="${placeImg(x)}" onerror="imgFallback(this,'${x.category}',${x.id})"/>
-      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}</div></div>
-    </div>`).join('');
-  await renderRevList();
-  updateRevForm();
-  showMainTab('detail');
+  const detailBody = document.querySelector('#page-detail .pd-body');
+  if (detailBody && window.TL_SKELETON) {
+    const prev = detailBody.innerHTML;
+    detailBody.dataset.prevHtml = prev;
+  }
+  try {
+    const data = await api('/places/' + id + '?lang=' + lang);
+    const p = data.place;
+    activePlace = p;
+    updateSeoForPlace(p);
+    const imgEl = document.getElementById('pdImg');
+    imgEl.src = placeImg(p);
+    imgEl.loading = 'lazy';
+    imgEl.onerror = function () { imgFallback(this, p.category, p.id); };
+    renderDetailGallery(p);
+    document.getElementById('pdCat').textContent = catLabel(p.category);
+    document.getElementById('pdTitle').textContent = p.name;
+    document.getElementById('pdLoc').textContent = '📍 ' + p.location + ' · ' + p.country;
+    setCollapsibleText(document.getElementById('pdOverview'), document.getElementById('pdOverviewMore'), placeField(p, 'overview') || placeField(p, 'description'));
+    setCollapsibleText(document.getElementById('pdHist'), document.getElementById('pdHistMore'), placeField(p, 'history'));
+    const things = placeListField(p, 'thingsToDo');
+    document.getElementById('pdThings').innerHTML = things.length
+      ? things.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
+      : `<li>${escapeHtml(placeField(p, 'tips') || '—')}</li>`;
+    setCollapsibleText(document.getElementById('pdCulture'), document.getElementById('pdCultureMore'), placeField(p, 'cultureFood'));
+    setCollapsibleText(document.getElementById('pdTips'), document.getElementById('pdTipsMore'), placeField(p, 'travelTips') || placeField(p, 'tips'));
+    const howEl = document.getElementById('pdHowToGet');
+    if (howEl) howEl.textContent = placeField(p, 'howToGetThere') || '—';
+    const bestEl = document.getElementById('pdBestTime');
+    if (bestEl) bestEl.textContent = placeField(p, 'bestTime') || '—';
+    document.getElementById('pdTags').innerHTML = (p.tags || []).map((tag) => `<span class="pd-tag">${escapeHtml(tag)}</span>`).join('');
+    renderFaqAccordion(p);
+    renderNearbyCards(data.nearby);
+    renderSimilarCards(data.similar);
+    renderDetailWidgets(data);
+    const affBox = document.getElementById('pdAffiliate');
+    if (affBox) {
+      if (p.affiliateHotelUrl || p.affiliateBookingUrl) {
+        affBox.style.display = 'block';
+        affBox.innerHTML = `<div class="ac-title">${t('affiliateTitle')}</div>
+          ${p.affiliateBookingUrl ? `<a href="${p.affiliateBookingUrl}" rel="nofollow sponsored" target="_blank" class="btn bo bsm">${t('affiliateBook')}</a>` : ''}
+          ${p.affiliateHotelUrl ? `<a href="${p.affiliateHotelUrl}" rel="nofollow sponsored" target="_blank" class="btn bo bsm">${t('affiliateHotel')}</a>` : ''}`;
+      } else affBox.style.display = 'none';
+    }
+    const canon = document.querySelector('link[rel="canonical"]');
+    if (canon) canon.href = `${location.origin}/?place=${p.id}`;
+    if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
+    document.getElementById('pdTS').textContent = stars(p.tiolaRating);
+    document.getElementById('pdTR').textContent = (p.tiolaRating || '—') + ' / 5';
+    document.getElementById('pdTC').textContent = (p.tiolaCount || 0) + ' ' + t('tiolaCount');
+    document.getElementById('icCountry').textContent = p.country;
+    document.getElementById('icCity').textContent = p.city;
+    document.getElementById('icCat').textContent = catLabel(p.category);
+    document.getElementById('icEntry').textContent = placeField(p, 'entryFee') || '—';
+    document.getElementById('icBest').textContent = placeField(p, 'bestTime') || '—';
+    await renderRevList();
+    updateRevForm();
+    showMainTab('detail');
+  } catch (e) {
+    if (window.TL_TOAST) window.TL_TOAST.error(e.message);
+  }
 }
 
 function goBack() {
@@ -609,7 +805,7 @@ function rate(n) {
 
 async function postTiola() {
   const txt = document.getElementById('rfTxt').value.trim();
-  if (!txt) { alert(t('writeSomething')); return; }
+  if (!txt) { window.TL_TOAST?.warning(t('writeSomething')); return; }
   if (!user) { openAuth(); return; }
   if (!activePlace) return;
   const fd = new FormData();
@@ -622,14 +818,14 @@ async function postTiola() {
   if (photo) fd.append('photo', photo);
   try {
     const data = await api('/tiolas', { method: 'POST', body: fd });
-    alert(data.message || t('tiolaPending'));
+    window.TL_TOAST?.success(data.message || t('tiolaPending'));
     document.getElementById('rfTxt').value = '';
     document.getElementById('rfPhoto').value = '';
     rating = 0;
     document.querySelectorAll('#rfStars span').forEach((s) => s.classList.remove('lit'));
     updateRevForm();
   } catch (e) {
-    alert(e.message);
+    /* toast from api */
   }
 }
 
@@ -686,10 +882,11 @@ async function updateProfilePage() {
   document.querySelector('.prof-name').textContent = user.name;
   document.querySelector('.prof-av').textContent = user.name[0];
 
-  const [myTiolas, myBlogs, saved] = await Promise.all([
+  const [myTiolas, myBlogs, saved, visitedStats] = await Promise.all([
     api('/tiolas?mine=1'),
     api('/blogs?mine=1'),
     api('/places/saved/all'),
+    api('/travel-lists/visited/stats').catch(() => ({ totalVisited: 0, countriesVisited: 0 })),
   ]);
 
   savedIds = new Set(saved.places.map((p) => p.id));
@@ -698,7 +895,28 @@ async function updateProfilePage() {
 
   document.getElementById('pRevCnt').textContent = myTiolas.tiolas.length;
   document.getElementById('pSavedCnt').textContent = savedIds.size;
-  document.getElementById('pCntCnt').textContent = new Set(approvedT.map((t) => t.countryTag || t.placeId)).size;
+  document.getElementById('pCntCnt').textContent = visitedStats.countriesVisited || new Set(approvedT.map((t) => t.countryTag || t.placeId)).size;
+  const pVis = document.getElementById('pVisitedCnt');
+  if (pVis) pVis.textContent = visitedStats.totalVisited || 0;
+
+  if (window.TL_TRIP) window.TL_TRIP.loadUserTrips('myTripPlans');
+
+  try {
+    const visited = await api('/travel-lists/visited/all');
+    const vg = document.getElementById('visitedGrid');
+    const ve = document.getElementById('visitedEmpty');
+    if (vg) {
+      if (!visited.places.length) { vg.innerHTML = ''; if (ve) ve.style.display = 'block'; }
+      else {
+        if (ve) ve.style.display = 'none';
+        vg.innerHTML = visited.places.map((p) => `
+          <div class="pc" onclick="openDetail(${p.id})">
+            <div class="pc-img"><img src="${placeImg(p)}" alt="" loading="lazy"/></div>
+            <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${p.visitedAt || ''}</div></div>
+          </div>`).join('');
+      }
+    }
+  } catch { /* optional */ }
 
   const tiList = document.getElementById('myTiolaList');
   const tiEmpty = document.getElementById('tiolaListEmpty');
@@ -755,15 +973,19 @@ function showWriteMode(mode, el) {
 
 async function toggleSave(id, btn) {
   if (!user) { openAuth(); return; }
-  if (savedIds.has(id)) {
-    await api('/places/' + id + '/save', { method: 'DELETE' });
-    savedIds.delete(id);
-    btn.textContent = '🤍';
-  } else {
-    await api('/places/' + id + '/save', { method: 'POST' });
-    savedIds.add(id);
-    btn.textContent = '❤️';
-  }
+  try {
+    if (savedIds.has(id)) {
+      await api('/places/' + id + '/save', { method: 'DELETE' });
+      savedIds.delete(id);
+      btn.textContent = '🤍';
+      window.TL_TOAST?.info(t('removedFromSaved'));
+    } else {
+      await api('/places/' + id + '/save', { method: 'POST' });
+      savedIds.add(id);
+      btn.textContent = '❤️';
+      window.TL_TOAST?.success(t('addedToSaved'));
+    }
+  } catch { /* toast from api */ }
 }
 
 function arcRate(n) {
@@ -857,13 +1079,14 @@ async function doLoginSubmit() {
     });
     setAuth(data.user, data.token);
     closeAuth();
+    window.TL_TOAST?.success(t('loginSuccess'));
     if (activePlace) updateRevForm();
     if (document.getElementById('page-profile').classList.contains('active')) updateProfilePage();
-  } catch (e) { alert(e.message); }
+  } catch { /* toast from api */ }
 }
 
 async function doRegSubmit() {
-  if (!document.getElementById('gC')?.checked) { alert(t('kvkkRequired')); return; }
+  if (!document.getElementById('gC')?.checked) { window.TL_TOAST?.warning(t('kvkkRequired')); return; }
   try {
     const data = await api('/auth/register', {
       method: 'POST',
@@ -876,7 +1099,17 @@ async function doRegSubmit() {
     });
     setAuth(data.user, data.token);
     closeAuth();
-  } catch (e) { alert(e.message); }
+    window.TL_TOAST?.success(t('registerSuccess'));
+  } catch { /* toast from api */ }
+}
+
+async function doLogout() {
+  try {
+    await api('/auth/logout', { method: 'POST' });
+    setAuth(null, null);
+    window.TL_TOAST?.info(t('logoutSuccess'));
+    updateProfilePage();
+  } catch { setAuth(null, null); }
 }
 
 function toggleNavMenu() {
@@ -930,6 +1163,7 @@ function refreshAfterLang() {
   if (document.getElementById('page-blog')?.classList.contains('active')) renderBlog();
   if (document.getElementById('page-profile')?.classList.contains('active')) updateProfilePage();
   if (document.getElementById('authOv')?.classList.contains('on')) buildAuthForm(authMode);
+  if (window.TL_COOKIE) window.TL_COOKIE.render(lang);
 }
 
 function setLang(l, btn) {
@@ -952,15 +1186,13 @@ function handleDeepLink() {
 
 async function init() {
   window.TL_I18N.apply(lang);
+  if (window.TL_COOKIE) window.TL_COOKIE.render(lang);
   document.querySelectorAll('.lb').forEach((b) => {
     b.classList.toggle('on', (lang === 'en' && b.textContent.trim() === 'EN') || (lang === 'tr' && b.textContent.trim() === 'TR'));
   });
   updateAuthUI();
+  renderGrid([]);
   try {
-    showGridSkeleton();
-    await loadPlaces({ sort: sortMode });
-    renderGrid(places);
-    updateCategoryCounts();
     await loadMapMarkers();
     if (user && token) {
       try {
@@ -974,7 +1206,6 @@ async function init() {
     }
   } catch (e) {
     console.error(e);
-    document.getElementById('pgrid').innerHTML = `<div class="no-res">${t('serverDown')}</div>`;
   }
   handleDeepLink();
 }

@@ -14,6 +14,7 @@ function mapPlaceRow(row, stats) {
   const categories = parseJson(row.categories, [row.category].filter(Boolean));
   const thingsToDo = parseJson(row.things_to_do, []);
   const thingsToDoEn = parseJson(row.things_to_do_en, []);
+  const photos = parseJson(row.photos, row.image_url ? [resolvePlaceImageUrl(row.image_url, row.category, row.id)] : []);
   const tiolaCount = stats?.tiolaCount || 0;
   const tiolaRating = stats?.tiolaRating || null;
   const popularity = row.popularity != null
@@ -47,6 +48,9 @@ function mapPlaceRow(row, stats) {
     cultureFoodEn: row.culture_food_en,
     travelTips: row.travel_tips || row.tips,
     travelTipsEn: row.travel_tips_en || row.tips_en,
+    howToGetThere: row.how_to_get_there,
+    howToGetThereEn: row.how_to_get_there_en,
+    photos: photos.map((url) => (url.startsWith('http') ? url : resolvePlaceImageUrl(url, row.category, row.id))),
     tips: row.tips,
     tipsEn: row.tips_en,
     tags,
@@ -56,6 +60,11 @@ function mapPlaceRow(row, stats) {
     popularity,
     tiolaRating,
     tiolaCount,
+    faqTR: parseJson(row.faq_tr, []),
+    faqEN: parseJson(row.faq_en, []),
+    affiliateHotelUrl: row.affiliate_hotel_url,
+    affiliateBookingUrl: row.affiliate_booking_url,
+    timezone: row.timezone,
   };
 }
 

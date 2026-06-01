@@ -21,8 +21,16 @@ const urls = [
   { loc: `${base}/legal/terms.html`, priority: '0.3' },
 ];
 
-for (const p of places.slice(0, 500)) {
+for (const p of places) {
   urls.push({ loc: `${base}/?place=${p.id}`, priority: '0.7' });
+}
+
+const staticPages = [
+  '/legal/about.html', '/legal/contact.html', '/legal/privacy.html',
+  '/legal/terms.html', '/legal/kvkk.html', '/login', '/register',
+];
+for (const pg of staticPages) {
+  urls.push({ loc: `${base}${pg}`, priority: '0.4' });
 }
 
 const xml = `<?xml version="1.0" encoding="UTF-8"?>

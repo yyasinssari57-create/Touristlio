@@ -9,6 +9,7 @@ const { enrichContentFields } = require('../lib/place-content');
 const BATCH3 = require('./places-batch3');
 const BATCH4 = require('./places-batch4');
 const BATCH5 = require('./places-batch5-categories');
+const BATCH6 = require('./places-batch6-world');
 
 const outPath = path.join(__dirname, '..', 'data', 'places.json');
 
@@ -62,7 +63,7 @@ const BEST_EN = {
   'İlkbahar–sonbahar': 'Spring–autumn',
 };
 
-const TARGET_MIN = 400;
+const TARGET_MIN = 800;
 const TARGET_MAX = 0;
 
 function imageUrl(name, id, category) {
@@ -75,6 +76,11 @@ function isShortText(text, minLen) {
 
 function isGenericDesc(text) {
   return !text || text.includes('Touristlio Tiola ile güncel') || text.includes('kültürel öneme');
+}
+
+function withPhotos(row) {
+  if (!row.photos && row.imageUrl) row.photos = [row.imageUrl];
+  return row;
 }
 
 function buildRow(id, row) {
@@ -176,7 +182,7 @@ try {
   /* ignore */
 }
 
-const allBatches = [...extraFromMerge, ...BATCH3, ...BATCH4, ...BATCH5];
+const allBatches = [...extraFromMerge, ...BATCH3, ...BATCH4, ...BATCH5, ...BATCH6];
 const existing = fs.existsSync(outPath)
   ? JSON.parse(fs.readFileSync(outPath, 'utf8'))
   : [];
@@ -204,7 +210,7 @@ for (const p of merged) {
 }
 
 let clean = merged.map((p) => {
-  const row = enrichContentFields({ ...p }, p.id);
+  const row = withPhotos(enrichContentFields({ ...p }, p.id));
   delete row.googleRating;
   delete row.googleCount;
   return row;

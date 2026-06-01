@@ -1,4 +1,5 @@
 const { resolveCoords } = require('./city-coords');
+const { buildFaqForPlace } = require('./faq-templates');
 
 /** Advanced filter buckets → legacy category slugs */
 const FILTER_GROUPS = {
@@ -91,10 +92,16 @@ function enrichContentFields(p, id) {
   const cultureFoodEn = p.cultureFoodEn || CULTURE_EN[i % CULTURE_EN.length](p.name, p.country);
   const travelTips = p.travelTips || p.tips || '';
   const travelTipsEn = p.travelTipsEn || p.tipsEn || p.tips || '';
+  const howToGetThere = p.howToGetThere || `${p.city} merkezinden toplu taşıma veya taksi ile ${p.name} ulaşılabilir.`;
+  const howToGetThereEn = p.howToGetThereEn || `Reach ${p.name} from ${p.city} center by public transit or taxi.`;
+  const photos = Array.isArray(p.photos) && p.photos.length ? p.photos : (p.imageUrl ? [p.imageUrl] : []);
   const [lat, lng] = p.lat != null && p.lng != null
     ? [p.lat, p.lng]
     : resolveCoords(p.city, p.country, id);
   const categories = p.categories?.length ? p.categories : deriveCategories(p.category);
+  const faqBuilt = buildFaqForPlace({ ...p, howToGetThere, howToGetThereEn, cultureFood, cultureFoodEn });
+  const faqTR = p.faqTR?.length >= 5 ? p.faqTR : faqBuilt.faqTR;
+  const faqEN = p.faqEN?.length >= 5 ? p.faqEN : faqBuilt.faqEN;
 
   return {
     ...p,
@@ -108,6 +115,9 @@ function enrichContentFields(p, id) {
     cultureFoodEn,
     travelTips,
     travelTipsEn,
+    howToGetThere,
+    howToGetThereEn,
+    photos,
     description: desc,
     descriptionEn: descEn,
     tips: p.tips || travelTips,
@@ -115,6 +125,8 @@ function enrichContentFields(p, id) {
     lat,
     lng,
     categories,
+    faqTR,
+    faqEN,
   };
 }
 

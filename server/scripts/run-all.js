@@ -21,6 +21,7 @@ try {
 }
 
 run('node server/scripts/build-places-500.js');
+run('node server/scripts/enrich-content.js');
 
 const statsPath = path.join(root, 'server', 'data', 'merge-stats.json');
 const stats = JSON.parse(fs.readFileSync(statsPath, 'utf8'));

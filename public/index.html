@@ -16,6 +16,8 @@
 <link rel="canonical" href="https://touristlio.com/"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
 <link rel="stylesheet" href="/css/style.css"/>
 </head>
 <body>
@@ -100,10 +102,34 @@
   <div class="explore-nav">
     <div class="explore-nav-inner">
       <div class="etab on" id="et-discover" onclick="showExploreTab('discover',this)" data-i18n="tabDiscover">🗺️ Destinasyonlar</div>
+      <div class="etab" id="et-map" onclick="showExploreTab('map',this)" data-i18n="tabMap">🗺️ Harita</div>
       <div class="etab" id="et-filter" onclick="showExploreTab('filter',this)" data-i18n="tabFilter">⚙️ Gelişmiş Filtrele</div>
       <div class="etab" id="et-tiolas" onclick="showExploreTab('tiolas',this)" data-i18n="tabTiolas">✨ Tiola'lar</div>
       <div class="etab" id="et-categories" onclick="showExploreTab('categories',this)" data-i18n="tabCategories">📂 Kategoriler</div>
       <div class="etab" id="et-tour" onclick="showExploreTab('tour',this)" data-i18n="tabTour">🧳 Tur Planla</div>
+    </div>
+  </div>
+
+  <!-- MAP TAB -->
+  <div class="explore-section" id="es-map">
+    <div class="discover-wrap map-tab-wrap">
+      <div class="explore-map-hd">
+        <h4 data-i18n="mapTitle">🗺️ Harita</h4>
+        <span style="font-size:.72rem;color:var(--t3)" data-i18n="mapSub">OpenStreetMap · kategoriye göre işaretler</span>
+      </div>
+      <div class="map-controls">
+        <input type="search" id="mapSearchInput" class="map-search-inp" data-i18n-placeholder="searchPh" placeholder="Haritada ara..." aria-label="Harita arama"/>
+        <button type="button" class="btn bo bsm" id="mapLocateBtn" data-i18n="mapLocate">📍 Konumum</button>
+      </div>
+      <div class="map-cat-strip">
+        <button type="button" class="map-cat-chip on" data-cat="all" data-i18n="all">Tümü</button>
+        <button type="button" class="map-cat-chip" data-cat="landmark">🏛️</button>
+        <button type="button" class="map-cat-chip" data-cat="museum">🏺</button>
+        <button type="button" class="map-cat-chip" data-cat="nature">⛰️</button>
+        <button type="button" class="map-cat-chip" data-cat="restaurant">🍽️</button>
+        <button type="button" class="map-cat-chip" data-cat="beach">🏖️</button>
+      </div>
+      <div id="exploreMapFull" class="map-full" role="region" aria-label="Destinasyon haritası"></div>
     </div>
   </div>
 
@@ -153,7 +179,9 @@
           <option value="az" data-i18n-sort="sortAz">A → Z</option>
         </select>
       </div>
+      <p class="browse-hint" id="browseHint" data-i18n="browseHint">Kategori seçin veya arama yapın — destinasyonlar burada listelenir.</p>
       <div class="pgrid" id="pgrid"></div>
+      <div class="load-more-wrap"><button type="button" class="btn bo" id="loadMoreBtn" style="display:none" onclick="loadMorePlaces()" data-i18n="loadMore">Daha Fazla Yükle</button></div>
       <div class="no-res" id="noRes" style="display:none" data-i18n="noResults">🔍 Sonuç bulunamadı. Farklı filtreler deneyin.</div>
       <div class="osm-hint" id="osmHint" style="display:none"></div>
     </div>
@@ -351,6 +379,9 @@
       <img src="/images/logo.png" alt="" class="logo-img footer-logo"/>
       <div class="ftag" data-i18n="footerTag">Sadece ziyaret etme. Hisset.</div>
       <div class="footer-legal">
+        <a href="/legal/about.html" data-i18n="footerAbout">Hakkımızda</a> ·
+        <a href="/legal/contact.html" data-i18n="footerContact">İletişim</a> ·
+        <a href="/legal/privacy.html" data-i18n="footerPrivacy">Gizlilik</a> ·
         <a href="/legal/kvkk.html" data-i18n="legalKvkk">KVKK</a> ·
         <a href="/legal/terms.html" data-i18n="legalTerms">Kullanım Şartları</a>
       </div>
@@ -393,14 +424,34 @@
     <div class="pd-body">
       <div style="margin-bottom:14px"><button class="btn bo bsm" onclick="goBack()" data-i18n="back">← Geri Dön</button></div>
       <div class="pd-gallery" id="pdGallery" style="display:none"></div>
+      <div class="detail-tabs">
+        <div class="dtab on" onclick="showDetailTab('overview',this)" data-i18n="detailOverview">📍 Genel Bakış</div>
+        <div class="dtab" onclick="showDetailTab('history',this)" data-i18n="detailHistory">🏛️ Tarihçe</div>
+        <div class="dtab" onclick="showDetailTab('things',this)" data-i18n="detailThings">✅ Yapılacaklar</div>
+        <div class="dtab" onclick="showDetailTab('culture',this)" data-i18n="detailCulture">🍽️ Kültür</div>
+        <div class="dtab" onclick="showDetailTab('tips',this)" data-i18n="detailTips">💡 İpuçları</div>
+      </div>
       <div class="pd-layout">
         <div>
+          <div class="dtab-panel active" id="dtab-overview">
           <div class="sec-block"><h2 data-i18n="detailOverview">📍 Genel Bakış</h2><p id="pdOverview" class="pd-text"></p><button type="button" class="read-more-btn" id="pdOverviewMore" style="display:none"></button></div>
+          </div>
+          <div class="dtab-panel" id="dtab-history">
           <div class="sec-block"><h2 data-i18n="detailHistory">🏛️ Tarihçe & Kültürel Önemi</h2><p id="pdHist" class="pd-text"></p><button type="button" class="read-more-btn" id="pdHistMore" style="display:none"></button></div>
+          </div>
+          <div class="dtab-panel" id="dtab-things">
           <div class="sec-block"><h2 data-i18n="detailThings">✅ Yapılacaklar</h2><ul id="pdThings" class="pd-list"></ul></div>
+          </div>
+          <div class="dtab-panel" id="dtab-culture">
           <div class="sec-block"><h2 data-i18n="detailCulture">🍽️ Kültür & Gastronomi</h2><p id="pdCulture" class="pd-text"></p><button type="button" class="read-more-btn" id="pdCultureMore" style="display:none"></button></div>
+          </div>
+          <div class="dtab-panel" id="dtab-tips">
           <div class="sec-block"><h2 data-i18n="detailTips">💡 Seyahat İpuçları</h2><p id="pdTips" class="pd-text"></p><button type="button" class="read-more-btn" id="pdTipsMore" style="display:none"></button></div>
+          <div class="sec-block"><h2 data-i18n="detailBestTime">📅 En İyi Zaman</h2><p id="pdBestTime" class="pd-text"></p></div>
+          <div class="sec-block"><h2 data-i18n="detailHowToGet">🚌 Nasıl Gidilir</h2><p id="pdHowToGet" class="pd-text"></p></div>
+          </div>
           <div class="sec-block"><h2 data-i18n="detailTags">🏷️ Etiketler</h2><div class="pd-tags" id="pdTags"></div></div>
+          <div class="sec-block faq-block" id="pdFaq" style="display:none"></div>
           <div class="rev-wrap">
             <div class="rev-hd"><h2 data-i18n="detailTiolas">✨ Tiola'lar</h2><div class="af-badge" data-i18n="antiFraud">🛡️ Sahte oy koruması</div></div>
             <div class="rform">
@@ -449,6 +500,10 @@
             <div class="dr-cnt" id="pdTC"></div>
           </div>
           <div id="pdMap" role="region" aria-label="Yer haritası"></div>
+          <div class="aside-card" id="pdWeather"></div>
+          <div class="aside-card" id="pdLocalInfo"></div>
+          <div class="aside-card" id="pdLiveData"></div>
+          <div class="aside-card" id="pdAffiliate" style="display:none"></div>
           <div class="aside-card">
             <div class="ac-title" data-i18n="infoTitle">📋 Bilgiler</div>
             <div class="ic-row"><span class="ic-lbl" data-i18n="infoCountry">Ülke</span><span class="ic-val" id="icCountry"></span></div>
@@ -458,8 +513,12 @@
             <div class="ic-row"><span class="ic-lbl" data-i18n="infoBest">En İyi Dönem</span><span class="ic-val" id="icBest"></span></div>
           </div>
           <div class="aside-card">
-            <div class="ac-title" data-i18n="nearbyTitle">📍 Aynı Ülkede</div>
+            <div class="ac-title" data-i18n="nearbyTitle">📍 Yakındaki Yerler</div>
             <div id="nearbyList"></div>
+          </div>
+          <div class="aside-card">
+            <div class="ac-title" data-i18n="similarTitle">✨ Benzer Yerler</div>
+            <div id="similarList"></div>
           </div>
         </div>
       </div>
@@ -485,15 +544,26 @@
             <div class="psi"><span class="psi-n" id="pRevCnt">0</span> <span data-i18n="profileStatReviews">Yorum</span></div>
             <div class="psi"><span class="psi-n" id="pSavedCnt">0</span> <span data-i18n="profileStatSaved">Kaydedilen</span></div>
             <div class="psi"><span class="psi-n" id="pCntCnt">0</span> <span data-i18n="profileStatCountries">Ülke</span></div>
+            <div class="psi"><span class="psi-n" id="pVisitedCnt">0</span> <span data-i18n="profileStatVisited">Ziyaret</span></div>
           </div>
         </div>
       </div>
       <div class="ptabs">
         <div class="ptab on" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</div>
+        <div class="ptab" onclick="showPTab('trips',this)" data-i18n="profileTabTrips">🧳 Gezi Planlarım</div>
+        <div class="ptab" onclick="showPTab('visited',this)" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</div>
         <div class="ptab" onclick="showPTab('blogs',this)" data-i18n="profileTabBlogs">📝 Bloglarım</div>
         <div class="ptab" onclick="showPTab('pending',this)" data-i18n="profileTabPending">⏳ Bekleyenler</div>
         <div class="ptab" onclick="showPTab('saved',this)" data-i18n="profileTabSaved">❤️ Kaydedilenler</div>
         <div class="ptab" onclick="showPTab('write',this)" data-i18n="profileTabWrite">✏️ Tiola / Blog Yaz</div>
+      </div>
+      <div class="ptab-c" id="ptab-trips">
+        <div style="margin-bottom:12px"><a href="/trip-planner.html" class="btn bp bsm" data-i18n="tripPlannerNew">+ Yeni Plan</a></div>
+        <div id="myTripPlans"></div>
+      </div>
+      <div class="ptab-c" id="ptab-visited">
+        <div id="visitedGrid" class="pgrid"></div>
+        <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n="emptyVisited">Henüz ziyaret kaydı yok.</p></div>
       </div>
       <div class="ptab-c active" id="ptab-tiolas">
         <div style="font-family:var(--fd);font-size:1.15rem;font-weight:700;color:var(--navy);margin-bottom:4px" data-i18n-html="profileMyTiolas">Tiola <em style="font-style:italic;color:var(--b)">larım</em></div>
@@ -560,9 +630,14 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="/js/i18n.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/skeleton.js"></script>
+<script src="/js/cookie-banner.js"></script>
 <script src="/js/map.js"></script>
 <script src="/js/tour-planner.js"></script>
+<script src="/js/trip-planner.js"></script>
 <script src="/js/app.js"></script>
 </body>
 </html>

@@ -1,17 +1,21 @@
 {
   "name": "touristlio",
-  "version": "1.0.0",
-  "description": "Touristlio — global travel discovery with Tiola reviews",
+  "version": "2.0.0",
+  "description": "Touristlio — global travel discovery with Tiola reviews (V2 Pro)",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "seed": "node server/seed.js",
     "places:merge": "node server/scripts/build-places-500.js",
+    "places:enrich": "node server/scripts/enrich-content.js",
+    "places:fetch-photos": "node server/scripts/fetch-photos.js",
+    "places:validate": "node server/scripts/validate-places.js",
     "places:fix-images": "node server/scripts/fix-places-images.js",
     "logo:extract": "node server/scripts/extract-nav-logo.js",
     "places:run-all": "node server/scripts/run-all.js",
-    "sitemap": "node server/scripts/generate-sitemap.js"
+    "sitemap": "node server/scripts/generate-sitemap.js",
+    "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\""
   },
   "engines": {
     "node": ">=18"
@@ -23,7 +27,13 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.2"
+    "multer": "^1.4.5-lts.2",
+    "node-cron": "^3.0.3",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0"
   }
 }

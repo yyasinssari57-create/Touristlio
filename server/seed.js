@@ -31,13 +31,17 @@ function seedPlaces() {
      description, description_en, overview, overview_en,
      history, history_en, things_to_do, things_to_do_en,
      culture_food, culture_food_en, travel_tips, travel_tips_en,
-     tips, tips_en, tags, search_aliases, categories, lat, lng, popularity)
+     how_to_get_there, how_to_get_there_en, photos,
+     tips, tips_en, tags, search_aliases, categories, lat, lng, popularity,
+     faq_tr, faq_en)
     VALUES (@id, @name, @location, @country, @city, @district, @category,
             @imageUrl, @isLocal, @entryFee, @entryFeeEn, @bestTime, @bestTimeEn,
             @description, @descriptionEn, @overview, @overviewEn,
             @history, @historyEn, @thingsToDo, @thingsToDoEn,
             @cultureFood, @cultureFoodEn, @travelTips, @travelTipsEn,
-            @tips, @tipsEn, @tags, @searchAliases, @categories, @lat, @lng, @popularity)
+            @howToGetThere, @howToGetThereEn, @photos,
+            @tips, @tipsEn, @tags, @searchAliases, @categories, @lat, @lng, @popularity,
+            @faqTR, @faqEN)
   `);
 
   const tx = db.transaction((rows) => {
@@ -58,11 +62,16 @@ function seedPlaces() {
         cultureFoodEn: p.cultureFoodEn || null,
         travelTips: p.travelTips || p.tips,
         travelTipsEn: p.travelTipsEn || p.tipsEn,
+        howToGetThere: p.howToGetThere || null,
+        howToGetThereEn: p.howToGetThereEn || null,
+        photos: JSON.stringify(p.photos || (p.imageUrl ? [p.imageUrl] : [])),
         tipsEn: p.tipsEn || null,
         tags: JSON.stringify(p.tags || []),
         searchAliases: JSON.stringify(p.searchAliases || []),
         categories: JSON.stringify(p.categories || [p.category]),
         popularity,
+        faqTR: JSON.stringify(p.faqTR || []),
+        faqEN: JSON.stringify(p.faqEN || []),
       });
     }
   });

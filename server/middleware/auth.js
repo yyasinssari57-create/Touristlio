@@ -2,12 +2,17 @@ const { verifyToken, sanitizeUser, findUserById } = require('../auth');
 
 function authOptional(req, res, next) {
   const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  const cookieToken = req.cookies?.tl_token;
+  let raw = null;
+  if (header?.startsWith('Bearer ')) raw = header.slice(7);
+  else if (cookieToken) raw = cookieToken;
+
+  if (!raw) {
     req.user = null;
     return next();
   }
   try {
-    const payload = verifyToken(header.slice(7));
+    const payload = verifyToken(raw);
     const row = findUserById(payload.id);
     req.user = sanitizeUser(row);
   } catch {

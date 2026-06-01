@@ -58,6 +58,8 @@ body{font-family:Inter,sans-serif;background:var(--l);}
           <option value="adventure">adventure</option>
         </select>
         <input class="ain" id="plAliases" placeholder="Arama alias (virgülle): Istanbul, İstanbul"/>
+        <input class="ain" id="plLat" placeholder="Enlem (lat)"/>
+        <input class="ain" id="plLng" placeholder="Boylam (lng)"/>
         <input class="ain full" id="plImage" placeholder="Görsel URL (Unsplash)"/>
         <textarea class="ain full" id="plDesc" placeholder="Açıklama (TR)" style="height:50px"></textarea>
         <textarea class="ain full" id="plDescEn" placeholder="Description (EN)" style="height:50px"></textarea>
@@ -73,6 +75,14 @@ body{font-family:Inter,sans-serif;background:var(--l);}
         <textarea class="ain full" id="plTipsEn" placeholder="Travel tips (EN)" style="height:40px"></textarea>
       </div>
       <button class="btn bp bsm" onclick="addPlace()">Yeri kaydet</button>
+      <div style="margin-top:14px">
+        <label style="font-size:.75rem;color:var(--t2)">Mevcut yere fotoğraf yükle (place ID)</label>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <input class="ain" id="photoPlaceId" placeholder="Place ID" style="max-width:120px"/>
+          <input type="file" id="photoFiles" accept="image/*" multiple style="font-size:.75rem"/>
+          <button class="btn bo bsm" type="button" onclick="uploadPhotos()">Yükle</button>
+        </div>
+      </div>
     </div>
 
     <div id="modSection" style="display:none">
@@ -84,6 +94,9 @@ body{font-family:Inter,sans-serif;background:var(--l);}
         <button class="btn bp bsm full" onclick="addModerator()">Moderatör oluştur</button>
       </div>
     </div>
+
+    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Kullanıcılar</h2>
+    <div id="userList"></div>
 
     <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Bekleyen Tiola'lar</h2>
     <div id="pendingTiolas"></div>
@@ -173,6 +186,8 @@ async function addPlace() {
         travelTips: document.getElementById('plTips').value,
         travelTipsEn: document.getElementById('plTipsEn').value,
         searchAliases: aliases,
+        lat: parseFloat(document.getElementById('plLat').value) || undefined,
+        lng: parseFloat(document.getElementById('plLng').value) || undefined,
       }),
     });
     alert('Yer eklendi');
@@ -198,6 +213,22 @@ async function addModerator() {
   } catch (e) { alert(e.message); }
 }
 
+async function uploadPhotos() {
+  const id = document.getElementById('photoPlaceId').value;
+  const files = document.getElementById('photoFiles').files;
+  if (!id || !files.length) { alert('Place ID ve dosya gerekli'); return; }
+  const fd = new FormData();
+  for (const f of files) fd.append('photos', f);
+  try {
+    const res = await fetch(API + '/admin/places/' + id + '/photos', {
+      method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd, credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    alert('Yüklendi: ' + data.uploaded);
+  } catch (e) { alert(e.message); }
+}
+
 async function refresh() {
   const stats = await api('/admin/stats');
   document.getElementById('statsRow').innerHTML = `
@@ -205,6 +236,14 @@ async function refresh() {
     <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
     <div class="admin-card"><strong>${stats.blogsPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Blog</span></div>
     <div class="admin-card"><strong>${stats.users}</strong><br><span style="font-size:.75rem;color:var(--t2)">Kullanıcı</span></div>`;
+
+  if (currentUser?.role === 'admin') {
+    try {
+      const ul = await api('/admin/users');
+      document.getElementById('userList').innerHTML = ul.users.length ? ul.users.map((u) => `
+        <div class="admin-card"><strong>${u.name}</strong> · ${u.email} · <span style="font-size:.72rem;color:var(--t3)">${u.role}</span></div>`).join('') : '<p style="color:var(--t3)">Kullanıcı yok.</p>';
+    } catch { document.getElementById('userList').innerHTML = ''; }
+  }
 
   const ti = await api('/admin/pending/tiolas');
   document.getElementById('pendingTiolas').innerHTML = ti.items.length ? ti.items.map((item) => `

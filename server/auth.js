@@ -33,6 +33,8 @@ function sanitizeUser(row) {
     role: row.role,
     avatarColor: row.avatar_color,
     createdAt: row.created_at,
+    emailVerified: !!row.email_verified,
+    riskScore: row.risk_score || 0,
   };
 }
 

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Kayıt — Touristlio</title>
+<link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="auth-page">
+<nav class="tl-nav"><div class="nav-inner">
+  <a href="/" class="brand"><img src="/images/logo-round.png" alt="" class="brand-mark brand-mark-round" width="44" height="44"/><span class="brand-text">Tourist<span class="brand-accent">lio</span></span></a>
+</div></nav>
+<div class="auth-page-box">
+  <h1 data-i18n="authTabReg">Kayıt Ol</h1>
+  <p class="auth-page-sub" data-i18n="authSub">Seyahatini puanla, kaydet ve paylaş</p>
+  <input class="ain" id="regName" type="text" data-i18n-placeholder="authName" placeholder="Ad Soyad"/>
+  <input class="ain" id="regEmail" type="email" data-i18n-placeholder="authEmail" placeholder="E-posta"/>
+  <input class="ain" id="regPass" type="password" data-i18n-placeholder="authPassMin" placeholder="Şifre (min 8 karakter)"/>
+  <label class="kvkk-check"><input type="checkbox" id="gC"/> <span data-i18n-html="authKvkkLabel">KVKK ve Kullanım Şartları kabul ediyorum</span></label>
+  <button class="btn bp" style="width:100%" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
+  <p class="auth-page-link"><span data-i18n="hasAccount">Zaten hesabınız var mı?</span> <a href="/login" data-i18n="login">Giriş Yap</a></p>
+  <p class="auth-page-link"><a href="/">← Touristlio</a></p>
+</div>
+<script src="/js/i18n.js"></script>
+<script>
+const lang = localStorage.getItem('tl_lang') || 'tr';
+window.TL_I18N.apply(lang);
+function t(k){ return window.TL_I18N.t(lang,k); }
+async function doReg(){
+  if(!gC.checked){ alert(t('kvkkRequired')); return; }
+  try {
+    const res = await fetch('/api/auth/register', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name: regName.value, email: regEmail.value, password: regPass.value, kvkkAccepted: true }),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error);
+    localStorage.setItem('tl_token', data.token);
+    localStorage.setItem('tl_user', JSON.stringify(data.user));
+    location.href = '/profile';
+  } catch(e){ alert(e.message); }
+}
+</script>
+</body>
+</html>

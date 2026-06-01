@@ -100,7 +100,9 @@ for (const col of [
   'description_en', 'history_en', 'tips_en', 'entry_fee_en', 'best_time_en',
   'overview', 'overview_en', 'things_to_do', 'things_to_do_en',
   'culture_food', 'culture_food_en', 'travel_tips', 'travel_tips_en',
+  'how_to_get_there', 'how_to_get_there_en', 'photos',
   'categories', 'lat', 'lng', 'popularity',
+  'faq_tr', 'faq_en', 'affiliate_hotel_url', 'affiliate_booking_url', 'timezone',
 ]) {
   try {
     db.prepare(`SELECT ${col} FROM places LIMIT 1`).get();
@@ -109,6 +111,170 @@ for (const col of [
     db.exec(`ALTER TABLE places ADD COLUMN ${col} ${type}`);
   }
 }
+
+for (const col of [
+  ['email_verified', 'INTEGER DEFAULT 0'],
+  ['failed_login_count', 'INTEGER DEFAULT 0'],
+  ['locked_until', 'TEXT'],
+  ['verification_token', 'TEXT'],
+  ['risk_score', 'INTEGER DEFAULT 0'],
+]) {
+  try {
+    db.prepare(`SELECT ${col[0]} FROM users LIMIT 1`).get();
+  } catch {
+    db.exec(`ALTER TABLE users ADD COLUMN ${col[0]} ${col[1]}`);
+  }
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS travel_lists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_public INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS travel_list_items (
+    list_id INTEGER NOT NULL,
+    place_id INTEGER NOT NULL,
+    note TEXT,
+    sort_order INTEGER DEFAULT 0,
+    added_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (list_id, place_id),
+    FOREIGN KEY (list_id) REFERENCES travel_lists(id) ON DELETE CASCADE,
+    FOREIGN KEY (place_id) REFERENCES places(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS visited_places (
+    user_id INTEGER NOT NULL,
+    place_id INTEGER NOT NULL,
+    visited_at TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, place_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (place_id) REFERENCES places(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS trip_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    country TEXT,
+    city TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    travelers INTEGER DEFAULT 1,
+    trip_type TEXT,
+    budget TEXT,
+    transport TEXT,
+    visibility TEXT NOT NULL DEFAULT 'private',
+    share_token TEXT UNIQUE,
+    status TEXT NOT NULL DEFAULT 'draft',
+    meta TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS trip_plan_days (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trip_id INTEGER NOT NULL,
+    day_number INTEGER NOT NULL,
+    title TEXT,
+    date TEXT,
+    FOREIGN KEY (trip_id) REFERENCES trip_plans(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS trip_plan_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    day_id INTEGER NOT NULL,
+    place_id INTEGER,
+    sort_order INTEGER DEFAULT 0,
+    start_time TEXT,
+    note TEXT,
+    FOREIGN KEY (day_id) REFERENCES trip_plan_days(id) ON DELETE CASCADE,
+    FOREIGN KEY (place_id) REFERENCES places(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS place_live_data (
+    place_id INTEGER PRIMARY KEY,
+    payload TEXT,
+    crowd_level TEXT,
+    source TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (place_id) REFERENCES places(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS role_permissions (
+    role_slug TEXT NOT NULL,
+    permission_slug TEXT NOT NULL,
+    PRIMARY KEY (role_slug, permission_slug)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_trip_plans_user ON trip_plans(user_id);
+  CREATE INDEX IF NOT EXISTS idx_travel_lists_user ON travel_lists(user_id);
+  CREATE INDEX IF NOT EXISTS idx_visited_user ON visited_places(user_id);
+`);
+
+function seedRbac() {
+  const roles = [
+    ['admin', 'Administrator'],
+    ['moderator', 'Moderator'],
+    ['member', 'Member'],
+  ];
+  const perms = [
+    ['admin.dashboard', 'View admin dashboard'],
+    ['admin.moderate', 'Moderate content'],
+    ['admin.users', 'Manage users'],
+    ['admin.places', 'Manage places'],
+    ['admin.tools', 'System tools'],
+    ['trip.manage', 'Manage own trip plans'],
+  ];
+  const rolePerms = {
+    admin: perms.map((p) => p[0]),
+    moderator: ['admin.dashboard', 'admin.moderate', 'admin.places'],
+    member: ['trip.manage'],
+  };
+  for (const [slug, name] of roles) {
+    db.prepare('INSERT OR IGNORE INTO roles (slug, name) VALUES (?, ?)').run(slug, name);
+  }
+  for (const [slug, name] of perms) {
+    db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
+  }
+  for (const [role, ps] of Object.entries(rolePerms)) {
+    for (const p of ps) {
+      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run(role, p);
+    }
+  }
+}
+seedRbac();
 
 function placeStats(placeId) {
   const row = db.prepare(`
