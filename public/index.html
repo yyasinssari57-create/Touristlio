@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Touristlio — Sadece Ziyaret Etme. Hisset.</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<!-- AUTH MODAL -->
+<div class="auth-ov" id="authOv">
+  <div class="auth-box">
+    <button class="aclose" onclick="closeAuth()">✕</button>
+    <img src="/images/logo.png" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
+    <div class="asub" data-i18n="authSub">Seyahatini puanla, kaydet ve paylaş</div>
+    <div class="atabs">
+      <div class="atab on" id="tabA" onclick="swTab('login',this)" data-i18n="authTabLogin">Giriş Yap</div>
+      <div class="atab" id="tabB" onclick="swTab('reg',this)" data-i18n="authTabReg">Kayıt Ol</div>
+    </div>
+    <div id="authForm"></div>
+    <div class="asec" data-i18n="authSecure">🔒 AES-256 şifreleme · KVKK & GDPR uyumlu</div>
+    <div class="aor" data-i18n="authOr">— veya —</div>
+    
+    <div class="anote" data-i18n="authNote">Misafirler okuyabilir · Tiola yazmak için üye olun</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="tl-nav">
+  <div class="nav-inner">
+    <button type="button" class="nav-toggle" id="navToggle" data-i18n-aria="menuAria" aria-label="Menü" onclick="toggleNavMenu()">☰</button>
+    <div class="navbar-left">
+      <a href="/" class="brand" onclick="showMainTab('explore');return false" aria-label="Touristlio">
+        <img src="/images/logo-round.png?v=1" alt="" class="brand-mark brand-mark-round" width="44" height="44" onerror="this.onerror=null;this.src='/images/icon-white.svg?v=3';this.classList.remove('brand-mark-round');this.classList.add('brand-mark-white');"/>
+        <h1 class="brand-name">Tourist<span class="brand-accent">lio</span></h1>
+      </a>
+      <span class="nav-divider" aria-hidden="true"></span>
+      <p class="brand-slogan" data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></p>
+    </div>
+    <div class="nav-menu" id="navMenu">
+      <div class="nav-tabs">
+        <div class="ntab on" id="nt-explore" onclick="showMainTab('explore')" data-i18n="explore">Keşfet</div>
+        <div class="ntab" id="nt-blog" onclick="showMainTab('blog')" data-i18n="blog">Blog</div>
+        <div class="ntab" id="nt-profile" onclick="showMainTab('profile')" data-i18n="profile">Profilim</div>
+      </div>
+      <div class="nav-r">
+        <div class="lsw">
+          <div class="lb" onclick="setLang('en',this)">EN</div>
+          <div class="lb on" onclick="setLang('tr',this)">TR</div>
+        </div>
+        <button class="btn nav-btn-ghost" id="authBtn" onclick="openAuth()">Giriş Yap</button>
+        <a class="btn nav-btn-ghost" id="adminLink" href="/admin" style="display:none;text-decoration:none" data-i18n="admin">Admin</a>
+        <button class="btn nav-btn-primary" onclick="openAuth()" data-i18n="join">Katıl</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════ EXPLORE PAGE ══════════════ -->
+<div class="page active" id="page-explore">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hbg"></div><div class="hmesh"></div><div class="hov"></div>
+    <div class="hc">
+      <div class="hpill" data-i18n="heroPill">🌍 Dünyanın en kişisel seyahat rehberi</div>
+      <p class="hsub" data-i18n="heroSub">Gizli yerel köşelerden ikonik yapılara — gerçek gezginler tarafından derlendi.</p>
+      <div class="srch-wrap">
+        <div class="srch-bar">
+          <input type="text" id="heroSearch" data-i18n-placeholder="searchPh" placeholder="İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu..." oninput="onSearch(this.value)" autocomplete="off"/>
+          <button class="btn bp bsm" onclick="doSearch()" data-i18n="searchBtn">🔍 Keşfet</button>
+        </div>
+        <div class="srch-drop" id="srchDrop"></div>
+      </div>
+      <div class="hpills">
+        <div class="hpl" onclick="quickSearch('İstanbul')">🕌 İstanbul</div>
+        <div class="hpl" onclick="quickSearch('Paris')">🗼 Paris</div>
+        <div class="hpl" onclick="quickSearch('Tokyo')">⛩️ Tokyo</div>
+        <div class="hpl" onclick="quickSearch('Bali')">🌴 Bali</div>
+        <div class="hpl" onclick="quickSearch('Roma')">🏛️ Roma</div>
+        <div class="hpl" onclick="quickSearch('Santorini')">🌊 Santorini</div>
+        <div class="hpl" onclick="quickSearch('Kyoto')">🍂 Kyoto</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPLORE SUB-NAV -->
+  <div class="explore-nav">
+    <div class="explore-nav-inner">
+      <div class="etab on" id="et-discover" onclick="showExploreTab('discover',this)" data-i18n="tabDiscover">🗺️ Destinasyonlar</div>
+      <div class="etab" id="et-filter" onclick="showExploreTab('filter',this)" data-i18n="tabFilter">⚙️ Gelişmiş Filtrele</div>
+      <div class="etab" id="et-tiolas" onclick="showExploreTab('tiolas',this)" data-i18n="tabTiolas">✨ Tiola'lar</div>
+      <div class="etab" id="et-categories" onclick="showExploreTab('categories',this)" data-i18n="tabCategories">📂 Kategoriler</div>
+      <div class="etab" id="et-tour" onclick="showExploreTab('tour',this)" data-i18n="tabTour">🧳 Tur Planla</div>
+    </div>
+  </div>
+
+  <!-- DISCOVER TAB -->
+  <div class="explore-section active" id="es-discover">
+    <div class="discover-wrap">
+      <div class="cat-strip">
+        <div class="cpill on" data-cat="all" onclick="setCat('all',this)">🌐 Tümü</div>
+        <div class="cpill" data-cat="landmark" onclick="setCat('landmark',this)">🏛️ Tarihi Yerler</div>
+        <div class="cpill" data-cat="museum" onclick="setCat('museum',this)">🏺 Müzeler</div>
+        <div class="cpill" data-cat="restaurant" onclick="setCat('restaurant',this)">🍽️ Restoranlar</div>
+        <div class="cpill" data-cat="cafe" onclick="setCat('cafe',this)">☕ Kafeler</div>
+        <div class="cpill" data-cat="beach" onclick="setCat('beach',this)">🏖️ Plajlar</div>
+        <div class="cpill" data-cat="nature" onclick="setCat('nature',this)">⛰️ Doğa</div>
+        <div class="cpill" data-cat="park" onclick="setCat('park',this)">🌳 Parklar</div>
+        <div class="cpill" data-cat="viewpoint" onclick="setCat('viewpoint',this)">🔭 Manzara</div>
+        <div class="cpill" data-cat="religious" onclick="setCat('religious',this)">⛪ Dini Yerler</div>
+        <div class="cpill" data-cat="market" onclick="setCat('market',this)">🏪 Pazarlar</div>
+        <div class="cpill" data-cat="shopping" onclick="setCat('shopping',this)">🛍️ Alışveriş</div>
+        <div class="cpill" data-cat="nightlife" onclick="setCat('nightlife',this)">🌙 Gece Hayatı</div>
+        <div class="cpill" data-cat="adventure" onclick="setCat('adventure',this)">🪂 Macera</div>
+        <div class="cpill" data-cat="spa" onclick="setCat('spa',this)">🧘 Spa & Wellness</div>
+      </div>
+      <div class="results-bar">
+        <h3><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
+        <select class="sort-sel" onchange="sortChange(this.value)">
+          <option value="tiola">En Yüksek Tiola Puanı</option>
+          <option value="reviewed">En Çok Tiola</option>
+          <option value="local">Önce Yerel Seçimler</option>
+          <option value="az">A → Z</option>
+        </select>
+      </div>
+      <div class="pgrid" id="pgrid"></div>
+      <div class="no-res" id="noRes" style="display:none" data-i18n="noResults">🔍 Sonuç bulunamadı. Farklı filtreler deneyin.</div>
+      <div class="osm-hint" id="osmHint" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- FILTER TAB -->
+  <div class="explore-section" id="es-filter">
+    <div class="filter-tab-wrap">
+      <div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--navy);margin-bottom:4px;" data-i18n="filterTitle">🎛️ Gelişmiş Filtreleme</div>
+      <div style="font-size:.82rem;color:var(--t2);margin-bottom:20px;" data-i18n="filterSub">Ülke, şehir, ilçe ve daha fazlasına göre filtrele</div>
+
+      <div class="filter-grid">
+        <div class="fg">
+          <div class="fg-lbl" data-i18n="filterContinent">Kıta</div>
+          <select class="fg-sel" onchange="updateCountryList(this.value)" id="contSel">
+            <option value="" data-i18n="allContinents">Tüm Kıtalar</option>
+            <option>Europe</option><option>Asia</option><option>Americas</option>
+            <option>Middle East</option><option>Africa</option><option>Oceania</option>
+          </select>
+        </div>
+        <div class="fg">
+          <div class="fg-lbl" data-i18n="filterCountry">Ülke</div>
+          <select class="fg-sel" id="cntSel" onchange="updateCityList(this.value)">
+            <option value="" data-i18n="allCountries">Tüm Ülkeler</option>
+            <option>Turkey 🇹🇷</option><option>France 🇫🇷</option><option>Japan 🇯🇵</option>
+            <option>Italy 🇮🇹</option><option>Greece 🇬🇷</option><option>Spain 🇪🇸</option>
+            <option>UK 🇬🇧</option><option>Germany 🇩🇪</option><option>USA 🇺🇸</option>
+            <option>Canada 🇨🇦</option><option>Brazil 🇧🇷</option><option>Thailand 🇹🇭</option>
+            <option>Indonesia 🇮🇩</option><option>India 🇮🇳</option><option>Australia 🇦🇺</option>
+            <option>UAE 🇦🇪</option><option>Portugal 🇵🇹</option><option>Morocco 🇲🇦</option>
+            <option>Egypt 🇪🇬</option><option>South Africa 🇿🇦</option><option>Mexico 🇲🇽</option>
+            <option>Norway 🇳🇴</option><option>Iceland 🇮🇸</option><option>South Korea 🇰🇷</option>
+            <option>Vietnam 🇻🇳</option><option>Cambodia 🇰🇭</option><option>Nepal 🇳🇵</option>
+            <option>Jordan 🇯🇴</option><option>Peru 🇵🇪</option><option>Cuba 🇨🇺</option>
+            <option>Tanzania 🇹🇿</option><option>Croatia 🇭🇷</option><option>Switzerland 🇨🇭</option>
+            <option>Netherlands 🇳🇱</option><option>Austria 🇦🇹</option><option>New Zealand 🇳🇿</option>
+            <option>Argentina 🇦🇷</option><option>Colombia 🇨🇴</option><option>Chile 🇨🇱</option>
+            <option>Singapore 🇸🇬</option><option>Malaysia 🇲🇾</option><option>Sri Lanka 🇱🇰</option>
+          </select>
+        </div>
+        <div class="fg">
+          <div class="fg-lbl" data-i18n="filterCity">Şehir</div>
+          <select class="fg-sel" id="citSel" onchange="updateDistrictList(this.value)">
+            <option value="" data-i18n="allCities">Tüm Şehirler</option>
+          </select>
+        </div>
+        <div class="fg">
+          <div class="fg-lbl" data-i18n="filterDistrict">İlçe / Bölge</div>
+          <select class="fg-sel" id="disSel"><option value="" data-i18n="allDistricts">Tüm İlçeler</option></select>
+        </div>
+      </div>
+
+      <div class="filter-chips-section">
+        <div class="fcs-title" data-i18n="filterMinTiola">Minimum Tiola puanı</div>
+        <div class="fchips">
+          <div class="fchip gold on" onclick="setStar(this,0)" data-i18n="all">Tümü</div>
+          <div class="fchip gold" onclick="setStar(this,3)">⭐ 3+</div>
+          <div class="fchip gold" onclick="setStar(this,4)">⭐ 4+</div>
+          <div class="fchip gold" onclick="setStar(this,4.5)">⭐ 4.5+</div>
+        </div>
+      </div>
+
+      <div class="filter-chips-section">
+        <div class="fcs-title" data-i18n="filterEntry">Giriş Ücreti</div>
+        <div class="fchips">
+          <div class="fchip on" onclick="soloChip(this,'.entry-chip');activeEntry='all';" data-v="all" data-i18n="all">Tümü</div>
+          <div class="fchip entry-chip" onclick="soloChip(this,'.entry-chip');activeEntry='free';" data-v="free" data-i18n="entryFree">🆓 Ücretsiz</div>
+          <div class="fchip entry-chip" onclick="soloChip(this,'.entry-chip');activeEntry='paid';" data-v="paid" data-i18n="entryPaid">💳 Ücretli</div>
+        </div>
+      </div>
+
+      <div class="filter-chips-section">
+        <div class="fcs-title" data-i18n="filterPlaces">Yerler</div>
+        <div class="fchips">
+          <div class="fchip on" onclick="soloChip(this,'.local-chip');activeLocal='all';" data-i18n="all">Tümü</div>
+          <div class="fchip teal local-chip" onclick="soloChip(this,'.local-chip');activeLocal='local';" data-i18n="filterLocalPicks">👤 Yerel Seçimleri</div>
+        </div>
+      </div>
+
+      <div class="filter-chips-section">
+        <div class="fcs-title" data-i18n="filterWeather">Hava Durumuna Göre</div>
+        <div class="fchips">
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherOutdoor">☀️ Açık Hava</div>
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherIndoor">🌧️ Kapalı Mekan</div>
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherWinter">❄️ Kış Aktivitesi</div>
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherSunrise">🌅 Gün Doğumu/Batımı</div>
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherNight">🌙 Gece</div>
+        </div>
+      </div>
+
+      <div class="filter-chips-section">
+        <div class="fcs-title" data-i18n="filterAccess">Erişilebilirlik</div>
+        <div class="fchips">
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessWheel">♿ Engelli Erişimi</div>
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessFamily">👨‍👩‍👧 Aile Dostu</div>
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessPet">🐶 Evcil Hayvan</div>
+          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessParking">🅿️ Otopark Var</div>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn bp" onclick="applyFilters();showExploreTab('discover',document.getElementById('et-discover'))" data-i18n="filterShow">🔍 Sonuçları Göster</button>
+        <button class="btn bo" onclick="resetFilters()" data-i18n="filterReset">↺ Sıfırla</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- TIOLA TAB -->
+  <div class="explore-section" id="es-tiolas">
+    <div class="discover-wrap">
+      <div class="results-bar">
+        <h3 data-i18n-html="tiolaFeedTitle">Gezginlerden <em style="font-style:italic;color:var(--b)">Tiola</em></h3>
+        <span style="font-size:.75rem;color:var(--t2)" data-i18n="tiolaFeedSub">Onaylı kısa deneyimler</span>
+      </div>
+      <div class="tiola-grid" id="tiolaFeed"></div>
+      <div class="no-res" id="tiolaEmpty" style="display:none" data-i18n="tiolaEmpty">Henüz onaylı Tiola yok. İlk sen yaz!</div>
+    </div>
+  </div>
+
+  <!-- TOUR PLANNER TAB -->
+  <div class="explore-section" id="es-tour">
+    <div class="tour-wrap">
+      <div class="tour-head">
+        <h2 data-i18n-html="tourTitle">Tur <em>planla</em></h2>
+        <p data-i18n="tourSub">Şehir ve gün sayısını seç — gerçekçi günlük rota ve yol süreleri.</p>
+      </div>
+      <div class="tour-form">
+        <div class="tour-field">
+          <label data-i18n="tourCity">Nereye?</label>
+          <input type="text" id="tourCity" data-i18n-placeholder="tourCityPh" placeholder="İstanbul, Paris, Tokyo..." list="tourCityList"/>
+          <datalist id="tourCityList">
+            <option value="Istanbul"><option value="Paris"><option value="Tokyo">
+            <option value="Rome"><option value="London"><option value="Barcelona">
+            <option value="New York"><option value="Dubai"><option value="Bangkok">
+          </datalist>
+        </div>
+        <div class="tour-field">
+          <label data-i18n="tourDays">Kaç gün?</label>
+          <select id="tourDays">
+            <option value="1">1 gün</option>
+            <option value="2">2 gün</option>
+            <option value="3" selected>3 gün</option>
+            <option value="4">4 gün</option>
+            <option value="5">5 gün</option>
+            <option value="7">7 gün</option>
+          </select>
+        </div>
+        <div class="tour-field">
+          <label data-i18n="tourPace">Tempo</label>
+          <select id="tourPace">
+            <option value="relaxed" data-i18n="tourPaceRelaxed">Rahat (günde ~3 yer)</option>
+            <option value="normal" selected data-i18n="tourPaceNormal">Normal (~4 yer)</option>
+            <option value="busy" data-i18n="tourPaceBusy">Yoğun (~5 yer)</option>
+          </select>
+        </div>
+        <button type="button" class="btn bp" onclick="buildTourPlan()" data-i18n="tourBuild">Rotayı oluştur</button>
+      </div>
+      <div id="tourResult" class="tour-result"></div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES TAB -->
+  <div class="explore-section" id="es-categories">
+    <div class="showcase" style="padding-top:28px">
+      <div class="sec-ey" data-i18n="catSectionEy">Tüm Kategoriler</div>
+      <div class="sec-ti" data-i18n-html="catSectionTitle">Ne <em>arıyorsun?</em></div>
+      <div class="cg">
+        <div class="ccard" data-cat="landmark" onclick="setCatAndSwitch('landmark')"><img src="https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&q=80"/><div class="cinfo"><div class="cname">Tarihi Yerler</div><div class="ccnt" id="cat-cnt-landmark">—</div></div></div>
+        <div class="ccard" data-cat="museum" onclick="setCatAndSwitch('museum')"><img src="https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=400&q=80"/><div class="cinfo"><div class="cname">Müzeler</div><div class="ccnt" id="cat-cnt-museum">—</div></div></div>
+        <div class="ccard" data-cat="restaurant" onclick="setCatAndSwitch('restaurant')"><img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80"/><div class="cinfo"><div class="cname">Restoranlar</div><div class="ccnt" id="cat-cnt-restaurant">—</div></div></div>
+        <div class="ccard" data-cat="cafe" onclick="setCatAndSwitch('cafe')"><img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80"/><div class="cinfo"><div class="cname">Kafeler</div><div class="ccnt" id="cat-cnt-cafe">—</div></div></div>
+        <div class="ccard" data-cat="beach" onclick="setCatAndSwitch('beach')"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80"/><div class="cinfo"><div class="cname">Plajlar</div><div class="ccnt" id="cat-cnt-beach">—</div></div></div>
+        <div class="ccard" data-cat="nature" onclick="setCatAndSwitch('nature')"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80"/><div class="cinfo"><div class="cname">Doğa</div><div class="ccnt" id="cat-cnt-nature">—</div></div></div>
+        <div class="ccard" data-cat="park" onclick="setCatAndSwitch('park')"><img src="https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?w=400&q=80"/><div class="cinfo"><div class="cname">Parklar</div><div class="ccnt" id="cat-cnt-park">—</div></div></div>
+        <div class="ccard" data-cat="viewpoint" onclick="setCatAndSwitch('viewpoint')"><img src="https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&q=80"/><div class="cinfo"><div class="cname">Manzara</div><div class="ccnt" id="cat-cnt-viewpoint">—</div></div></div>
+        <div class="ccard" data-cat="religious" onclick="setCatAndSwitch('religious')"><img src="https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?w=400&q=80"/><div class="cinfo"><div class="cname">Dini Yerler</div><div class="ccnt" id="cat-cnt-religious">—</div></div></div>
+        <div class="ccard" data-cat="adventure" onclick="setCatAndSwitch('adventure')"><img src="https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&q=80"/><div class="cinfo"><div class="cname">Macera</div><div class="ccnt" id="cat-cnt-adventure">—</div></div></div>
+        <div class="ccard" data-cat="market" onclick="setCatAndSwitch('market')"><img src="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=400&q=80"/><div class="cinfo"><div class="cname">Pazarlar</div><div class="ccnt" id="cat-cnt-market">—</div></div></div>
+        <div class="ccard" data-cat="shopping" onclick="setCatAndSwitch('shopping')"><img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=80"/><div class="cinfo"><div class="cname">Alışveriş</div><div class="ccnt" id="cat-cnt-shopping">—</div></div></div>
+        <div class="ccard" data-cat="spa" onclick="setCatAndSwitch('spa')"><img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80"/><div class="cinfo"><div class="cname">Spa & Wellness</div><div class="ccnt" id="cat-cnt-spa">—</div></div></div>
+        <div class="ccard" data-cat="nightlife" onclick="setCatAndSwitch('nightlife')"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80"/><div class="cinfo"><div class="cname">Gece Hayatı</div><div class="ccnt" id="cat-cnt-nightlife">—</div></div></div>
+      </div>
+    </div>
+
+    <div class="stats-strip">
+      <div class="sc"><div class="sn" id="stat-countries">—</div><div class="sl" data-i18n="statCountries">Kapsanan Ülke</div></div>
+      <div class="sc"><div class="sn" id="stat-places">—</div><div class="sl" data-i18n="statPlaces">Listelenen Yer</div></div>
+      <div class="sc"><div class="sn">Tiola</div><div class="sl" data-i18n="statTiola">Topluluk Puanı</div></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div>
+      <img src="/images/logo.png" alt="" class="logo-img footer-logo"/>
+      <div class="ftag" data-i18n="footerTag">Sadece ziyaret etme. Hisset.</div>
+      <div class="footer-legal">
+        <a href="/legal/kvkk.html" data-i18n="legalKvkk">KVKK</a> ·
+        <a href="/legal/terms.html" data-i18n="legalTerms">Kullanım Şartları</a>
+      </div>
+      <p class="osm-attrib" data-i18n="osmAttrib">Harita verisi © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> katkıda bulunanları</p>
+    </div>
+    <div style="font-size:.68rem" data-i18n="footerCopy">© 2026 Touristlio · Tüm hakları saklıdır</div>
+  </footer>
+</div>
+
+<!-- ══════════════ BLOG PAGE ══════════════ -->
+<div class="page" id="page-blog">
+  <div class="blog-wrap">
+    <div class="blog-hero-card">
+      <h1 data-i18n-html="blogHeroTitle">Seyahat <em>Hikayeleri</em></h1>
+      <p data-i18n="blogSub">Yerel yazarlardan özenle seçilmiş gezi rehberleri, gizli köşeler ve kültürel keşifler.</p>
+      <div class="bcats">
+        <div class="bcat-chip on" onclick="setBlogCat('all',this)" data-i18n="blogCatAll">Tümü</div>
+        <div class="bcat-chip" onclick="setBlogCat('guide',this)" data-i18n="blogCatGuide">🗺️ Rehberler</div>
+        <div class="bcat-chip" onclick="setBlogCat('hidden',this)" data-i18n="blogCatHidden">💎 Gizli Köşeler</div>
+        <div class="bcat-chip" onclick="setBlogCat('food',this)" data-i18n="blogCatFood">🍜 Yemek</div>
+        <div class="bcat-chip" onclick="setBlogCat('nature',this)" data-i18n="blogCatNature">🌿 Doğa</div>
+        <div class="bcat-chip" onclick="setBlogCat('culture',this)" data-i18n="blogCatCulture">🎭 Kültür</div>
+      </div>
+    </div>
+    <div class="blog-grid" id="blogGrid"></div>
+  </div>
+</div>
+
+<!-- ══════════════ DETAIL PAGE ══════════════ -->
+<div class="page" id="page-detail">
+  <div class="detail-page">
+    <div class="pd-hero">
+      <img id="pdImg" src="" alt=""/>
+      <div class="pd-hero-ov">
+        <div class="pd-cat" id="pdCat"></div>
+        <div class="pd-title" id="pdTitle"></div>
+        <div class="pd-loc" id="pdLoc"></div>
+      </div>
+    </div>
+    <div class="pd-body">
+      <div style="margin-bottom:14px"><button class="btn bo bsm" onclick="goBack()" data-i18n="back">← Geri Dön</button></div>
+      <div class="pd-layout">
+        <div>
+          <div class="sec-block"><h2 data-i18n="detailAbout">📍 Hakkında</h2><p id="pdDesc" class="pd-text"></p><button type="button" class="read-more-btn" id="pdDescMore" style="display:none"></button></div>
+          <div class="sec-block"><h2 data-i18n="detailHistory">🏛️ Tarihçe & Kültürel Önemi</h2><p id="pdHist" class="pd-text"></p><button type="button" class="read-more-btn" id="pdHistMore" style="display:none"></button></div>
+          <div class="sec-block"><h2 data-i18n="detailTips">💡 Ziyaretçi Tavsiyeleri</h2><p id="pdTips" class="pd-text"></p><button type="button" class="read-more-btn" id="pdTipsMore" style="display:none"></button></div>
+          <div class="sec-block"><h2 data-i18n="detailTags">🏷️ Etiketler</h2><div class="pd-tags" id="pdTags"></div></div>
+          <div class="rev-wrap">
+            <div class="rev-hd"><h2 data-i18n="detailTiolas">✨ Tiola'lar</h2><div class="af-badge" data-i18n="antiFraud">🛡️ Sahte oy koruması</div></div>
+            <div class="rform">
+              <div class="rf-top">
+                <div class="rfav" id="rfAv" style="background:var(--b)">?</div>
+                <div><div class="rfnm" id="rfNm">—</div><div class="rftp" id="rfTp"></div></div>
+              </div>
+              <div class="member-ex" id="memberEx" style="display:none">
+                <div class="me-g">
+                  <div class="me-lbl" data-i18n="yourRating">Puanınız</div>
+                  <div class="rfstars" id="rfStars"><span onclick="rate(1)">★</span><span onclick="rate(2)">★</span><span onclick="rate(3)">★</span><span onclick="rate(4)">★</span><span onclick="rate(5)">★</span></div>
+                </div>
+                <div class="me-g">
+                  <div class="me-lbl" data-i18n="category">Kategori</div>
+                  <select class="me-sel" id="revCatSel">
+                    <option value="" data-i18n="selectCat">Seçin...</option>
+                    <option>🏛️ Tarihi Yer</option><option>🏺 Müze</option><option>🍽️ Restoran</option>
+                    <option>☕ Kafe</option><option>🏖️ Plaj</option><option>⛰️ Doğa</option>
+                    <option>🌳 Park</option><option>🛍️ Alışveriş</option><option>🌙 Gece Hayatı</option>
+                    <option>🧘 Spa</option><option>🪂 Macera</option><option>🔭 Manzara</option>
+                    <option>⛪ Dini Yer</option><option>🏪 Pazar</option>
+                  </select>
+                </div>
+              </div>
+              <div class="member-ex" id="starStep" style="margin-bottom:10px">
+                <div class="me-g"><div class="me-lbl" data-i18n="starOptional">1. Yıldız (isteğe bağlı)</div>
+                  <div class="rfstars" id="rfStars"><span onclick="rate(1)">★</span><span onclick="rate(2)">★</span><span onclick="rate(3)">★</span><span onclick="rate(4)">★</span><span onclick="rate(5)">★</span></div>
+                </div>
+              </div>
+              <textarea class="rft" id="rfTxt" data-i18n-placeholder="tiolaPlaceholder" placeholder="2. Deneyimini yaz (Tiola)..."></textarea>
+              <div style="margin-bottom:8px"><label style="font-size:.7rem;color:var(--t2)" data-i18n="photoOptional">3. Fotoğraf (isteğe bağlı)</label><br/>
+              <input type="file" id="rfPhoto" accept="image/*" style="font-size:.75rem;margin-top:4px"/></div>
+              <div class="rf-foot">
+                <div class="rnote" id="rfNote"></div>
+                <button class="btn bp bsm" onclick="postTiola()" data-i18n="sendTiola">Tiola Gönder</button>
+              </div>
+            </div>
+            <div class="rlist" id="revList"></div>
+          </div>
+        </div>
+        <div>
+          <div class="tiola-rating-box">
+            <div class="dr-lbl t">Touristlio</div>
+            <div style="color:var(--star2);font-size:1rem" id="pdTS"></div>
+            <div class="dr-num t" id="pdTR"></div>
+            <div class="dr-cnt" id="pdTC"></div>
+          </div>
+          <div class="aside-card">
+            <div class="ac-title" data-i18n="infoTitle">📋 Bilgiler</div>
+            <div class="ic-row"><span class="ic-lbl" data-i18n="infoCountry">Ülke</span><span class="ic-val" id="icCountry"></span></div>
+            <div class="ic-row"><span class="ic-lbl" data-i18n="infoCity">Şehir</span><span class="ic-val" id="icCity"></span></div>
+            <div class="ic-row"><span class="ic-lbl" data-i18n="infoCategory">Kategori</span><span class="ic-val" id="icCat"></span></div>
+            <div class="ic-row"><span class="ic-lbl" data-i18n="infoEntry">Giriş</span><span class="ic-val" id="icEntry"></span></div>
+            <div class="ic-row"><span class="ic-lbl" data-i18n="infoBest">En İyi Dönem</span><span class="ic-val" id="icBest"></span></div>
+          </div>
+          <div class="aside-card">
+            <div class="ac-title" data-i18n="nearbyTitle">📍 Aynı Ülkede</div>
+            <div id="nearbyList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PROFILE PAGE ══════════════ -->
+<div class="page" id="page-profile">
+  <div class="profile-wrap">
+    <div id="pLoginNotice" style="text-align:center;padding:80px 20px;display:none">
+      <div style="font-size:3rem;margin-bottom:12px">🔒</div>
+      <div style="font-family:var(--fd);font-size:1.3rem;font-weight:700;color:var(--navy);margin-bottom:7px" data-i18n="profileLoginTitle">Giriş Yapın</div>
+      <div style="color:var(--t2);font-size:.84rem;margin-bottom:18px" data-i18n="profileLoginSub">Seyahat günlüğünüz, yorumlarınız ve favorileriniz</div>
+      <button class="btn bp" onclick="openAuth()" data-i18n="profileLoginBtn">Giriş Yap / Kayıt Ol</button>
+    </div>
+    <div id="pContent" style="display:none">
+      <div class="prof-hd">
+        <div class="prof-av">M</div>
+        <div>
+          <div class="prof-name" data-i18n="profileMember">Üye</div>
+          <div class="prof-stats">
+            <div class="psi"><span class="psi-n" id="pRevCnt">0</span> <span data-i18n="profileStatReviews">Yorum</span></div>
+            <div class="psi"><span class="psi-n" id="pSavedCnt">0</span> <span data-i18n="profileStatSaved">Kaydedilen</span></div>
+            <div class="psi"><span class="psi-n" id="pCntCnt">0</span> <span data-i18n="profileStatCountries">Ülke</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="ptabs">
+        <div class="ptab on" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</div>
+        <div class="ptab" onclick="showPTab('blogs',this)" data-i18n="profileTabBlogs">📝 Bloglarım</div>
+        <div class="ptab" onclick="showPTab('pending',this)" data-i18n="profileTabPending">⏳ Bekleyenler</div>
+        <div class="ptab" onclick="showPTab('saved',this)" data-i18n="profileTabSaved">❤️ Kaydedilenler</div>
+        <div class="ptab" onclick="showPTab('write',this)" data-i18n="profileTabWrite">✏️ Tiola / Blog Yaz</div>
+      </div>
+      <div class="ptab-c active" id="ptab-tiolas">
+        <div style="font-family:var(--fd);font-size:1.15rem;font-weight:700;color:var(--navy);margin-bottom:4px" data-i18n-html="profileMyTiolas">Tiola <em style="font-style:italic;color:var(--b)">larım</em></div>
+        <div style="font-size:.78rem;color:var(--t2);margin-bottom:14px" data-i18n="profileMyTiolasSub">Yazdığın onaylı ve bekleyen Tiola'lar</div>
+        <div class="pgrid" id="myTiolaList"></div>
+        <div class="empty-state" id="tiolaListEmpty"><div class="empty-icon">✈️</div><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.<br>Bir yere yorum yazdığında burada görünür.</p></div>
+      </div>
+      <div class="ptab-c" id="ptab-blogs">
+        <div id="myBlogList"></div>
+        <div class="empty-state" id="blogListEmpty"><div class="empty-icon">📝</div><p data-i18n="emptyBlog">Henüz blog yazmadınız.</p></div>
+      </div>
+      <div class="ptab-c" id="ptab-pending">
+        <div id="myPendingList"></div>
+        <div class="empty-state" id="pendingEmpty"><div class="empty-icon">⏳</div><p data-i18n="emptyPending">Onay bekleyen içerik yok.</p></div>
+      </div>
+      <div class="ptab-c" id="ptab-revs" style="display:none">
+        <div id="myRevList"></div>
+        <div class="empty-state" id="revEmpty"><div class="empty-icon">⭐</div><p>Henüz yorum yazmadınız.</p></div>
+      </div>
+      <div class="ptab-c" id="ptab-saved">
+        <div class="pgrid" id="savedGrid"></div>
+        <div class="empty-state" id="savedEmpty"><div class="empty-icon">❤️</div><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.<br>Kartlardaki 🤍 ikonuna tıklayın.</p></div>
+      </div>
+      <div class="ptab-c" id="ptab-write">
+        <div class="write-card">
+          <div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:14px" data-i18n="writeNew">Yeni Tiola veya Blog</div>
+          <div class="ptabs" style="margin-bottom:14px">
+            <div class="ptab on" id="write-tiola-tab" onclick="showWriteMode('tiola',this)" data-i18n="writeTiolaTab">✨ Tiola</div>
+            <div class="ptab" id="write-blog-tab" onclick="showWriteMode('blog',this)" data-i18n="writeBlogTab">📝 Blog</div>
+          </div>
+          <div id="writeTiolaForm">
+          <select class="w-sel" id="arcPlace"><option value="" data-i18n="placeOptional">Mekân (isteğe bağlı)</option></select>
+          <input class="w-sel" id="arcCity" data-i18n-placeholder="cityTagPh" placeholder="Şehir etiketi (genel Tiola için, isteğe bağlı)" style="margin-bottom:8px"/>
+          <input type="file" id="arcPhoto" accept="image/*" style="font-size:.75rem;margin-bottom:10px"/>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px">
+            <div class="me-g"><div class="me-lbl" style="font-size:.64rem;margin-bottom:4px" data-i18n="memberRating">Puanınız (Üyeler)</div>
+              <div class="rfstars" id="arcStars"><span onclick="arcRate(1)">★</span><span onclick="arcRate(2)">★</span><span onclick="arcRate(3)">★</span><span onclick="arcRate(4)">★</span><span onclick="arcRate(5)">★</span></div>
+            </div>
+            <div class="me-g"><div class="me-lbl" style="font-size:.64rem;margin-bottom:4px" data-i18n="memberCategory">Kategori (Üyeler)</div>
+              <select class="me-sel" id="arcCat"><option value="" data-i18n="selectCat">Seçin...</option><option>🏛️ Tarihi Yer</option><option>🍽️ Restoran</option><option>☕ Kafe</option><option>🏖️ Plaj</option><option>⛰️ Doğa</option><option>🌙 Gece Hayatı</option></select>
+            </div>
+          </div>
+          <textarea class="rft" id="arcTxt" data-i18n-placeholder="shareExperience" placeholder="Deneyiminizi paylaşın..."></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:.62rem;color:var(--t3)" data-i18n="oneRatingPer">🛡️ Kişi başı bir puan</div>
+            <button class="btn bp bsm" onclick="submitArc()" data-i18n="sendTiola">Tiola Gönder</button></div>
+          <div id="writeBlogForm" style="display:none">
+          <input class="w-sel" id="blogTitle" data-i18n-placeholder="blogTitlePh" placeholder="Blog başlığı"/>
+          <select class="w-sel" id="blogCat">
+            <option value="guide" data-i18n="blogCatGuideOpt">Rehber</option>
+            <option value="hidden" data-i18n="blogCatHiddenOpt">Gizli Köşe</option>
+            <option value="food" data-i18n="blogCatFoodOpt">Yemek</option>
+            <option value="nature" data-i18n="blogCatNatureOpt">Doğa</option>
+            <option value="culture" data-i18n="blogCatCultureOpt">Kültür</option>
+          </select>
+          <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..." style="height:120px"></textarea>
+          <button class="btn bp bsm" onclick="submitBlog()" data-i18n="submitBlog">Blog Gönder</button>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/i18n.js"></script>
+<script src="/js/tour-planner.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

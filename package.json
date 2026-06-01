@@ -1,0 +1,28 @@
+{
+  "name": "touristlio",
+  "version": "1.0.0",
+  "description": "Touristlio — global travel discovery with Tiola reviews",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "seed": "node server/seed.js",
+    "places:merge": "node server/scripts/build-places-500.js",
+    "places:fix-images": "node server/scripts/fix-places-images.js",
+    "logo:extract": "node server/scripts/extract-nav-logo.js",
+    "places:run-all": "node server/scripts/run-all.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^11.9.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2"
+  }
+}
