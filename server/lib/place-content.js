@@ -13,8 +13,10 @@ const FILTER_GROUPS = {
 
 const CATEGORY_TO_GROUPS = {};
 for (const [group, cats] of Object.entries(FILTER_GROUPS)) {
-  for (const c of cats) CATEGORY_TO_GROUPS[c] = CATEGORY_TO_GROUPS[c] || [];
-  CATEGORY_TO_GROUPS[c].push(group);
+  for (const c of cats) {
+    CATEGORY_TO_GROUPS[c] = CATEGORY_TO_GROUPS[c] || [];
+    CATEGORY_TO_GROUPS[c].push(group);
+  }
 }
 
 function deriveCategories(category) {
