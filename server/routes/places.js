@@ -2,48 +2,48 @@ const express = require('express');
 const { db, placeStats } = require('../db');
 const { authOptional, authRequired } = require('../middleware/auth');
 const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
-const { resolvePlaceImageUrl } = require('../lib/place-image');
+const { matchesFilterGroup } = require('../lib/place-content');
+const { mapPlaceRow, mapMarker } = require('../lib/place-map');
 
 const router = express.Router();
 
 function mapPlace(row) {
-  const stats = placeStats(row.id);
-  let searchAliases = [];
-  try {
-    searchAliases = JSON.parse(row.search_aliases || '[]');
-  } catch {
-    searchAliases = [];
-  }
-  return {
-    id: row.id,
-    name: row.name,
-    location: row.location,
-    country: row.country,
-    city: row.city,
-    district: row.district,
-    category: row.category,
-    imageUrl: resolvePlaceImageUrl(row.image_url, row.category, row.id),
-    isLocal: !!row.is_local,
-    entryFee: row.entry_fee,
-    entryFeeEn: row.entry_fee_en,
-    bestTime: row.best_time,
-    bestTimeEn: row.best_time_en,
-    description: row.description,
-    descriptionEn: row.description_en,
-    history: row.history,
-    historyEn: row.history_en,
-    tips: row.tips,
-    tipsEn: row.tips_en,
-    tags: JSON.parse(row.tags || '[]'),
-    searchAliases,
-    tiolaRating: stats.tiolaRating,
-    tiolaCount: stats.tiolaCount,
-  };
+  return mapPlaceRow(row, placeStats(row.id));
 }
+
+router.get('/meta/categories', (_req, res) => {
+  res.json({
+    groups: ['cities', 'historical', 'nature', 'museums', 'restaurants', 'hotels', 'activities'],
+    legacy: ['landmark', 'museum', 'restaurant', 'cafe', 'beach', 'nature', 'park', 'viewpoint', 'religious', 'market', 'shopping', 'nightlife', 'adventure', 'spa', 'hotel', 'city'],
+  });
+});
+
+router.get('/map/markers', authOptional, (req, res) => {
+  const { city, country, category, group, q } = req.query;
+  let rows = db.prepare('SELECT * FROM places WHERE lat IS NOT NULL AND lng IS NOT NULL').all();
+  if (!rows.length) rows = db.prepare('SELECT * FROM places').all();
+
+  let places = rows.map(mapPlace);
+  const qNorm = q ? normalizeSearch(q) : '';
+  if (qNorm) places = places.filter((p) => matchesQuery(p, qNorm));
+  if (country) places = places.filter((p) => p.country === country);
+  if (city) {
+    places = places.filter((p) => p.city === city || p.city?.toLowerCase() === String(city).toLowerCase());
+  }
+  if (category && category !== 'all') {
+    places = places.filter((p) => p.category === category || (p.categories || []).includes(category));
+  }
+  if (group && group !== 'all') {
+    places = places.filter((p) => matchesFilterGroup(p.categories, group));
+  }
+
+  const lang = req.query.lang === 'en' ? 'en' : 'tr';
+  res.json({ markers: places.slice(0, 500).map((p) => mapMarker(p, lang)) });
+});
 
 router.get('/', authOptional, (req, res) => {
   const {
-    q, category, country, city, district, localOnly, entry, sort, minTiola,
+    q, category, group, country, city, district, localOnly, entry, sort, minTiola,
   } = req.query;
 
   let rows = db.prepare('SELECT * FROM places').all();
@@ -52,8 +52,16 @@ router.get('/', authOptional, (req, res) => {
   if (qNorm) {
     rows = rows.filter((row) => matchesQuery(mapPlace(row), qNorm));
   }
-  if (category && category !== 'all') {
-    rows = rows.filter((r) => r.category === category);
+  if (group && group !== 'all') {
+    rows = rows.filter((r) => {
+      const p = mapPlace(r);
+      return matchesFilterGroup(p.categories, group);
+    });
+  } else if (category && category !== 'all') {
+    rows = rows.filter((r) => {
+      const cats = mapPlace(r).categories;
+      return r.category === category || (cats || []).includes(category);
+    });
   }
   if (country) {
     rows = rows.filter((r) => r.country === country);
@@ -85,7 +93,9 @@ router.get('/', authOptional, (req, res) => {
   } else if (sort === 'local') {
     places.sort((a, b) => (b.isLocal ? 1 : 0) - (a.isLocal ? 1 : 0));
   } else if (sort === 'az') {
-    places.sort((a, b) => a.name.localeCompare(b.name));
+    places.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+  } else if (sort === 'popularity') {
+    places.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
   } else {
     places.sort((a, b) => (b.tiolaRating || 0) - (a.tiolaRating || 0));
   }
@@ -108,6 +118,7 @@ router.get('/saved/all', authRequired, (req, res) => {
 });
 
 router.get('/:id', authOptional, (req, res) => {
+  if (req.params.id === 'meta' || req.params.id === 'map') return res.status(404).json({ error: 'Not found' });
   const row = db.prepare('SELECT * FROM places WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Yer bulunamadı' });
   const place = mapPlace(row);

@@ -59,7 +59,18 @@ body{font-family:Inter,sans-serif;background:var(--l);}
         </select>
         <input class="ain" id="plAliases" placeholder="Arama alias (virgülle): Istanbul, İstanbul"/>
         <input class="ain full" id="plImage" placeholder="Görsel URL (Unsplash)"/>
-        <textarea class="ain full" id="plDesc" placeholder="Kısa açıklama" style="height:60px"></textarea>
+        <textarea class="ain full" id="plDesc" placeholder="Açıklama (TR)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plDescEn" placeholder="Description (EN)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plOverview" placeholder="Genel bakış (TR, uzun)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plOverviewEn" placeholder="Overview (EN)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plHistory" placeholder="Tarihçe (TR)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plHistoryEn" placeholder="History (EN)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plThings" placeholder="Yapılacaklar (TR, satır başına bir madde)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plThingsEn" placeholder="Things to do (EN, one per line)" style="height:50px"></textarea>
+        <textarea class="ain full" id="plCulture" placeholder="Kültür & yemek (TR)" style="height:40px"></textarea>
+        <textarea class="ain full" id="plCultureEn" placeholder="Culture & food (EN)" style="height:40px"></textarea>
+        <textarea class="ain full" id="plTips" placeholder="Seyahat ipuçları (TR)" style="height:40px"></textarea>
+        <textarea class="ain full" id="plTipsEn" placeholder="Travel tips (EN)" style="height:40px"></textarea>
       </div>
       <button class="btn bp bsm" onclick="addPlace()">Yeri kaydet</button>
     </div>
@@ -132,6 +143,10 @@ async function showPanel(user) {
   await refresh();
 }
 
+function lines(id) {
+  return document.getElementById(id).value.split('\n').map((s) => s.trim()).filter(Boolean);
+}
+
 async function addPlace() {
   const aliases = document.getElementById('plAliases').value.split(',').map((s) => s.trim()).filter(Boolean);
   try {
@@ -146,6 +161,17 @@ async function addPlace() {
         category: document.getElementById('plCat').value,
         imageUrl: document.getElementById('plImage').value,
         description: document.getElementById('plDesc').value,
+        descriptionEn: document.getElementById('plDescEn').value,
+        overview: document.getElementById('plOverview').value,
+        overviewEn: document.getElementById('plOverviewEn').value,
+        history: document.getElementById('plHistory').value,
+        historyEn: document.getElementById('plHistoryEn').value,
+        thingsToDo: lines('plThings'),
+        thingsToDoEn: lines('plThingsEn'),
+        cultureFood: document.getElementById('plCulture').value,
+        cultureFoodEn: document.getElementById('plCultureEn').value,
+        travelTips: document.getElementById('plTips').value,
+        travelTipsEn: document.getElementById('plTipsEn').value,
         searchAliases: aliases,
       }),
     });

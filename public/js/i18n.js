@@ -17,8 +17,12 @@ window.TL_I18N = (function () {
       placesFound: 'yer bulundu', noResults: '🔍 Sonuç bulunamadı. Farklı filtreler deneyin.',
       osmSearchSoon: "OSM'den ara (yakında)",
       osmHint: 'Aradığınız yer listede yok mu? OpenStreetMap entegrasyonu VPS sonrası açılacak.',
-      sortTiola: 'En Yüksek Tiola Puanı', sortReviewed: 'En Çok Tiola', filterMinTiola: 'Minimum Tiola puanı',
+      sortPopularity: 'En Popüler', sortTiola: 'En Yüksek Tiola Puanı', sortReviewed: 'En Çok Tiola', filterMinTiola: 'Minimum Tiola puanı',
       sortLocal: 'Önce Yerel Seçimler', sortAz: 'A → Z',
+      grpHistorical: '🏛️ Tarihi', grpNature: '⛰️ Doğa', grpMuseums: '🏺 Müzeler',
+      grpRestaurants: '🍽️ Yeme-İçme', grpHotels: '🏨 Oteller', grpActivities: '🎯 Aktiviteler',
+      mapTitle: '🗺️ Harita', mapSub: 'OpenStreetMap · kategoriye göre işaretler',
+      detailOverview: '📍 Genel Bakış', detailThings: '✅ Yapılacaklar', detailCulture: '🍽️ Kültür & Gastronomi',
       authSub: 'Seyahatini puanla, kaydet ve paylaş', authTabLogin: 'Giriş Yap', authTabReg: 'Kayıt Ol',
       authNote: 'Misafirler okuyabilir · Tiola yazmak için üye olun',
       authSecure: '🔒 AES-256 şifreleme · KVKK & GDPR uyumlu',
@@ -117,8 +121,12 @@ window.TL_I18N = (function () {
       placesFound: 'places found', noResults: '🔍 No results. Try different filters.',
       osmSearchSoon: 'Search OSM (coming soon)',
       osmHint: 'Place not in our list? OpenStreetMap search opens after VPS deployment.',
-      sortTiola: 'Highest Tiola rating', sortReviewed: 'Most Tiolas', filterMinTiola: 'Minimum Tiola rating',
+      sortPopularity: 'Most popular', sortTiola: 'Highest Tiola rating', sortReviewed: 'Most Tiolas', filterMinTiola: 'Minimum Tiola rating',
       sortLocal: 'Local picks first', sortAz: 'A → Z',
+      grpHistorical: '🏛️ Historic', grpNature: '⛰️ Nature', grpMuseums: '🏺 Museums',
+      grpRestaurants: '🍽️ Food & drink', grpHotels: '🏨 Hotels', grpActivities: '🎯 Activities',
+      mapTitle: '🗺️ Map', mapSub: 'OpenStreetMap · markers by category',
+      detailOverview: '📍 Overview', detailThings: '✅ Things to do', detailCulture: '🍽️ Culture & food',
       authSub: 'Rate, save and share your trips', authTabLogin: 'Log in', authTabReg: 'Sign up',
       authNote: 'Guests can browse · Sign up to write a Tiola',
       authSecure: '🔒 AES-256 encryption · GDPR compliant',
@@ -255,10 +263,25 @@ window.TL_I18N = (function () {
       el.setAttribute('aria-label', t(lang, el.getAttribute('data-i18n-aria')));
     });
     document.querySelectorAll('select.sort-sel option').forEach((opt) => {
-      const map = { tiola: 'sortTiola', reviewed: 'sortReviewed', local: 'sortLocal', az: 'sortAz' };
-      const k = map[opt.value];
+      const map = {
+        popularity: 'sortPopularity', tiola: 'sortTiola', reviewed: 'sortReviewed', local: 'sortLocal', az: 'sortAz',
+      };
+      const k = map[opt.value] || opt.getAttribute('data-i18n-sort');
       if (k) opt.textContent = t(lang, k);
     });
+    document.documentElement.setAttribute('data-tl-lang', lang);
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.content = lang === 'en'
+        ? 'Touristlio — global destinations, Tiola community ratings, and OpenStreetMap-powered travel discovery.'
+        : 'Touristlio — dünya çapında destinasyonlar, Tiola topluluk puanları ve OpenStreetMap haritalarıyla kişisel seyahat rehberi.';
+    }
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) {
+      ogTitle.content = lang === 'en'
+        ? "Touristlio — Don't Just Visit. Feel It."
+        : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
+    }
     document.querySelectorAll('#tourDays option').forEach((opt) => {
       const map = { 1: 'tourDay1', 2: 'tourDay2', 3: 'tourDay3', 4: 'tourDay4', 5: 'tourDay5', 7: 'tourDay7' };
       const k = map[opt.value];

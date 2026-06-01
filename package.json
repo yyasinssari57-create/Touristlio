@@ -10,7 +10,8 @@
     "places:merge": "node server/scripts/build-places-500.js",
     "places:fix-images": "node server/scripts/fix-places-images.js",
     "logo:extract": "node server/scripts/extract-nav-logo.js",
-    "places:run-all": "node server/scripts/run-all.js"
+    "places:run-all": "node server/scripts/run-all.js",
+    "sitemap": "node server/scripts/generate-sitemap.js"
   },
   "engines": {
     "node": ">=18"

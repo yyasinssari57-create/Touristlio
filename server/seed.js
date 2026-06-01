@@ -4,6 +4,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { db } = require('./db');
 const { createUser, findUserByEmail } = require('./auth');
+const { enrichContentFields } = require('./lib/place-content');
 
 const placesPath = path.join(__dirname, 'data', 'places.json');
 const blogsSeed = [
@@ -17,31 +18,51 @@ const blogsSeed = [
 
 function seedPlaces() {
   if (!fs.existsSync(placesPath)) {
-    console.error('places.json missing — run: node server/extract-places.js');
+    console.error('places.json missing — run: npm run places:merge');
     process.exit(1);
   }
-  const places = JSON.parse(fs.readFileSync(placesPath, 'utf8'));
+  const raw = JSON.parse(fs.readFileSync(placesPath, 'utf8'));
+  const places = raw.map((p) => enrichContentFields(p, p.id));
+
   const insert = db.prepare(`
     INSERT OR REPLACE INTO places
-    (id, name, location, country, city, district, category, google_rating, google_count,
+    (id, name, location, country, city, district, category,
      image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en,
-     description, description_en, history, history_en, tips, tips_en, tags, search_aliases)
-    VALUES (@id, @name, @location, @country, @city, @district, @category, NULL, NULL,
+     description, description_en, overview, overview_en,
+     history, history_en, things_to_do, things_to_do_en,
+     culture_food, culture_food_en, travel_tips, travel_tips_en,
+     tips, tips_en, tags, search_aliases, categories, lat, lng, popularity)
+    VALUES (@id, @name, @location, @country, @city, @district, @category,
             @imageUrl, @isLocal, @entryFee, @entryFeeEn, @bestTime, @bestTimeEn,
-            @description, @descriptionEn, @history, @historyEn, @tips, @tipsEn, @tags, @searchAliases)
+            @description, @descriptionEn, @overview, @overviewEn,
+            @history, @historyEn, @thingsToDo, @thingsToDoEn,
+            @cultureFood, @cultureFoodEn, @travelTips, @travelTipsEn,
+            @tips, @tipsEn, @tags, @searchAliases, @categories, @lat, @lng, @popularity)
   `);
+
   const tx = db.transaction((rows) => {
     for (const p of rows) {
+      const popularity = (p.tiolaCount || 0) * 2;
       insert.run({
         ...p,
         isLocal: p.isLocal ? 1 : 0,
         entryFeeEn: p.entryFeeEn || null,
         bestTimeEn: p.bestTimeEn || null,
         descriptionEn: p.descriptionEn || null,
+        overview: p.overview || p.description,
+        overviewEn: p.overviewEn || p.descriptionEn,
         historyEn: p.historyEn || null,
+        thingsToDo: JSON.stringify(p.thingsToDo || []),
+        thingsToDoEn: JSON.stringify(p.thingsToDoEn || []),
+        cultureFood: p.cultureFood || null,
+        cultureFoodEn: p.cultureFoodEn || null,
+        travelTips: p.travelTips || p.tips,
+        travelTipsEn: p.travelTipsEn || p.tipsEn,
         tipsEn: p.tipsEn || null,
-        tags: JSON.stringify(p.tags),
+        tags: JSON.stringify(p.tags || []),
         searchAliases: JSON.stringify(p.searchAliases || []),
+        categories: JSON.stringify(p.categories || [p.category]),
+        popularity,
       });
     }
   });

@@ -29,8 +29,6 @@ db.exec(`
     city TEXT,
     district TEXT,
     category TEXT,
-    google_rating REAL,
-    google_count TEXT,
     image_url TEXT,
     is_local INTEGER DEFAULT 0,
     entry_fee TEXT,
@@ -98,11 +96,17 @@ try {
   db.exec('ALTER TABLE places ADD COLUMN search_aliases TEXT');
 }
 
-for (const col of ['description_en', 'history_en', 'tips_en', 'entry_fee_en', 'best_time_en']) {
+for (const col of [
+  'description_en', 'history_en', 'tips_en', 'entry_fee_en', 'best_time_en',
+  'overview', 'overview_en', 'things_to_do', 'things_to_do_en',
+  'culture_food', 'culture_food_en', 'travel_tips', 'travel_tips_en',
+  'categories', 'lat', 'lng', 'popularity',
+]) {
   try {
     db.prepare(`SELECT ${col} FROM places LIMIT 1`).get();
   } catch {
-    db.exec(`ALTER TABLE places ADD COLUMN ${col} TEXT`);
+    const type = ['lat', 'lng', 'popularity'].includes(col) ? 'REAL' : 'TEXT';
+    db.exec(`ALTER TABLE places ADD COLUMN ${col} ${type}`);
   }
 }
 

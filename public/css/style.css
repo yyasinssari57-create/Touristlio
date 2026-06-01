@@ -393,3 +393,25 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .pd-text.collapsed{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;}
 .read-more-btn{background:none;border:none;color:var(--b);font-size:.78rem;font-weight:600;cursor:pointer;padding:4px 0;margin-top:4px;}
 .read-more-btn:hover{text-decoration:underline;}
+
+.explore-map-wrap{background:var(--w);border:1.5px solid var(--l2);border-radius:var(--r2);overflow:hidden;margin-bottom:18px;box-shadow:var(--sh);}
+.explore-map-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--l2);}
+.explore-map-hd h4{font-family:var(--fd);font-size:1rem;color:var(--navy);font-weight:700;}
+#exploreMap{height:320px;width:100%;background:var(--l2);}
+#pdMap{height:200px;width:100%;border-radius:var(--r);margin-bottom:14px;display:none;}
+.tl-map-pin{background:transparent;border:none;}
+.map-popup{min-width:160px;}
+.pd-list{margin:0 0 0 1.1rem;color:var(--t2);line-height:1.65;}
+.pd-list li{margin-bottom:6px;}
+.pd-gallery{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;}
+.pd-gallery img{height:72px;width:110px;object-fit:cover;border-radius:10px;flex-shrink:0;border:2px solid transparent;cursor:pointer;transition:border-color .2s;}
+.pd-gallery img.active{border-color:var(--brand-accent);}
+.group-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.gpill{padding:6px 12px;border-radius:100px;font-size:.72rem;font-weight:600;background:var(--w);border:1.5px solid var(--l2);color:var(--t2);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.gpill.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+.gpill:hover{border-color:var(--brand-accent);color:var(--navy);}
+.pgrid.skeleton .pc{pointer-events:none;}
+.pc.sk{animation:pulse 1.2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+.empty-state{text-align:center;padding:40px 20px;color:var(--t2);}
+.empty-state .empty-icon{font-size:2.5rem;margin-bottom:10px;}

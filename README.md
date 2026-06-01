@@ -9,13 +9,15 @@ Global seyahat keşif platformu — **yalnızca Tiola** (topluluk puanı ve yoru
 ```powershell
 cd C:\Users\Yasin\Projects\touristlio
 npm install
-npm run places:merge   # Tüm destinasyonlar (500 üst sınır kaldırıldı), Google alanları JSON'da yok
-npm run seed
+npm run places:merge   # places.json — zengin içerik, koordinatlar, çoklu kategori
+npm run seed           # SQLite
+npm run sitemap        # public/sitemap.xml (isteğe bağlı)
 npm start
 ```
 
 - **Site:** http://localhost:3000  
 - **Admin:** http://localhost:3000/admin  
+- **Derin link:** `/?place=1` (detay sayfası)
 
 ## Admin (.env)
 
@@ -24,68 +26,76 @@ npm start
 | Değişken | Açıklama |
 |----------|----------|
 | `ADMIN_EMAIL` | Admin e-postası |
-| `ADMIN_PASSWORD` | Güçlü şifre (`ChangeMe123!` kullanmayın) |
+| `ADMIN_PASSWORD` | Güçlü şifre |
 | `ADMIN_NAME` | Görünen ad |
 | `JWT_SECRET` | Uzun rastgele dize |
 
+## Mimari (v1.1)
+
+```
+touristlio/
+├── server/
+│   ├── index.js              # Express giriş
+│   ├── db.js                 # SQLite şema + migration
+│   ├── seed.js               # places.json → DB
+│   ├── lib/
+│   │   ├── place-content.js  # Bölüm metinleri, kategori grupları
+│   │   ├── place-map.js      # API DTO
+│   │   └── city-coords.js    # Leaflet koordinatları
+│   ├── routes/
+│   │   ├── places.js         # REST: liste, detay, harita, filtre
+│   │   ├── admin.js          # Moderasyon + CMS yer ekleme
+│   │   └── ...
+│   └── data/places.json      # Tek kaynak (UI'da hardcoded liste yok)
+├── public/
+│   ├── js/i18n.js            # TR/EN — data-i18n anında geçiş
+│   ├── js/map.js             # Leaflet + OpenStreetMap
+│   ├── js/app.js             # Keşfet, detay, filtreler
+│   ├── robots.txt
+│   └── sitemap.xml
+└── data/touristlio.db
+```
+
 ## Özellikler
 
-- **400–500 destinasyon** — TR + global, alias arama (`Istanbul` / `İstanbul`)
-- **Google yok** — Google puanı/yorumu ne arayüzde gösterilir ne de export'a (`places.json`) yazılır; veritabanında `google_*` alanları `NULL`
-- **Siyah navbar** — `icon.svg` ikon (siyah T+pin rozeti) + beyaz Touristlio, TR/EN, Keşfet / Blog / Profil; admin paneli de aynı `tl-nav`'ı kullanır
-- **Tiola** — isteğe bağlı yıldız, metin, foto; moderasyon sonrası yayın
-- **Puan** — sadece onaylı Tiola yıldızlarından Touristlio puanı
-- **OSM** — footer attribution; `/api/osm/search` VPS sonrası (şimdilik iskelet)
-- **Admin** — Tiola/blog onay, yeni yer, moderatör ekleme
+- **700+ destinasyon** — TR + EN içerik bölümleri: genel bakış, tarihçe, yapılacaklar, kültür/yemek, seyahat ipuçları
+- **TR/EN** — Navbar dil anahtarı tüm UI + yer içeriğini anında değiştirir (`descriptionEn`, `overviewEn`, …)
+- **Leaflet + OSM** — Keşfet haritası ve detay yan panel; kategoriye göre renkli işaretler, popup önizleme
+- **Gelişmiş filtreler** — Tarihi, doğa, müze, yeme-içme, otel, aktivite grupları + legacy kategori şeridi
+- **Sıralama** — Popülerlik, Tiola puanı, Tiola sayısı, yerel seçim, A→Z
+- **SEO** — Meta/OG etiketleri, `robots.txt`, `sitemap.xml`, semantik detay bölümleri
+- **Tiola** — moderasyon, sahte oy koruması
+- **Google yok** — Ne JSON'da ne arayüzde Google puanı
 
-## Logo
-
-- Navbar ikon: `public/images/icon.svg` (T + pin)
-- Tam logo PNG (isteğe bağlı): `public/images/logo.png` ← `Desktop\touristlio-logo.png`
-
-## Yer verisi
-
-**Google puanı yok** — `places.json` ve arayüzde yalnızca Touristlio / Tiola puanları gösterilir. `google_rating` / `google_count` alanları export edilmez; seed sırasında NULL yazılır.
+## Yer verisi komutları
 
 | Komut | Açıklama |
 |-------|----------|
-| `npm run places:merge` | `build-places-500.js` — batch3–5 birleştirir, **üst sınır yok** (700+ hedef), Google alanları silinir |
-| `npm run places:fix-images` | Bozuk/tekrarlayan görselleri photo-pool ile düzeltir |
-| `npm run seed` | `places.json` → SQLite |
-| `npm run logo:extract` | `public/images/logo.png` (veya Desktop / `touristlio7c.html`) → `icon.svg` + `icon-white.svg` (üst T+pin kırpımı, invert yok) |
-| `npm run places:run-all` | logo:extract + places:merge + seed (tek komut) |
+| `npm run places:merge` | `build-places-500.js` — batch birleştirme, içerik zenginleştirme, lat/lng |
+| `npm run seed` | `places.json` → SQLite (yeni kolonlar) |
+| `npm run places:fix-images` | Bozuk görselleri düzelt |
+| `npm run sitemap` | `public/sitemap.xml` üret |
+| `npm run places:run-all` | merge + seed |
 
-### places:merge akışı
-
-1. Mevcut `server/data/places.json` zenginleştirilir (batch3/4/5 + global extra).
-2. Google alanları (`googleRating`, `googleCount`) kaldırılır.
-3. Hedef **400–500** yer — fazlası kesilir.
-4. `photo-pool.js` ile `imageUrl` dağıtılır (tekrarlar minimize edilir).
-5. `server/data/merge-stats.json` — yer sayısı ve duplicate URL özeti.
-
-Merge sonrası kontrol:
+Merge sonrası:
 
 ```powershell
 npm run places:merge
 npm run seed
-# merge-stats.json → count, duplicateUrls
+npm run sitemap
 ```
 
-### Toplu import (uzun vade)
+## Görseller ve performans
 
-`server/data/import/places.csv` veya GeoJSON + `import-places.js` (planlı).
+- Kart ve detay görsellerinde `loading="lazy"`
+- İsteğe bağlı WebP: Unsplash URL'lerine `&fm=webp` eklenebilir (CDN destekliyorsa); üretimde `imageUrl` pool güncellemesi yeterli
 
 ## OpenStreetMap
 
-1. Şimdi: Touristlio DB + alias arama; footer © OSM.  
-2. VPS: Nominatim proxy → `/api/osm/search` (max 1 req/s, cache, [ToS](https://operations.osmfoundation.org/policies/nominatim/)).
+Footer attribution. Harita karoları: `tile.openstreetmap.org`. VPS sonrası Nominatim proxy (`/api/osm/search`).
 
-## Proje yapısı
+## v2 (plan)
 
-```
-touristlio/
-├── server/scripts/   # build-places-500.js, places-batch3/4, photo-pool.js
-├── server/data/places.json
-├── public/images/    # icon.svg, logo.png
-└── data/touristlio.db
-```
+- Tam adres geocoding (Nominatim), otel kategorisi veri genişletmesi
+- Rich-text CMS, çoklu fotoğraf yükleme
+- Node API ayrımı + isteğe bağlı PostgreSQL

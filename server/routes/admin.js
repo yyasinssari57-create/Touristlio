@@ -97,38 +97,96 @@ router.post('/moderators', requireRole('admin'), (req, res) => {
 router.post('/places', requireRole('admin', 'moderator'), (req, res) => {
   const {
     name, location, country, city, district, category,
-    imageUrl, entryFee, bestTime,
-    description, history, tips, tags, searchAliases, isLocal,
+    imageUrl, entryFee, entryFeeEn, bestTime, bestTimeEn,
+    description, descriptionEn, overview, overviewEn,
+    history, historyEn, thingsToDo, thingsToDoEn,
+    cultureFood, cultureFoodEn, travelTips, travelTipsEn,
+    tips, tipsEn, tags, searchAliases, categories, isLocal, lat, lng,
   } = req.body || {};
   if (!name || !country || !city || !category) {
     return res.status(400).json({ error: 'Ad, ülke, şehir ve kategori zorunlu' });
   }
+  const { enrichContentFields } = require('../lib/place-content');
   const maxId = db.prepare('SELECT MAX(id) AS m FROM places').get().m || 0;
   const id = maxId + 1;
-  db.prepare(`
-    INSERT INTO places
-    (id, name, location, country, city, district, category, google_rating, google_count,
-     image_url, is_local, entry_fee, best_time, description, history, tips, tags, search_aliases)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  const enriched = enrichContentFields({
     id,
     name,
-    location || `${city}, ${country}`,
+    location: location || `${city}, ${country}`,
     country,
     city,
-    district || city,
+    district: district || city,
     category,
-    null,
-    null,
-    imageUrl || 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&q=80',
-    isLocal ? 1 : 0,
-    entryFee || 'Ücretli',
-    bestTime || 'Sabah erken',
-    description || name,
-    history || '',
-    tips || '',
-    JSON.stringify(tags || []),
-    JSON.stringify(searchAliases || []),
+    imageUrl: imageUrl || 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&q=80',
+    isLocal: !!isLocal,
+    entryFee: entryFee || 'Ücretli',
+    entryFeeEn,
+    bestTime: bestTime || 'Sabah erken',
+    bestTimeEn,
+    description: description || name,
+    descriptionEn,
+    overview,
+    overviewEn,
+    history: history || '',
+    historyEn,
+    thingsToDo,
+    thingsToDoEn,
+    cultureFood,
+    cultureFoodEn,
+    travelTips: travelTips || tips,
+    travelTipsEn: travelTipsEn || tipsEn,
+    tips: tips || travelTips,
+    tipsEn,
+    tags: tags || [],
+    searchAliases: searchAliases || [],
+    categories,
+    lat,
+    lng,
+  }, id);
+
+  db.prepare(`
+    INSERT INTO places
+    (id, name, location, country, city, district, category,
+     image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en,
+     description, description_en, overview, overview_en,
+     history, history_en, things_to_do, things_to_do_en,
+     culture_food, culture_food_en, travel_tips, travel_tips_en,
+     tips, tips_en, tags, search_aliases, categories, lat, lng, popularity)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    enriched.name,
+    enriched.location,
+    enriched.country,
+    enriched.city,
+    enriched.district,
+    enriched.category,
+    enriched.imageUrl,
+    enriched.isLocal ? 1 : 0,
+    enriched.entryFee,
+    enriched.entryFeeEn || null,
+    enriched.bestTime,
+    enriched.bestTimeEn || null,
+    enriched.description,
+    enriched.descriptionEn || null,
+    enriched.overview,
+    enriched.overviewEn || null,
+    enriched.history,
+    enriched.historyEn || null,
+    JSON.stringify(enriched.thingsToDo || []),
+    JSON.stringify(enriched.thingsToDoEn || []),
+    enriched.cultureFood || null,
+    enriched.cultureFoodEn || null,
+    enriched.travelTips,
+    enriched.travelTipsEn || null,
+    enriched.tips,
+    enriched.tipsEn || null,
+    JSON.stringify(enriched.tags || []),
+    JSON.stringify(enriched.searchAliases || []),
+    JSON.stringify(enriched.categories || [category]),
+    enriched.lat,
+    enriched.lng,
+    0,
   );
   res.status(201).json({ id, name });
 });

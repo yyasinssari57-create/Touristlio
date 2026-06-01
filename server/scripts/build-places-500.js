@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { assignUniqueImages, fallbackImageUrl } = require('../lib/photo-pools');
+const { enrichContentFields } = require('../lib/place-content');
 const BATCH3 = require('./places-batch3');
 const BATCH4 = require('./places-batch4');
 const BATCH5 = require('./places-batch5-categories');
@@ -81,7 +82,7 @@ function buildRow(id, row) {
   const i = id % DESC.length;
   const fee = entryFee || (isLocal ? 'Ücretsiz' : 'Ücretli');
   const best = ['Sabah erken', 'Gün batımı', 'Hafta içi sabah', 'İlkbahar–sonbahar'][id % 4];
-  return {
+  const base = {
     id,
     name,
     location,
@@ -104,6 +105,7 @@ function buildRow(id, row) {
     tags: [country, city, category].filter(Boolean),
     searchAliases: aliases || [],
   };
+  return enrichContentFields(base, id);
 }
 
 function enrichExisting(p, id) {
@@ -120,7 +122,7 @@ function enrichExisting(p, id) {
     ? p.tips
     : TIPS[id % TIPS.length](p.name, p.city);
 
-  return {
+  const base = {
     id: p.id,
     name: p.name,
     location: p.location,
@@ -150,7 +152,19 @@ function enrichExisting(p, id) {
       : TIPS_EN[id % TIPS_EN.length](p.name, p.city),
     tags: p.tags || [p.country, p.city, p.category],
     searchAliases: p.searchAliases || [],
+    overview: p.overview,
+    overviewEn: p.overviewEn,
+    thingsToDo: p.thingsToDo,
+    thingsToDoEn: p.thingsToDoEn,
+    cultureFood: p.cultureFood,
+    cultureFoodEn: p.cultureFoodEn,
+    travelTips: p.travelTips || tips,
+    travelTipsEn: p.travelTipsEn,
+    lat: p.lat,
+    lng: p.lng,
+    categories: p.categories,
   };
+  return enrichContentFields(base, id);
 }
 
 let extraFromMerge = [];
@@ -190,7 +204,7 @@ for (const p of merged) {
 }
 
 let clean = merged.map((p) => {
-  const row = { ...p };
+  const row = enrichContentFields({ ...p }, p.id);
   delete row.googleRating;
   delete row.googleCount;
   return row;
