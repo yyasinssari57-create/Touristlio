@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Make logo transparent</title></head>
+<body>
+<pre id="out">loading…</pre>
+<script>
+(async () => {
+  const img = new Image();
+  img.src = 'logo-round.png';
+  await img.decode();
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const id = ctx.getImageData(0, 0, c.width, c.height);
+  const d = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] < 80 && d[i + 1] < 80 && d[i + 2] < 80) d[i + 3] = 0;
+  }
+  ctx.putImageData(id, 0, 0);
+  const b64 = c.toDataURL('image/png').split(',')[1];
+  const resp = await fetch('/api/dev/write-logo-transparent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ b64 }),
+  });
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { status: resp.status, body: text.slice(0, 200) }; }
+  document.getElementById('out').textContent = JSON.stringify({ status: resp.status, ...data }, null, 2);
+})();
+</script>
+</body>
+</html>

@@ -45,13 +45,15 @@
   <div class="nav-inner">
     <button type="button" class="nav-toggle" id="navToggle" data-i18n-aria="menuAria" aria-label="Menü" onclick="toggleNavMenu()">☰</button>
     <div class="navbar-left">
-      <a href="/" class="brand" onclick="showMainTab('explore');return false" aria-label="Touristlio">
-        <img src="/images/logo-round.png?v=1" alt="" class="brand-mark brand-mark-round" width="44" height="44" onerror="this.onerror=null;this.src='/images/icon-white.svg?v=3';this.classList.remove('brand-mark-round');this.classList.add('brand-mark-white');"/>
+      <a href="/" class="brand" onclick="showMainTab('explore');return false" aria-label="Touristlio ana sayfa">
         <h1 class="brand-name">Tourist<span class="brand-accent">lio</span></h1>
       </a>
       <span class="nav-divider" aria-hidden="true"></span>
       <p class="brand-slogan" data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></p>
     </div>
+    <a href="/" class="nav-brand-center" onclick="showMainTab('explore');return false" aria-label="Touristlio">
+      <img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon-white.svg'"/>
+    </a>
     <div class="nav-menu" id="navMenu">
       <div class="nav-tabs">
         <div class="ntab on" id="nt-explore" onclick="showMainTab('explore')" data-i18n="explore">Keşfet</div>

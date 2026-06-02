@@ -25,14 +25,17 @@ input,select,textarea,button{font-family:var(--fn);}
 /* NAV — siyah tam genişlik şerit */
 :root{--nav-h:68px;}
 nav.tl-nav,nav{position:fixed;top:0;left:0;right:0;z-index:500;background:#0a0a0a;border-bottom:1px solid rgba(255,255,255,.08);}
-.nav-inner{height:var(--nav-h);min-height:64px;max-height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(16px,4vw,40px);gap:16px;}
+.nav-inner{position:relative;height:var(--nav-h);min-height:64px;max-height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(16px,4vw,40px);gap:16px;}
+.nav-brand-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;justify-content:center;text-decoration:none;line-height:0;pointer-events:auto;}
+.nav-brand-center .brand-mark{height:46px;width:auto;object-fit:contain;object-position:center;background:transparent;border-radius:0;}
 .navbar-left{display:flex;align-items:center;gap:16px;flex-shrink:0;min-width:0;height:100%;}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;background:transparent;}
 .brand-name{font-family:var(--fd);font-size:1.35rem;font-weight:900;color:#fff;letter-spacing:-0.04em;white-space:nowrap;line-height:1.1;margin:0;}
 .nav-divider{width:1px;height:34px;background:rgba(255,255,255,.22);flex-shrink:0;align-self:center;}
 .brand-slogan{font-family:var(--fd);font-size:.78rem;font-weight:400;color:#fff;margin:0;line-height:1.3;white-space:nowrap;align-self:center;}
 .brand-slogan em{font-style:italic;color:var(--brand-accent);font-weight:700;}
-.brand-mark{width:44px;height:44px;flex-shrink:0;object-fit:cover;object-position:center;display:block;background:transparent!important;border:none;padding:0;opacity:1!important;visibility:visible!important;}
+.brand-mark{width:46px;height:46px;flex-shrink:0;object-fit:contain;object-position:center;display:block;background:#0a0a0a;border:none;padding:0;opacity:1!important;visibility:visible!important;}
+nav.tl-nav .brand-mark{border-radius:6px;}
 .brand-mark.brand-mark-round{border-radius:50%;object-fit:cover;object-position:center;}
 /* SVG fallback only — round PNG needs no invert */
 nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filter:invert(1)!important;object-fit:cover;object-position:top center;}
@@ -329,7 +332,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
   .nav-inner{flex-wrap:wrap;height:auto;min-height:var(--nav-h);padding:10px 14px;position:relative;gap:10px;}
   .navbar-left{gap:10px;flex:1;min-width:0;}
   .brand-name{font-size:1.15rem;}
-  .brand-mark{width:36px;height:36px;}
+  .brand-mark,.nav-brand-center .brand-mark{height:46px;width:auto;}
   .nav-divider,.brand-slogan{display:none;}
   .nav-menu{display:none;position:absolute;top:100%;left:0;right:0;background:#0a0a0a;flex-direction:column;align-items:stretch;padding:14px 16px 18px;border-bottom:1px solid rgba(255,255,255,.1);gap:12px;}
   .nav-menu.open{display:flex;}

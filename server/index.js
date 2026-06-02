@@ -79,6 +79,19 @@ app.get('/api/config/public', (_req, res) => {
   });
 });
 
+/** Dev-only: write processed navbar logo PNG from base64 payload. */
+app.post('/api/dev/write-logo-transparent', express.json({ limit: '5mb' }), (req, res) => {
+  const b64 = req.body?.b64;
+  if (!b64 || typeof b64 !== 'string') {
+    return res.status(400).json({ error: 'missing b64' });
+  }
+  const out = path.join(__dirname, '..', 'public', 'images', 'logo-transparent.png');
+  const buf = Buffer.from(b64, 'base64');
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, buf);
+  res.json({ ok: true, size: buf.length, path: 'public/images/logo-transparent.png' });
+});
+
 app.get('/sitemap.xml', (_req, res, next) => {
   const sitemapPath = path.join(__dirname, '..', 'public', 'sitemap.xml');
   if (fs.existsSync(sitemapPath)) return res.sendFile(sitemapPath);
