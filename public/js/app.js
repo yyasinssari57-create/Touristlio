@@ -296,16 +296,13 @@ function setAuth(u, tok) {
 
 function updateAuthUI() {
   const btn = document.getElementById('authBtn');
-  const adminLink = document.getElementById('adminLink');
   if (!btn) return;
   if (user) {
-    btn.textContent = `✓ ${user.name.split(' ')[0]}`;
-    if (adminLink && ['admin', 'moderator'].includes(user.role)) {
-      adminLink.style.display = 'inline-flex';
-    }
+    btn.textContent = t('profile');
+    btn.onclick = () => showMainTab('profile');
   } else {
     btn.textContent = t('login');
-    if (adminLink) adminLink.style.display = 'none';
+    btn.onclick = () => openAuth();
   }
 }
 
