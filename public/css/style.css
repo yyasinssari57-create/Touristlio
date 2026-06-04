@@ -522,3 +522,49 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
   .ptabs{overflow-x:auto;flex-wrap:nowrap;}
   .ptab{flex:none;min-width:max-content;padding:7px 12px;}
 }
+
+/* Gezilecek Yerler — discovery */
+.discover-page{padding-top:var(--nav-h);min-height:100vh;background:var(--l);}
+.discover-layout{display:grid;grid-template-columns:1fr min(42vw,480px);gap:0;min-height:calc(100vh - var(--nav-h));}
+.discover-main{padding:24px clamp(16px,3vw,32px) 80px;overflow-y:auto;}
+.discover-map-panel{position:sticky;top:var(--nav-h);height:calc(100vh - var(--nav-h));border-left:1px solid var(--l2);background:var(--w);}
+.discover-map{width:100%;height:100%;min-height:280px;}
+.discover-hd-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.discover-count-line{font-size:.82rem;color:var(--t2);margin-top:4px;}
+.discover-hd{margin-bottom:20px;}
+.discover-hd h1{font-family:var(--fd);font-size:clamp(1.4rem,2.5vw,1.85rem);font-weight:900;color:var(--navy);margin-bottom:6px;}
+.discover-hd p{font-size:.85rem;color:var(--t2);}
+.discover-hd-row{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+.discover-step{display:none;}
+.discover-step.active{display:block;}
+.discover-city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+.city-card{border:none;padding:0;border-radius:var(--r2);overflow:hidden;background:var(--w);box-shadow:var(--sh);cursor:pointer;text-align:left;transition:transform .2s,box-shadow .2s;}
+.city-card:hover{transform:translateY(-3px);box-shadow:var(--sh2);}
+.city-card img{width:100%;height:120px;object-fit:cover;display:block;}
+.city-card-body{padding:12px 14px;}
+.city-card-body h3{font-family:var(--fd);font-size:1rem;color:var(--navy);margin-bottom:4px;}
+.city-card-body span{font-size:.72rem;color:var(--t2);}
+.discover-cat-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.discover-cat-chip{padding:8px 14px;border-radius:100px;border:1.5px solid var(--l2);background:var(--w);font-size:.78rem;cursor:pointer;}
+.discover-cat-chip.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+.discover-place-list{display:flex;flex-direction:column;gap:10px;}
+.discover-place-card{display:flex;gap:12px;padding:12px;background:var(--w);border-radius:var(--r);border:1px solid var(--l2);cursor:pointer;transition:border-color .2s;}
+.discover-place-card:hover{border-color:var(--brand-accent);}
+.discover-place-card img{width:88px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;}
+.discover-place-card h4{font-size:.9rem;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.discover-place-card p{font-size:.72rem;color:var(--t2);}
+.discover-empty{text-align:center;padding:40px 20px;color:var(--t2);}
+.discover-empty .empty-icon{font-size:2.5rem;margin-bottom:10px;}
+.admin-shell{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - var(--nav-h));padding-top:var(--nav-h);}
+.admin-sidebar{background:var(--navy2);color:rgba(255,255,255,.85);padding:20px 12px;}
+.admin-sidebar a,.admin-sidebar button{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:inherit;font-size:.8rem;border-radius:8px;cursor:pointer;text-decoration:none;margin-bottom:4px;}
+.admin-sidebar a.on,.admin-sidebar button.on{background:rgba(255,255,255,.12);color:#fff;}
+.admin-content{padding:24px 28px 60px;}
+.adm-section.active{display:block;}
+@media(max-width:900px){
+  .discover-layout{grid-template-columns:1fr;}
+  .discover-map-panel{position:fixed;bottom:0;left:0;right:0;height:38vh;z-index:150;border-left:none;border-top:1px solid var(--l2);box-shadow:0 -8px 24px rgba(0,0,0,.08);}
+  .discover-main{padding-bottom:calc(38vh + 24px);}
+  .admin-shell{grid-template-columns:1fr;}
+  .admin-sidebar{display:flex;overflow-x:auto;gap:4px;padding:12px;}
+}

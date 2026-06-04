@@ -9,16 +9,19 @@ const logger = require('./lib/logger');
 const { apiLimiter } = require('./middleware/rateLimit');
 const { clear: clearCache } = require('./lib/cache');
 
-const authRoutes = require('./routes/auth');
+const authRoutes = require('./modules/auth/auth.routes');
 const placesRoutes = require('./routes/places');
 const tiolasRoutes = require('./routes/tiolas');
 const blogsRoutes = require('./routes/blogs');
 const adminRoutes = require('./routes/admin');
 const osmRoutes = require('./routes/osm');
 const travelListsRoutes = require('./routes/travel-lists');
-const tripPlansRoutes = require('./routes/trip-plans');
 const liveDataRoutes = require('./routes/live-data');
 const searchRoutes = require('./routes/search');
+const settingsRoutes = require('./modules/settings/settings.routes');
+const usersRoutes = require('./modules/users/users.routes');
+const moderationRoutes = require('./modules/moderation/moderation.routes');
+const analyticsRoutes = require('./modules/analytics/analytics.routes');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -64,22 +67,27 @@ app.use('/api/blogs', blogsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/osm', osmRoutes);
 app.use('/api/travel-lists', travelListsRoutes);
-app.use('/api/trip-plans', tripPlansRoutes);
 app.use('/api/live-data', liveDataRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/moderation', moderationRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'Touristlio', version: '2.0.0', ts: new Date().toISOString() });
 });
 
 app.get('/api/config/public', (_req, res) => {
+  const settingsService = require('./modules/settings/settings.service');
   res.json({
     affiliateEnabled: process.env.AFFILIATE_ENABLED === 'true',
     siteUrl: process.env.SITE_URL || 'http://localhost:3000',
+    ...settingsService.getPublic(),
   });
 });
 
-/** Dev-only: write processed navbar logo PNG from base64 payload. */
+/** Dev-only: write processed navbar logo PNG from base64 payload (agent). */
 app.post('/api/dev/write-logo-transparent', express.json({ limit: '5mb' }), (req, res) => {
   const b64 = req.body?.b64;
   if (!b64 || typeof b64 !== 'string') {
@@ -118,12 +126,8 @@ app.get('/search', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'search.html'));
 });
 
-app.get('/trip-planner', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'trip-planner.html'));
-});
-
-app.get('/trip/:id', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'trip-planner.html'));
+app.get('/gezilecek-yerler', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
 app.get('*', (req, res, next) => {
@@ -147,7 +151,7 @@ app.listen(PORT, () => {
   logger.info(`Touristlio V2 → http://localhost:${PORT}`);
   logger.info(`Admin → http://localhost:${PORT}/admin`);
   logger.info(`Search → http://localhost:${PORT}/search`);
-  logger.info(`Trip Planner → http://localhost:${PORT}/trip-planner`);
+  logger.info(`Gezilecek Yerler → http://localhost:${PORT}/?tab=places`);
 });
 
 if (process.env.LIVE_DATA_CRON !== 'false') {

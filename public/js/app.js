@@ -278,6 +278,7 @@ async function api(path, opts = {}) {
     if (window.TL_TOAST) window.TL_TOAST.error(msg);
     throw new Error(msg);
   }
+  if (data && data.success === true && data.data != null) return data.data;
   return data;
 }
 
@@ -503,6 +504,7 @@ function showMainTab(tab) {
   if (tab === 'blog') renderBlog();
   if (tab === 'profile') updateProfilePage();
   if (tab === 'explore') loadTiolaFeed();
+  if (tab === 'places') window.TL_DISCOVER?.onTabShown();
   window.scrollTo(0, 0);
 }
 
@@ -896,8 +898,6 @@ async function updateProfilePage() {
   const pVis = document.getElementById('pVisitedCnt');
   if (pVis) pVis.textContent = visitedStats.totalVisited || 0;
 
-  if (window.TL_TRIP) window.TL_TRIP.loadUserTrips('myTripPlans');
-
   try {
     const visited = await api('/travel-lists/visited/all');
     const vg = document.getElementById('visitedGrid');
@@ -1131,19 +1131,6 @@ function updateCategoryCounts() {
   if (sc) sc.textContent = String(countries.size);
 }
 
-function buildTourPlan() {
-  const city = document.getElementById('tourCity')?.value.trim();
-  const days = document.getElementById('tourDays')?.value;
-  const pace = document.getElementById('tourPace')?.value || 'normal';
-  const box = document.getElementById('tourResult');
-  if (!city) {
-    box.innerHTML = `<div class="tour-empty">${t('tourEnterCity')}</div>`;
-    return;
-  }
-  const plan = window.TL_TOUR.generate(places, { city, days, pace, lang });
-  window.TL_TOUR.renderPlan(box, plan);
-}
-
 function refreshAfterLang() {
   updateAuthUI();
   if (places.length) {
@@ -1161,6 +1148,7 @@ function refreshAfterLang() {
   if (document.getElementById('page-profile')?.classList.contains('active')) updateProfilePage();
   if (document.getElementById('authOv')?.classList.contains('on')) buildAuthForm(authMode);
   if (window.TL_COOKIE) window.TL_COOKIE.render(lang);
+  if (window.TL_DISCOVER) window.TL_DISCOVER.setLang(lang);
 }
 
 function setLang(l, btn) {
@@ -1177,7 +1165,11 @@ document.addEventListener('click', (e) => {
 });
 
 function handleDeepLink() {
-  const id = new URLSearchParams(location.search).get('place');
+  const params = new URLSearchParams(location.search);
+  const tab = params.get('tab');
+  const onPlacesPath = location.pathname.replace(/\/+$/, '') === '/gezilecek-yerler';
+  if (tab === 'places' || onPlacesPath) showMainTab('places');
+  const id = params.get('place');
   if (id && /^\d+$/.test(id)) openDetail(Number(id));
 }
 

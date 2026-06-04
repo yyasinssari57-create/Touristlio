@@ -266,7 +266,7 @@ router.get('/stats', checkPermission('admin.dashboard'), (_req, res) => {
     tiolasApproved: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'approved'").get().c,
     tiolasPending: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get().c,
     blogsPending: db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get().c,
-    tripPlans: db.prepare('SELECT COUNT(*) AS c FROM trip_plans').get().c,
+    travelLists: db.prepare('SELECT COUNT(*) AS c FROM travel_lists').get().c,
     visitedRecords: db.prepare('SELECT COUNT(*) AS c FROM visited_places').get().c,
   };
   res.json(stats);

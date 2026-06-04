@@ -57,6 +57,7 @@
     <div class="nav-menu" id="navMenu">
       <div class="nav-tabs">
         <div class="ntab on" id="nt-explore" onclick="showMainTab('explore')" data-i18n="explore">Keşfet</div>
+        <div class="ntab" id="nt-places" onclick="showMainTab('places')" data-i18n="discoverPlaces">Gezilecek Yerler</div>
         <div class="ntab" id="nt-blog" onclick="showMainTab('blog')" data-i18n="blog">Blog</div>
         <div class="ntab" id="nt-profile" onclick="showMainTab('profile')" data-i18n="profile">Profilim</div>
       </div>
@@ -66,7 +67,6 @@
           <div class="lb on" onclick="setLang('tr',this)">TR</div>
         </div>
         <button class="btn nav-btn-ghost" id="authBtn" onclick="openAuth()">Giriş Yap</button>
-        <a class="btn nav-btn-ghost" id="adminLink" href="/admin" style="display:none;text-decoration:none" data-i18n="admin">Admin</a>
         <button class="btn nav-btn-primary" onclick="openAuth()" data-i18n="join">Katıl</button>
       </div>
     </div>
@@ -108,7 +108,6 @@
       <div class="etab" id="et-filter" onclick="showExploreTab('filter',this)" data-i18n="tabFilter">⚙️ Gelişmiş Filtrele</div>
       <div class="etab" id="et-tiolas" onclick="showExploreTab('tiolas',this)" data-i18n="tabTiolas">✨ Tiola'lar</div>
       <div class="etab" id="et-categories" onclick="showExploreTab('categories',this)" data-i18n="tabCategories">📂 Kategoriler</div>
-      <div class="etab" id="et-tour" onclick="showExploreTab('tour',this)" data-i18n="tabTour">🧳 Tur Planla</div>
     </div>
   </div>
 
@@ -304,48 +303,6 @@
     </div>
   </div>
 
-  <!-- TOUR PLANNER TAB -->
-  <div class="explore-section" id="es-tour">
-    <div class="tour-wrap">
-      <div class="tour-head">
-        <h2 data-i18n-html="tourTitle">Tur <em>planla</em></h2>
-        <p data-i18n="tourSub">Şehir ve gün sayısını seç — gerçekçi günlük rota ve yol süreleri.</p>
-      </div>
-      <div class="tour-form">
-        <div class="tour-field">
-          <label data-i18n="tourCity">Nereye?</label>
-          <input type="text" id="tourCity" data-i18n-placeholder="tourCityPh" placeholder="İstanbul, Paris, Tokyo..." list="tourCityList"/>
-          <datalist id="tourCityList">
-            <option value="Istanbul"><option value="Paris"><option value="Tokyo">
-            <option value="Rome"><option value="London"><option value="Barcelona">
-            <option value="New York"><option value="Dubai"><option value="Bangkok">
-          </datalist>
-        </div>
-        <div class="tour-field">
-          <label data-i18n="tourDays">Kaç gün?</label>
-          <select id="tourDays">
-            <option value="1">1 gün</option>
-            <option value="2">2 gün</option>
-            <option value="3" selected>3 gün</option>
-            <option value="4">4 gün</option>
-            <option value="5">5 gün</option>
-            <option value="7">7 gün</option>
-          </select>
-        </div>
-        <div class="tour-field">
-          <label data-i18n="tourPace">Tempo</label>
-          <select id="tourPace">
-            <option value="relaxed" data-i18n="tourPaceRelaxed">Rahat (günde ~3 yer)</option>
-            <option value="normal" selected data-i18n="tourPaceNormal">Normal (~4 yer)</option>
-            <option value="busy" data-i18n="tourPaceBusy">Yoğun (~5 yer)</option>
-          </select>
-        </div>
-        <button type="button" class="btn bp" onclick="buildTourPlan()" data-i18n="tourBuild">Rotayı oluştur</button>
-      </div>
-      <div id="tourResult" class="tour-result"></div>
-    </div>
-  </div>
-
   <!-- CATEGORIES TAB -->
   <div class="explore-section" id="es-categories">
     <div class="showcase" style="padding-top:28px">
@@ -391,6 +348,45 @@
     </div>
     <div style="font-size:.68rem" data-i18n="footerCopy">© 2026 Touristlio · Tüm hakları saklıdır</div>
   </footer>
+</div>
+
+<!-- ══════════════ GEZİLECEK YERLER ══════════════ -->
+<div class="page" id="page-places">
+  <div class="discover-page">
+    <div class="discover-layout">
+      <div class="discover-main">
+        <div class="discover-step" id="discoverStepCities">
+          <header class="discover-hd">
+            <h1 data-i18n="discoverPlacesTitle">Gezilecek Yerler</h1>
+            <p data-i18n="discoverPlacesSub">Şehir seçin — ardından kategori ve harita ile keşfedin.</p>
+          </header>
+          <div class="discover-city-grid" id="discoverCityGrid" role="list"></div>
+        </div>
+        <div class="discover-step active" id="discoverStepPlaces">
+          <header class="discover-hd discover-hd-row">
+            <div class="discover-hd-actions">
+              <button type="button" class="btn bo bsm" id="discoverBackBtn" style="display:none" data-i18n="discoverClearCity">← Tüm yerler</button>
+              <button type="button" class="btn bo bsm" id="discoverCitiesBtn" data-i18n="discoverPickCity">🏙️ Şehirler</button>
+            </div>
+            <div>
+              <h1 id="discoverCityTitle" data-i18n="discoverGlobalTitle">Tüm gezilecek yerler</h1>
+              <p id="discoverPlaceSub" data-i18n="discoverGlobalSub">Türkiye geneli · kategori veya şehir filtreleyin</p>
+              <p class="discover-count-line"><span id="discoverPlaceCount">0</span> <span data-i18n="placesFound">yer</span></p>
+            </div>
+          </header>
+          <div class="discover-cat-strip" id="discoverCatStrip" aria-label="Kategori filtreleri"></div>
+          <div class="discover-place-list" id="discoverPlaceList" role="list"></div>
+          <div class="discover-empty" id="discoverEmpty" style="display:none">
+            <div class="empty-icon">🗺️</div>
+            <p data-i18n="discoverEmpty">Bu filtrede yer bulunamadı.</p>
+          </div>
+        </div>
+      </div>
+      <aside class="discover-map-panel" aria-label="Harita">
+        <div id="discoverMap" class="discover-map"></div>
+      </aside>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════ BLOG PAGE ══════════════ -->
@@ -552,16 +548,11 @@
       </div>
       <div class="ptabs">
         <div class="ptab on" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</div>
-        <div class="ptab" onclick="showPTab('trips',this)" data-i18n="profileTabTrips">🧳 Gezi Planlarım</div>
         <div class="ptab" onclick="showPTab('visited',this)" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</div>
         <div class="ptab" onclick="showPTab('blogs',this)" data-i18n="profileTabBlogs">📝 Bloglarım</div>
         <div class="ptab" onclick="showPTab('pending',this)" data-i18n="profileTabPending">⏳ Bekleyenler</div>
         <div class="ptab" onclick="showPTab('saved',this)" data-i18n="profileTabSaved">❤️ Kaydedilenler</div>
         <div class="ptab" onclick="showPTab('write',this)" data-i18n="profileTabWrite">✏️ Tiola / Blog Yaz</div>
-      </div>
-      <div class="ptab-c" id="ptab-trips">
-        <div style="margin-bottom:12px"><a href="/trip-planner.html" class="btn bp bsm" data-i18n="tripPlannerNew">+ Yeni Plan</a></div>
-        <div id="myTripPlans"></div>
       </div>
       <div class="ptab-c" id="ptab-visited">
         <div id="visitedGrid" class="pgrid"></div>
@@ -638,8 +629,8 @@
 <script src="/js/skeleton.js"></script>
 <script src="/js/cookie-banner.js"></script>
 <script src="/js/map.js"></script>
-<script src="/js/tour-planner.js"></script>
-<script src="/js/trip-planner.js"></script>
+<script src="/js/map-discover.js"></script>
+<script src="/js/discover-places.js"></script>
 <script src="/js/app.js"></script>
 </body>
 </html>

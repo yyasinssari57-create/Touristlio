@@ -37,9 +37,24 @@ body{font-family:Inter,sans-serif;background:var(--l);}
     <a href="/" class="btn nav-btn-ghost" style="text-decoration:none">Site</a>
     <button class="btn nav-btn-ghost" onclick="adminLogout()">Çıkış</button></div>
   </div></nav>
-  <div class="admin-wrap">
+  <div class="admin-shell">
+    <nav class="admin-sidebar" id="adminSidebar" aria-label="Admin menü">
+      <button type="button" class="on" data-section="dashboard" onclick="showAdminSection('dashboard',this)">📊 Dashboard</button>
+      <button type="button" data-section="places" onclick="showAdminSection('places',this)">📍 Places</button>
+      <button type="button" data-section="cities" onclick="showAdminSection('cities',this)">🏙️ Cities</button>
+      <button type="button" data-section="categories" onclick="showAdminSection('categories',this)">📂 Categories</button>
+      <button type="button" data-section="moderation" onclick="showAdminSection('moderation',this)">✅ Moderation</button>
+      <button type="button" data-section="users" data-role="admin" onclick="showAdminSection('users',this)">👤 Users</button>
+      <button type="button" data-section="content" onclick="showAdminSection('content',this)">📝 Content</button>
+      <button type="button" data-section="analytics" onclick="showAdminSection('analytics',this)">📈 Analytics</button>
+      <button type="button" data-section="settings" data-role="admin" onclick="showAdminSection('settings',this)">⚙️ Settings</button>
+      <button type="button" data-section="roles" data-role="admin" onclick="showAdminSection('roles',this)">🔐 Roles</button>
+    </nav>
+    <div class="admin-content">
+    <section id="adm-dashboard" class="adm-section active">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px" id="statsRow"></div>
-
+    </section>
+    <section id="adm-places" class="adm-section" style="display:none">
     <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni yer ekle</h2>
     <div class="admin-card">
       <div class="admin-form" id="placeForm">
@@ -85,6 +100,33 @@ body{font-family:Inter,sans-serif;background:var(--l);}
         </div>
       </div>
     </div>
+    </section>
+    <section id="adm-cities" class="adm-section" style="display:none"><div class="admin-card"><p style="color:var(--t2);font-size:.85rem">Şehir listesi keşif akışından yönetilir (yakında tam CRUD).</p></div></section>
+    <section id="adm-categories" class="adm-section" style="display:none"><div class="admin-card"><p style="color:var(--t2);font-size:.85rem">Kategori grupları: museum, nature, food, historical, entertainment.</p></div></section>
+    <section id="adm-moderation" class="adm-section" style="display:none">
+    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Bekleyen Tiola'lar</h2>
+    <div id="pendingTiolas"></div>
+    </section>
+    <section id="adm-users" class="adm-section" style="display:none">
+    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Kullanıcılar</h2>
+    <div id="userList"></div>
+    </section>
+    <section id="adm-content" class="adm-section" style="display:none">
+    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Bekleyen Bloglar</h2>
+    <div id="pendingBlogs"></div>
+    </section>
+    <section id="adm-analytics" class="adm-section" style="display:none">
+      <div class="admin-card" id="analyticsSummary"></div>
+      <div class="admin-card" id="analyticsQuality" style="margin-top:12px"></div>
+    </section>
+    <section id="adm-settings" class="adm-section" style="display:none">
+      <div class="admin-card">
+        <h3 style="margin:0 0 12px;color:var(--navy)">Site ayarları (DB)</h3>
+        <div class="admin-form" id="settingsForm"></div>
+        <button class="btn bp bsm" type="button" onclick="saveSettings()">Kaydet</button>
+      </div>
+    </section>
+    <section id="adm-roles" class="adm-section" style="display:none"><div class="admin-card"><p style="color:var(--t2)">Admin · Moderator · Editor rolleri tanımlı.</p></div></section>
 
     <div id="modSection" style="display:none">
       <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Moderatör ekle</h2>
@@ -95,14 +137,7 @@ body{font-family:Inter,sans-serif;background:var(--l);}
         <button class="btn bp bsm full" onclick="addModerator()">Moderatör oluştur</button>
       </div>
     </div>
-
-    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Kullanıcılar</h2>
-    <div id="userList"></div>
-
-    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Bekleyen Tiola'lar</h2>
-    <div id="pendingTiolas"></div>
-    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Bekleyen Bloglar</h2>
-    <div id="pendingBlogs"></div>
+    </div>
   </div>
 </div>
 
@@ -117,7 +152,25 @@ async function api(path, opts = {}) {
   const res = await fetch(API + path, { ...opts, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Hata');
+  if (data && data.success === true && data.data != null) return data.data;
   return data;
+}
+
+function showAdminSection(id, btn) {
+  document.querySelectorAll('.adm-section').forEach((s) => { s.style.display = 'none'; s.classList.remove('active'); });
+  const el = document.getElementById('adm-' + id);
+  if (el) { el.style.display = 'block'; el.classList.add('active'); }
+  document.querySelectorAll('#adminSidebar button').forEach((b) => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+}
+
+function applyAdminRbac(role) {
+  document.querySelectorAll('[data-role="admin"]').forEach((el) => {
+    el.style.display = role === 'admin' ? '' : 'none';
+  });
+  if (role === 'editor') {
+    showAdminSection('content', document.querySelector('[data-section="content"]'));
+  }
 }
 
 async function adminLogin() {
@@ -129,8 +182,8 @@ async function adminLogin() {
         password: document.getElementById('admPass').value,
       }),
     });
-    if (!['admin', 'moderator'].includes(data.user.role)) {
-      alert('Admin veya moderatör yetkisi gerekli');
+    if (!['admin', 'moderator', 'editor'].includes(data.user.role)) {
+      alert('Admin, moderatör veya editör yetkisi gerekli');
       return;
     }
     token = data.token;
@@ -154,6 +207,7 @@ async function showPanel(user) {
   document.getElementById('adminPanel').style.display = 'block';
   document.getElementById('admUser').textContent = user.name + ' (' + user.role + ')';
   document.getElementById('modSection').style.display = user.role === 'admin' ? 'block' : 'none';
+  applyAdminRbac(user.role);
   await refresh();
 }
 
@@ -230,6 +284,54 @@ async function uploadPhotos() {
   } catch (e) { alert(e.message); }
 }
 
+let siteSettings = {};
+
+async function loadSettingsForm() {
+  if (currentUser?.role !== 'admin') return;
+  try {
+    siteSettings = await api('/settings');
+    const form = document.getElementById('settingsForm');
+    if (!form || !siteSettings.settings) return;
+    form.innerHTML = Object.entries(siteSettings.settings).map(([key, val]) => `
+      <label class="full" style="font-size:.72rem;color:var(--t2)">${key}</label>
+      <input class="ain full" data-set-key="${key}" value="${String(val).replace(/"/g, '&quot;')}"/>`).join('');
+  } catch (e) {
+    console.warn('settings', e);
+  }
+}
+
+async function saveSettings() {
+  const body = {};
+  document.querySelectorAll('#settingsForm [data-set-key]').forEach((inp) => {
+    body[inp.dataset.setKey] = inp.value;
+  });
+  try {
+    await api('/settings', { method: 'PUT', body: JSON.stringify({ settings: body }) });
+    alert('Ayarlar kaydedildi');
+    await loadSettingsForm();
+  } catch (e) { alert(e.message); }
+}
+
+async function loadAnalytics() {
+  const sumEl = document.getElementById('analyticsSummary');
+  const qEl = document.getElementById('analyticsQuality');
+  if (!sumEl) return;
+  try {
+    const stats = await api('/analytics/summary');
+    const quality = await api('/analytics/quality');
+    sumEl.innerHTML = `<h3 style="margin:0 0 10px">Özet</h3>
+      <p>Yer: <strong>${stats.places}</strong> · Kullanıcı: <strong>${stats.users}</strong> · Onaylı Tiola: <strong>${stats.tiolasApproved}</strong></p>
+      <p>Bekleyen Tiola: <strong>${stats.tiolasPending}</strong> · Bekleyen blog: <strong>${stats.blogsPending}</strong></p>`;
+    if (qEl) {
+      qEl.innerHTML = `<h3 style="margin:0 0 10px">İçerik kalitesi</h3>
+        <p>Skor: <strong>${quality.score}%</strong> (${quality.total} yer)</p>
+        <p style="font-size:.8rem;color:var(--t2)">Foto eksik: ${quality.issues.noPhoto} · FAQ: ${quality.issues.noFaq} · Koordinat: ${quality.issues.noCoords}</p>`;
+    }
+  } catch (e) {
+    sumEl.innerHTML = `<p style="color:var(--t3)">${e.message}</p>`;
+  }
+}
+
 async function refresh() {
   const stats = await api('/admin/stats');
   document.getElementById('statsRow').innerHTML = `
@@ -262,6 +364,9 @@ async function refresh() {
       </div>
     </div>`).join('') : '<p style="color:var(--t3)">Bekleyen Tiola yok.</p>';
 
+  await loadAnalytics();
+  await loadSettingsForm();
+
   const bl = await api('/admin/pending/blogs');
   document.getElementById('pendingBlogs').innerHTML = bl.items.length ? bl.items.map((item) => `
     <div class="admin-card admin-item">
@@ -283,7 +388,7 @@ async function rejectBlog(id) { await api('/admin/blogs/' + id + '/reject', { me
   if (token) {
     try {
       const me = await api('/auth/me');
-      if (['admin', 'moderator'].includes(me.user.role)) showPanel(me.user);
+      if (['admin', 'moderator', 'editor'].includes(me.user.role)) showPanel(me.user);
     } catch { adminLogout(); }
   }
 })();

@@ -1,19 +1,16 @@
 window.TL_I18N = (function () {
   const dict = {
     tr: {
-      login: 'Giriş Yap', join: 'Katıl', explore: 'Keşfet', blog: 'Blog', profile: 'Profilim', admin: 'Admin',
+      login: 'Giriş Yap', join: 'Katıl', explore: 'Keşfet', discoverPlaces: 'Gezilecek Yerler', blog: 'Blog', profile: 'Profilim', admin: 'Admin',
+      discoverPlacesTitle: 'Gezilecek Yerler', discoverPlacesSub: 'Şehir seçin — ardından kategori ve harita ile keşfedin.',
+      discoverGlobalTitle: 'Tüm gezilecek yerler', discoverGlobalSub: 'Türkiye geneli · kategori veya şehir filtreleyin',
+      discoverPickCity: '🏙️ Şehirler', discoverClearCity: '← Tüm yerler', discoverEmpty: 'Bu filtrede yer bulunamadı.',
       heroPill: '🌍 Dünyanın en kişisel seyahat rehberi',
       heroTitle: 'Sadece Ziyaret Etme.', heroTitleEm: 'Hisset.',
       heroSub: 'Gizli yerel köşelerden ikonik yapılara — gerçek gezginler tarafından derlendi.',
       searchPh: 'İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu...',
       searchBtn: '🔍 Keşfet',
-      tabDiscover: '🗺️ Destinasyonlar', tabFilter: '⚙️ Gelişmiş Filtrele', tabTiolas: "✨ Tiola'lar", tabCategories: '📂 Kategoriler', tabTour: '🧳 Tur Planla',
-      tourTitle: 'Tur planla', tourSub: 'Şehir ve gün sayısını seç — gerçekçi günlük rota ve yol süreleri.',
-      tourCity: 'Nereye?', tourDays: 'Kaç gün?', tourPace: 'Tempo', tourBuild: 'Rotayı oluştur',
-      tourCityPh: 'İstanbul, Paris, Tokyo...',
-      tourDay1: '1 gün', tourDay2: '2 gün', tourDay3: '3 gün', tourDay4: '4 gün', tourDay5: '5 gün', tourDay7: '7 gün',
-      tourPaceRelaxed: 'Rahat (günde ~3 yer)', tourPaceNormal: 'Normal (~4 yer)', tourPaceBusy: 'Yoğun (~5 yer)',
-      tourEnterCity: 'Şehir adı yazın (ör. İstanbul).',
+      tabDiscover: '🗺️ Destinasyonlar', tabFilter: '⚙️ Gelişmiş Filtrele', tabTiolas: "✨ Tiola'lar", tabCategories: '📂 Kategoriler',
       placesFound: 'yer bulundu', noResults: '🔍 Sonuç bulunamadı. Farklı filtreler deneyin.',
       osmSearchSoon: "OSM'den ara (yakında)",
       osmHint: 'Aradığınız yer listede yok mu? OpenStreetMap entegrasyonu VPS sonrası açılacak.',
@@ -132,35 +129,22 @@ window.TL_I18N = (function () {
       addedToSaved: 'Favorilere eklendi', removedFromSaved: 'Favorilerden çıkarıldı',
       loginSuccess: 'Giriş başarılı', registerSuccess: 'Hesap oluşturuldu', logoutSuccess: 'Çıkış yapıldı',
       mapLocate: '📍 Konumum',
-      profileTabTrips: '🧳 Gezi Planlarım', profileTabVisited: '✅ Ziyaret Ettiklerim',
-      profileStatVisited: 'Ziyaret', tripPlannerNew: '+ Yeni Plan', emptyVisited: 'Henüz ziyaret kaydı yok.',
+      profileTabVisited: '✅ Ziyaret Ettiklerim',
+      profileStatVisited: 'Ziyaret', emptyVisited: 'Henüz ziyaret kaydı yok.',
       searchPageTitle: 'Destinasyon Ara', searchPrev: '← Önceki', searchNext: 'Sonraki →',
-      tripPlannerTitle: '🧳 Gezi Planlayıcı Pro', tripStep1: '1. Temel Bilgiler', tripStep2: '2. Tercihler', tripStep3: '3. Günlük Program',
-      tripName: 'Plan adı', tripNamePh: 'İstanbul Hafta Sonu', tripStart: 'Başlangıç', tripEnd: 'Bitiş',
-      tripTravelers: 'Gezgin sayısı', tripType: 'İlgi alanı', tripBudget: 'Bütçe', tripTransport: 'Ulaşım',
-      tripBudgetLow: 'Ekonomik', tripBudgetMid: 'Orta', tripBudgetHigh: 'Lüks',
-      tripNext: 'İleri →', tripGenerate: 'Rotayı Oluştur', tripSave: 'Kaydet', tripPrint: '🖨️ Yazdır / PDF',
-      tripShare: 'Paylaşım:', tripDefaultName: 'Gezi Planım', tripDayTitle: 'Gün başlığı',
-      tripSelectPlace: 'Yer seçin', tripRemove: 'Kaldır', tripAddPlace: 'Yer ekle', tripSearchPlace: 'Yer ara...',
-      tripDensityHigh: '⚠️ Yoğun program — dinlenme ekleyin', tripDensityMid: 'Tempo yüksek olabilir',
-      tripNearbyHint: 'Son eklenen yere yakın bir yer', tripSaved: 'Plan kaydedildi', tripCreated: 'Plan oluşturuldu',
-      tripEmpty: 'Henüz gezi planı yok.',
       forgotPassword: 'Şifremi unuttum',
     },
     en: {
-      login: 'Log in', join: 'Join', explore: 'Explore', blog: 'Blog', profile: 'My profile', admin: 'Admin',
+      login: 'Log in', join: 'Join', explore: 'Explore', discoverPlaces: 'Places to visit', blog: 'Blog', profile: 'My profile', admin: 'Admin',
+      discoverPlacesTitle: 'Places to visit', discoverPlacesSub: 'Pick a city — then filter by category; map stays in sync.',
+      discoverGlobalTitle: 'All places to visit', discoverGlobalSub: 'Across Turkey · filter by category or city',
+      discoverPickCity: '🏙️ Cities', discoverClearCity: '← All places', discoverEmpty: 'No places match this filter.',
       heroPill: "🌍 The world's most personal travel guide",
       heroTitle: "Don't just visit.", heroTitleEm: 'Feel it.',
       heroSub: 'From hidden local gems to iconic landmarks — curated by real travelers.',
       searchPh: 'Istanbul, Eiffel Tower, Tokyo, Machu Picchu...',
       searchBtn: '🔍 Explore',
-      tabDiscover: '🗺️ Destinations', tabFilter: '⚙️ Advanced filters', tabTiolas: '✨ Tiolas', tabCategories: '📂 Categories', tabTour: '🧳 Plan a trip',
-      tourTitle: 'Plan your trip', tourSub: 'Pick city and days — realistic daily routes with travel times.',
-      tourCity: 'Where to?', tourDays: 'How many days?', tourPace: 'Pace', tourBuild: 'Build itinerary',
-      tourCityPh: 'Istanbul, Paris, Tokyo...',
-      tourDay1: '1 day', tourDay2: '2 days', tourDay3: '3 days', tourDay4: '4 days', tourDay5: '5 days', tourDay7: '7 days',
-      tourPaceRelaxed: 'Relaxed (~3 stops/day)', tourPaceNormal: 'Normal (~4 stops)', tourPaceBusy: 'Busy (~5 stops)',
-      tourEnterCity: 'Enter a city name.',
+      tabDiscover: '🗺️ Destinations', tabFilter: '⚙️ Advanced filters', tabTiolas: '✨ Tiolas', tabCategories: '📂 Categories',
       placesFound: 'places found', noResults: '🔍 No results. Try different filters.',
       osmSearchSoon: 'Search OSM (coming soon)',
       osmHint: 'Place not in our list? OpenStreetMap search opens after VPS deployment.',
@@ -279,19 +263,9 @@ window.TL_I18N = (function () {
       addedToSaved: 'Added to favorites', removedFromSaved: 'Removed from favorites',
       loginSuccess: 'Logged in', registerSuccess: 'Account created', logoutSuccess: 'Logged out',
       mapLocate: '📍 My location',
-      profileTabTrips: '🧳 My trip plans', profileTabVisited: '✅ Places visited',
-      profileStatVisited: 'Visited', tripPlannerNew: '+ New plan', emptyVisited: 'No visits recorded yet.',
+      profileTabVisited: '✅ Places visited',
+      profileStatVisited: 'Visited', emptyVisited: 'No visits recorded yet.',
       searchPageTitle: 'Search destinations', searchPrev: '← Previous', searchNext: 'Next →',
-      tripPlannerTitle: '🧳 Trip Planner Pro', tripStep1: '1. Basics', tripStep2: '2. Preferences', tripStep3: '3. Daily schedule',
-      tripName: 'Plan name', tripNamePh: 'Weekend in Istanbul', tripStart: 'Start', tripEnd: 'End',
-      tripTravelers: 'Travelers', tripType: 'Interest', tripBudget: 'Budget', tripTransport: 'Transport',
-      tripBudgetLow: 'Budget', tripBudgetMid: 'Mid', tripBudgetHigh: 'Luxury',
-      tripNext: 'Next →', tripGenerate: 'Build itinerary', tripSave: 'Save', tripPrint: '🖨️ Print / PDF',
-      tripShare: 'Share:', tripDefaultName: 'My trip', tripDayTitle: 'Day title',
-      tripSelectPlace: 'Select place', tripRemove: 'Remove', tripAddPlace: 'Add place', tripSearchPlace: 'Search place...',
-      tripDensityHigh: '⚠️ Packed schedule — add breaks', tripDensityMid: 'Pace may feel tight',
-      tripNearbyHint: 'Near your last stop', tripSaved: 'Plan saved', tripCreated: 'Plan created',
-      tripEmpty: 'No trip plans yet.',
       forgotPassword: 'Forgot password?',
     },
   };
@@ -338,8 +312,6 @@ window.TL_I18N = (function () {
         el.innerHTML = `${t(lang, 'catSectionTitle')} <em>${t(lang, 'catSectionEm')}</em>`;
       } else if (key === 'profileMyTiolas') {
         el.innerHTML = `${t(lang, 'profileMyTiolas')} <em style="font-style:italic;color:var(--b)">${t(lang, 'profileMyTiolasEm')}</em>`;
-      } else if (key === 'tourTitle') {
-        el.innerHTML = `${t(lang, 'tourTitle').replace('planla', '').replace('trip', '').trim()} <em>${lang === 'en' ? 'trip' : 'planla'}</em>`;
       } else {
         const val = t(lang, key);
         if (val) el.innerHTML = val;
@@ -368,16 +340,6 @@ window.TL_I18N = (function () {
         ? "Touristlio — Don't Just Visit. Feel It."
         : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
     }
-    document.querySelectorAll('#tourDays option').forEach((opt) => {
-      const map = { 1: 'tourDay1', 2: 'tourDay2', 3: 'tourDay3', 4: 'tourDay4', 5: 'tourDay5', 7: 'tourDay7' };
-      const k = map[opt.value];
-      if (k) opt.textContent = t(lang, k);
-    });
-    document.querySelectorAll('#tourPace option').forEach((opt) => {
-      const map = { relaxed: 'tourPaceRelaxed', normal: 'tourPaceNormal', busy: 'tourPaceBusy' };
-      const k = map[opt.value];
-      if (k) opt.textContent = t(lang, k);
-    });
     document.querySelectorAll('.cpill[data-cat]').forEach((el) => {
       el.textContent = catLabel(lang, el.getAttribute('data-cat'));
     });

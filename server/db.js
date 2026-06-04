@@ -241,12 +241,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_trip_plans_user ON trip_plans(user_id);
   CREATE INDEX IF NOT EXISTS idx_travel_lists_user ON travel_lists(user_id);
   CREATE INDEX IF NOT EXISTS idx_visited_user ON visited_places(user_id);
+
+  CREATE TABLE IF NOT EXISTS site_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function seedRbac() {
   const roles = [
     ['admin', 'Administrator'],
     ['moderator', 'Moderator'],
+    ['editor', 'Editor'],
     ['member', 'Member'],
   ];
   const perms = [
@@ -254,13 +261,16 @@ function seedRbac() {
     ['admin.moderate', 'Moderate content'],
     ['admin.users', 'Manage users'],
     ['admin.places', 'Manage places'],
-    ['admin.tools', 'System tools'],
-    ['trip.manage', 'Manage own trip plans'],
+    ['admin.content', 'Manage blog and pages'],
+    ['admin.settings', 'System settings'],
+    ['admin.roles', 'Roles and permissions'],
+    ['admin.analytics', 'View analytics'],
   ];
   const rolePerms = {
     admin: perms.map((p) => p[0]),
-    moderator: ['admin.dashboard', 'admin.moderate', 'admin.places'],
-    member: ['trip.manage'],
+    moderator: ['admin.dashboard', 'admin.moderate', 'admin.places', 'admin.content'],
+    editor: ['admin.dashboard', 'admin.content'],
+    member: [],
   };
   for (const [slug, name] of roles) {
     db.prepare('INSERT OR IGNORE INTO roles (slug, name) VALUES (?, ?)').run(slug, name);
