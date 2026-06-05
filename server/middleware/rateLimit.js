@@ -24,4 +24,12 @@ const searchLimiter = rateLimit({
   message: { error: 'Arama limiti aşıldı. Bir dakika bekleyin.' },
 });
 
-module.exports = { apiLimiter, authLimiter, searchLimiter };
+const adminToolLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.ADMIN_TOOL_RATE_LIMIT_MAX) || 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Admin araç limiti aşıldı. Lütfen bekleyin.' },
+});
+
+module.exports = { apiLimiter, authLimiter, searchLimiter, adminToolLimiter };

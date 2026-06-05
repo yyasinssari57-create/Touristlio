@@ -8,13 +8,11 @@ const authModel = require('./auth.model');
 
 const logger = require('../../lib/logger');
 
-
+const mailer = require('../../lib/mailer');
 
 const MAX_FAILED = 5;
 
 const LOCK_MINUTES = 15;
-
-
 
 const COOKIE_OPTS = {
 
@@ -30,8 +28,6 @@ const COOKIE_OPTS = {
 
 };
 
-
-
 function validationError(req) {
 
   const errors = validationResult(req);
@@ -42,23 +38,17 @@ function validationError(req) {
 
 }
 
-
-
 function setAuthCookie(res, token) {
 
   res.cookie('tl_token', token, COOKIE_OPTS);
 
 }
 
-
-
 function clearAuthCookie(res) {
 
   res.clearCookie('tl_token', { path: '/' });
 
 }
-
-
 
 function isLocked(row) {
 
@@ -68,9 +58,13 @@ function isLocked(row) {
 
 }
 
+function siteBase() {
 
+  return (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-function register(req) {
+}
+
+async function register(req) {
 
   const err = validationError(req);
 
@@ -90,7 +84,19 @@ function register(req) {
 
   authModel.updateVerification(user.id, verifyToken);
 
-  logger.info({ msg: 'Email verification (stub)', email: user.email, token: verifyToken, url: `/verify-email?token=${verifyToken}` });
+  const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
+
+  try {
+
+    await mailer.sendVerificationEmail(user.email, verifyUrl);
+
+    logger.info({ msg: 'Verification email sent', email: user.email });
+
+  } catch (e) {
+
+    logger.warn({ msg: 'Verification email failed', email: user.email, err: e.message });
+
+  }
 
   const token = signToken(user);
 
@@ -109,8 +115,6 @@ function register(req) {
   };
 
 }
-
-
 
 function login(req) {
 
@@ -146,9 +150,7 @@ function login(req) {
 
 }
 
-
-
-function forgotPassword(req) {
+async function forgotPassword(req) {
 
   const err = validationError(req);
 
@@ -164,15 +166,25 @@ function forgotPassword(req) {
 
     authModel.insertPasswordReset(row.id, token, expires);
 
-    logger.info({ msg: 'Password reset (stub)', email: row.email, token, url: `/reset-password?token=${token}` });
+    const resetUrl = `${siteBase()}/reset-password?token=${token}`;
+
+    try {
+
+      await mailer.sendPasswordResetEmail(row.email, resetUrl);
+
+      logger.info({ msg: 'Password reset email sent', email: row.email });
+
+    } catch (e) {
+
+      logger.warn({ msg: 'Password reset email failed', email: row.email, err: e.message });
+
+    }
 
   }
 
   return { status: 200, message: 'E-posta kayıtlıysa sıfırlama bağlantısı gönderildi.' };
 
 }
-
-
 
 function resetPassword(req) {
 
@@ -194,8 +206,6 @@ function resetPassword(req) {
 
 }
 
-
-
 function verifyEmail(req) {
 
   const err = validationError(req);
@@ -211,8 +221,6 @@ function verifyEmail(req) {
   return { status: 200, message: 'E-posta doğrulandı' };
 
 }
-
-
 
 module.exports = {
 
@@ -233,4 +241,3 @@ module.exports = {
   verifyEmail,
 
 };
-

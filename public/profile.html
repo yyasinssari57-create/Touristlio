@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow"/>
 <title>Profilim — Touristlio</title>
 <link rel="stylesheet" href="/css/style.css"/>
 </head>
@@ -23,7 +24,11 @@
     <div class="prof-hd">
       <div class="prof-av" id="profAv">?</div>
       <div><div class="prof-name" id="profName">—</div>
-      <div class="prof-stats"><div class="psi"><span class="psi-n" id="pSavedCnt">0</span> <span data-i18n="profileStatSaved">Kaydedilen</span></div></div></div>
+      <div class="prof-stats">
+        <div class="psi"><span class="psi-n" id="pSavedCnt">0</span> <span data-i18n="profileStatSaved">Kaydedilen</span></div>
+        <div class="psi"><span class="psi-n" id="pVisitedCnt">0</span> <span data-i18n="profileStatVisited">Ziyaret</span></div>
+        <div class="psi"><span class="psi-n" id="pCountriesCnt">0</span> <span data-i18n="profileStatCountries">Ülke</span></div>
+      </div></div>
     </div>
     <h3 style="font-family:var(--fd);color:var(--navy)" data-i18n="profileTabSaved">❤️ Kaydedilenler</h3>
     <div class="pgrid" id="savedGrid"></div>
@@ -34,6 +39,16 @@
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function safeUrl(url) {
+  const s = String(url || '').trim();
+  if (/^https?:\/\//i.test(s) && !/^javascript:/i.test(s)) return s;
+  if (s.startsWith('/') && !s.startsWith('//')) return s;
+  return '/images/icon.svg';
+}
 async function api(path){
   const token = localStorage.getItem('tl_token');
   const res = await fetch('/api'+path, { credentials:'include', headers: token ? {Authorization:'Bearer '+token} : {} });
@@ -48,14 +63,19 @@ async function init(){
     document.getElementById('pContent').style.display='block';
     document.getElementById('profName').textContent = me.user.name;
     document.getElementById('profAv').textContent = me.user.name[0];
-    const saved = await api('/places/saved/all');
+    const [saved, visited] = await Promise.all([
+      api('/places/saved/all'),
+      api('/travel-lists/visited/stats'),
+    ]);
     document.getElementById('pSavedCnt').textContent = saved.places.length;
+    document.getElementById('pVisitedCnt').textContent = visited.totalVisited || 0;
+    document.getElementById('pCountriesCnt').textContent = visited.countriesVisited || 0;
     const sg = document.getElementById('savedGrid');
     const se = document.getElementById('savedEmpty');
     if(!saved.places.length){ sg.innerHTML=''; se.style.display='block'; }
     else {
       se.style.display='none';
-      sg.innerHTML = saved.places.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img"><img src="${p.imageUrl}" alt=""/></div><div class="pc-body"><div class="pc-name">${p.name}</div></div></div>`).join('');
+      sg.innerHTML = saved.places.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img"><img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}"/></div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></div>`).join('');
     }
   } catch { /* login notice shown */ }
 }

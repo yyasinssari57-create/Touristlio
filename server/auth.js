@@ -4,6 +4,16 @@ const { db } = require('./db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
+function validateJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (process.env.NODE_ENV !== 'production') return;
+  if (!secret || secret.length < 32 || secret === 'dev-secret-change-me') {
+    throw new Error(
+      'JWT_SECRET must be set to a long random string (32+ chars) in production. See .env.example.',
+    );
+  }
+}
+
 function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
@@ -57,6 +67,8 @@ function createUser({ name, email, password, role = 'member' }) {
 }
 
 module.exports = {
+  JWT_SECRET,
+  validateJwtSecret,
   signToken,
   verifyToken,
   hashPassword,

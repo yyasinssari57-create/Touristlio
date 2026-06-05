@@ -1,6 +1,7 @@
 const express = require('express');
 const { validationResult } = require('express-validator');
-const { db } = require('../db');
+const { db, allPlaceStats } = require('../db');
+const { parsePositiveInt } = require('../lib/sanitize');
 const { authOptional, authRequired } = require('../middleware/auth');
 const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
 const { cacheKey, wrap } = require('../lib/cache');
@@ -11,7 +12,22 @@ const { getLiveData } = require('../services/liveDataService');
 const placesService = require('../modules/places/places.service');
 
 const router = express.Router();
-const { mapPlace } = placesService;
+const { mapPlace: mapPlaceFromService } = placesService;
+
+let legacyStatsCache = null;
+let legacyStatsCacheAt = 0;
+
+function getLegacyStats() {
+  const now = Date.now();
+  if (legacyStatsCache && now - legacyStatsCacheAt < 120000) return legacyStatsCache;
+  legacyStatsCache = allPlaceStats();
+  legacyStatsCacheAt = now;
+  return legacyStatsCache;
+}
+
+function mapPlace(row) {
+  return mapPlaceFromService(row, getLegacyStats());
+}
 
 function validationError(req, res) {
   const errors = validationResult(req);
@@ -52,7 +68,9 @@ router.get('/:id', authOptional, async (req, res) => {
   if (['meta', 'map', 'search', 'saved', 'cities'].includes(req.params.id)) {
     return res.status(404).json({ error: 'Not found' });
   }
-  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(req.params.id);
+  const placeId = parsePositiveInt(req.params.id, res);
+  if (!placeId) return;
+  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
   if (!row) return res.status(404).json({ error: 'Yer bulunamadı' });
   const place = mapPlace(row);
   const allRows = db.prepare('SELECT * FROM places').all();
@@ -90,7 +108,9 @@ router.get('/:id', authOptional, async (req, res) => {
 });
 
 router.get('/:id/weather', authOptional, async (req, res) => {
-  const row = db.prepare('SELECT lat, lng FROM places WHERE id = ?').get(req.params.id);
+  const placeId = parsePositiveInt(req.params.id, res);
+  if (!placeId) return;
+  const row = db.prepare('SELECT lat, lng FROM places WHERE id = ?').get(placeId);
   if (!row) return res.status(404).json({ error: 'Yer bulunamadı' });
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
   const weather = await getWeather(row.lat, row.lng, lang);
@@ -98,21 +118,27 @@ router.get('/:id/weather', authOptional, async (req, res) => {
 });
 
 router.get('/:id/saved', authRequired, (req, res) => {
+  const placeId = parsePositiveInt(req.params.id, res);
+  if (!placeId) return;
   const saved = db.prepare(`
     SELECT 1 FROM saved_places WHERE user_id = ? AND place_id = ?
-  `).get(req.user.id, req.params.id);
+  `).get(req.user.id, placeId);
   res.json({ saved: !!saved });
 });
 
 router.post('/:id/save', authRequired, (req, res) => {
+  const placeId = parsePositiveInt(req.params.id, res);
+  if (!placeId) return;
   db.prepare(`
     INSERT OR IGNORE INTO saved_places (user_id, place_id) VALUES (?, ?)
-  `).run(req.user.id, req.params.id);
+  `).run(req.user.id, placeId);
   res.json({ saved: true });
 });
 
 router.delete('/:id/save', authRequired, (req, res) => {
-  db.prepare('DELETE FROM saved_places WHERE user_id = ? AND place_id = ?').run(req.user.id, req.params.id);
+  const placeId = parsePositiveInt(req.params.id, res);
+  if (!placeId) return;
+  db.prepare('DELETE FROM saved_places WHERE user_id = ? AND place_id = ?').run(req.user.id, placeId);
   res.json({ saved: false });
 });
 

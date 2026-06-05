@@ -2,5 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
 
 Sitemap: https://touristlio.com/sitemap.xml

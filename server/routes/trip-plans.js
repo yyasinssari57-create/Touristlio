@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { db, placeStats } = require('../db');
 const { authRequired, authOptional } = require('../middleware/auth');
+const { parsePositiveInt } = require('../lib/sanitize');
 const { mapPlaceRow } = require('../lib/place-map');
 const { findNearbyPlaces } = require('../lib/geo');
 
@@ -105,13 +106,17 @@ router.get('/share/:token', authOptional, (req, res) => {
 });
 
 router.get('/:id', authOptional, (req, res) => {
-  const trip = db.prepare('SELECT * FROM trip_plans WHERE id = ?').get(req.params.id);
+  const tripId = parsePositiveInt(req.params.id, res);
+  if (!tripId) return;
+  const trip = db.prepare('SELECT * FROM trip_plans WHERE id = ?').get(tripId);
   if (!canViewTrip(trip, req.user)) return res.status(404).json({ error: 'Plan bulunamadı' });
   res.json({ trip: loadTripFull(trip.id) });
 });
 
 router.put('/:id', authRequired, (req, res) => {
-  const trip = db.prepare('SELECT * FROM trip_plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  const tripId = parsePositiveInt(req.params.id, res);
+  if (!tripId) return;
+  const trip = db.prepare('SELECT * FROM trip_plans WHERE id = ? AND user_id = ?').get(tripId, req.user.id);
   if (!trip) return res.status(404).json({ error: 'Plan bulunamadı' });
   const b = req.body || {};
   db.prepare(`
@@ -143,7 +148,9 @@ router.put('/:id', authRequired, (req, res) => {
 });
 
 router.delete('/:id', authRequired, (req, res) => {
-  const trip = db.prepare('SELECT id FROM trip_plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  const tripId = parsePositiveInt(req.params.id, res);
+  if (!tripId) return;
+  const trip = db.prepare('SELECT id FROM trip_plans WHERE id = ? AND user_id = ?').get(tripId, req.user.id);
   if (!trip) return res.status(404).json({ error: 'Plan bulunamadı' });
   db.prepare('DELETE FROM trip_plan_items WHERE day_id IN (SELECT id FROM trip_plan_days WHERE trip_id = ?)').run(trip.id);
   db.prepare('DELETE FROM trip_plan_days WHERE trip_id = ?').run(trip.id);

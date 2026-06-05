@@ -7,8 +7,11 @@ const { authRequired, requireRole } = require('../middleware/auth');
 const { createUser, findUserByEmail, sanitizeUser } = require('../auth');
 const { clear: clearCache } = require('../lib/cache');
 const { computeUserRiskScore, checkPermission } = require('../middleware/rbac');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
+const { adminToolLimiter } = require('../middleware/rateLimit');
+const { sanitizeName, parsePositiveInt } = require('../lib/sanitize');
 
+const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
 router.use(authRequired, requireRole('admin', 'moderator'));
 
@@ -83,35 +86,54 @@ router.get('/pending/blogs', (_req, res) => {
   });
 });
 
+function runAdminScript(scriptRel) {
+  const cwd = path.join(__dirname, '..', '..');
+  const scriptPath = path.join(__dirname, '..', scriptRel);
+  return spawnSync(process.execPath, [scriptPath], {
+    cwd,
+    encoding: 'utf8',
+    timeout: SCRIPT_TIMEOUT_MS,
+    maxBuffer: 4 * 1024 * 1024,
+  });
+}
+
 router.post('/tiolas/:id/approve', (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
   db.prepare(`
     UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
-    WHERE id = ? AND status = 'pending'
-  `).run(req.user.id, req.params.id);
+    WHERE id = ? AND status IN ('pending', 'spam')
+  `).run(req.user.id, id);
   res.json({ ok: true });
 });
 
 router.post('/tiolas/:id/reject', (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
   db.prepare(`
     UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
-    WHERE id = ? AND status = 'pending'
-  `).run(req.user.id, req.params.id);
+    WHERE id = ? AND status IN ('pending', 'spam')
+  `).run(req.user.id, id);
   res.json({ ok: true });
 });
 
 router.post('/blogs/:id/approve', (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
   db.prepare(`
     UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status = 'pending'
-  `).run(req.user.id, req.params.id);
+  `).run(req.user.id, id);
   res.json({ ok: true });
 });
 
 router.post('/blogs/:id/reject', (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
   db.prepare(`
     UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status = 'pending'
-  `).run(req.user.id, req.params.id);
+  `).run(req.user.id, id);
   res.json({ ok: true });
 });
 
@@ -136,7 +158,8 @@ router.post('/places', requireRole('admin', 'moderator'), (req, res) => {
     cultureFood, cultureFoodEn, travelTips, travelTipsEn,
     tips, tipsEn, tags, searchAliases, categories, isLocal, lat, lng,
   } = req.body || {};
-  if (!name || !country || !city || !category) {
+  const safeName = sanitizeName(name);
+  if (!safeName || !country || !city || !category) {
     return res.status(400).json({ error: 'Ad, ülke, şehir ve kategori zorunlu' });
   }
   const { enrichContentFields } = require('../lib/place-content');
@@ -144,7 +167,7 @@ router.post('/places', requireRole('admin', 'moderator'), (req, res) => {
   const id = maxId + 1;
   const enriched = enrichContentFields({
     id,
-    name,
+    name: safeName,
     location: location || `${city}, ${country}`,
     country,
     city,
@@ -246,7 +269,8 @@ router.get('/users', requireRole('admin'), (_req, res) => {
 });
 
 router.post('/places/:id/photos', requireRole('admin', 'moderator'), upload.array('photos', 10), (req, res) => {
-  const placeId = req.params.id;
+  const placeId = parsePositiveInt(req.params.id, res);
+  if (!placeId) return;
   const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
   if (!row) return res.status(404).json({ error: 'Yer bulunamadı' });
 
@@ -265,6 +289,7 @@ router.get('/stats', checkPermission('admin.dashboard'), (_req, res) => {
     places: db.prepare('SELECT COUNT(*) AS c FROM places').get().c,
     tiolasApproved: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'approved'").get().c,
     tiolasPending: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get().c,
+    tiolasSpam: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'spam'").get().c,
     blogsPending: db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get().c,
     travelLists: db.prepare('SELECT COUNT(*) AS c FROM travel_lists').get().c,
     visitedRecords: db.prepare('SELECT COUNT(*) AS c FROM visited_places').get().c,
@@ -285,27 +310,31 @@ router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) =
   });
 });
 
-router.post('/tools/cache-clear', requireRole('admin'), (_req, res) => {
+router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, (_req, res) => {
   clearCache();
   res.json({ ok: true, message: 'Cache temizlendi' });
 });
 
-router.post('/tools/sitemap', requireRole('admin'), (_req, res) => {
-  try {
-    execSync('node server/scripts/generate-sitemap.js', { cwd: path.join(__dirname, '..', '..'), stdio: 'pipe' });
-    res.json({ ok: true, message: 'Sitemap yenilendi' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, (_req, res) => {
+  const result = runAdminScript('scripts/generate-sitemap.js');
+  if (result.error) {
+    return res.status(500).json({ error: result.error.message || 'Sitemap hatası' });
   }
+  if (result.status !== 0) {
+    return res.status(500).json({ error: (result.stderr || result.stdout || 'Sitemap hatası').slice(0, 500) });
+  }
+  res.json({ ok: true, message: 'Sitemap yenilendi' });
 });
 
-router.post('/tools/validate', requireRole('admin'), (_req, res) => {
-  try {
-    const out = execSync('node server/scripts/validate-places.js', { cwd: path.join(__dirname, '..', '..'), stdio: 'pipe' }).toString();
-    res.json({ ok: true, output: out.slice(0, 2000) });
-  } catch (e) {
-    res.status(500).json({ error: e.stderr?.toString() || e.message });
+router.post('/tools/validate', requireRole('admin'), adminToolLimiter, (_req, res) => {
+  const result = runAdminScript('scripts/validate-places.js');
+  if (result.error) {
+    return res.status(500).json({ error: result.error.message || 'Doğrulama hatası' });
   }
+  if (result.status !== 0) {
+    return res.status(500).json({ error: (result.stderr || result.stdout || 'Doğrulama hatası').slice(0, 500) });
+  }
+  res.json({ ok: true, output: (result.stdout || '').slice(0, 2000) });
 });
 
 router.get('/moderation/risk', checkPermission('admin.moderate'), (_req, res) => {

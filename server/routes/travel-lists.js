@@ -1,8 +1,10 @@
+const crypto = require('crypto');
 const express = require('express');
 const { db } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const { mapPlaceRow } = require('../lib/place-map');
 const { placeStats } = require('../db');
+const { parsePositiveInt } = require('../lib/sanitize');
 
 const router = express.Router();
 
@@ -29,15 +31,43 @@ router.get('/visited/stats', authRequired, (req, res) => {
 router.post('/visited', authRequired, (req, res) => {
   const { placeId, visitedAt, note } = req.body || {};
   if (!placeId) return res.status(400).json({ error: 'placeId gerekli' });
+  const pid = Number(placeId);
+  if (!Number.isFinite(pid)) return res.status(400).json({ error: 'Geçersiz placeId' });
   db.prepare(`
     INSERT OR REPLACE INTO visited_places (user_id, place_id, visited_at, note) VALUES (?, ?, ?, ?)
-  `).run(req.user.id, placeId, visitedAt || new Date().toISOString().slice(0, 10), note || null);
+  `).run(req.user.id, pid, visitedAt || new Date().toISOString().slice(0, 10), note || null);
   res.json({ ok: true });
 });
 
 router.delete('/visited/:placeId', authRequired, (req, res) => {
-  db.prepare('DELETE FROM visited_places WHERE user_id = ? AND place_id = ?').run(req.user.id, req.params.placeId);
+  const pid = Number(req.params.placeId);
+  if (!Number.isFinite(pid)) return res.status(400).json({ error: 'Geçersiz placeId' });
+  db.prepare('DELETE FROM visited_places WHERE user_id = ? AND place_id = ?').run(req.user.id, pid);
   res.json({ ok: true });
+});
+
+router.get('/public/:shareToken', (req, res) => {
+  const token = String(req.params.shareToken || '').trim();
+  if (!token || token.length < 16) return res.status(400).json({ error: 'Geçersiz paylaşım bağlantısı' });
+  const list = db.prepare(`
+    SELECT * FROM travel_lists WHERE share_token = ? AND is_public = 1
+  `).get(token);
+  if (!list) return res.status(404).json({ error: 'Liste bulunamadı veya herkese açık değil' });
+  const items = db.prepare(`
+    SELECT p.*, tli.note, tli.sort_order FROM travel_list_items tli
+    JOIN places p ON p.id = tli.place_id WHERE tli.list_id = ? ORDER BY tli.sort_order, tli.added_at
+  `).all(list.id);
+  res.json({
+    list: {
+      id: list.id,
+      name: list.name,
+      description: list.description,
+      isPublic: true,
+      createdAt: list.created_at,
+      updatedAt: list.updated_at,
+    },
+    places: items.map(mapPlace),
+  });
 });
 
 router.get('/', authRequired, (req, res) => {
@@ -46,8 +76,14 @@ router.get('/', authRequired, (req, res) => {
     FROM travel_lists tl WHERE user_id = ? ORDER BY updated_at DESC
   `).all(req.user.id);
   res.json({ lists: rows.map((r) => ({
-    id: r.id, name: r.name, description: r.description, isPublic: !!r.is_public,
-    itemCount: r.item_count, createdAt: r.created_at, updatedAt: r.updated_at,
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    isPublic: !!r.is_public,
+    shareToken: r.share_token || null,
+    itemCount: r.item_count,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
   })) });
 });
 
@@ -60,41 +96,75 @@ router.post('/', authRequired, (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid, name: name.trim() });
 });
 
+router.post('/:id/publish', authRequired, (req, res) => {
+  const listId = parsePositiveInt(req.params.id, res);
+  if (!listId) return;
+  const list = db.prepare('SELECT * FROM travel_lists WHERE id = ? AND user_id = ?').get(listId, req.user.id);
+  if (!list) return res.status(404).json({ error: 'Liste bulunamadı' });
+  const shareToken = list.share_token || crypto.randomBytes(16).toString('hex');
+  db.prepare(`
+    UPDATE travel_lists SET is_public = 1, share_token = ?, updated_at = datetime('now') WHERE id = ?
+  `).run(shareToken, listId);
+  const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+  res.json({
+    ok: true,
+    shareToken,
+    publicUrl: `${siteUrl}/api/travel-lists/public/${shareToken}`,
+  });
+});
+
 router.get('/:id', authRequired, (req, res) => {
-  const list = db.prepare('SELECT * FROM travel_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  const listId = parsePositiveInt(req.params.id, res);
+  if (!listId) return;
+  const list = db.prepare('SELECT * FROM travel_lists WHERE id = ? AND user_id = ?').get(listId, req.user.id);
   if (!list) return res.status(404).json({ error: 'Liste bulunamadı' });
   const items = db.prepare(`
     SELECT p.*, tli.note, tli.sort_order FROM travel_list_items tli
     JOIN places p ON p.id = tli.place_id WHERE tli.list_id = ? ORDER BY tli.sort_order, tli.added_at
   `).all(list.id);
   res.json({
-    list: { id: list.id, name: list.name, description: list.description },
+    list: {
+      id: list.id,
+      name: list.name,
+      description: list.description,
+      isPublic: !!list.is_public,
+      shareToken: list.share_token || null,
+    },
     places: items.map(mapPlace),
   });
 });
 
 router.post('/:id/items', authRequired, (req, res) => {
-  const list = db.prepare('SELECT id FROM travel_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  const listId = parsePositiveInt(req.params.id, res);
+  if (!listId) return;
+  const list = db.prepare('SELECT id FROM travel_lists WHERE id = ? AND user_id = ?').get(listId, req.user.id);
   if (!list) return res.status(404).json({ error: 'Liste bulunamadı' });
   const { placeId, note } = req.body || {};
-  if (!placeId) return res.status(400).json({ error: 'placeId gerekli' });
+  const pid = Number(placeId);
+  if (!Number.isFinite(pid)) return res.status(400).json({ error: 'Geçersiz placeId' });
   const max = db.prepare('SELECT COALESCE(MAX(sort_order),0) AS m FROM travel_list_items WHERE list_id = ?').get(list.id).m;
   db.prepare(`
     INSERT OR REPLACE INTO travel_list_items (list_id, place_id, note, sort_order) VALUES (?, ?, ?, ?)
-  `).run(list.id, placeId, note || null, max + 1);
+  `).run(list.id, pid, note || null, max + 1);
   db.prepare("UPDATE travel_lists SET updated_at = datetime('now') WHERE id = ?").run(list.id);
   res.json({ ok: true });
 });
 
 router.delete('/:id/items/:placeId', authRequired, (req, res) => {
-  const list = db.prepare('SELECT id FROM travel_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  const listId = parsePositiveInt(req.params.id, res);
+  if (!listId) return;
+  const pid = Number(req.params.placeId);
+  if (!Number.isFinite(pid)) return res.status(400).json({ error: 'Geçersiz placeId' });
+  const list = db.prepare('SELECT id FROM travel_lists WHERE id = ? AND user_id = ?').get(listId, req.user.id);
   if (!list) return res.status(404).json({ error: 'Liste bulunamadı' });
-  db.prepare('DELETE FROM travel_list_items WHERE list_id = ? AND place_id = ?').run(list.id, req.params.placeId);
+  db.prepare('DELETE FROM travel_list_items WHERE list_id = ? AND place_id = ?').run(list.id, pid);
   res.json({ ok: true });
 });
 
 router.delete('/:id', authRequired, (req, res) => {
-  const list = db.prepare('SELECT id FROM travel_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  const listId = parsePositiveInt(req.params.id, res);
+  if (!listId) return;
+  const list = db.prepare('SELECT id FROM travel_lists WHERE id = ? AND user_id = ?').get(listId, req.user.id);
   if (!list) return res.status(404).json({ error: 'Liste bulunamadı' });
   db.prepare('DELETE FROM travel_list_items WHERE list_id = ?').run(list.id);
   db.prepare('DELETE FROM travel_lists WHERE id = ?').run(list.id);

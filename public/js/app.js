@@ -21,9 +21,18 @@ function fallbackImgUrl(category, placeId) {
   return PLACE_FALLBACK_POOL[Math.abs(seed) % PLACE_FALLBACK_POOL.length];
 }
 
+function safeUrl(url) {
+  const s = String(url || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s) && !/^javascript:/i.test(s)) return s;
+  if (s.startsWith('/') && !s.startsWith('//')) return s;
+  return '';
+}
+
 function placeImg(p) {
-  const url = String(p?.imageUrl || '').trim();
+  const url = safeUrl(p?.imageUrl);
   if (url.startsWith('http') && !/undefined|null|placeholder/i.test(url)) return url;
+  if (url.startsWith('/')) return url;
   return fallbackImgUrl(p?.category, p?.id);
 }
 
@@ -495,12 +504,24 @@ function quickSearch(q) {
   setTimeout(() => document.getElementById('es-discover').scrollIntoView({ behavior: 'smooth' }), 100);
 }
 
+function setCanonical(href) {
+  let link = document.querySelector('link[rel="canonical"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'canonical';
+    document.head.appendChild(link);
+  }
+  link.href = href || `${location.origin}/`;
+}
+
 function showMainTab(tab) {
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
   document.querySelectorAll('.ntab').forEach((n) => n.classList.remove('on'));
   document.getElementById('nt-' + tab)?.classList.add('on');
   prevTab = tab;
+  if (tab === 'places') setCanonical(`${location.origin}/gezilecek-yerler`);
+  else if (tab !== 'detail') setCanonical(`${location.origin}/`);
   if (tab === 'blog') renderBlog();
   if (tab === 'profile') updateProfilePage();
   if (tab === 'explore') loadTiolaFeed();
@@ -731,8 +752,7 @@ async function openDetail(id) {
           ${p.affiliateHotelUrl ? `<a href="${p.affiliateHotelUrl}" rel="nofollow sponsored" target="_blank" class="btn bo bsm">${t('affiliateHotel')}</a>` : ''}`;
       } else affBox.style.display = 'none';
     }
-    const canon = document.querySelector('link[rel="canonical"]');
-    if (canon) canon.href = `${location.origin}/?place=${p.id}`;
+    setCanonical(`${location.origin}/?place=${p.id}`);
     if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
     document.getElementById('pdTS').textContent = stars(p.tiolaRating);
     document.getElementById('pdTR').textContent = (p.tiolaRating || '—') + ' / 5';
@@ -840,14 +860,14 @@ async function renderBlog() {
     const rest = blogs.slice(1);
     document.getElementById('blogGrid').innerHTML = `
       <div class="bcard feat" onclick="${feat.placeId ? `openDetail(${feat.placeId})` : ''}">
-        <img class="bimg" src="${feat.imageUrl || ''}"/>
+        <img class="bimg" src="${safeUrl(feat.imageUrl) || placeImg({ category: 'guide', id: feat.id })}" alt=""/>
         <div class="bbody"><div class="bcat-lbl">${feat.category}</div><div class="btitle">${escapeHtml(feat.title)}</div>
         <div class="bexc">${escapeHtml(feat.excerpt || '')}</div>
         <div class="bmeta"><div class="bauthor"><div class="bav" style="background:var(--b)">${feat.authorName[0]}</div><span>${escapeHtml(feat.authorName)}</span></div></div></div>
       </div>
       ${rest.slice(0, 4).map((b) => `
         <div class="bcard" onclick="${b.placeId ? `openDetail(${b.placeId})` : ''}">
-          <img class="bimg" src="${b.imageUrl || ''}"/>
+          <img class="bimg" src="${safeUrl(b.imageUrl) || placeImg({ category: 'guide', id: b.id })}" alt=""/>
           <div class="bbody"><div class="bcat-lbl">${b.category}</div><div class="btitle">${escapeHtml(b.title)}</div>
           <div class="bmeta"><div class="bauthor"><div class="bav" style="background:var(--b2)">${b.authorName[0]}</div><span>${escapeHtml(b.authorName)}</span></div></div></div>
         </div>`).join('')}`;

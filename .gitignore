@@ -11,3 +11,9 @@ data/*.db-shm
 .DS_Store
 Thumbs.db
 public/sitemap.xml
+
+# Dev logo / restore artifacts (local agent tooling)
+public/images/logo-transparent.png
+scripts/_write-logo*
+scripts/_decode-logo*
+scripts/_run-logo*

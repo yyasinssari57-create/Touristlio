@@ -90,42 +90,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_blogs_status ON blogs(status, created_at);
 `);
 
-try {
-  db.prepare('SELECT search_aliases FROM places LIMIT 1').get();
-} catch {
-  db.exec('ALTER TABLE places ADD COLUMN search_aliases TEXT');
-}
-
-for (const col of [
-  'description_en', 'history_en', 'tips_en', 'entry_fee_en', 'best_time_en',
-  'overview', 'overview_en', 'things_to_do', 'things_to_do_en',
-  'culture_food', 'culture_food_en', 'travel_tips', 'travel_tips_en',
-  'how_to_get_there', 'how_to_get_there_en', 'photos',
-  'categories', 'lat', 'lng', 'popularity',
-  'faq_tr', 'faq_en', 'affiliate_hotel_url', 'affiliate_booking_url', 'timezone',
-]) {
-  try {
-    db.prepare(`SELECT ${col} FROM places LIMIT 1`).get();
-  } catch {
-    const type = ['lat', 'lng', 'popularity'].includes(col) ? 'REAL' : 'TEXT';
-    db.exec(`ALTER TABLE places ADD COLUMN ${col} ${type}`);
-  }
-}
-
-for (const col of [
-  ['email_verified', 'INTEGER DEFAULT 0'],
-  ['failed_login_count', 'INTEGER DEFAULT 0'],
-  ['locked_until', 'TEXT'],
-  ['verification_token', 'TEXT'],
-  ['risk_score', 'INTEGER DEFAULT 0'],
-]) {
-  try {
-    db.prepare(`SELECT ${col[0]} FROM users LIMIT 1`).get();
-  } catch {
-    db.exec(`ALTER TABLE users ADD COLUMN ${col[0]} ${col[1]}`);
-  }
-}
-
 db.exec(`
   CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -286,16 +250,26 @@ function seedRbac() {
 }
 seedRbac();
 
+const { runMigrations } = require('./lib/migrations');
+runMigrations(db);
+
 function placeStats(placeId) {
-  const row = db.prepare(`
-    SELECT COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
-    FROM tiolas
-    WHERE place_id = ? AND status = 'approved' AND stars IS NOT NULL AND stars > 0
-  `).get(placeId);
-  return {
-    tiolaCount: row.count || 0,
-    tiolaRating: row.avg || null,
-  };
+  const all = allPlaceStats();
+  return all.get(placeId) || { tiolaCount: 0, tiolaRating: null };
 }
 
-module.exports = { db, placeStats };
+function allPlaceStats() {
+  const rows = db.prepare(`
+    SELECT place_id AS placeId, COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
+    FROM tiolas
+    WHERE status = 'approved' AND stars IS NOT NULL AND stars > 0 AND place_id IS NOT NULL
+    GROUP BY place_id
+  `).all();
+  const map = new Map();
+  for (const row of rows) {
+    map.set(row.placeId, { tiolaCount: row.count || 0, tiolaRating: row.avg || null });
+  }
+  return map;
+}
+
+module.exports = { db, placeStats, allPlaceStats };

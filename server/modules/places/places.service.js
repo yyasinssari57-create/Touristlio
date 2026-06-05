@@ -1,4 +1,4 @@
-const { db, placeStats } = require('../../db');
+const { db, allPlaceStats } = require('../../db');
 
 const { normalizeSearch, matchesQuery } = require('../../lib/search-normalize');
 
@@ -20,10 +20,26 @@ function normalizeCountry(value) {
 
 
 
-function mapPlace(row) {
+const STATS_CACHE_TTL = 60 * 1000;
+const LIST_STATS_CACHE_TTL = 2 * 60 * 1000;
+let cachedAllStats = null;
+let cachedAllStatsAt = 0;
 
-  return mapPlaceRow(row, placeStats(row.id));
+function getAllStatsMap() {
+  const now = Date.now();
+  if (cachedAllStats && now - cachedAllStatsAt < LIST_STATS_CACHE_TTL) {
+    return cachedAllStats;
+  }
+  cachedAllStats = allPlaceStats();
+  cachedAllStatsAt = now;
+  return cachedAllStats;
+}
 
+function mapPlace(row, statsMap) {
+  const stats = statsMap
+    ? (statsMap.get(row.id) || { tiolaCount: 0, tiolaRating: null })
+    : { tiolaCount: 0, tiolaRating: null };
+  return mapPlaceRow(row, stats);
 }
 
 
@@ -78,7 +94,7 @@ function toApiPlace(p) {
 
 
 
-function filterPlaces(rows, queryParams) {
+function filterPlaces(rows, queryParams, statsMap = getAllStatsMap()) {
 
   const {
 
@@ -94,7 +110,7 @@ function filterPlaces(rows, queryParams) {
 
   if (qNorm) {
 
-    filtered = filtered.filter((row) => matchesQuery(mapPlace(row), qNorm));
+    filtered = filtered.filter((row) => matchesQuery(mapPlace(row, statsMap), qNorm));
 
   }
 
@@ -102,7 +118,7 @@ function filterPlaces(rows, queryParams) {
 
     filtered = filtered.filter((r) => {
 
-      const p = mapPlace(r);
+      const p = mapPlace(r, statsMap);
 
       return matchesFilterGroup(p.categories, group);
 
@@ -130,7 +146,7 @@ function filterPlaces(rows, queryParams) {
 
     filtered = filtered.filter((r) => {
 
-      const cats = mapPlace(r).categories;
+      const cats = mapPlace(r, statsMap).categories;
 
       return allowed.includes(r.category) || (cats || []).some((c) => allowed.includes(c));
 
@@ -192,7 +208,7 @@ function filterPlaces(rows, queryParams) {
 
 
 
-  let places = filtered.map(mapPlace);
+  let places = filtered.map((r) => mapPlace(r, statsMap));
 
 
 
@@ -263,8 +279,9 @@ function listPlaces(queryParams) {
   return wrap(key, () => {
 
     const rows = db.prepare('SELECT * FROM places').all();
+    const statsMap = getAllStatsMap();
 
-    let { places, qNorm } = filterPlaces(rows, queryParams);
+    let { places, qNorm } = filterPlaces(rows, queryParams, statsMap);
 
     places = sortPlaces(places, sort);
 
@@ -290,7 +307,7 @@ function listPlaces(queryParams) {
 
     };
 
-  });
+  }, STATS_CACHE_TTL);
 
 }
 
@@ -302,7 +319,9 @@ function listMarkers(queryParams, lang = 'tr') {
 
   if (!rows.length) rows = db.prepare('SELECT * FROM places').all();
 
-  const { places } = filterPlaces(rows, queryParams);
+  const statsMap = getAllStatsMap();
+
+  const { places } = filterPlaces(rows, queryParams, statsMap);
 
   return places.slice(0, 500).map((p) => mapMarker(p, lang));
 
@@ -336,29 +355,69 @@ const TURKEY_CITIES = [
 
 
 
-function citiesWithCounts(country = 'Turkey') {
+function citiesWithCounts(country) {
 
-  const rows = db.prepare('SELECT city FROM places WHERE country LIKE ? OR country LIKE ?').all('%Turkey%', '%Türkiye%');
+  const countryNorm = country ? normalizeCountry(country).toLowerCase() : '';
 
-  const counts = {};
+  let rows;
 
-  rows.forEach((r) => {
+  if (countryNorm) {
 
-    if (!r.city) return;
+    rows = db.prepare(`
+      SELECT city, country, COUNT(*) AS c FROM places
+      WHERE lower(country) LIKE ? OR lower(country) LIKE ?
+      GROUP BY city, country
+    `).all(`%${countryNorm}%`, countryNorm === 'turkey' ? '%türkiye%' : `%${countryNorm}%`);
 
-    const key = r.city.trim();
+  } else {
 
-    counts[key] = (counts[key] || 0) + 1;
+    rows = db.prepare(`
+      SELECT city, country, COUNT(*) AS c FROM places
+      WHERE city IS NOT NULL AND trim(city) != ''
+      GROUP BY city, country
+      ORDER BY c DESC, city ASC
+      LIMIT 120
+    `).all();
 
-  });
+  }
 
-  return TURKEY_CITIES.map((c) => {
+  if (countryNorm && (countryNorm === 'turkey' || countryNorm.includes('turkey') || countryNorm.includes('türkiye'))) {
 
-    const matchKey = Object.keys(counts).find((k) => k.toLowerCase().replace(/ı/g, 'i') === c.slug || k.toLowerCase().includes(c.slug));
+    const counts = {};
 
-    return { ...c, placeCount: matchKey ? counts[matchKey] : counts[c.nameEn] || counts[c.name] || 0 };
+    rows.forEach((r) => {
 
-  });
+      if (!r.city) return;
+
+      const key = r.city.trim();
+
+      counts[key] = (counts[key] || 0) + (r.c || 0);
+
+    });
+
+    return TURKEY_CITIES.map((c) => {
+
+      const matchKey = Object.keys(counts).find((k) => k.toLowerCase().replace(/ı/g, 'i') === c.slug || k.toLowerCase().includes(c.slug));
+
+      return { ...c, placeCount: matchKey ? counts[matchKey] : counts[c.nameEn] || counts[c.name] || 0 };
+
+    });
+
+  }
+
+  return rows.map((r) => ({
+
+    slug: (r.city || '').toLowerCase().replace(/\s+/g, '-'),
+
+    name: r.city,
+
+    nameEn: r.city,
+
+    country: r.country,
+
+    placeCount: r.c || 0,
+
+  }));
 
 }
 

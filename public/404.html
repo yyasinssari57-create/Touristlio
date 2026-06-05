@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow"/>
 <title>404 — Touristlio</title>
 <link rel="stylesheet" href="/css/style.css"/>
 </head>
@@ -11,7 +12,10 @@
   <img src="/images/logo-round.png?v=5" alt="Touristlio" class="brand-mark"/>
   <h1>404</h1>
   <p data-i18n="err404">Aradığınız sayfa bulunamadı.</p>
-  <a href="/" class="btn bp" data-i18n="errHome">Ana sayfaya dön</a>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px">
+    <a href="/" class="btn bp" data-i18n="errHome">Ana sayfaya dön</a>
+    <a href="/gezilecek-yerler" class="btn bo" data-i18n="errPlaces">Gezilecek Yerler</a>
+  </div>
 </div>
 <script src="/js/i18n.js"></script>
 <script>window.TL_I18N.apply(localStorage.getItem('tl_lang')||'tr');</script>

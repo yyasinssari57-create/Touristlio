@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Touristlio Admin</title>
+<meta name="robots" content="noindex, nofollow"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/style.css"/>
 <style>
@@ -142,6 +143,15 @@ body{font-family:Inter,sans-serif;background:var(--l);}
 </div>
 
 <script>
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 const API = '/api';
 let token = localStorage.getItem('tl_token');
 let currentUser = null;
@@ -337,6 +347,7 @@ async function refresh() {
   document.getElementById('statsRow').innerHTML = `
     <div class="admin-card"><strong>${stats.places}</strong><br><span style="font-size:.75rem;color:var(--t2)">Yer</span></div>
     <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
+    <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
     <div class="admin-card"><strong>${stats.blogsPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Blog</span></div>
     <div class="admin-card"><strong>${stats.users}</strong><br><span style="font-size:.75rem;color:var(--t2)">Kullanıcı</span></div>`;
 
@@ -353,9 +364,9 @@ async function refresh() {
     <div class="admin-card admin-item">
       <div style="flex:1">
         ${item.photoUrl ? `<img src="${item.photoUrl}" alt=""/>` : ''}
-        <div><strong>${item.userName}</strong> · ${item.placeName}</div>
+        <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}</div>
         ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}
-        <p style="font-size:.85rem;color:var(--t2);margin-top:6px">${item.text}</p>
+        <p style="font-size:.85rem;color:var(--t2);margin-top:6px">${escapeHtml(item.text)}</p>
         <div style="font-size:.65rem;color:var(--t3)">${item.createdAt}</div>
       </div>
       <div class="admin-actions">
@@ -370,8 +381,8 @@ async function refresh() {
   const bl = await api('/admin/pending/blogs');
   document.getElementById('pendingBlogs').innerHTML = bl.items.length ? bl.items.map((item) => `
     <div class="admin-card admin-item">
-      <div style="flex:1"><strong>${item.title}</strong> — ${item.userName}
-        <p style="font-size:.85rem;color:var(--t2)">${item.excerpt || ''}</p></div>
+      <div style="flex:1"><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.userName)}
+        <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(item.excerpt || '')}</p></div>
       <div class="admin-actions">
         <button class="btn-ok" onclick="approveBlog(${item.id})">Onayla</button>
         <button class="btn-no" onclick="rejectBlog(${item.id})">Reddet</button>

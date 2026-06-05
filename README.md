@@ -74,9 +74,27 @@ touristlio/
 | `npm run seed` | places.json → SQLite |
 | `npm run sitemap` | sitemap.xml |
 
+## Güvenlik (v2.2)
+
+- Production: `JWT_SECRET` zorunlu (32+ karakter), Helmet CSP, API hata maskeleme
+- Dev logo endpoint yalnızca `NODE_ENV !== production`
+- Admin moderasyon: `escapeHtml`, Tiola spam filtresi (`spam` / `pending` ayrı sayaç)
+- `safeUrl()` blog/yer görselleri; admin araçları `spawnSync` + rate limit
+
+## API (v2.2)
+
+| Yol | Açıklama |
+|-----|----------|
+| `/api/trip-plans` | Gezi planları API (UI sekmesi yok; navbar değişmez) |
+| `/api/travel-lists/public/:token` | Herkese açık liste |
+| `/api/travel-lists/:id/publish` | Liste yayınla + share token |
+
+## E-posta (SMTP)
+
+`.env` içinde `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` tanımlanırsa kayıt doğrulama ve şifre sıfırlama e-postası gönderilir; aksi halde yalnızca log.
+
 ## v2.1 (ertelenen)
 
-- Gerçek SMTP e-posta (şifre sıfırlama / doğrulama şu an konsol stub)
 - Affiliate gerçek partner API entegrasyonu
 - jsPDF tam PDF export (şu an print CSS)
 - PostgreSQL, Nominatim geocoding proxy

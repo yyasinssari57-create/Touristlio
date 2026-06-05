@@ -2,8 +2,20 @@ const TTL_MS = Number(process.env.CACHE_TTL_MS) || 5 * 60 * 1000;
 
 const store = new Map();
 
+function normalizeCacheParts(parts) {
+  if (parts == null || typeof parts !== 'object') return parts;
+  const sorted = {};
+  for (const key of Object.keys(parts).sort()) {
+    const v = parts[key];
+    sorted[key] = v != null && typeof v === 'object' && !Array.isArray(v)
+      ? normalizeCacheParts(v)
+      : v;
+  }
+  return sorted;
+}
+
 function cacheKey(prefix, parts) {
-  return `${prefix}:${JSON.stringify(parts)}`;
+  return `${prefix}:${JSON.stringify(normalizeCacheParts(parts))}`;
 }
 
 function get(key) {
@@ -38,4 +50,4 @@ function clear(prefix) {
   }
 }
 
-module.exports = { cacheKey, get, set, wrap, clear, TTL_MS };
+module.exports = { cacheKey, normalizeCacheParts, get, set, wrap, clear, TTL_MS };

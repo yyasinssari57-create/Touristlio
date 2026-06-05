@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const { db } = require('../db');
 const { authOptional, authRequired } = require('../middleware/auth');
+const { sanitizeText } = require('../lib/sanitize');
 
 const router = express.Router();
 
@@ -23,7 +24,12 @@ const upload = multer({
   },
 });
 
-const SPAM_WORDS = ['http://', 'https://', 'www.', 'casino', 'viagra', 'kumar'];
+const SPAM_WORDS = [
+  'http://', 'https://', 'www.', 'bit.ly', 't.me/',
+  'casino', 'viagra', 'kumar', 'bahis', 'forex', 'crypto scam',
+  'click here', 'free money', 'whatsapp', 'telegram.me',
+  'buy now', 'limited offer', 'earn $', 'work from home',
+];
 
 function mapTiola(row) {
   return {
@@ -58,7 +64,11 @@ function tiolaSelect(extra = '') {
 
 function looksLikeSpam(text) {
   const lower = text.toLowerCase();
-  return SPAM_WORDS.some((w) => lower.includes(w));
+  if (SPAM_WORDS.some((w) => lower.includes(w))) return true;
+  const linkCount = (lower.match(/https?:\/\//g) || []).length;
+  if (linkCount >= 2) return true;
+  if (/(.)\1{8,}/.test(lower)) return true;
+  return false;
 }
 
 router.get('/', authOptional, (req, res) => {
@@ -76,8 +86,10 @@ router.get('/', authOptional, (req, res) => {
   }
 
   if (placeId) {
+    const pid = Number(placeId);
+    if (!Number.isFinite(pid)) return res.status(400).json({ error: 'Geçersiz placeId' });
     where += ' AND t.place_id = ?';
-    params.push(Number(placeId));
+    params.push(pid);
   }
   if (general === '1') {
     where += ' AND t.place_id IS NULL';
@@ -94,7 +106,8 @@ router.get('/', authOptional, (req, res) => {
 
 router.post('/', authRequired, upload.single('photo'), (req, res) => {
   const { text, stars, category, placeId, cityTag, countryTag } = req.body || {};
-  if (!text?.trim()) {
+  const cleanText = sanitizeText(text, 2000);
+  if (!cleanText) {
     return res.status(400).json({ error: 'Tiola metni gerekli' });
   }
   const starNum = stars ? Number(stars) : null;
@@ -117,7 +130,7 @@ router.post('/', authRequired, upload.single('photo'), (req, res) => {
     }
   }
 
-  const initialStatus = looksLikeSpam(text) ? 'pending' : 'pending';
+  const initialStatus = looksLikeSpam(cleanText) ? 'spam' : 'pending';
   const photoPath = req.file ? req.file.filename : null;
 
   const info = db.prepare(`
@@ -128,17 +141,19 @@ router.post('/', authRequired, upload.single('photo'), (req, res) => {
     pid,
     starNum,
     category || null,
-    text.trim(),
+    cleanText,
     photoPath,
-    cityTag || null,
-    countryTag || null,
-    initialStatus
+    cityTag ? sanitizeText(cityTag, 80) : null,
+    countryTag ? sanitizeText(countryTag, 80) : null,
+    initialStatus,
   );
 
   const row = db.prepare(`${tiolaSelect('WHERE t.id = ?')}`).get(info.lastInsertRowid);
   res.status(201).json({
     tiola: mapTiola(row),
-    message: 'Tiola\'n alındı. Onay sonrası yayınlanacak.',
+    message: initialStatus === 'spam'
+      ? 'Tiola spam olarak işaretlendi ve yayınlanmayacak.'
+      : 'Tiola\'n alındı. Onay sonrası yayınlanacak.',
   });
 });
 
@@ -147,8 +162,9 @@ router.get('/pending/count', authRequired, (req, res) => {
     return res.status(403).json({ error: 'Yetki yok' });
   }
   const count = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get().c;
+  const spamCount = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'spam'").get().c;
   const blogCount = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get().c;
-  res.json({ tiolas: count, blogs: blogCount });
+  res.json({ tiolas: count, spam: spamCount, blogs: blogCount });
 });
 
 module.exports = router;

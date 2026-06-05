@@ -1,8 +1,13 @@
 const express = require('express');
 const { db } = require('../db');
 const { authOptional, authRequired } = require('../middleware/auth');
+const { sanitizeText } = require('../lib/sanitize');
 
 const router = express.Router();
+
+const MAX_TITLE = 200;
+const MAX_EXCERPT = 500;
+const MAX_BODY = 20000;
 
 function mapBlog(row) {
   return {
@@ -48,20 +53,23 @@ router.get('/', authOptional, (req, res) => {
 
 router.post('/', authRequired, (req, res) => {
   const { title, excerpt, body, category, imageUrl, placeId } = req.body || {};
-  if (!title?.trim() || !body?.trim()) {
+  const cleanTitle = sanitizeText(title, MAX_TITLE);
+  const cleanBody = sanitizeText(body, MAX_BODY);
+  if (!cleanTitle || !cleanBody) {
     return res.status(400).json({ error: 'Başlık ve içerik gerekli' });
   }
+  const cleanExcerpt = sanitizeText(excerpt || cleanBody, MAX_EXCERPT).slice(0, MAX_EXCERPT);
   const info = db.prepare(`
     INSERT INTO blogs (user_id, category, title, excerpt, body, image_url, place_id, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
   `).run(
     req.user.id,
     category || 'guide',
-    title.trim(),
-    (excerpt || body).trim().slice(0, 300),
-    body.trim(),
-    imageUrl || null,
-    placeId ? Number(placeId) : null
+    cleanTitle,
+    cleanExcerpt,
+    cleanBody,
+    imageUrl ? sanitizeText(imageUrl, 500) : null,
+    placeId ? Number(placeId) : null,
   );
   const row = db.prepare(`
     SELECT b.*, u.name AS author_name FROM blogs b
