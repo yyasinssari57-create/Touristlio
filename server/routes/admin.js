@@ -9,7 +9,11 @@ const { clear: clearCache } = require('../lib/cache');
 const { computeUserRiskScore, checkPermission } = require('../middleware/rbac');
 const { spawnSync } = require('child_process');
 const { adminToolLimiter } = require('../middleware/rateLimit');
-const { sanitizeName, parsePositiveInt } = require('../lib/sanitize');
+const { parsePositiveInt } = require('../lib/sanitize');
+const catalogDb = require('../lib/catalog-db');
+const adminPlace = require('../lib/admin-place');
+const placesService = require('../modules/places/places.service');
+const { ok, fail } = require('../lib/apiResponse');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
@@ -65,7 +69,7 @@ router.get('/pending/tiolas', (_req, res) => {
     WHERE t.status = 'pending'
     ORDER BY t.created_at ASC
   `).all();
-  res.json({ items: rows.map(mapPendingTiola) });
+  return ok(res, { items: rows.map(mapPendingTiola) });
 });
 
 router.get('/pending/blogs', (_req, res) => {
@@ -75,7 +79,7 @@ router.get('/pending/blogs', (_req, res) => {
     WHERE b.status = 'pending'
     ORDER BY b.created_at ASC
   `).all();
-  res.json({
+  return ok(res, {
     items: rows.map((r) => ({
       id: r.id,
       userName: r.user_name,
@@ -104,7 +108,7 @@ router.post('/tiolas/:id/approve', (req, res) => {
     UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
-  res.json({ ok: true });
+  return ok(res, { approved: true });
 });
 
 router.post('/tiolas/:id/reject', (req, res) => {
@@ -114,7 +118,7 @@ router.post('/tiolas/:id/reject', (req, res) => {
     UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
-  res.json({ ok: true });
+  return ok(res, { rejected: true });
 });
 
 router.post('/blogs/:id/approve', (req, res) => {
@@ -124,7 +128,7 @@ router.post('/blogs/:id/approve', (req, res) => {
     UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status = 'pending'
   `).run(req.user.id, id);
-  res.json({ ok: true });
+  return ok(res, { approved: true });
 });
 
 router.post('/blogs/:id/reject', (req, res) => {
@@ -134,130 +138,206 @@ router.post('/blogs/:id/reject', (req, res) => {
     UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status = 'pending'
   `).run(req.user.id, id);
-  res.json({ ok: true });
+  return ok(res, { rejected: true });
 });
 
 router.post('/moderators', requireRole('admin'), (req, res) => {
   const { name, email, password } = req.body || {};
   if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Ad, e-posta ve şifre gerekli' });
+    return fail(res, 'Ad, e-posta ve şifre gerekli');
   }
   if (findUserByEmail(email)) {
-    return res.status(409).json({ error: 'E-posta zaten kayıtlı' });
+    return fail(res, 'E-posta zaten kayıtlı', 409);
   }
   const user = createUser({ name, email, password, role: 'moderator' });
-  res.status(201).json({ user: sanitizeUser(user) });
+  return ok(res, { user: sanitizeUser(user) }, 201);
 });
 
-router.post('/places', requireRole('admin', 'moderator'), (req, res) => {
-  const {
-    name, location, country, city, district, category,
-    imageUrl, entryFee, entryFeeEn, bestTime, bestTimeEn,
-    description, descriptionEn, overview, overviewEn,
-    history, historyEn, thingsToDo, thingsToDoEn,
-    cultureFood, cultureFoodEn, travelTips, travelTipsEn,
-    tips, tipsEn, tags, searchAliases, categories, isLocal, lat, lng,
-  } = req.body || {};
-  const safeName = sanitizeName(name);
-  if (!safeName || !country || !city || !category) {
-    return res.status(400).json({ error: 'Ad, ülke, şehir ve kategori zorunlu' });
+/* ── Places CRUD ── */
+router.get('/places', checkPermission('admin.places'), (req, res) => {
+  try {
+    const q = req.query.q || '';
+    const limit = Number(req.query.limit) || 100;
+    const offset = Number(req.query.offset) || 0;
+    const data = adminPlace.listAdminPlaces({ q, limit, offset, includeArchived: req.query.all === '1' });
+    return ok(res, data);
+  } catch (err) {
+    return fail(res, err.message || 'Yerler getirilemedi', 500);
   }
-  const { enrichContentFields } = require('../lib/place-content');
-  const maxId = db.prepare('SELECT MAX(id) AS m FROM places').get().m || 0;
-  const id = maxId + 1;
-  const enriched = enrichContentFields({
-    id,
-    name: safeName,
-    location: location || `${city}, ${country}`,
-    country,
-    city,
-    district: district || city,
-    category,
-    imageUrl: imageUrl || 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&q=80',
-    isLocal: !!isLocal,
-    entryFee: entryFee || 'Ücretli',
-    entryFeeEn,
-    bestTime: bestTime || 'Sabah erken',
-    bestTimeEn,
-    description: description || name,
-    descriptionEn,
-    overview,
-    overviewEn,
-    history: history || '',
-    historyEn,
-    thingsToDo,
-    thingsToDoEn,
-    cultureFood,
-    cultureFoodEn,
-    travelTips: travelTips || tips,
-    travelTipsEn: travelTipsEn || tipsEn,
-    tips: tips || travelTips,
-    tipsEn,
-    tags: tags || [],
-    searchAliases: searchAliases || [],
-    categories,
-    lat,
-    lng,
-  }, id);
+});
 
-  db.prepare(`
-    INSERT INTO places
-    (id, name, location, country, city, district, category,
-     image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en,
-     description, description_en, overview, overview_en,
-     history, history_en, things_to_do, things_to_do_en,
-     culture_food, culture_food_en, travel_tips, travel_tips_en,
-     how_to_get_there, how_to_get_there_en, photos,
-     tips, tips_en, tags, search_aliases, categories, lat, lng, popularity)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    enriched.name,
-    enriched.location,
-    enriched.country,
-    enriched.city,
-    enriched.district,
-    enriched.category,
-    enriched.imageUrl,
-    enriched.isLocal ? 1 : 0,
-    enriched.entryFee,
-    enriched.entryFeeEn || null,
-    enriched.bestTime,
-    enriched.bestTimeEn || null,
-    enriched.description,
-    enriched.descriptionEn || null,
-    enriched.overview,
-    enriched.overviewEn || null,
-    enriched.history,
-    enriched.historyEn || null,
-    JSON.stringify(enriched.thingsToDo || []),
-    JSON.stringify(enriched.thingsToDoEn || []),
-    enriched.cultureFood || null,
-    enriched.cultureFoodEn || null,
-    enriched.travelTips,
-    enriched.travelTipsEn || null,
-    enriched.howToGetThere || null,
-    enriched.howToGetThereEn || null,
-    JSON.stringify(enriched.photos || (enriched.imageUrl ? [enriched.imageUrl] : [])),
-    enriched.tips,
-    enriched.tipsEn || null,
-    JSON.stringify(enriched.tags || []),
-    JSON.stringify(enriched.searchAliases || []),
-    JSON.stringify(enriched.categories || [category]),
-    enriched.lat,
-    enriched.lng,
-    0,
-  );
-  res.status(201).json({ id, name });
+router.get('/places/:id', checkPermission('admin.places'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const place = adminPlace.getAdminPlace(id);
+  if (!place) return fail(res, 'Yer bulunamadı', 404);
+  return ok(res, { place });
+});
+
+router.post('/places', checkPermission('admin.places'), (req, res) => {
+  try {
+    const created = adminPlace.insertPlace(req.body || {});
+    clearCache('places-list');
+    clearCache('search');
+    return ok(res, created, 201);
+  } catch (err) {
+    return fail(res, err.message || 'Yer eklenemedi');
+  }
+});
+
+router.put('/places/:id', checkPermission('admin.places'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  try {
+    const updated = adminPlace.updatePlace(id, req.body || {});
+    if (!updated) return fail(res, 'Yer bulunamadı', 404);
+    clearCache('places-list');
+    clearCache('search');
+    return ok(res, { place: updated });
+  } catch (err) {
+    return fail(res, err.message || 'Yer güncellenemedi');
+  }
+});
+
+router.delete('/places/:id', checkPermission('admin.places'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const preview = adminPlace.getAdminPlace(id);
+  if (!preview) return fail(res, 'Yer bulunamadı', 404);
+  const result = adminPlace.deletePlace(id);
   clearCache('places-list');
   clearCache('search');
+  return ok(res, result);
 });
 
+router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), (req, res) => {
+  const placeId = parsePositiveInt(req.params.id, res);
+  if (!placeId) return;
+  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
+  if (!row) return fail(res, 'Yer bulunamadı', 404);
+
+  const newPaths = (req.files || []).map((f) => `${placeId}/${f.filename}`);
+  const existing = JSON.parse(row.photos || '[]');
+  const merged = [...existing, ...newPaths.map((p) => `/uploads/${p}`)];
+  db.prepare('UPDATE places SET photos = ? WHERE id = ?').run(JSON.stringify(merged), placeId);
+  clearCache('places-list');
+  clearCache('search');
+  return ok(res, { photos: merged, uploaded: newPaths.length });
+});
+
+/* ── Cities CRUD ── */
+router.get('/cities', checkPermission('admin.cities'), (req, res) => {
+  try {
+    const cities = catalogDb.listCities({ includeInactive: req.query.all === '1' });
+    return ok(res, { cities });
+  } catch (err) {
+    return fail(res, err.message || 'Şehirler getirilemedi', 500);
+  }
+});
+
+router.get('/cities/:id', checkPermission('admin.cities'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const city = catalogDb.getCityById(id);
+  if (!city) return fail(res, 'Şehir bulunamadı', 404);
+  return ok(res, { city });
+});
+
+router.post('/cities', checkPermission('admin.cities'), (req, res) => {
+  try {
+    const city = catalogDb.createCity(req.body || {});
+    clearCache('places-list');
+    return ok(res, { city }, 201);
+  } catch (err) {
+    return fail(res, err.message || 'Şehir eklenemedi');
+  }
+});
+
+router.put('/cities/:id', checkPermission('admin.cities'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  try {
+    const city = catalogDb.updateCity(id, req.body || {});
+    if (!city) return fail(res, 'Şehir bulunamadı', 404);
+    clearCache('places-list');
+    clearCache('search');
+    return ok(res, { city });
+  } catch (err) {
+    return fail(res, err.message || 'Şehir güncellenemedi');
+  }
+});
+
+router.delete('/cities/:id', checkPermission('admin.cities'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const result = catalogDb.deleteCity(id, { hard: true });
+  if (!result.ok) return fail(res, result.error, result.error?.includes('kayıtlı') ? 409 : 404);
+  clearCache('places-list');
+  return ok(res, result);
+});
+
+/* ── Categories CRUD ── */
+router.get('/categories', checkPermission('admin.categories'), (req, res) => {
+  try {
+    const categories = catalogDb.listCategories({ includeInactive: req.query.all === '1' });
+    return ok(res, { categories });
+  } catch (err) {
+    return fail(res, err.message || 'Kategoriler getirilemedi', 500);
+  }
+});
+
+router.post('/categories', checkPermission('admin.categories'), (req, res) => {
+  try {
+    const category = catalogDb.createCategory(req.body || {});
+    placesService.invalidatePlacesCache();
+    clearCache('search');
+    return ok(res, { category }, 201);
+  } catch (err) {
+    return fail(res, err.message || 'Kategori eklenemedi');
+  }
+});
+
+router.put('/categories/reorder', checkPermission('admin.categories'), (req, res) => {
+  try {
+    const categories = catalogDb.reorderCategories(req.body?.orderedIds || req.body?.ids);
+    placesService.invalidatePlacesCache();
+    return ok(res, { categories });
+  } catch (err) {
+    return fail(res, err.message || 'Sıralama güncellenemedi');
+  }
+});
+
+router.put('/categories/:id', checkPermission('admin.categories'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  try {
+    const category = catalogDb.updateCategory(id, req.body || {});
+    if (!category) return fail(res, 'Kategori bulunamadı', 404);
+    placesService.invalidatePlacesCache();
+    clearCache('search');
+    return ok(res, { category });
+  } catch (err) {
+    return fail(res, err.message || 'Kategori güncellenemedi');
+  }
+});
+
+router.delete('/categories/:id', checkPermission('admin.categories'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const reassignTo = req.body?.reassignTo || req.query.reassignTo;
+  const result = catalogDb.deleteCategory(id, { reassignTo });
+  if (!result.ok) return fail(res, result.error, result.placeCount ? 409 : 404);
+  placesService.invalidatePlacesCache();
+  clearCache('search');
+  return ok(res, result);
+});
+
+/* ── Users & roles (admin only) ── */
 router.get('/users', requireRole('admin'), (_req, res) => {
   const rows = db.prepare(`
     SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 200
   `).all();
-  res.json({
+  return ok(res, {
     users: rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -268,19 +348,19 @@ router.get('/users', requireRole('admin'), (_req, res) => {
   });
 });
 
-router.post('/places/:id/photos', requireRole('admin', 'moderator'), upload.array('photos', 10), (req, res) => {
-  const placeId = parsePositiveInt(req.params.id, res);
-  if (!placeId) return;
-  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
-  if (!row) return res.status(404).json({ error: 'Yer bulunamadı' });
-
-  const newPaths = (req.files || []).map((f) => `${placeId}/${f.filename}`);
-  const existing = JSON.parse(row.photos || '[]');
-  const merged = [...existing, ...newPaths.map((p) => `/uploads/${p}`)];
-  db.prepare('UPDATE places SET photos = ? WHERE id = ?').run(JSON.stringify(merged), placeId);
-  clearCache('places-list');
-  clearCache('search');
-  res.json({ photos: merged, uploaded: newPaths.length });
+router.get('/roles', requireRole('admin'), (_req, res) => {
+  const roles = db.prepare('SELECT slug, name FROM roles ORDER BY slug').all();
+  const permissions = db.prepare('SELECT slug, name FROM permissions ORDER BY slug').all();
+  const rolePermissions = db.prepare('SELECT role_slug, permission_slug FROM role_permissions').all();
+  const byRole = {};
+  for (const rp of rolePermissions) {
+    if (!byRole[rp.role_slug]) byRole[rp.role_slug] = [];
+    byRole[rp.role_slug].push(rp.permission_slug);
+  }
+  return ok(res, {
+    roles: roles.map((r) => ({ slug: r.slug, name: r.name, permissions: byRole[r.slug] || [] })),
+    permissions: permissions.map((p) => ({ slug: p.slug, name: p.name })),
+  });
 });
 
 router.get('/stats', checkPermission('admin.dashboard'), (_req, res) => {
@@ -294,7 +374,7 @@ router.get('/stats', checkPermission('admin.dashboard'), (_req, res) => {
     travelLists: db.prepare('SELECT COUNT(*) AS c FROM travel_lists').get().c,
     visitedRecords: db.prepare('SELECT COUNT(*) AS c FROM visited_places').get().c,
   };
-  res.json(stats);
+  return ok(res, stats);
 });
 
 router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) => {
@@ -303,7 +383,7 @@ router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) =
   const noFaq = db.prepare("SELECT COUNT(*) AS c FROM places WHERE faq_tr IS NULL OR faq_tr = '[]'").get().c;
   const noCoords = db.prepare('SELECT COUNT(*) AS c FROM places WHERE lat IS NULL OR lng IS NULL').get().c;
   const shortDesc = db.prepare('SELECT COUNT(*) AS c FROM places WHERE length(description) < 80').get().c;
-  res.json({
+  return ok(res, {
     total,
     issues: { noPhoto, noFaq, noCoords, shortDesc },
     score: Math.round(100 - ((noPhoto + noFaq + noCoords + shortDesc) / Math.max(total, 1)) * 25),
@@ -312,29 +392,29 @@ router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) =
 
 router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, (_req, res) => {
   clearCache();
-  res.json({ ok: true, message: 'Cache temizlendi' });
+  return ok(res, { message: 'Cache temizlendi' });
 });
 
 router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, (_req, res) => {
   const result = runAdminScript('scripts/generate-sitemap.js');
   if (result.error) {
-    return res.status(500).json({ error: result.error.message || 'Sitemap hatası' });
+    return fail(res, result.error.message || 'Sitemap hatası', 500);
   }
   if (result.status !== 0) {
-    return res.status(500).json({ error: (result.stderr || result.stdout || 'Sitemap hatası').slice(0, 500) });
+    return fail(res, (result.stderr || result.stdout || 'Sitemap hatası').slice(0, 500), 500);
   }
-  res.json({ ok: true, message: 'Sitemap yenilendi' });
+  return ok(res, { message: 'Sitemap yenilendi' });
 });
 
 router.post('/tools/validate', requireRole('admin'), adminToolLimiter, (_req, res) => {
   const result = runAdminScript('scripts/validate-places.js');
   if (result.error) {
-    return res.status(500).json({ error: result.error.message || 'Doğrulama hatası' });
+    return fail(res, result.error.message || 'Doğrulama hatası', 500);
   }
   if (result.status !== 0) {
-    return res.status(500).json({ error: (result.stderr || result.stdout || 'Doğrulama hatası').slice(0, 500) });
+    return fail(res, (result.stderr || result.stdout || 'Doğrulama hatası').slice(0, 500), 500);
   }
-  res.json({ ok: true, output: (result.stdout || '').slice(0, 2000) });
+  return ok(res, { output: (result.stdout || '').slice(0, 2000) });
 });
 
 router.get('/moderation/risk', checkPermission('admin.moderate'), (_req, res) => {
@@ -347,7 +427,7 @@ router.get('/moderation/risk', checkPermission('admin.moderate'), (_req, res) =>
     ...u,
     riskScore: computeUserRiskScore(u.id),
   })).sort((a, b) => b.riskScore - a.riskScore);
-  res.json({ users: scored });
+  return ok(res, { users: scored });
 });
 
 module.exports = router;

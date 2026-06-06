@@ -12,133 +12,176 @@ body{font-family:Inter,sans-serif;background:var(--l);}
 .admin-login{max-width:360px;margin:120px auto;padding:24px;background:#fff;border-radius:16px;box-shadow:var(--sh2);}
 .admin-item{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;}
 .admin-item img{width:80px;height:60px;object-fit:cover;border-radius:8px;}
-.admin-actions{display:flex;gap:6px;}
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap;}
 .btn-ok{background:var(--ok);color:#fff;border:none;padding:8px 14px;border-radius:100px;cursor:pointer;font-weight:600;font-size:.75rem;}
 .btn-no{background:#ef4444;color:#fff;border:none;padding:8px 14px;border-radius:100px;cursor:pointer;font-weight:600;font-size:.75rem;}
+.btn-edit{background:var(--navy);color:#fff;border:none;padding:8px 14px;border-radius:100px;cursor:pointer;font-weight:600;font-size:.75rem;}
 .admin-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
 .admin-form .ain{margin-bottom:0;}
 .admin-form .full{grid-column:1/-1;}
+.photo-preview-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;}
+.photo-thumb{position:relative;width:80px;height:60px;border-radius:8px;overflow:hidden;border:1px solid var(--l2);}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:.65rem;cursor:pointer;line-height:1;}
+.photo-upload-hint{font-size:.72rem;color:var(--t3);margin:4px 0 0;}
 </style>
 </head>
 <body>
-<div id="loginScreen" class="admin-login">
+<div id="loginScreen" class="admin-login" role="main" aria-labelledby="loginTitle">
   <img src="/images/logo.png" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
-  <p style="text-align:center;font-weight:700;color:var(--navy);margin-bottom:12px">Admin</p>
-  <input class="ain" id="admEmail" type="email" placeholder="E-posta"/>
-  <input class="ain" id="admPass" type="password" placeholder="Şifre"/>
-  <button class="btn bp" style="width:100%;margin-top:8px" onclick="adminLogin()">Giriş</button>
+  <p id="loginTitle" style="text-align:center;font-weight:700;color:var(--navy);margin-bottom:12px">Admin</p>
+  <label class="sr-only" for="admEmail">E-posta</label>
+  <input class="ain" id="admEmail" type="email" placeholder="E-posta" autocomplete="username" aria-required="true"/>
+  <label class="sr-only" for="admPass">Şifre</label>
+  <input class="ain" id="admPass" type="password" placeholder="Şifre" autocomplete="current-password" aria-required="true"/>
+  <button class="btn bp" style="width:100%;margin-top:8px" onclick="adminLogin()" aria-label="Admin paneline giriş yap">Giriş</button>
   <p style="font-size:.7rem;color:var(--t3);margin-top:10px;text-align:center"><a href="/">← Siteye dön</a></p>
+  <div id="loginErr" class="admin-status err" style="display:none;margin-top:10px" role="alert"></div>
 </div>
 
 <div id="adminPanel" style="display:none">
-  <nav class="tl-nav"><div class="nav-inner">
+  <nav class="tl-nav" aria-label="Üst menü"><div class="nav-inner">
     <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span> Admin</span></a>
-    <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46"/></a>
+    <a href="/" class="nav-brand-center" aria-label="Touristlio ana sayfa"><img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46"/></a>
     <div class="nav-r"><span id="admUser" style="font-size:.8rem;color:rgba(255,255,255,.75)"></span>
     <a href="/" class="btn nav-btn-ghost" style="text-decoration:none">Site</a>
-    <button class="btn nav-btn-ghost" onclick="adminLogout()">Çıkış</button></div>
+    <button class="btn nav-btn-ghost" onclick="adminLogout()" aria-label="Çıkış yap">Çıkış</button></div>
   </div></nav>
-  <div class="admin-shell">
-    <nav class="admin-sidebar" id="adminSidebar" aria-label="Admin menü">
-      <button type="button" class="on" data-section="dashboard" onclick="showAdminSection('dashboard',this)">📊 Dashboard</button>
-      <button type="button" data-section="places" onclick="showAdminSection('places',this)">📍 Places</button>
-      <button type="button" data-section="cities" onclick="showAdminSection('cities',this)">🏙️ Cities</button>
-      <button type="button" data-section="categories" onclick="showAdminSection('categories',this)">📂 Categories</button>
-      <button type="button" data-section="moderation" onclick="showAdminSection('moderation',this)">✅ Moderation</button>
-      <button type="button" data-section="users" data-role="admin" onclick="showAdminSection('users',this)">👤 Users</button>
-      <button type="button" data-section="content" onclick="showAdminSection('content',this)">📝 Content</button>
-      <button type="button" data-section="analytics" onclick="showAdminSection('analytics',this)">📈 Analytics</button>
-      <button type="button" data-section="settings" data-role="admin" onclick="showAdminSection('settings',this)">⚙️ Settings</button>
-      <button type="button" data-section="roles" data-role="admin" onclick="showAdminSection('roles',this)">🔐 Roles</button>
-    </nav>
-    <div class="admin-content">
-    <section id="adm-dashboard" class="adm-section active">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px" id="statsRow"></div>
-    </section>
-    <section id="adm-places" class="adm-section" style="display:none">
-    <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni yer ekle</h2>
-    <div class="admin-card">
-      <div class="admin-form" id="placeForm">
-        <input class="ain" id="plName" placeholder="Yer adı *"/>
-        <input class="ain" id="plCountry" placeholder="Ülke *"/>
-        <input class="ain" id="plCity" placeholder="Şehir *"/>
-        <input class="ain" id="plDistrict" placeholder="İlçe / bölge"/>
-        <input class="ain full" id="plLocation" placeholder="Konum metni"/>
-        <select class="ain" id="plCat">
-          <option value="landmark">landmark</option>
-          <option value="museum">museum</option>
-          <option value="nature">nature</option>
-          <option value="beach">beach</option>
-          <option value="religious">religious</option>
-          <option value="restaurant">restaurant</option>
-          <option value="viewpoint">viewpoint</option>
-          <option value="adventure">adventure</option>
-        </select>
-        <input class="ain" id="plAliases" placeholder="Arama alias (virgülle): Istanbul, İstanbul"/>
-        <input class="ain" id="plLat" placeholder="Enlem (lat)"/>
-        <input class="ain" id="plLng" placeholder="Boylam (lng)"/>
-        <input class="ain full" id="plImage" placeholder="Görsel URL (Unsplash)"/>
-        <textarea class="ain full" id="plDesc" placeholder="Açıklama (TR)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plDescEn" placeholder="Description (EN)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plOverview" placeholder="Genel bakış (TR, uzun)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plOverviewEn" placeholder="Overview (EN)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plHistory" placeholder="Tarihçe (TR)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plHistoryEn" placeholder="History (EN)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plThings" placeholder="Yapılacaklar (TR, satır başına bir madde)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plThingsEn" placeholder="Things to do (EN, one per line)" style="height:50px"></textarea>
-        <textarea class="ain full" id="plCulture" placeholder="Kültür & yemek (TR)" style="height:40px"></textarea>
-        <textarea class="ain full" id="plCultureEn" placeholder="Culture & food (EN)" style="height:40px"></textarea>
-        <textarea class="ain full" id="plTips" placeholder="Seyahat ipuçları (TR)" style="height:40px"></textarea>
-        <textarea class="ain full" id="plTipsEn" placeholder="Travel tips (EN)" style="height:40px"></textarea>
-      </div>
-      <button class="btn bp bsm" onclick="addPlace()">Yeri kaydet</button>
-      <div style="margin-top:14px">
-        <label style="font-size:.75rem;color:var(--t2)">Mevcut yere fotoğraf yükle (place ID)</label>
-        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-          <input class="ain" id="photoPlaceId" placeholder="Place ID" style="max-width:120px"/>
-          <input type="file" id="photoFiles" accept="image/*" multiple style="font-size:.75rem"/>
-          <button class="btn bo bsm" type="button" onclick="uploadPhotos()">Yükle</button>
-        </div>
-      </div>
-    </div>
-    </section>
-    <section id="adm-cities" class="adm-section" style="display:none"><div class="admin-card"><p style="color:var(--t2);font-size:.85rem">Şehir listesi keşif akışından yönetilir (yakında tam CRUD).</p></div></section>
-    <section id="adm-categories" class="adm-section" style="display:none"><div class="admin-card"><p style="color:var(--t2);font-size:.85rem">Kategori grupları: museum, nature, food, historical, entertainment.</p></div></section>
-    <section id="adm-moderation" class="adm-section" style="display:none">
-    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Bekleyen Tiola'lar</h2>
-    <div id="pendingTiolas"></div>
-    </section>
-    <section id="adm-users" class="adm-section" style="display:none">
-    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Kullanıcılar</h2>
-    <div id="userList"></div>
-    </section>
-    <section id="adm-content" class="adm-section" style="display:none">
-    <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Bekleyen Bloglar</h2>
-    <div id="pendingBlogs"></div>
-    </section>
-    <section id="adm-analytics" class="adm-section" style="display:none">
-      <div class="admin-card" id="analyticsSummary"></div>
-      <div class="admin-card" id="analyticsQuality" style="margin-top:12px"></div>
-    </section>
-    <section id="adm-settings" class="adm-section" style="display:none">
-      <div class="admin-card">
-        <h3 style="margin:0 0 12px;color:var(--navy)">Site ayarları (DB)</h3>
-        <div class="admin-form" id="settingsForm"></div>
-        <button class="btn bp bsm" type="button" onclick="saveSettings()">Kaydet</button>
-      </div>
-    </section>
-    <section id="adm-roles" class="adm-section" style="display:none"><div class="admin-card"><p style="color:var(--t2)">Admin · Moderator · Editor rolleri tanımlı.</p></div></section>
 
-    <div id="modSection" style="display:none">
-      <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Moderatör ekle</h2>
-      <div class="admin-card admin-form">
-        <input class="ain" id="modName" placeholder="Ad"/>
-        <input class="ain" id="modEmail" placeholder="E-posta"/>
-        <input class="ain full" id="modPass" type="password" placeholder="Geçici şifre"/>
-        <button class="btn bp bsm full" onclick="addModerator()">Moderatör oluştur</button>
-      </div>
+  <div class="admin-shell">
+    <nav class="admin-topnav" id="adminTabs" role="tablist" aria-label="Admin bölümleri">
+      <button type="button" role="tab" aria-selected="true" class="on" data-section="dashboard" data-permission="admin.dashboard" onclick="showAdminSection('dashboard',this)">Özet</button>
+      <button type="button" role="tab" aria-selected="false" data-section="places" data-permission="admin.places" onclick="showAdminSection('places',this)">Gezilecek Yerler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="cities" data-permission="admin.cities" onclick="showAdminSection('cities',this)">Şehirler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="categories" data-permission="admin.categories" onclick="showAdminSection('categories',this)">Kategoriler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="moderation" data-permission="admin.moderate" onclick="showAdminSection('moderation',this)">Moderasyon</button>
+      <button type="button" role="tab" aria-selected="false" data-section="users" data-role="admin" data-permission="admin.users" onclick="showAdminSection('users',this)">Kullanıcılar</button>
+      <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" onclick="showAdminSection('content',this)">İçerik</button>
+      <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.dashboard" onclick="showAdminSection('analytics',this)">Analitik</button>
+      <button type="button" role="tab" aria-selected="false" data-section="settings" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('settings',this)">Ayarlar</button>
+      <button type="button" role="tab" aria-selected="false" data-section="roles" data-role="admin" data-permission="admin.roles" onclick="showAdminSection('roles',this)">Roller</button>
+    </nav>
+
+    <div class="admin-content" role="main">
+      <div id="globalErr" class="admin-status err" style="display:none" role="alert" aria-live="polite"></div>
+
+      <section id="adm-dashboard" class="adm-section active" role="tabpanel" aria-label="Dashboard">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px" id="statsRow"></div>
+      </section>
+
+      <section id="adm-places" class="adm-section" style="display:none" role="tabpanel" aria-label="Yerler">
+        <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni yer ekle</h2>
+        <div class="admin-card">
+          <div class="admin-form" id="placeForm">
+            <input class="ain" id="plName" placeholder="Yer adı *" aria-label="Yer adı"/>
+            <input class="ain" id="plCountry" placeholder="Ülke *" aria-label="Ülke"/>
+            <input class="ain" id="plCity" placeholder="Şehir *" aria-label="Şehir"/>
+            <input class="ain" id="plDistrict" placeholder="İlçe / bölge" aria-label="İlçe"/>
+            <input class="ain full" id="plLocation" placeholder="Konum metni" aria-label="Konum"/>
+            <select class="ain" id="plCat" aria-label="Kategori"></select>
+            <input class="ain" id="plAliases" placeholder="Arama alias (virgülle)" aria-label="Arama aliasları"/>
+            <input class="ain" id="plLat" placeholder="Enlem" aria-label="Enlem" type="number" step="any"/>
+            <input class="ain" id="plLng" placeholder="Boylam" aria-label="Boylam" type="number" step="any"/>
+            <input class="ain full" id="plImage" placeholder="Görsel URL (opsiyonel)" aria-label="Görsel URL"/>
+            <div class="full">
+              <label for="plPhotos" style="font-size:.75rem;color:var(--t2);display:block;margin-bottom:4px">Görseller (dosya yükle)</label>
+              <input type="file" id="plPhotos" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yer görselleri yükle"/>
+              <div id="plPhotoPreview" class="photo-preview-row" aria-live="polite"></div>
+              <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · max 5 MB</p>
+            </div>
+            <textarea class="ain full" id="plDesc" placeholder="Açıklama (TR)" style="height:50px" aria-label="Açıklama Türkçe"></textarea>
+            <textarea class="ain full" id="plDescEn" placeholder="Description (EN)" style="height:50px" aria-label="Açıklama İngilizce"></textarea>
+          </div>
+          <button class="btn bp bsm" type="button" onclick="addPlace()" aria-label="Yeni yeri kaydet">Yeri kaydet</button>
+        </div>
+        <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Yer listesi</h2>
+        <div class="admin-card">
+          <label class="sr-only" for="placeSearch">Yer ara</label>
+          <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" style="max-width:280px;margin-bottom:8px" oninput="debounceLoadPlaces()"/>
+          <div id="placesTableWrap" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="adm-cities" class="adm-section" style="display:none" role="tabpanel" aria-label="Şehirler">
+        <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni şehir ekle</h2>
+        <div class="admin-card admin-form">
+          <input class="ain" id="ctName" placeholder="Şehir adı *" aria-label="Şehir adı"/>
+          <input class="ain" id="ctCountry" placeholder="Ülke *" aria-label="Ülke"/>
+          <input class="ain" id="ctNameEn" placeholder="İngilizce ad" aria-label="İngilizce ad"/>
+          <input class="ain" id="ctSlug" placeholder="Slug (opsiyonel)" aria-label="Slug"/>
+          <button class="btn bp bsm full" type="button" onclick="addCity()" aria-label="Şehir ekle">Şehir ekle</button>
+        </div>
+        <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Şehir listesi</h2>
+        <div class="admin-card" id="citiesTableWrap" aria-live="polite"></div>
+      </section>
+
+      <section id="adm-categories" class="adm-section" style="display:none" role="tabpanel" aria-label="Kategoriler">
+        <p style="font-size:.82rem;color:var(--t2);margin:0 0 16px;max-width:640px;line-height:1.5">
+          <strong>Keşfet filtre çipleri:</strong> Burada eklediğiniz veya düzenlediğiniz kategoriler, Keşfet sayfasında
+          <em>Destinasyonlar</em> ve <em>Harita</em> sekmelerindeki tek filtre şeridinde (Tümü + gruplar + kategoriler) görünür.
+          Grup çipleri (Tarihi, Doğa…) yer sayısına göre otomatik oluşur; tek tek kategoriler bu listeden yönetilir.
+        </p>
+        <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni kategori ekle</h2>
+        <div class="admin-card admin-form">
+          <input class="ain" id="catSlug" placeholder="Kod (slug) *" aria-label="Kategori kodu"/>
+          <input class="ain" id="catNameTr" placeholder="Türkçe ad *" aria-label="Türkçe ad"/>
+          <input class="ain" id="catNameEn" placeholder="İngilizce ad" aria-label="İngilizce ad"/>
+          <input class="ain" id="catIcon" placeholder="İkon (emoji)" aria-label="İkon" maxlength="4"/>
+          <button class="btn bp bsm full" type="button" onclick="addCategory()" aria-label="Kategori ekle">Kategori ekle</button>
+        </div>
+        <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Kategori listesi</h2>
+        <div class="admin-card" id="categoriesTableWrap" aria-live="polite"></div>
+      </section>
+
+      <section id="adm-moderation" class="adm-section" style="display:none" role="tabpanel" aria-label="Moderasyon">
+        <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Bekleyen Tiola'lar</h2>
+        <div id="pendingTiolas"></div>
+      </section>
+
+      <section id="adm-users" class="adm-section" style="display:none" role="tabpanel" aria-label="Kullanıcılar">
+        <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Kullanıcılar</h2>
+        <div id="userList"></div>
+        <div id="modSection" style="margin-top:24px">
+          <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Moderatör ekle</h2>
+          <div class="admin-card admin-form">
+            <input class="ain" id="modName" placeholder="Ad" aria-label="Moderatör adı"/>
+            <input class="ain" id="modEmail" placeholder="E-posta" aria-label="Moderatör e-posta" type="email"/>
+            <input class="ain full" id="modPass" type="password" placeholder="Geçici şifre" aria-label="Geçici şifre"/>
+            <button class="btn bp bsm full" type="button" onclick="addModerator()" aria-label="Moderatör oluştur">Moderatör oluştur</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="adm-content" class="adm-section" style="display:none" role="tabpanel" aria-label="İçerik">
+        <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Bekleyen Bloglar</h2>
+        <div id="pendingBlogs"></div>
+      </section>
+
+      <section id="adm-analytics" class="adm-section" style="display:none" role="tabpanel" aria-label="Analitik">
+        <div class="admin-card" id="analyticsSummary"></div>
+        <div class="admin-card" id="analyticsQuality" style="margin-top:12px"></div>
+      </section>
+
+      <section id="adm-settings" class="adm-section" style="display:none" role="tabpanel" aria-label="Ayarlar">
+        <div class="admin-card">
+          <h3 style="margin:0 0 12px;color:var(--navy)">Site ayarları</h3>
+          <div class="admin-form" id="settingsForm"></div>
+          <button class="btn bp bsm" type="button" onclick="saveSettings()" aria-label="Ayarları kaydet">Kaydet</button>
+        </div>
+      </section>
+
+      <section id="adm-roles" class="adm-section" style="display:none" role="tabpanel" aria-label="Roller">
+        <div class="admin-card" id="rolesPanel" aria-live="polite"></div>
+      </section>
     </div>
-    </div>
+  </div>
+</div>
+
+<div id="modalOverlay" class="admin-modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="admin-modal">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div class="admin-modal-actions" id="modalActions"></div>
   </div>
 </div>
 
@@ -155,45 +198,182 @@ function escapeHtml(s) {
 const API = '/api';
 let token = localStorage.getItem('tl_token');
 let currentUser = null;
+let categoryOptions = [];
+let placesDebounce = null;
+let editExistingPhotos = [];
+
+const ROLE_DEFAULT_PERMS = {
+  moderator: [
+    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.categories', 'admin.content',
+  ],
+  editor: ['admin.dashboard', 'admin.content'],
+};
+
+function effectivePermissions(user) {
+  if (!user) return [];
+  if (user.role === 'admin') return null;
+  const perms = user.permissions;
+  if (perms == null || (Array.isArray(perms) && perms.length === 0)) {
+    return ROLE_DEFAULT_PERMS[user.role] || [];
+  }
+  return perms;
+}
+
+function hasAdminPerm(slug) {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin') return true;
+  return effectivePermissions(currentUser).includes(slug);
+}
+
+function bindPhotoInput(inputId, previewId) {
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  if (!input || !preview) return;
+  input.onchange = () => {
+    preview.innerHTML = '';
+    [...(input.files || [])].forEach((file) => {
+      const url = URL.createObjectURL(file);
+      const wrap = document.createElement('div');
+      wrap.className = 'photo-thumb';
+      wrap.innerHTML = `<img src="${url}" alt="Önizleme"/>`;
+      preview.appendChild(wrap);
+    });
+  };
+}
+
+function renderExistingPhotos(containerId, photos) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = (photos || []).map((url, idx) => `
+    <div class="photo-thumb" data-idx="${idx}">
+      <img src="${escapeHtml(url)}" alt="Mevcut görsel ${idx + 1}"/>
+      <button type="button" aria-label="Görseli kaldır" onclick="removeEditPhoto(${idx})">×</button>
+    </div>`).join('') || '<p style="font-size:.75rem;color:var(--t3);margin:0">Henüz görsel yok.</p>';
+}
+
+function removeEditPhoto(idx) {
+  editExistingPhotos = editExistingPhotos.filter((_, i) => i !== idx);
+  renderExistingPhotos('edPhotoExisting', editExistingPhotos);
+}
+
+async function uploadPlacePhotos(placeId, inputId) {
+  const input = document.getElementById(inputId);
+  if (!input?.files?.length) return;
+  const fd = new FormData();
+  [...input.files].forEach((f) => fd.append('photos', f));
+  await api('/admin/places/' + placeId + '/photos', { method: 'POST', body: fd });
+  input.value = '';
+}
 
 async function api(path, opts = {}) {
-  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  const headers = { ...(opts.headers || {}) };
+  const isForm = opts.body instanceof FormData;
+  if (!isForm && opts.body && typeof opts.body !== 'string') {
+    headers['Content-Type'] = 'application/json';
+    opts = { ...opts, body: JSON.stringify(opts.body) };
+  } else if (!isForm && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
   if (token) headers.Authorization = 'Bearer ' + token;
-  const res = await fetch(API + path, { ...opts, headers });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Hata');
-  if (data && data.success === true && data.data != null) return data.data;
+  const res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
+  let data = {};
+  try { data = await res.json(); } catch { /* boş yanıt */ }
+  if (!res.ok || data.success === false) {
+    throw new Error(data.error || 'Veri getirilemedi');
+  }
+  if (data.success === true && data.data != null) return data.data;
   return data;
 }
+
+function showErr(msg, elId) {
+  const el = document.getElementById(elId || 'globalErr');
+  if (!el) { alert(msg); return; }
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.focus();
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+function closeModal() {
+  const ov = document.getElementById('modalOverlay');
+  ov.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function openModal(title, bodyHtml, actions) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  const actEl = document.getElementById('modalActions');
+  actEl.innerHTML = '';
+  (actions || []).forEach((a) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = a.primary ? 'btn bp bsm' : 'btn bo bsm';
+    btn.textContent = a.label;
+    btn.setAttribute('aria-label', a.label);
+    btn.onclick = () => { if (a.onClick) a.onClick(); };
+    actEl.appendChild(btn);
+  });
+  document.getElementById('modalOverlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  actEl.querySelector('button')?.focus();
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'modalOverlay') closeModal();
+});
 
 function showAdminSection(id, btn) {
   document.querySelectorAll('.adm-section').forEach((s) => { s.style.display = 'none'; s.classList.remove('active'); });
   const el = document.getElementById('adm-' + id);
   if (el) { el.style.display = 'block'; el.classList.add('active'); }
-  document.querySelectorAll('#adminSidebar button').forEach((b) => b.classList.remove('on'));
-  if (btn) btn.classList.add('on');
+  document.querySelectorAll('#adminTabs button').forEach((b) => {
+    b.classList.remove('on');
+    b.setAttribute('aria-selected', 'false');
+  });
+  if (btn) { btn.classList.add('on'); btn.setAttribute('aria-selected', 'true'); btn.focus(); }
+  if (id === 'places') loadPlacesList();
+  if (id === 'cities') loadCitiesList();
+  if (id === 'categories') loadCategoriesList();
+  if (id === 'roles' && currentUser?.role === 'admin') loadRoles();
 }
 
-function applyAdminRbac(role) {
+function applyAdminRbac(user) {
+  const role = typeof user === 'string' ? user : user?.role;
   document.querySelectorAll('[data-role="admin"]').forEach((el) => {
-    el.style.display = role === 'admin' ? '' : 'none';
+    const hide = role !== 'admin';
+    el.style.display = hide ? 'none' : '';
+    el.setAttribute('aria-hidden', hide ? 'true' : 'false');
   });
+  document.querySelectorAll('#adminTabs button[data-permission]').forEach((btn) => {
+    const hide = role === 'admin' ? false : !hasAdminPerm(btn.dataset.permission);
+    btn.style.display = hide ? 'none' : '';
+    btn.setAttribute('aria-hidden', hide ? 'true' : 'false');
+  });
+  const tabsNav = document.getElementById('adminTabs');
+  if (tabsNav) tabsNav.style.display = '';
+  const tabButtons = [...document.querySelectorAll('#adminTabs button')];
+  const isTabVisible = (btn) => btn.style.display !== 'none';
+  const visibleTab = tabButtons.find(isTabVisible);
+  if (visibleTab && !tabButtons.some((b) => b.classList.contains('on') && isTabVisible(b))) {
+    showAdminSection(visibleTab.dataset.section, visibleTab);
+  }
   if (role === 'editor') {
-    showAdminSection('content', document.querySelector('[data-section="content"]'));
+    const contentBtn = document.querySelector('[data-section="content"]');
+    if (contentBtn && contentBtn.style.display !== 'none') showAdminSection('content', contentBtn);
   }
 }
 
 async function adminLogin() {
+  document.getElementById('loginErr').style.display = 'none';
   try {
     const data = await api('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({
-        email: document.getElementById('admEmail').value,
-        password: document.getElementById('admPass').value,
-      }),
+      body: { email: document.getElementById('admEmail').value, password: document.getElementById('admPass').value },
     });
     if (!['admin', 'moderator', 'editor'].includes(data.user.role)) {
-      alert('Admin, moderatör veya editör yetkisi gerekli');
+      showErr('Admin, moderatör veya editör yetkisi gerekli', 'loginErr');
       return;
     }
     token = data.token;
@@ -201,7 +381,7 @@ async function adminLogin() {
     localStorage.setItem('tl_token', token);
     localStorage.setItem('tl_user', JSON.stringify(data.user));
     showPanel(data.user);
-  } catch (e) { alert(e.message); }
+  } catch (e) { showErr(e.message, 'loginErr'); }
 }
 
 function adminLogout() {
@@ -213,24 +393,161 @@ function adminLogout() {
 }
 
 async function showPanel(user) {
+  currentUser = user;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('adminPanel').style.display = 'block';
   document.getElementById('admUser').textContent = user.name + ' (' + user.role + ')';
-  document.getElementById('modSection').style.display = user.role === 'admin' ? 'block' : 'none';
-  applyAdminRbac(user.role);
+  applyAdminRbac(user);
+  bindPhotoInput('plPhotos', 'plPhotoPreview');
+  await loadCategoryOptions();
   await refresh();
 }
 
-function lines(id) {
-  return document.getElementById(id).value.split('\n').map((s) => s.trim()).filter(Boolean);
+async function loadCategoryOptions() {
+  try {
+    const data = await api('/admin/categories?all=1');
+    categoryOptions = data.categories || [];
+    const sel = document.getElementById('plCat');
+    sel.innerHTML = categoryOptions.map((c) =>
+      `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.icon)} ${escapeHtml(c.nameTr)} (${escapeHtml(c.slug)})</option>`
+    ).join('');
+  } catch (e) {
+    console.warn('Kategoriler yüklenemedi', e);
+  }
+}
+
+function debounceLoadPlaces() {
+  clearTimeout(placesDebounce);
+  placesDebounce = setTimeout(loadPlacesList, 300);
+}
+
+async function loadPlacesList() {
+  const wrap = document.getElementById('placesTableWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const q = document.getElementById('placeSearch')?.value || '';
+    const data = await api('/admin/places?q=' + encodeURIComponent(q) + '&limit=80');
+    const rows = data.places || [];
+    if (!rows.length) {
+      wrap.innerHTML = '<p style="color:var(--t3)">Kayıtlı yer bulunamadı.</p>';
+      return;
+    }
+    wrap.innerHTML = `<table class="admin-table" aria-label="Yer listesi">
+      <thead><tr><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>İşlem</th></tr></thead>
+      <tbody>${rows.map((p) => `<tr>
+        <td>${p.id}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.city)}</td>
+        <td>${escapeHtml(p.country)}</td>
+        <td>${escapeHtml(p.category)}</td>
+        <td class="admin-actions">
+          <button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" onclick="openPlaceEdit(${p.id})">Düzenle</button>
+          <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" onclick="confirmDeletePlace(${p.id})">Sil</button>
+        </td>
+      </tr>`).join('')}</tbody></table>
+      <p style="font-size:.72rem;color:var(--t3);margin-top:8px">Toplam: ${data.total || rows.length}</p>`;
+  } catch (e) {
+    wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function openPlaceEdit(id) {
+  try {
+    const data = await api('/admin/places/' + id);
+    const p = data.place;
+    editExistingPhotos = [...(p.photos || [])];
+    const catOpts = categoryOptions.map((c) =>
+      `<option value="${escapeHtml(c.slug)}" ${c.slug === p.category ? 'selected' : ''}>${escapeHtml(c.nameTr)}</option>`
+    ).join('');
+    openModal('Yer düzenle: ' + p.name, `
+      <div class="admin-form">
+        <input class="ain" id="edName" value="${escapeHtml(p.name)}" aria-label="Ad"/>
+        <input class="ain" id="edCountry" value="${escapeHtml(p.country)}" aria-label="Ülke"/>
+        <input class="ain" id="edCity" value="${escapeHtml(p.city)}" aria-label="Şehir"/>
+        <select class="ain" id="edCat" aria-label="Kategori">${catOpts}</select>
+        <input class="ain" id="edLat" value="${p.lat ?? ''}" aria-label="Enlem" type="number" step="any"/>
+        <input class="ain" id="edLng" value="${p.lng ?? ''}" aria-label="Boylam" type="number" step="any"/>
+        <input class="ain full" id="edImage" value="${escapeHtml(p.imageUrl || '')}" aria-label="Görsel URL (opsiyonel)"/>
+        <div class="full">
+          <p style="font-size:.75rem;color:var(--t2);margin:0 0 6px">Mevcut görseller</p>
+          <div id="edPhotoExisting" class="photo-preview-row"></div>
+          <label for="edPhotos" style="font-size:.75rem;color:var(--t2);display:block;margin:8px 0 4px">Yeni görsel ekle</label>
+          <input type="file" id="edPhotos" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yeni görseller yükle"/>
+          <div id="edPhotoNewPreview" class="photo-preview-row"></div>
+        </div>
+        <textarea class="ain full" id="edDesc" aria-label="Açıklama" style="height:60px">${escapeHtml(p.description || '')}</textarea>
+      </div>
+      ${p.tiolaCount ? `<p style="font-size:.8rem;color:#b45309">⚠ Bu yerde ${p.tiolaCount} Tiola kaydı var.</p>` : ''}`,
+      [
+        { label: 'İptal', onClick: closeModal },
+        { label: 'Kaydet', primary: true, onClick: () => savePlaceEdit(id) },
+      ]
+    );
+    renderExistingPhotos('edPhotoExisting', editExistingPhotos);
+    bindPhotoInput('edPhotos', 'edPhotoNewPreview');
+  } catch (e) { showErr(e.message); }
+}
+
+async function savePlaceEdit(id) {
+  try {
+    const photos = editExistingPhotos.length ? editExistingPhotos : undefined;
+    const imageUrl = document.getElementById('edImage').value;
+    await api('/admin/places/' + id, {
+      method: 'PUT',
+      body: {
+        name: document.getElementById('edName').value,
+        country: document.getElementById('edCountry').value,
+        city: document.getElementById('edCity').value,
+        category: document.getElementById('edCat').value,
+        lat: parseFloat(document.getElementById('edLat').value) || undefined,
+        lng: parseFloat(document.getElementById('edLng').value) || undefined,
+        imageUrl: imageUrl || (photos?.[0] || undefined),
+        photos,
+        description: document.getElementById('edDesc').value,
+      },
+    });
+    await uploadPlacePhotos(id, 'edPhotos');
+    closeModal();
+    editExistingPhotos = [];
+    await loadPlacesList();
+    await refresh();
+  } catch (e) { showErr(e.message); }
+}
+
+async function confirmDeletePlace(id) {
+  try {
+    const data = await api('/admin/places/' + id);
+    const p = data.place;
+    const tiolaWarn = p.tiolaCount
+      ? `<p style="color:#b91c1c;font-weight:600">⚠ DİKKAT: Bu işlem ${p.tiolaCount} Tiola yorumunu kalıcı olarak silecek!</p>`
+      : '';
+    openModal('Yeri sil', `
+      <p><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.city)}, ${escapeHtml(p.country)}) kalıcı olarak silinecek.</p>
+      ${tiolaWarn}
+      <p style="font-size:.8rem;color:var(--t2)">Bu işlem geri alınamaz.</p>`,
+      [
+        { label: 'İptal', onClick: closeModal },
+        { label: 'Kalıcı sil', primary: true, onClick: () => deletePlace(id) },
+      ]
+    );
+  } catch (e) { showErr(e.message); }
+}
+
+async function deletePlace(id) {
+  try {
+    await api('/admin/places/' + id, { method: 'DELETE' });
+    closeModal();
+    await loadPlacesList();
+    await refresh();
+  } catch (e) { showErr(e.message); }
 }
 
 async function addPlace() {
-  const aliases = document.getElementById('plAliases').value.split(',').map((s) => s.trim()).filter(Boolean);
   try {
-    await api('/admin/places', {
+    const created = await api('/admin/places', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         name: document.getElementById('plName').value,
         country: document.getElementById('plCountry').value,
         city: document.getElementById('plCity').value,
@@ -240,74 +557,284 @@ async function addPlace() {
         imageUrl: document.getElementById('plImage').value,
         description: document.getElementById('plDesc').value,
         descriptionEn: document.getElementById('plDescEn').value,
-        overview: document.getElementById('plOverview').value,
-        overviewEn: document.getElementById('plOverviewEn').value,
-        history: document.getElementById('plHistory').value,
-        historyEn: document.getElementById('plHistoryEn').value,
-        thingsToDo: lines('plThings'),
-        thingsToDoEn: lines('plThingsEn'),
-        cultureFood: document.getElementById('plCulture').value,
-        cultureFoodEn: document.getElementById('plCultureEn').value,
-        travelTips: document.getElementById('plTips').value,
-        travelTipsEn: document.getElementById('plTipsEn').value,
-        searchAliases: aliases,
+        searchAliases: document.getElementById('plAliases').value.split(',').map((s) => s.trim()).filter(Boolean),
         lat: parseFloat(document.getElementById('plLat').value) || undefined,
         lng: parseFloat(document.getElementById('plLng').value) || undefined,
-      }),
+      },
     });
-    alert('Yer eklendi');
+    const placeId = created.id || created.place?.id;
+    if (placeId) await uploadPlacePhotos(placeId, 'plPhotos');
+    document.getElementById('placeForm').querySelectorAll('input,textarea').forEach((i) => {
+      if (i.id !== 'plCat' && i.type !== 'file') i.value = '';
+    });
+    const photoPreview = document.getElementById('plPhotoPreview');
+    if (photoPreview) photoPreview.innerHTML = '';
+    const photoInput = document.getElementById('plPhotos');
+    if (photoInput) photoInput.value = '';
+    await loadPlacesList();
     await refresh();
-  } catch (e) { alert(e.message); }
+  } catch (e) { showErr(e.message); }
+}
+
+async function loadCitiesList() {
+  const wrap = document.getElementById('citiesTableWrap');
+  wrap.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const data = await api('/admin/cities?all=1');
+    const rows = data.cities || [];
+    if (!rows.length) { wrap.innerHTML = '<p style="color:var(--t3)">Şehir yok.</p>'; return; }
+    wrap.innerHTML = `<table class="admin-table" aria-label="Şehir listesi">
+      <thead><tr><th>ID</th><th>Şehir</th><th>Ülke</th><th>Yer sayısı</th><th>Durum</th><th>İşlem</th></tr></thead>
+      <tbody>${rows.map((c) => `<tr>
+        <td>${c.id}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.country)}</td>
+        <td>${c.placeCount}</td><td>${c.isActive ? 'Aktif' : 'Pasif'}</td>
+        <td class="admin-actions">
+          <button class="btn-edit" type="button" aria-label="${escapeHtml(c.name)} düzenle" onclick="openCityEdit(${c.id})">Düzenle</button>
+          <button class="btn-no" type="button" aria-label="${escapeHtml(c.name)} sil" onclick="confirmDeleteCity(${c.id},'${escapeHtml(c.name)}',${c.placeCount})">Sil</button>
+        </td></tr>`).join('')}</tbody></table>`;
+  } catch (e) { wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+}
+
+async function addCity() {
+  try {
+    await api('/admin/cities', {
+      method: 'POST',
+      body: {
+        name: document.getElementById('ctName').value,
+        country: document.getElementById('ctCountry').value,
+        nameEn: document.getElementById('ctNameEn').value,
+        slug: document.getElementById('ctSlug').value,
+      },
+    });
+    ['ctName','ctCountry','ctNameEn','ctSlug'].forEach((id) => { document.getElementById(id).value = ''; });
+    await loadCitiesList();
+  } catch (e) { showErr(e.message); }
+}
+
+async function openCityEdit(id) {
+  try {
+    const data = await api('/admin/cities/' + id);
+    const c = data.city;
+    openModal('Şehir düzenle', `
+      <div class="admin-form">
+        <input class="ain" id="edCtName" value="${escapeHtml(c.name)}" aria-label="Şehir adı"/>
+        <input class="ain" id="edCtCountry" value="${escapeHtml(c.country)}" aria-label="Ülke"/>
+        <input class="ain" id="edCtNameEn" value="${escapeHtml(c.nameEn)}" aria-label="İngilizce ad"/>
+        <input class="ain" id="edCtSlug" value="${escapeHtml(c.slug)}" aria-label="Slug"/>
+        <label style="font-size:.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="edCtActive" ${c.isActive ? 'checked' : ''} aria-label="Aktif"/> Aktif</label>
+      </div>
+      <p style="font-size:.78rem;color:var(--t2)">Bağlı yer: ${c.placeCount}</p>`,
+      [
+        { label: 'İptal', onClick: closeModal },
+        { label: 'Kaydet', primary: true, onClick: () => saveCityEdit(id) },
+      ]
+    );
+  } catch (e) { showErr(e.message); }
+}
+
+async function saveCityEdit(id) {
+  try {
+    await api('/admin/cities/' + id, {
+      method: 'PUT',
+      body: {
+        name: document.getElementById('edCtName').value,
+        country: document.getElementById('edCtCountry').value,
+        nameEn: document.getElementById('edCtNameEn').value,
+        slug: document.getElementById('edCtSlug').value,
+        isActive: document.getElementById('edCtActive').checked,
+      },
+    });
+    closeModal();
+    await loadCitiesList();
+  } catch (e) { showErr(e.message); }
+}
+
+function confirmDeleteCity(id, name, placeCount) {
+  if (placeCount > 0) {
+    openModal('Silinemez', `
+      <p><strong>${escapeHtml(name)}</strong> şehrinde <strong>${placeCount}</strong> yer kayıtlı.</p>
+      <p style="color:var(--t2)">Önce yerleri başka şehre taşıyın veya silin.</p>`,
+      [{ label: 'Tamam', primary: true, onClick: closeModal }]
+    );
+    return;
+  }
+  openModal('Şehri sil', `<p><strong>${escapeHtml(name)}</strong> kalıcı olarak silinecek.</p>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Sil', primary: true, onClick: () => deleteCity(id) },
+    ]
+  );
+}
+
+async function deleteCity(id) {
+  try {
+    await api('/admin/cities/' + id, { method: 'DELETE' });
+    closeModal();
+    await loadCitiesList();
+  } catch (e) { showErr(e.message); }
+}
+
+async function loadCategoriesList() {
+  const wrap = document.getElementById('categoriesTableWrap');
+  wrap.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const data = await api('/admin/categories?all=1');
+    const rows = data.categories || [];
+    categoryOptions = rows;
+    if (!rows.length) { wrap.innerHTML = '<p style="color:var(--t3)">Kategori yok.</p>'; return; }
+    wrap.innerHTML = `<table class="admin-table" aria-label="Kategori listesi">
+      <thead><tr><th>Kod</th><th>TR</th><th>EN</th><th>Yer</th><th>İşlem</th></tr></thead>
+      <tbody>${rows.map((c) => `<tr>
+        <td>${escapeHtml(c.icon)} ${escapeHtml(c.slug)}</td>
+        <td>${escapeHtml(c.nameTr)}</td><td>${escapeHtml(c.nameEn)}</td><td>${c.placeCount}</td>
+        <td class="admin-actions">
+          <button class="btn-edit" type="button" aria-label="${escapeHtml(c.nameTr)} düzenle" onclick="openCategoryEdit(${c.id})">Düzenle</button>
+          <button class="btn-no" type="button" aria-label="${escapeHtml(c.nameTr)} sil" onclick="confirmDeleteCategory(${c.id},'${escapeHtml(c.slug)}',${c.placeCount})">Sil</button>
+        </td></tr>`).join('')}</tbody></table>`;
+    const sel = document.getElementById('plCat');
+    if (sel) sel.innerHTML = rows.filter((c) => c.isActive).map((c) =>
+      `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.icon)} ${escapeHtml(c.nameTr)}</option>`
+    ).join('');
+  } catch (e) { wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+}
+
+async function addCategory() {
+  try {
+    await api('/admin/categories', {
+      method: 'POST',
+      body: {
+        slug: document.getElementById('catSlug').value,
+        nameTr: document.getElementById('catNameTr').value,
+        nameEn: document.getElementById('catNameEn').value,
+        icon: document.getElementById('catIcon').value,
+      },
+    });
+    ['catSlug','catNameTr','catNameEn','catIcon'].forEach((id) => { document.getElementById(id).value = ''; });
+    await loadCategoriesList();
+  } catch (e) { showErr(e.message); }
+}
+
+async function openCategoryEdit(id) {
+  try {
+    const data = await api('/admin/categories?all=1');
+    const c = (data.categories || []).find((x) => x.id === id);
+    if (!c) throw new Error('Kategori bulunamadı');
+    openModal('Kategori düzenle', `
+      <div class="admin-form">
+        <input class="ain" id="edCatSlug" value="${escapeHtml(c.slug)}" aria-label="Kod"/>
+        <input class="ain" id="edCatNameTr" value="${escapeHtml(c.nameTr)}" aria-label="Türkçe ad"/>
+        <input class="ain" id="edCatNameEn" value="${escapeHtml(c.nameEn)}" aria-label="İngilizce ad"/>
+        <input class="ain" id="edCatIcon" value="${escapeHtml(c.icon)}" aria-label="İkon"/>
+        <label style="font-size:.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="edCatActive" ${c.isActive ? 'checked' : ''}/> Aktif</label>
+      </div>`,
+      [
+        { label: 'İptal', onClick: closeModal },
+        { label: 'Kaydet', primary: true, onClick: () => saveCategoryEdit(id) },
+      ]
+    );
+  } catch (e) { showErr(e.message); }
+}
+
+async function saveCategoryEdit(id) {
+  try {
+    await api('/admin/categories/' + id, {
+      method: 'PUT',
+      body: {
+        slug: document.getElementById('edCatSlug').value,
+        nameTr: document.getElementById('edCatNameTr').value,
+        nameEn: document.getElementById('edCatNameEn').value,
+        icon: document.getElementById('edCatIcon').value,
+        isActive: document.getElementById('edCatActive').checked,
+      },
+    });
+    closeModal();
+    await loadCategoriesList();
+  } catch (e) { showErr(e.message); }
+}
+
+function confirmDeleteCategory(id, slug, placeCount) {
+  const others = categoryOptions.filter((c) => c.slug !== slug && c.isActive);
+  const opts = others.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.nameTr)} (${escapeHtml(c.slug)})</option>`).join('');
+  if (placeCount > 0) {
+    openModal('Kategori sil — yerleri taşı', `
+      <p><strong>${escapeHtml(slug)}</strong> kategorisinde <strong>${placeCount}</strong> yer var.</p>
+      <label for="reassignCat" style="font-size:.8rem">Yerlerin taşınacağı kategori:</label>
+      <select class="ain" id="reassignCat" aria-label="Hedef kategori" style="margin-top:6px">${opts}</select>`,
+      [
+        { label: 'İptal', onClick: closeModal },
+        { label: 'Taşı ve sil', primary: true, onClick: () => deleteCategory(id, document.getElementById('reassignCat').value) },
+      ]
+    );
+    return;
+  }
+  openModal('Kategoriyi sil', `<p><strong>${escapeHtml(slug)}</strong> silinecek.</p>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Sil', primary: true, onClick: () => deleteCategory(id) },
+    ]
+  );
+}
+
+async function deleteCategory(id, reassignTo) {
+  try {
+    if (reassignTo === '' || reassignTo == null) {
+      const row = categoryOptions.find((c) => c.id === id);
+      if (row && row.placeCount > 0) {
+        showErr('Yerleri taşımak için hedef kategori seçin.');
+        return;
+      }
+    }
+    await api('/admin/categories/' + id, {
+      method: 'DELETE',
+      body: reassignTo ? { reassignTo } : undefined,
+    });
+    closeModal();
+    await loadCategoriesList();
+  } catch (e) { showErr(e.message); }
+}
+
+async function loadRoles() {
+  const el = document.getElementById('rolesPanel');
+  try {
+    const data = await api('/admin/roles');
+    el.innerHTML = `<h3 style="margin:0 0 12px;color:var(--navy)">Roller ve yetkiler</h3>
+      ${(data.roles || []).map((r) => `
+        <div style="margin-bottom:14px;padding:12px;background:var(--l);border-radius:8px">
+          <strong>${escapeHtml(r.name)}</strong> <span style="font-size:.72rem;color:var(--t3)">(${escapeHtml(r.slug)})</span>
+          <p style="font-size:.75rem;color:var(--t2);margin-top:6px">${(r.permissions || []).map(escapeHtml).join(' · ') || 'Yetki yok'}</p>
+        </div>`).join('')}`;
+  } catch (e) { el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
 }
 
 async function addModerator() {
   try {
     await api('/admin/moderators', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         name: document.getElementById('modName').value,
         email: document.getElementById('modEmail').value,
         password: document.getElementById('modPass').value,
-      }),
+      },
     });
-    alert('Moderatör oluşturuldu');
     document.getElementById('modName').value = '';
     document.getElementById('modEmail').value = '';
     document.getElementById('modPass').value = '';
     await refresh();
-  } catch (e) { alert(e.message); }
-}
-
-async function uploadPhotos() {
-  const id = document.getElementById('photoPlaceId').value;
-  const files = document.getElementById('photoFiles').files;
-  if (!id || !files.length) { alert('Place ID ve dosya gerekli'); return; }
-  const fd = new FormData();
-  for (const f of files) fd.append('photos', f);
-  try {
-    const res = await fetch(API + '/admin/places/' + id + '/photos', {
-      method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd, credentials: 'include',
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    alert('Yüklendi: ' + data.uploaded);
-  } catch (e) { alert(e.message); }
+  } catch (e) { showErr(e.message); }
 }
 
 let siteSettings = {};
 
 async function loadSettingsForm() {
-  if (currentUser?.role !== 'admin') return;
+  if (!hasAdminPerm('admin.settings')) return;
   try {
     siteSettings = await api('/settings');
     const form = document.getElementById('settingsForm');
     if (!form || !siteSettings.settings) return;
     form.innerHTML = Object.entries(siteSettings.settings).map(([key, val]) => `
-      <label class="full" style="font-size:.72rem;color:var(--t2)">${key}</label>
-      <input class="ain full" data-set-key="${key}" value="${String(val).replace(/"/g, '&quot;')}"/>`).join('');
-  } catch (e) {
-    console.warn('settings', e);
-  }
+      <label class="full" style="font-size:.72rem;color:var(--t2)" for="set-${key}">${escapeHtml(key)}</label>
+      <input class="ain full" id="set-${key}" data-set-key="${escapeHtml(key)}" value="${String(val).replace(/"/g, '&quot;')}" aria-label="${escapeHtml(key)} ayarı"/>`).join('');
+  } catch (e) { console.warn('Ayarlar yüklenemedi', e); }
 }
 
 async function saveSettings() {
@@ -316,10 +843,9 @@ async function saveSettings() {
     body[inp.dataset.setKey] = inp.value;
   });
   try {
-    await api('/settings', { method: 'PUT', body: JSON.stringify({ settings: body }) });
-    alert('Ayarlar kaydedildi');
+    await api('/settings', { method: 'PUT', body: { settings: body } });
     await loadSettingsForm();
-  } catch (e) { alert(e.message); }
+  } catch (e) { showErr(e.message); }
 }
 
 async function loadAnalytics() {
@@ -338,68 +864,76 @@ async function loadAnalytics() {
         <p style="font-size:.8rem;color:var(--t2)">Foto eksik: ${quality.issues.noPhoto} · FAQ: ${quality.issues.noFaq} · Koordinat: ${quality.issues.noCoords}</p>`;
     }
   } catch (e) {
-    sumEl.innerHTML = `<p style="color:var(--t3)">${e.message}</p>`;
+    sumEl.innerHTML = `<p style="color:var(--t3)">${escapeHtml(e.message)}</p>`;
   }
 }
 
 async function refresh() {
-  const stats = await api('/admin/stats');
-  document.getElementById('statsRow').innerHTML = `
-    <div class="admin-card"><strong>${stats.places}</strong><br><span style="font-size:.75rem;color:var(--t2)">Yer</span></div>
-    <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
-    <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
-    <div class="admin-card"><strong>${stats.blogsPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Blog</span></div>
-    <div class="admin-card"><strong>${stats.users}</strong><br><span style="font-size:.75rem;color:var(--t2)">Kullanıcı</span></div>`;
+  try {
+    const stats = await api('/admin/stats');
+    document.getElementById('statsRow').innerHTML = `
+      <div class="admin-card"><strong>${stats.places}</strong><br><span style="font-size:.75rem;color:var(--t2)">Yer</span></div>
+      <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
+      <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
+      <div class="admin-card"><strong>${stats.blogsPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Blog</span></div>
+      <div class="admin-card"><strong>${stats.users}</strong><br><span style="font-size:.75rem;color:var(--t2)">Kullanıcı</span></div>`;
+  } catch (e) { showErr(e.message); }
 
   if (currentUser?.role === 'admin') {
     try {
       const ul = await api('/admin/users');
       document.getElementById('userList').innerHTML = ul.users.length ? ul.users.map((u) => `
-        <div class="admin-card"><strong>${u.name}</strong> · ${u.email} · <span style="font-size:.72rem;color:var(--t3)">${u.role}</span></div>`).join('') : '<p style="color:var(--t3)">Kullanıcı yok.</p>';
+        <div class="admin-card"><strong>${escapeHtml(u.name)}</strong> · ${escapeHtml(u.email)} · <span style="font-size:.72rem;color:var(--t3)">${escapeHtml(u.role)}</span></div>`).join('') : '<p style="color:var(--t3)">Kullanıcı yok.</p>';
     } catch { document.getElementById('userList').innerHTML = ''; }
   }
 
-  const ti = await api('/admin/pending/tiolas');
-  document.getElementById('pendingTiolas').innerHTML = ti.items.length ? ti.items.map((item) => `
-    <div class="admin-card admin-item">
-      <div style="flex:1">
-        ${item.photoUrl ? `<img src="${item.photoUrl}" alt=""/>` : ''}
-        <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}</div>
-        ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}
-        <p style="font-size:.85rem;color:var(--t2);margin-top:6px">${escapeHtml(item.text)}</p>
-        <div style="font-size:.65rem;color:var(--t3)">${item.createdAt}</div>
-      </div>
-      <div class="admin-actions">
-        <button class="btn-ok" onclick="approveTiola(${item.id})">Onayla</button>
-        <button class="btn-no" onclick="rejectTiola(${item.id})">Reddet</button>
-      </div>
-    </div>`).join('') : '<p style="color:var(--t3)">Bekleyen Tiola yok.</p>';
+  try {
+    const ti = await api('/admin/pending/tiolas');
+    document.getElementById('pendingTiolas').innerHTML = ti.items.length ? ti.items.map((item) => `
+      <div class="admin-card admin-item">
+        <div style="flex:1">
+          ${item.photoUrl ? `<img src="${item.photoUrl}" alt="Tiola fotoğrafı"/>` : ''}
+          <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}</div>
+          ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}
+          <p style="font-size:.85rem;color:var(--t2);margin-top:6px">${escapeHtml(item.text)}</p>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-ok" type="button" aria-label="Tiola onayla" onclick="approveTiola(${item.id})">Onayla</button>
+          <button class="btn-no" type="button" aria-label="Tiola reddet" onclick="rejectTiola(${item.id})">Reddet</button>
+        </div>
+      </div>`).join('') : '<p style="color:var(--t3)">Bekleyen Tiola yok.</p>';
+  } catch (e) { document.getElementById('pendingTiolas').innerHTML = `<p style="color:var(--t3)">${escapeHtml(e.message)}</p>`; }
 
   await loadAnalytics();
   await loadSettingsForm();
 
-  const bl = await api('/admin/pending/blogs');
-  document.getElementById('pendingBlogs').innerHTML = bl.items.length ? bl.items.map((item) => `
-    <div class="admin-card admin-item">
-      <div style="flex:1"><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.userName)}
-        <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(item.excerpt || '')}</p></div>
-      <div class="admin-actions">
-        <button class="btn-ok" onclick="approveBlog(${item.id})">Onayla</button>
-        <button class="btn-no" onclick="rejectBlog(${item.id})">Reddet</button>
-      </div>
-    </div>`).join('') : '<p style="color:var(--t3)">Bekleyen blog yok.</p>';
+  try {
+    const bl = await api('/admin/pending/blogs');
+    document.getElementById('pendingBlogs').innerHTML = bl.items.length ? bl.items.map((item) => `
+      <div class="admin-card admin-item">
+        <div style="flex:1"><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.userName)}
+          <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(item.excerpt || '')}</p></div>
+        <div class="admin-actions">
+          <button class="btn-ok" type="button" aria-label="Blog onayla" onclick="approveBlog(${item.id})">Onayla</button>
+          <button class="btn-no" type="button" aria-label="Blog reddet" onclick="rejectBlog(${item.id})">Reddet</button>
+        </div>
+      </div>`).join('') : '<p style="color:var(--t3)">Bekleyen blog yok.</p>';
+  } catch (e) { document.getElementById('pendingBlogs').innerHTML = ''; }
 }
 
-async function approveTiola(id) { await api('/admin/tiolas/' + id + '/approve', { method: 'POST' }); refresh(); }
-async function rejectTiola(id) { await api('/admin/tiolas/' + id + '/reject', { method: 'POST' }); refresh(); }
-async function approveBlog(id) { await api('/admin/blogs/' + id + '/approve', { method: 'POST' }); refresh(); }
-async function rejectBlog(id) { await api('/admin/blogs/' + id + '/reject', { method: 'POST' }); refresh(); }
+async function approveTiola(id) { try { await api('/admin/tiolas/' + id + '/approve', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
+async function rejectTiola(id) { try { await api('/admin/tiolas/' + id + '/reject', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
+async function approveBlog(id) { try { await api('/admin/blogs/' + id + '/approve', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
+async function rejectBlog(id) { try { await api('/admin/blogs/' + id + '/reject', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
 
 (async () => {
   if (token) {
     try {
       const me = await api('/auth/me');
-      if (['admin', 'moderator', 'editor'].includes(me.user.role)) showPanel(me.user);
+      if (['admin', 'moderator', 'editor'].includes(me.user.role)) {
+        currentUser = me.user;
+        showPanel(me.user);
+      }
     } catch { adminLogout(); }
   }
 })();

@@ -40,11 +40,12 @@ function cities(req, res) {
 }
 
 function metaCategories(_req, res) {
-  return ok(res, {
-    groups: ['cities', 'historical', 'nature', 'museums', 'restaurants', 'hotels', 'activities'],
-    discover: placesService.DISCOVER_CATEGORIES,
-    legacy: ['landmark', 'museum', 'restaurant', 'cafe', 'beach', 'nature', 'park', 'viewpoint', 'religious', 'market', 'shopping', 'nightlife', 'adventure', 'spa', 'hotel', 'city'],
-  });
+  try {
+    const payload = placesService.getMetaCategories();
+    return ok(res, payload);
+  } catch (e) {
+    return fail(res, e.message || 'Kategori meta alınamadı', 500);
+  }
 }
 
 module.exports = {

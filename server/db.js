@@ -225,6 +225,8 @@ function seedRbac() {
     ['admin.moderate', 'Moderate content'],
     ['admin.users', 'Manage users'],
     ['admin.places', 'Manage places'],
+    ['admin.cities', 'Manage cities'],
+    ['admin.categories', 'Manage categories'],
     ['admin.content', 'Manage blog and pages'],
     ['admin.settings', 'System settings'],
     ['admin.roles', 'Roles and permissions'],
@@ -232,7 +234,7 @@ function seedRbac() {
   ];
   const rolePerms = {
     admin: perms.map((p) => p[0]),
-    moderator: ['admin.dashboard', 'admin.moderate', 'admin.places', 'admin.content'],
+    moderator: ['admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities', 'admin.categories', 'admin.content'],
     editor: ['admin.dashboard', 'admin.content'],
     member: [],
   };

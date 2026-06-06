@@ -43,7 +43,7 @@ window.TL_I18N = (function () {
       tiolaLabel: 'Tiola',
       tiolaCount: 'Tiola',
       all: 'Tümü',
-      catAll: '🌐 Tümü', catLandmark: '🏛️ Tarihi Yerler', catMuseum: '🏺 Müzeler', catRestaurant: '🍽️ Restoranlar',
+      catAll: '🌐 Tümü', catLandmark: '🏛️ Tarihi Yerler', catHistorical: '📜 Tarihi', catMuseum: '🏺 Müzeler', catRestaurant: '🍽️ Restoranlar',
       catCafe: '☕ Kafeler', catBeach: '🏖️ Plajlar', catNature: '⛰️ Doğa', catPark: '🌳 Parklar',
       catViewpoint: '🔭 Manzara', catReligious: '⛪ Dini Yerler', catMarket: '🏪 Pazarlar',
       catShopping: '🛍️ Alışveriş', catNightlife: '🌙 Gece Hayatı', catAdventure: '🪂 Macera', catSpa: '🧘 Spa & Wellness',
@@ -178,7 +178,7 @@ window.TL_I18N = (function () {
       tiolaLabel: 'Tiola',
       tiolaCount: 'Tiolas',
       all: 'All',
-      catAll: '🌐 All', catLandmark: '🏛️ Historic sites', catMuseum: '🏺 Museums', catRestaurant: '🍽️ Restaurants',
+      catAll: '🌐 All', catLandmark: '🏛️ Historic sites', catHistorical: '📜 Historical', catMuseum: '🏺 Museums', catRestaurant: '🍽️ Restaurants',
       catCafe: '☕ Cafés', catBeach: '🏖️ Beaches', catNature: '⛰️ Nature', catPark: '🌳 Parks',
       catViewpoint: '🔭 Viewpoints', catReligious: '⛪ Religious sites', catMarket: '🏪 Markets',
       catShopping: '🛍️ Shopping', catNightlife: '🌙 Nightlife', catAdventure: '🪂 Adventure', catSpa: '🧘 Spa & wellness',
@@ -273,7 +273,7 @@ window.TL_I18N = (function () {
   };
 
   const CAT_KEYS = {
-    all: 'catAll', landmark: 'catLandmark', museum: 'catMuseum', restaurant: 'catRestaurant',
+    all: 'catAll', landmark: 'catLandmark', historical: 'catHistorical', museum: 'catMuseum', restaurant: 'catRestaurant',
     cafe: 'catCafe', beach: 'catBeach', nature: 'catNature', park: 'catPark',
     viewpoint: 'catViewpoint', religious: 'catReligious', market: 'catMarket',
     shopping: 'catShopping', nightlife: 'catNightlife', adventure: 'catAdventure', spa: 'catSpa',
@@ -284,7 +284,12 @@ window.TL_I18N = (function () {
   }
 
   function catLabel(lang, cat) {
-    return t(lang, CAT_KEYS[cat] || 'catAll');
+    const meta = window.TL_CATEGORY_META?.categories?.find((c) => c.slug === cat);
+    if (meta) {
+      const name = lang === 'en' ? meta.nameEn : meta.nameTr;
+      return `${meta.icon ? `${meta.icon} ` : ''}${name}`;
+    }
+    return t(lang, CAT_KEYS[cat] || cat);
   }
 
   function apply(lang) {
@@ -342,13 +347,15 @@ window.TL_I18N = (function () {
         ? "Touristlio — Don't Just Visit. Feel It."
         : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
     }
-    document.querySelectorAll('.cpill[data-cat]').forEach((el) => {
-      el.textContent = catLabel(lang, el.getAttribute('data-cat'));
-    });
-    document.querySelectorAll('.ccard[data-cat] .cname').forEach((el) => {
-      const card = el.closest('.ccard');
-      if (card) el.textContent = catLabel(lang, card.getAttribute('data-cat')).replace(/^[^\s]+\s/, '');
-    });
+    if (!window.TL_CATEGORY_META) {
+      document.querySelectorAll('.cpill[data-cat]').forEach((el) => {
+        el.textContent = catLabel(lang, el.getAttribute('data-cat'));
+      });
+      document.querySelectorAll('.ccard[data-cat] .cname').forEach((el) => {
+        const card = el.closest('.ccard');
+        if (card) el.textContent = catLabel(lang, card.getAttribute('data-cat')).replace(/^[^\s]+\s/, '');
+      });
+    }
   }
 
   return { dict, t, catLabel, CAT_KEYS, apply };

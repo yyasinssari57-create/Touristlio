@@ -48,6 +48,50 @@ function runMigrations(db) {
   }
 
   addColumnIfMissing(db, 'travel_lists', 'share_token', 'TEXT');
+  addColumnIfMissing(db, 'places', 'status', "TEXT DEFAULT 'published'");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      name_en TEXT,
+      slug TEXT NOT NULL,
+      country TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(country, slug)
+    );
+
+    CREATE TABLE IF NOT EXISTS place_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_tr TEXT NOT NULL,
+      name_en TEXT,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cities_country ON cities(country, is_active);
+    CREATE INDEX IF NOT EXISTS idx_places_status ON places(status);
+  `);
+
+  const catalogPerms = [
+    ['admin.cities', 'Manage cities'],
+    ['admin.categories', 'Manage categories'],
+    ['admin.analytics', 'View analytics'],
+  ];
+  for (const [slug, name] of catalogPerms) {
+    db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
+    db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('admin', slug);
+    db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('moderator', slug);
+  }
+
+  const { seedCategoriesIfEmpty, seedCitiesFromPlaces } = require('./catalog-db');
+  seedCategoriesIfEmpty(db);
+  seedCitiesFromPlaces(db);
 }
 
 module.exports = { runMigrations };

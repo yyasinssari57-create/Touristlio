@@ -1,4 +1,5 @@
 const { db } = require('../db');
+const { fail } = require('../lib/apiResponse');
 
 function rolePermissions(roleSlug) {
   return db.prepare(`
@@ -8,11 +9,11 @@ function rolePermissions(roleSlug) {
 
 function checkPermission(...required) {
   return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ error: 'Giriş gerekli' });
+    if (!req.user) return fail(res, 'Giriş gerekli', 401);
     const perms = rolePermissions(req.user.role);
     if (req.user.role === 'admin') return next();
     if (required.some((p) => perms.includes(p))) return next();
-    return res.status(403).json({ error: 'Yetki yok' });
+    return fail(res, 'Yetki yok', 403);
   };
 }
 

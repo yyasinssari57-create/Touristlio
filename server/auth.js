@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('./db');
+const { rolePermissions } = require('./middleware/rbac');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -36,6 +37,7 @@ function comparePassword(password, hash) {
 
 function sanitizeUser(row) {
   if (!row) return null;
+  const permissions = row.role === 'admin' ? null : rolePermissions(row.role);
   return {
     id: row.id,
     name: row.name,
@@ -45,6 +47,7 @@ function sanitizeUser(row) {
     createdAt: row.created_at,
     emailVerified: !!row.email_verified,
     riskScore: row.risk_score || 0,
+    permissions,
   };
 }
 

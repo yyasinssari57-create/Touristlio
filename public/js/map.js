@@ -256,9 +256,13 @@ window.TL_MAP = (function () {
 
     lastLang = lang;
 
-    ensureExploreMap('exploreMap');
+    if (document.getElementById('exploreMap')) {
 
-    paintMarkers(exploreMap, exploreCluster, markers, lang);
+      ensureExploreMap('exploreMap');
+
+      paintMarkers(exploreMap, exploreCluster, markers, lang);
+
+    }
 
     if (document.getElementById('exploreMapFull')) {
 
@@ -418,6 +422,16 @@ window.TL_MAP = (function () {
 
 
 
+  function bindMapCatChips() {
+    document.querySelectorAll('.map-cat-chip').forEach((chip) => {
+      chip.onclick = () => {
+        document.querySelectorAll('.map-cat-chip').forEach((c) => c.classList.remove('on'));
+        chip.classList.add('on');
+        setMapCategory(chip.dataset.cat || 'all');
+      };
+    });
+  }
+
   function bindMapControls() {
 
     const searchInp = document.getElementById('mapSearchInput');
@@ -428,19 +442,7 @@ window.TL_MAP = (function () {
 
     }
 
-    document.querySelectorAll('.map-cat-chip').forEach((chip) => {
-
-      chip.addEventListener('click', () => {
-
-        document.querySelectorAll('.map-cat-chip').forEach((c) => c.classList.remove('on'));
-
-        chip.classList.add('on');
-
-        setMapCategory(chip.dataset.cat || 'all');
-
-      });
-
-    });
+    bindMapCatChips();
 
     document.getElementById('mapLocateBtn')?.addEventListener('click', () => {
 
@@ -478,6 +480,8 @@ window.TL_MAP = (function () {
     setMapSearch,
 
     setMapCategory,
+
+    bindMapCatChips,
 
     locateUser,
 

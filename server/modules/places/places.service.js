@@ -6,7 +6,12 @@ const { matchesFilterGroup } = require('../../lib/place-content');
 
 const { mapPlaceRow, mapMarker } = require('../../lib/place-map');
 
-const { cacheKey, wrap } = require('../../lib/cache');
+const catalogDb = require('../../lib/catalog-db');
+const { FILTER_GROUPS, GROUP_VISIBILITY } = require('../../lib/place-content');
+const { cacheKey, wrap, clear } = require('../../lib/cache');
+
+const CACHE_VERSION = 'v2';
+const META_CACHE_TTL = 60 * 1000;
 
 
 
@@ -272,7 +277,7 @@ function listPlaces(queryParams) {
 
   const cacheParams = { ...queryParams, limit, offset };
 
-  const key = cacheKey('places-list', cacheParams);
+  const key = cacheKey(`places-list-${CACHE_VERSION}`, cacheParams);
 
 
 
@@ -423,21 +428,52 @@ function citiesWithCounts(country) {
 
 
 
-const DISCOVER_CATEGORIES = [
+const GROUP_ORDER = ['historical', 'nature', 'museums', 'restaurants', 'hotels', 'activities'];
 
-  { id: 'museum', icon: '🏺' },
+function getMetaCategories() {
+  const key = cacheKey(`places-meta-categories-${CACHE_VERSION}`, {});
+  return wrap(key, () => {
+    const allCats = catalogDb.listCategories();
+    const categories = allCats.map((c) => ({
+        slug: c.slug,
+        nameTr: c.nameTr,
+        nameEn: c.nameEn,
+        icon: c.icon || '',
+        placeCount: c.placeCount,
+        sortOrder: c.sortOrder,
+      }));
 
-  { id: 'nature', icon: '⛰️' },
+    const activeSlugs = new Set(categories.map((c) => c.slug));
+    const groups = GROUP_ORDER.filter((group) => {
+      const visibility = GROUP_VISIBILITY[group] || FILTER_GROUPS[group] || [];
+      return visibility.some((slug) => activeSlugs.has(slug));
+    });
 
-  { id: 'food', icon: '🍽️' },
+    const discover = categories.map((c) => ({
+      id: c.slug,
+      slug: c.slug,
+      icon: c.icon,
+      nameTr: c.nameTr,
+      nameEn: c.nameEn,
+      placeCount: c.placeCount,
+    }));
 
-  { id: 'historical', icon: '🏛️' },
+    return {
+      version: CACHE_VERSION,
+      groups,
+      categories,
+      discover,
+      legacy: [...activeSlugs],
+    };
+  }, META_CACHE_TTL);
+}
 
-  { id: 'entertainment', icon: '🎭' },
-
-];
-
-
+function invalidatePlacesCache() {
+  clear(`places-list-${CACHE_VERSION}`);
+  clear(`places-meta-categories-${CACHE_VERSION}`);
+  cachedAllStats = null;
+  cachedAllStatsAt = 0;
+}
 
 module.exports = {
 
@@ -455,9 +491,13 @@ module.exports = {
 
   citiesWithCounts,
 
+  getMetaCategories,
+
+  invalidatePlacesCache,
+
   TURKEY_CITIES,
 
-  DISCOVER_CATEGORIES,
+  CACHE_VERSION,
 
 };
 

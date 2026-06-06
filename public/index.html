@@ -122,13 +122,8 @@
         <input type="search" id="mapSearchInput" class="map-search-inp" data-i18n-placeholder="searchPh" placeholder="Haritada ara..." aria-label="Harita arama"/>
         <button type="button" class="btn bo bsm" id="mapLocateBtn" data-i18n="mapLocate">📍 Konumum</button>
       </div>
-      <div class="map-cat-strip">
-        <button type="button" class="map-cat-chip on" data-cat="all" data-i18n="all">Tümü</button>
-        <button type="button" class="map-cat-chip" data-cat="landmark">🏛️</button>
-        <button type="button" class="map-cat-chip" data-cat="museum">🏺</button>
-        <button type="button" class="map-cat-chip" data-cat="nature">⛰️</button>
-        <button type="button" class="map-cat-chip" data-cat="restaurant">🍽️</button>
-        <button type="button" class="map-cat-chip" data-cat="beach">🏖️</button>
+      <div class="map-filter-bar" id="mapFilterBar">
+        <div class="explore-filter-strip" id="mapFilterStrip" role="toolbar" aria-label="Harita filtreleri"></div>
       </div>
       <div id="exploreMapFull" class="map-full" role="region" aria-label="Destinasyon haritası"></div>
     </div>
@@ -137,38 +132,8 @@
   <!-- DISCOVER TAB -->
   <div class="explore-section active" id="es-discover">
     <div class="discover-wrap">
-      <div class="group-strip" id="groupStrip">
-        <div class="gpill on" data-group="all" onclick="setFilterGroup('all',this)" data-i18n="all">Tümü</div>
-        <div class="gpill" data-group="historical" onclick="setFilterGroup('historical',this)" data-i18n="grpHistorical">🏛️ Tarihi</div>
-        <div class="gpill" data-group="nature" onclick="setFilterGroup('nature',this)" data-i18n="grpNature">⛰️ Doğa</div>
-        <div class="gpill" data-group="museums" onclick="setFilterGroup('museums',this)" data-i18n="grpMuseums">🏺 Müzeler</div>
-        <div class="gpill" data-group="restaurants" onclick="setFilterGroup('restaurants',this)" data-i18n="grpRestaurants">🍽️ Yeme-İçme</div>
-        <div class="gpill" data-group="hotels" onclick="setFilterGroup('hotels',this)" data-i18n="grpHotels">🏨 Oteller</div>
-        <div class="gpill" data-group="activities" onclick="setFilterGroup('activities',this)" data-i18n="grpActivities">🎯 Aktiviteler</div>
-      </div>
-      <div class="explore-map-wrap">
-        <div class="explore-map-hd">
-          <h4 data-i18n="mapTitle">🗺️ Harita</h4>
-          <span style="font-size:.72rem;color:var(--t3)" data-i18n="mapSub">OpenStreetMap · kategoriye göre işaretler</span>
-        </div>
-        <div id="exploreMap" role="region" aria-label="Destinasyon haritası"></div>
-      </div>
-      <div class="cat-strip">
-        <div class="cpill on" data-cat="all" onclick="setCat('all',this)">🌐 Tümü</div>
-        <div class="cpill" data-cat="landmark" onclick="setCat('landmark',this)">🏛️ Tarihi Yerler</div>
-        <div class="cpill" data-cat="museum" onclick="setCat('museum',this)">🏺 Müzeler</div>
-        <div class="cpill" data-cat="restaurant" onclick="setCat('restaurant',this)">🍽️ Restoranlar</div>
-        <div class="cpill" data-cat="cafe" onclick="setCat('cafe',this)">☕ Kafeler</div>
-        <div class="cpill" data-cat="beach" onclick="setCat('beach',this)">🏖️ Plajlar</div>
-        <div class="cpill" data-cat="nature" onclick="setCat('nature',this)">⛰️ Doğa</div>
-        <div class="cpill" data-cat="park" onclick="setCat('park',this)">🌳 Parklar</div>
-        <div class="cpill" data-cat="viewpoint" onclick="setCat('viewpoint',this)">🔭 Manzara</div>
-        <div class="cpill" data-cat="religious" onclick="setCat('religious',this)">⛪ Dini Yerler</div>
-        <div class="cpill" data-cat="market" onclick="setCat('market',this)">🏪 Pazarlar</div>
-        <div class="cpill" data-cat="shopping" onclick="setCat('shopping',this)">🛍️ Alışveriş</div>
-        <div class="cpill" data-cat="nightlife" onclick="setCat('nightlife',this)">🌙 Gece Hayatı</div>
-        <div class="cpill" data-cat="adventure" onclick="setCat('adventure',this)">🪂 Macera</div>
-        <div class="cpill" data-cat="spa" onclick="setCat('spa',this)">🧘 Spa & Wellness</div>
+      <div class="discover-filter-bar" id="discoverFilterBar">
+        <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
       </div>
       <div class="results-bar">
         <h3><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
@@ -308,22 +273,7 @@
     <div class="showcase" style="padding-top:28px">
       <div class="sec-ey" data-i18n="catSectionEy">Tüm Kategoriler</div>
       <div class="sec-ti" data-i18n-html="catSectionTitle">Ne <em>arıyorsun?</em></div>
-      <div class="cg">
-        <div class="ccard" data-cat="landmark" onclick="setCatAndSwitch('landmark')"><img src="https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&q=80"/><div class="cinfo"><div class="cname">Tarihi Yerler</div><div class="ccnt" id="cat-cnt-landmark">—</div></div></div>
-        <div class="ccard" data-cat="museum" onclick="setCatAndSwitch('museum')"><img src="https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=400&q=80"/><div class="cinfo"><div class="cname">Müzeler</div><div class="ccnt" id="cat-cnt-museum">—</div></div></div>
-        <div class="ccard" data-cat="restaurant" onclick="setCatAndSwitch('restaurant')"><img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80"/><div class="cinfo"><div class="cname">Restoranlar</div><div class="ccnt" id="cat-cnt-restaurant">—</div></div></div>
-        <div class="ccard" data-cat="cafe" onclick="setCatAndSwitch('cafe')"><img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80"/><div class="cinfo"><div class="cname">Kafeler</div><div class="ccnt" id="cat-cnt-cafe">—</div></div></div>
-        <div class="ccard" data-cat="beach" onclick="setCatAndSwitch('beach')"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80"/><div class="cinfo"><div class="cname">Plajlar</div><div class="ccnt" id="cat-cnt-beach">—</div></div></div>
-        <div class="ccard" data-cat="nature" onclick="setCatAndSwitch('nature')"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80"/><div class="cinfo"><div class="cname">Doğa</div><div class="ccnt" id="cat-cnt-nature">—</div></div></div>
-        <div class="ccard" data-cat="park" onclick="setCatAndSwitch('park')"><img src="https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?w=400&q=80"/><div class="cinfo"><div class="cname">Parklar</div><div class="ccnt" id="cat-cnt-park">—</div></div></div>
-        <div class="ccard" data-cat="viewpoint" onclick="setCatAndSwitch('viewpoint')"><img src="https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&q=80"/><div class="cinfo"><div class="cname">Manzara</div><div class="ccnt" id="cat-cnt-viewpoint">—</div></div></div>
-        <div class="ccard" data-cat="religious" onclick="setCatAndSwitch('religious')"><img src="https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?w=400&q=80"/><div class="cinfo"><div class="cname">Dini Yerler</div><div class="ccnt" id="cat-cnt-religious">—</div></div></div>
-        <div class="ccard" data-cat="adventure" onclick="setCatAndSwitch('adventure')"><img src="https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&q=80"/><div class="cinfo"><div class="cname">Macera</div><div class="ccnt" id="cat-cnt-adventure">—</div></div></div>
-        <div class="ccard" data-cat="market" onclick="setCatAndSwitch('market')"><img src="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=400&q=80"/><div class="cinfo"><div class="cname">Pazarlar</div><div class="ccnt" id="cat-cnt-market">—</div></div></div>
-        <div class="ccard" data-cat="shopping" onclick="setCatAndSwitch('shopping')"><img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=80"/><div class="cinfo"><div class="cname">Alışveriş</div><div class="ccnt" id="cat-cnt-shopping">—</div></div></div>
-        <div class="ccard" data-cat="spa" onclick="setCatAndSwitch('spa')"><img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80"/><div class="cinfo"><div class="cname">Spa & Wellness</div><div class="ccnt" id="cat-cnt-spa">—</div></div></div>
-        <div class="ccard" data-cat="nightlife" onclick="setCatAndSwitch('nightlife')"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80"/><div class="cinfo"><div class="cname">Gece Hayatı</div><div class="ccnt" id="cat-cnt-nightlife">—</div></div></div>
-      </div>
+      <div class="cg" id="categoryCardsGrid"></div>
     </div>
 
     <div class="stats-strip">

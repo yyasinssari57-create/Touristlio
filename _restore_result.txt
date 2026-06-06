@@ -1,0 +1,13 @@
+=== Restore pre-nihai: 1dd581dd9e162b136db1d9e2d0af2c0810916046 ===
+Files in tree: 91
+Git ref main -> 1dd581dd9e162b136db1d9e2d0af2c0810916046
+Patched: removed Admin link from public navbar
+Patched app.js: admin nav removed, cards load on init
+Added splash HTML
+Merged black-T splash CSS
+Check hero: true
+Check explore tab: true
+Check nav-minimal: false
+Check admin in nav: false
+Check splash T: true
+DONE

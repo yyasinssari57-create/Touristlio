@@ -4,12 +4,22 @@ const { buildFaqForPlace } = require('./faq-templates');
 /** Advanced filter buckets → legacy category slugs */
 const FILTER_GROUPS = {
   cities: ['city'],
-  historical: ['landmark', 'religious'],
+  historical: ['historical', 'landmark', 'religious'],
   nature: ['nature', 'beach', 'park', 'viewpoint'],
   museums: ['museum'],
   restaurants: ['restaurant', 'cafe'],
   hotels: ['hotel'],
   activities: ['adventure', 'nightlife', 'spa', 'shopping', 'market'],
+};
+
+/** Group pills shown only when these slugs exist in active DB categories with places */
+const GROUP_VISIBILITY = {
+  historical: ['historical'],
+  nature: ['nature', 'beach', 'park', 'viewpoint'],
+  museums: ['museum'],
+  restaurants: ['restaurant', 'cafe', 'food'],
+  hotels: ['hotel'],
+  activities: ['adventure', 'nightlife', 'spa', 'shopping', 'market', 'entertainment'],
 };
 
 const CATEGORY_TO_GROUPS = {};
@@ -132,6 +142,7 @@ function enrichContentFields(p, id) {
 
 module.exports = {
   FILTER_GROUPS,
+  GROUP_VISIBILITY,
   deriveCategories,
   matchesFilterGroup,
   enrichContentFields,

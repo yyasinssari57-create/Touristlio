@@ -30,9 +30,12 @@ function safeUrl(url) {
 }
 
 function placeImg(p) {
-  const url = safeUrl(p?.imageUrl);
-  if (url.startsWith('http') && !/undefined|null|placeholder/i.test(url)) return url;
-  if (url.startsWith('/')) return url;
+  const candidates = [p?.imageUrl, ...(Array.isArray(p?.photos) ? p.photos : [])];
+  for (const raw of candidates) {
+    const url = safeUrl(raw);
+    if (url.startsWith('http') && !/undefined|null|placeholder/i.test(url)) return url;
+    if (url.startsWith('/')) return url;
+  }
   return fallbackImgUrl(p?.category, p?.id);
 }
 
@@ -66,6 +69,37 @@ let placesTotal = 0;
 let placesOffset = 0;
 let cardsLoaded = false;
 let currentFilterParams = {};
+let categoryMeta = null;
+
+const GROUP_I18N = {
+  historical: 'grpHistorical',
+  nature: 'grpNature',
+  museums: 'grpMuseums',
+  restaurants: 'grpRestaurants',
+  hotels: 'grpHotels',
+  activities: 'grpActivities',
+};
+
+const CATEGORY_IMAGES = {
+  landmark: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&q=80',
+  historical: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&q=80',
+  museum: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=400&q=80',
+  restaurant: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80',
+  cafe: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80',
+  beach: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80',
+  nature: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
+  park: 'https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?w=400&q=80',
+  viewpoint: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&q=80',
+  religious: 'https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?w=400&q=80',
+  adventure: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&q=80',
+  market: 'https://images.unsplash.com/photo-1527838832700-5059252407fa?w=400&q=80',
+  shopping: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=80',
+  spa: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80',
+  nightlife: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80',
+  food: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80',
+  entertainment: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80',
+  hotel: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80',
+};
 
 const CITYDB = {
   'Turkey 🇹🇷': { Istanbul: ['Sultanahmet', 'Beyoğlu', 'Karaköy'], Ankara: ['Çankaya'], 'İzmir': ['Selçuk'], Denizli: ['Pamukkale'], Nevşehir: ['Göreme'] },
@@ -99,7 +133,78 @@ function t(key) {
 }
 
 function catLabel(cat) {
+  const meta = categoryMeta?.categories?.find((c) => c.slug === cat);
+  if (meta) {
+    const name = lang === 'en' ? meta.nameEn : meta.nameTr;
+    return `${meta.icon ? `${meta.icon} ` : ''}${name}`;
+  }
   return window.TL_I18N.catLabel(lang, cat);
+}
+
+function categoryImage(slug) {
+  return CATEGORY_IMAGES[slug] || CATEGORY_IMAGES.landmark;
+}
+
+async function loadCategoryMeta() {
+  try {
+    const data = await api('/places/meta/categories');
+    categoryMeta = data;
+    window.TL_CATEGORY_META = data;
+    const slugs = new Set((data.categories || []).map((c) => c.slug));
+    if (activeCat !== 'all' && !slugs.has(activeCat)) activeCat = 'all';
+    if (activeFilterGroup !== 'all' && !(data.groups || []).includes(activeFilterGroup)) activeFilterGroup = 'all';
+    renderExploreFilters();
+    renderCategoryCards();
+    updateCategoryCounts();
+  } catch (e) {
+    console.warn('category meta', e);
+  }
+}
+
+function buildExploreFiltersHtml() {
+  const allOn = activeFilterGroup === 'all' && activeCat === 'all';
+  let html = `<div class="fpill${allOn ? ' on' : ''}" data-kind="all" data-filter="all" onclick="setExploreFilter('all',this)">${t('all')}</div>`;
+  (categoryMeta.groups || []).forEach((g) => {
+    const label = t(GROUP_I18N[g] || g);
+    const on = activeFilterGroup === g ? ' on' : '';
+    html += `<div class="fpill fpill-group${on}" data-kind="group" data-filter="${escapeHtml(g)}" onclick="setExploreFilter('group:${escapeHtml(g)}',this)">${escapeHtml(label)}</div>`;
+  });
+  (categoryMeta.categories || []).forEach((c) => {
+    const label = lang === 'en' ? c.nameEn : c.nameTr;
+    const icon = c.icon ? `${c.icon} ` : '';
+    const on = activeFilterGroup === 'all' && activeCat === c.slug ? ' on' : '';
+    html += `<div class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" onclick="setExploreFilter('cat:${escapeHtml(c.slug)}',this)">${icon}${escapeHtml(label)}</div>`;
+  });
+  return html;
+}
+
+function renderExploreFilters() {
+  if (!categoryMeta) return;
+  const html = buildExploreFiltersHtml();
+  ['discoverFilterStrip', 'mapFilterStrip'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function renderCategoryCards() {
+  const grid = document.getElementById('categoryCardsGrid');
+  if (!grid || !categoryMeta) return;
+  grid.innerHTML = (categoryMeta.categories || []).map((c) => {
+    const label = lang === 'en' ? c.nameEn : c.nameTr;
+    return `
+      <div class="ccard" data-cat="${c.slug}" onclick="setCatAndSwitch('${c.slug}')">
+        <img src="${categoryImage(c.slug)}" alt="" loading="lazy"/>
+        <div class="cinfo">
+          <div class="cname">${escapeHtml(label)}</div>
+          <div class="ccnt" id="cat-cnt-${c.slug}">—</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function isExploreMapTabActive() {
+  return document.getElementById('es-map')?.classList.contains('active');
 }
 
 function placeField(p, base) {
@@ -430,7 +535,7 @@ async function applyFilters() {
   try {
     await loadPlaces(currentFilterParams, false);
     renderGrid(places);
-    await loadMapMarkers();
+    if (isExploreMapTabActive()) await loadMapMarkers();
   } finally {
     placesLoading = false;
   }
@@ -542,9 +647,6 @@ function showExploreTab(name, el) {
       loadMapMarkers();
     }, 200);
   }
-  if (name === 'discover' && window.TL_MAP) {
-    setTimeout(() => window.TL_MAP.invalidateExplore(), 200);
-  }
 }
 
 async function loadTiolaFeed() {
@@ -584,28 +686,52 @@ function formatDate(iso) {
   return d.toLocaleDateString(lang === 'en' ? 'en' : 'tr');
 }
 
-function setFilterGroup(group, el) {
-  activeFilterGroup = group;
-  document.querySelectorAll('.gpill').forEach((c) => c.classList.remove('on'));
-  if (el) el.classList.add('on');
+function syncExploreFilterState() {
+  document.querySelectorAll('.explore-filter-strip .fpill').forEach((pill) => {
+    const kind = pill.dataset.kind;
+    const filter = pill.dataset.filter;
+    let on = false;
+    if (kind === 'all') on = activeFilterGroup === 'all' && activeCat === 'all';
+    else if (kind === 'group') on = activeFilterGroup === filter;
+    else if (kind === 'cat') on = activeFilterGroup === 'all' && activeCat === filter;
+    pill.classList.toggle('on', on);
+  });
+}
+
+function setExploreFilter(key, el) {
+  if (key === 'all') {
+    activeFilterGroup = 'all';
+    activeCat = 'all';
+  } else if (key.startsWith('group:')) {
+    activeFilterGroup = key.slice(6);
+    activeCat = 'all';
+  } else if (key.startsWith('cat:')) {
+    activeFilterGroup = 'all';
+    activeCat = key.slice(4);
+  }
+  syncExploreFilterState();
   applyFilters();
 }
 
-function setCat(cat, el) {
-  activeCat = cat;
-  document.querySelectorAll('.cpill').forEach((c) => c.classList.remove('on'));
-  if (el) el.classList.add('on');
-  applyFilters();
+function setFilterGroup(group) {
+  setExploreFilter(group === 'all' ? 'all' : `group:${group}`);
+}
+
+function setCat(cat) {
+  setExploreFilter(cat === 'all' ? 'all' : `cat:${cat}`);
 }
 
 function setCatAndSwitch(cat) {
   activeCat = cat;
+  activeFilterGroup = 'all';
   showExploreTab('discover', document.getElementById('et-discover'));
+  syncExploreFilterState();
   applyFilters();
   document.getElementById('es-discover')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 async function loadCategoryStats() {
+  if (!categoryMeta) await loadCategoryMeta();
   if (placesTotal > 0) { updateCategoryCounts(); return; }
   try {
     const data = await api('/places?limit=1&offset=0&sort=popularity');
@@ -636,10 +762,7 @@ function resetFilters() {
   activeStar = 0;
   activeEntry = 'all';
   activeLocal = 'all';
-  document.querySelectorAll('.cpill').forEach((c) => c.classList.remove('on'));
-  document.querySelectorAll('.gpill').forEach((c) => c.classList.remove('on'));
-  document.querySelector('.cpill')?.classList.add('on');
-  document.querySelector('.gpill')?.classList.add('on');
+  syncFilterChipState('all', 'all');
   document.getElementById('cntSel').value = '';
   document.getElementById('citSel').innerHTML = `<option value="">${t('allCities')}</option>`;
   document.getElementById('disSel').innerHTML = `<option value="">${t('allDistricts')}</option>`;
@@ -1136,13 +1259,17 @@ function toggleNavMenu() {
 function updateCategoryCounts() {
   const counts = {};
   places.forEach((p) => { counts[p.category] = (counts[p.category] || 0) + 1; });
+  (categoryMeta?.categories || []).forEach((c) => {
+    const el = document.getElementById(`cat-cnt-${c.slug}`);
+    if (!el) return;
+    const n = counts[c.slug] || c.placeCount || 0;
+    el.textContent = n ? `${n} ${t('placesCount')}` : t('placesCountZero');
+  });
   Object.keys(counts).forEach((cat) => {
     const el = document.getElementById(`cat-cnt-${cat}`);
-    if (el) el.textContent = `${counts[cat]} ${t('placesCount')}`;
-  });
-  ['cafe', 'restaurant', 'spa', 'shopping', 'nightlife'].forEach((cat) => {
-    const el = document.getElementById(`cat-cnt-${cat}`);
-    if (el && !counts[cat]) el.textContent = t('placesCountZero');
+    if (el && !categoryMeta?.categories?.some((c) => c.slug === cat)) {
+      el.textContent = `${counts[cat]} ${t('placesCount')}`;
+    }
   });
   const countries = new Set(places.map((p) => p.country).filter(Boolean));
   const sp = document.getElementById('stat-places');
@@ -1153,10 +1280,12 @@ function updateCategoryCounts() {
 
 function refreshAfterLang() {
   updateAuthUI();
+  renderExploreFilters();
+  renderCategoryCards();
   if (places.length) {
     renderGrid(places);
     updateCategoryCounts();
-    loadMapMarkers();
+    if (isExploreMapTabActive()) loadMapMarkers();
   }
   if (document.getElementById('page-detail')?.classList.contains('active') && activePlace) {
     openDetail(activePlace.id);
@@ -1202,7 +1331,9 @@ async function init() {
   updateAuthUI();
   renderGrid([]);
   try {
-    await loadMapMarkers();
+    await loadCategoryMeta();
+    await applyFilters();
+    if (isExploreMapTabActive()) await loadMapMarkers();
     if (user && token) {
       try {
         const me = await api('/auth/me');

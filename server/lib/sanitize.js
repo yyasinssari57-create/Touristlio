@@ -11,10 +11,12 @@ function sanitizeName(value, maxLen = 200) {
   return sanitizeText(value, maxLen);
 }
 
+const { fail } = require('./apiResponse');
+
 function parsePositiveInt(raw, res, label = 'id') {
   const n = Number.parseInt(String(raw), 10);
   if (!Number.isFinite(n) || n < 1) {
-    if (res) res.status(400).json({ error: `Geçersiz ${label}` });
+    if (res) fail(res, `Geçersiz ${label}`);
     return null;
   }
   return n;

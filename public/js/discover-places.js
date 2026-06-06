@@ -8,13 +8,7 @@ window.TL_DISCOVER = (function () {
   let loading = false;
   let viewMode = 'places';
 
-  const CATEGORY_LABELS = {
-    tr: { museum: 'Müze', nature: 'Doğa', food: 'Yeme-İçme', historical: 'Tarihi', entertainment: 'Eğlence' },
-    en: { museum: 'Museums', nature: 'Nature', food: 'Food', historical: 'Historical', entertainment: 'Entertainment' },
-  };
-
-  const CATS = ['museum', 'nature', 'food', 'historical', 'entertainment'];
-  const CAT_ICONS = { museum: '🏺', nature: '⛰️', food: '🍽️', historical: '🏛️', entertainment: '🎭' };
+  let discoverCats = [];
 
   async function fetchJson(path) {
     const res = await fetch(API + path, { credentials: 'include' });
@@ -29,7 +23,18 @@ window.TL_DISCOVER = (function () {
   }
 
   function catLabel(id) {
-    return (CATEGORY_LABELS[lang] || CATEGORY_LABELS.tr)[id] || id;
+    const meta = discoverCats.find((c) => c.id === id || c.slug === id);
+    if (meta) return lang === 'en' ? meta.nameEn : meta.nameTr;
+    return window.TL_I18N?.catLabel(lang, id) || id;
+  }
+
+  async function loadDiscoverCategories() {
+    try {
+      const data = await fetchJson('/places/meta/categories');
+      discoverCats = data.discover || data.categories || [];
+    } catch {
+      discoverCats = [];
+    }
   }
 
   function placeImg(p) {
@@ -147,10 +152,18 @@ window.TL_DISCOVER = (function () {
   function renderCategoryFilters() {
     const strip = document.getElementById('discoverCatStrip');
     if (!strip) return;
-    strip.innerHTML = CATS.map((id) => `
+    if (!discoverCats.length) {
+      strip.innerHTML = '';
+      return;
+    }
+    strip.innerHTML = discoverCats.map((c) => {
+      const id = c.id || c.slug;
+      const icon = c.icon ? `${c.icon} ` : '';
+      return `
       <button type="button" class="discover-cat-chip${activeCategory === id ? ' on' : ''}" data-cat="${id}">
-        ${CAT_ICONS[id]} ${catLabel(id)}
-      </button>`).join('');
+        ${icon}${catLabel(id)}
+      </button>`;
+    }).join('');
     strip.querySelectorAll('.discover-cat-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
         const id = chip.dataset.cat;
@@ -211,11 +224,15 @@ window.TL_DISCOVER = (function () {
     }
   }
 
-  function init() {
+  async function init() {
     const page = document.getElementById('page-places');
     if (!page) return;
     document.getElementById('discoverCitiesBtn')?.addEventListener('click', loadCities);
     document.getElementById('discoverBackBtn')?.addEventListener('click', clearCityFilter);
+    await loadDiscoverCategories();
+    if (activeCategory && !discoverCats.some((c) => (c.id || c.slug) === activeCategory)) {
+      activeCategory = null;
+    }
     if (window.TL_MAP_DISCOVER) {
       window.TL_MAP_DISCOVER.init('discoverMap');
       window.TL_MAP_DISCOVER.setTurkeyView();
@@ -226,8 +243,10 @@ window.TL_DISCOVER = (function () {
     loadPlacesAndMap();
   }
 
-  function onTabShown() {
+  async function onTabShown() {
     lang = localStorage.getItem('tl_lang') || 'tr';
+    await loadDiscoverCategories();
+    renderCategoryFilters();
     setTimeout(() => {
       window.TL_MAP_DISCOVER?.invalidate();
       if (viewMode === 'places') loadPlacesAndMap();
@@ -235,11 +254,12 @@ window.TL_DISCOVER = (function () {
     }, 150);
   }
 
-  function setLang(l) {
+  async function setLang(l) {
     lang = l;
     updateHeader();
     if (viewMode === 'cities') renderCityGrid();
     else {
+      await loadDiscoverCategories();
       renderCategoryFilters();
       if (places.length) loadPlacesAndMap();
     }
