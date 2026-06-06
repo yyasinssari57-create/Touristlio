@@ -7,44 +7,27 @@
 <meta name="robots" content="noindex, nofollow"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/style.css"/>
-<style>
-body{font-family:Inter,sans-serif;background:var(--l);}
-.admin-login{max-width:360px;margin:120px auto;padding:24px;background:#fff;border-radius:16px;box-shadow:var(--sh2);}
-.admin-item{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;}
-.admin-item img{width:80px;height:60px;object-fit:cover;border-radius:8px;}
-.admin-actions{display:flex;gap:6px;flex-wrap:wrap;}
-.btn-ok{background:var(--ok);color:#fff;border:none;padding:8px 14px;border-radius:100px;cursor:pointer;font-weight:600;font-size:.75rem;}
-.btn-no{background:#ef4444;color:#fff;border:none;padding:8px 14px;border-radius:100px;cursor:pointer;font-weight:600;font-size:.75rem;}
-.btn-edit{background:var(--navy);color:#fff;border:none;padding:8px 14px;border-radius:100px;cursor:pointer;font-weight:600;font-size:.75rem;}
-.admin-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
-.admin-form .ain{margin-bottom:0;}
-.admin-form .full{grid-column:1/-1;}
-.photo-preview-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;}
-.photo-thumb{position:relative;width:80px;height:60px;border-radius:8px;overflow:hidden;border:1px solid var(--l2);}
-.photo-thumb img{width:100%;height:100%;object-fit:cover;}
-.photo-thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:.65rem;cursor:pointer;line-height:1;}
-.photo-upload-hint{font-size:.72rem;color:var(--t3);margin:4px 0 0;}
-</style>
+<link rel="stylesheet" href="/css/inline-overrides.css"/>
 </head>
-<body>
+<body class="admin-body">
 <div id="loginScreen" class="admin-login" role="main" aria-labelledby="loginTitle">
   <img src="/images/logo.png" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
-  <p id="loginTitle" style="text-align:center;font-weight:700;color:var(--navy);margin-bottom:12px">Admin</p>
+  <p id="loginTitle">Admin</p>
   <label class="sr-only" for="admEmail">E-posta</label>
   <input class="ain" id="admEmail" type="email" placeholder="E-posta" autocomplete="username" aria-required="true"/>
   <label class="sr-only" for="admPass">Şifre</label>
   <input class="ain" id="admPass" type="password" placeholder="Şifre" autocomplete="current-password" aria-required="true"/>
-  <button class="btn bp" style="width:100%;margin-top:8px" onclick="adminLogin()" aria-label="Admin paneline giriş yap">Giriş</button>
-  <p style="font-size:.7rem;color:var(--t3);margin-top:10px;text-align:center"><a href="/">← Siteye dön</a></p>
-  <div id="loginErr" class="admin-status err" style="display:none;margin-top:10px" role="alert"></div>
+  <button class="btn bp" onclick="adminLogin()" aria-label="Admin paneline giriş yap">Giriş</button>
+  <p class="admin-login-back"><a href="/">← Siteye dön</a></p>
+  <div id="loginErr" class="admin-status err" style="display:none" role="alert"></div>
 </div>
 
 <div id="adminPanel" style="display:none">
   <nav class="tl-nav" aria-label="Üst menü"><div class="nav-inner">
     <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span> Admin</span></a>
     <a href="/" class="nav-brand-center" aria-label="Touristlio ana sayfa"><img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46"/></a>
-    <div class="nav-r"><span id="admUser" style="font-size:.8rem;color:rgba(255,255,255,.75)"></span>
-    <a href="/" class="btn nav-btn-ghost" style="text-decoration:none">Site</a>
+    <div class="nav-r"><span id="admUser"></span>
+    <a href="/" class="btn nav-btn-ghost nav-link-plain">Site</a>
     <button class="btn nav-btn-ghost" onclick="adminLogout()" aria-label="Çıkış yap">Çıkış</button></div>
   </div></nav>
 
@@ -66,11 +49,11 @@ body{font-family:Inter,sans-serif;background:var(--l);}
       <div id="globalErr" class="admin-status err" style="display:none" role="alert" aria-live="polite"></div>
 
       <section id="adm-dashboard" class="adm-section active" role="tabpanel" aria-label="Dashboard">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px" id="statsRow"></div>
+        <div id="statsRow"></div>
       </section>
 
       <section id="adm-places" class="adm-section" style="display:none" role="tabpanel" aria-label="Yerler">
-        <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni yer ekle</h2>
+        <h2 class="adm-h2">Yeni yer ekle</h2>
         <div class="admin-card">
           <div class="admin-form" id="placeForm">
             <input class="ain" id="plName" placeholder="Yer adı *" aria-label="Yer adı"/>
@@ -84,26 +67,26 @@ body{font-family:Inter,sans-serif;background:var(--l);}
             <input class="ain" id="plLng" placeholder="Boylam" aria-label="Boylam" type="number" step="any"/>
             <input class="ain full" id="plImage" placeholder="Görsel URL (opsiyonel)" aria-label="Görsel URL"/>
             <div class="full">
-              <label for="plPhotos" style="font-size:.75rem;color:var(--t2);display:block;margin-bottom:4px">Görseller (dosya yükle)</label>
+              <label for="plPhotos" class="adm-label-sm">Görseller (dosya yükle)</label>
               <input type="file" id="plPhotos" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yer görselleri yükle"/>
               <div id="plPhotoPreview" class="photo-preview-row" aria-live="polite"></div>
               <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · max 5 MB</p>
             </div>
-            <textarea class="ain full" id="plDesc" placeholder="Açıklama (TR)" style="height:50px" aria-label="Açıklama Türkçe"></textarea>
-            <textarea class="ain full" id="plDescEn" placeholder="Description (EN)" style="height:50px" aria-label="Açıklama İngilizce"></textarea>
+            <textarea class="ain full adm-textarea-sm" id="plDesc" placeholder="Açıklama (TR)" aria-label="Açıklama Türkçe"></textarea>
+            <textarea class="ain full adm-textarea-sm" id="plDescEn" placeholder="Description (EN)" aria-label="Açıklama İngilizce"></textarea>
           </div>
           <button class="btn bp bsm" type="button" onclick="addPlace()" aria-label="Yeni yeri kaydet">Yeri kaydet</button>
         </div>
-        <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Yer listesi</h2>
+        <h2 class="adm-h2-spaced">Yer listesi</h2>
         <div class="admin-card">
           <label class="sr-only" for="placeSearch">Yer ara</label>
-          <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" style="max-width:280px;margin-bottom:8px" oninput="debounceLoadPlaces()"/>
+          <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" oninput="debounceLoadPlaces()"/>
           <div id="placesTableWrap" aria-live="polite"></div>
         </div>
       </section>
 
       <section id="adm-cities" class="adm-section" style="display:none" role="tabpanel" aria-label="Şehirler">
-        <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni şehir ekle</h2>
+        <h2 class="adm-h2">Yeni şehir ekle</h2>
         <div class="admin-card admin-form">
           <input class="ain" id="ctName" placeholder="Şehir adı *" aria-label="Şehir adı"/>
           <input class="ain" id="ctCountry" placeholder="Ülke *" aria-label="Ülke"/>
@@ -111,17 +94,17 @@ body{font-family:Inter,sans-serif;background:var(--l);}
           <input class="ain" id="ctSlug" placeholder="Slug (opsiyonel)" aria-label="Slug"/>
           <button class="btn bp bsm full" type="button" onclick="addCity()" aria-label="Şehir ekle">Şehir ekle</button>
         </div>
-        <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Şehir listesi</h2>
+        <h2 class="adm-h2-spaced">Şehir listesi</h2>
         <div class="admin-card" id="citiesTableWrap" aria-live="polite"></div>
       </section>
 
       <section id="adm-categories" class="adm-section" style="display:none" role="tabpanel" aria-label="Kategoriler">
-        <p style="font-size:.82rem;color:var(--t2);margin:0 0 16px;max-width:640px;line-height:1.5">
+        <p class="adm-cat-hint">
           <strong>Keşfet filtre çipleri:</strong> Burada eklediğiniz veya düzenlediğiniz kategoriler, Keşfet sayfasında
           <em>Destinasyonlar</em> ve <em>Harita</em> sekmelerindeki tek filtre şeridinde (Tümü + gruplar + kategoriler) görünür.
           Grup çipleri (Tarihi, Doğa…) yer sayısına göre otomatik oluşur; tek tek kategoriler bu listeden yönetilir.
         </p>
-        <h2 style="font-family:var(--fd);color:var(--navy);margin-bottom:12px">Yeni kategori ekle</h2>
+        <h2 class="adm-h2">Yeni kategori ekle</h2>
         <div class="admin-card admin-form">
           <input class="ain" id="catSlug" placeholder="Kod (slug) *" aria-label="Kategori kodu"/>
           <input class="ain" id="catNameTr" placeholder="Türkçe ad *" aria-label="Türkçe ad"/>
@@ -129,20 +112,20 @@ body{font-family:Inter,sans-serif;background:var(--l);}
           <input class="ain" id="catIcon" placeholder="İkon (emoji)" aria-label="İkon" maxlength="4"/>
           <button class="btn bp bsm full" type="button" onclick="addCategory()" aria-label="Kategori ekle">Kategori ekle</button>
         </div>
-        <h2 style="font-family:var(--fd);color:var(--navy);margin:24px 0 12px">Kategori listesi</h2>
+        <h2 class="adm-h2-spaced">Kategori listesi</h2>
         <div class="admin-card" id="categoriesTableWrap" aria-live="polite"></div>
       </section>
 
       <section id="adm-moderation" class="adm-section" style="display:none" role="tabpanel" aria-label="Moderasyon">
-        <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Bekleyen Tiola'lar</h2>
+        <h2 class="adm-h2-tight">Bekleyen Tiola'lar</h2>
         <div id="pendingTiolas"></div>
       </section>
 
       <section id="adm-users" class="adm-section" style="display:none" role="tabpanel" aria-label="Kullanıcılar">
-        <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Kullanıcılar</h2>
+        <h2 class="adm-h2-tight">Kullanıcılar</h2>
         <div id="userList"></div>
-        <div id="modSection" style="margin-top:24px">
-          <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Moderatör ekle</h2>
+        <div id="modSection">
+          <h2 class="adm-h2-tight">Moderatör ekle</h2>
           <div class="admin-card admin-form">
             <input class="ain" id="modName" placeholder="Ad" aria-label="Moderatör adı"/>
             <input class="ain" id="modEmail" placeholder="E-posta" aria-label="Moderatör e-posta" type="email"/>
@@ -153,18 +136,18 @@ body{font-family:Inter,sans-serif;background:var(--l);}
       </section>
 
       <section id="adm-content" class="adm-section" style="display:none" role="tabpanel" aria-label="İçerik">
-        <h2 style="font-family:var(--fd);color:var(--navy);margin:0 0 12px">Bekleyen Bloglar</h2>
+        <h2 class="adm-h2-tight">Bekleyen Bloglar</h2>
         <div id="pendingBlogs"></div>
       </section>
 
       <section id="adm-analytics" class="adm-section" style="display:none" role="tabpanel" aria-label="Analitik">
         <div class="admin-card" id="analyticsSummary"></div>
-        <div class="admin-card" id="analyticsQuality" style="margin-top:12px"></div>
+        <div class="admin-card" id="analyticsQuality"></div>
       </section>
 
       <section id="adm-settings" class="adm-section" style="display:none" role="tabpanel" aria-label="Ayarlar">
         <div class="admin-card">
-          <h3 style="margin:0 0 12px;color:var(--navy)">Site ayarları</h3>
+          <h3>Site ayarları</h3>
           <div class="admin-form" id="settingsForm"></div>
           <button class="btn bp bsm" type="button" onclick="saveSettings()" aria-label="Ayarları kaydet">Kaydet</button>
         </div>

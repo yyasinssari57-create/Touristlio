@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
 <link rel="stylesheet" href="/css/style.css"/>
+<link rel="stylesheet" href="/css/inline-overrides.css"/>
 </head>
 <body>
 
@@ -59,7 +60,6 @@
         <div class="ntab on" id="nt-explore" onclick="showMainTab('explore')" data-i18n="explore">Keşfet</div>
         <div class="ntab" id="nt-places" onclick="showMainTab('places')" data-i18n="discoverPlaces">Gezilecek Yerler</div>
         <div class="ntab" id="nt-blog" onclick="showMainTab('blog')" data-i18n="blog">Blog</div>
-        <div class="ntab" id="nt-profile" onclick="showMainTab('profile')" data-i18n="profile">Profilim</div>
       </div>
       <div class="nav-r">
         <div class="lsw">
@@ -116,7 +116,7 @@
     <div class="discover-wrap map-tab-wrap">
       <div class="explore-map-hd">
         <h4 data-i18n="mapTitle">🗺️ Harita</h4>
-        <span style="font-size:.72rem;color:var(--t3)" data-i18n="mapSub">OpenStreetMap · kategoriye göre işaretler</span>
+        <span class="map-sub" data-i18n="mapSub">OpenStreetMap · kategoriye göre işaretler</span>
       </div>
       <div class="map-controls">
         <input type="search" id="mapSearchInput" class="map-search-inp" data-i18n-placeholder="searchPh" placeholder="Haritada ara..." aria-label="Harita arama"/>
@@ -156,8 +156,8 @@
   <!-- FILTER TAB -->
   <div class="explore-section" id="es-filter">
     <div class="filter-tab-wrap">
-      <div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--navy);margin-bottom:4px;" data-i18n="filterTitle">🎛️ Gelişmiş Filtreleme</div>
-      <div style="font-size:.82rem;color:var(--t2);margin-bottom:20px;" data-i18n="filterSub">Ülke, şehir, ilçe ve daha fazlasına göre filtrele</div>
+      <div class="filter-tab-title" data-i18n="filterTitle">🎛️ Gelişmiş Filtreleme</div>
+      <div class="filter-tab-sub" data-i18n="filterSub">Ülke, şehir, ilçe ve daha fazlasına göre filtrele</div>
 
       <div class="filter-grid">
         <div class="fg">
@@ -260,8 +260,8 @@
   <div class="explore-section" id="es-tiolas">
     <div class="discover-wrap">
       <div class="results-bar">
-        <h3 data-i18n-html="tiolaFeedTitle">Gezginlerden <em style="font-style:italic;color:var(--b)">Tiola</em></h3>
-        <span style="font-size:.75rem;color:var(--t2)" data-i18n="tiolaFeedSub">Onaylı kısa deneyimler</span>
+        <h3 data-i18n-html="tiolaFeedTitle">Gezginlerden <em class="em-accent">Tiola</em></h3>
+        <span class="tiola-feed-sub" data-i18n="tiolaFeedSub">Onaylı kısa deneyimler</span>
       </div>
       <div class="tiola-grid" id="tiolaFeed"></div>
       <div class="no-res" id="tiolaEmpty" style="display:none" data-i18n="tiolaEmpty">Henüz onaylı Tiola yok. İlk sen yaz!</div>
@@ -270,7 +270,7 @@
 
   <!-- CATEGORIES TAB -->
   <div class="explore-section" id="es-categories">
-    <div class="showcase" style="padding-top:28px">
+    <div class="showcase">
       <div class="sec-ey" data-i18n="catSectionEy">Tüm Kategoriler</div>
       <div class="sec-ti" data-i18n-html="catSectionTitle">Ne <em>arıyorsun?</em></div>
       <div class="cg" id="categoryCardsGrid"></div>
@@ -296,7 +296,7 @@
       </div>
       <p class="osm-attrib" data-i18n="osmAttrib">Harita verisi © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> katkıda bulunanları</p>
     </div>
-    <div style="font-size:.68rem" data-i18n="footerCopy">© 2026 Touristlio · Tüm hakları saklıdır</div>
+    <div class="footer-copy" data-i18n="footerCopy">© 2026 Touristlio · Tüm hakları saklıdır</div>
   </footer>
 </div>
 
@@ -370,7 +370,7 @@
       </div>
     </div>
     <div class="pd-body">
-      <div style="margin-bottom:14px"><button class="btn bo bsm" onclick="goBack()" data-i18n="back">← Geri Dön</button></div>
+      <div class="detail-back-row"><button class="btn bo bsm" onclick="goBack()" data-i18n="back">← Geri Dön</button></div>
       <div class="pd-gallery" id="pdGallery" style="display:none"></div>
       <div class="detail-tabs">
         <div class="dtab on" onclick="showDetailTab('overview',this)" data-i18n="detailOverview">📍 Genel Bakış</div>
@@ -404,7 +404,7 @@
             <div class="rev-hd"><h2 data-i18n="detailTiolas">✨ Tiola'lar</h2><div class="af-badge" data-i18n="antiFraud">🛡️ Sahte oy koruması</div></div>
             <div class="rform">
               <div class="rf-top">
-                <div class="rfav" id="rfAv" style="background:var(--b)">?</div>
+                <div class="rfav" id="rfAv">?</div>
                 <div><div class="rfnm" id="rfNm">—</div><div class="rftp" id="rfTp"></div></div>
               </div>
               <div class="member-ex" id="memberEx" style="display:none">
@@ -424,14 +424,14 @@
                   </select>
                 </div>
               </div>
-              <div class="member-ex" id="starStep" style="margin-bottom:10px">
+              <div class="member-ex" id="starStep">
                 <div class="me-g"><div class="me-lbl" data-i18n="starOptional">1. Yıldız (isteğe bağlı)</div>
                   <div class="rfstars" id="rfStars"><span onclick="rate(1)">★</span><span onclick="rate(2)">★</span><span onclick="rate(3)">★</span><span onclick="rate(4)">★</span><span onclick="rate(5)">★</span></div>
                 </div>
               </div>
               <textarea class="rft" id="rfTxt" data-i18n-placeholder="tiolaPlaceholder" placeholder="2. Deneyimini yaz (Tiola)..."></textarea>
-              <div style="margin-bottom:8px"><label style="font-size:.7rem;color:var(--t2)" data-i18n="photoOptional">3. Fotoğraf (isteğe bağlı)</label><br/>
-              <input type="file" id="rfPhoto" accept="image/*" style="font-size:.75rem;margin-top:4px"/></div>
+              <div class="rf-photo-row"><label class="rf-photo-label" data-i18n="photoOptional">3. Fotoğraf (isteğe bağlı)</label><br/>
+              <input type="file" id="rfPhoto" accept="image/*"/></div>
               <div class="rf-foot">
                 <div class="rnote" id="rfNote"></div>
                 <button class="btn bp bsm" onclick="postTiola()" data-i18n="sendTiola">Tiola Gönder</button>
@@ -443,7 +443,7 @@
         <div>
           <div class="tiola-rating-box">
             <div class="dr-lbl t">Touristlio</div>
-            <div style="color:var(--star2);font-size:1rem" id="pdTS"></div>
+            <div id="pdTS"></div>
             <div class="dr-num t" id="pdTR"></div>
             <div class="dr-cnt" id="pdTC"></div>
           </div>
@@ -477,10 +477,10 @@
 <!-- ══════════════ PROFILE PAGE ══════════════ -->
 <div class="page" id="page-profile">
   <div class="profile-wrap">
-    <div id="pLoginNotice" style="text-align:center;padding:80px 20px;display:none">
-      <div style="font-size:3rem;margin-bottom:12px">🔒</div>
-      <div style="font-family:var(--fd);font-size:1.3rem;font-weight:700;color:var(--navy);margin-bottom:7px" data-i18n="profileLoginTitle">Giriş Yapın</div>
-      <div style="color:var(--t2);font-size:.84rem;margin-bottom:18px" data-i18n="profileLoginSub">Seyahat günlüğünüz, yorumlarınız ve favorileriniz</div>
+    <div id="pLoginNotice" style="display:none">
+      <div class="profile-login-icon">🔒</div>
+      <div class="profile-login-title" data-i18n="profileLoginTitle">Giriş Yapın</div>
+      <div class="profile-login-sub" data-i18n="profileLoginSub">Seyahat günlüğünüz, yorumlarınız ve favorileriniz</div>
       <button class="btn bp" onclick="openAuth()" data-i18n="profileLoginBtn">Giriş Yap / Kayıt Ol</button>
     </div>
     <div id="pContent" style="display:none">
@@ -509,8 +509,8 @@
         <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n="emptyVisited">Henüz ziyaret kaydı yok.</p></div>
       </div>
       <div class="ptab-c active" id="ptab-tiolas">
-        <div style="font-family:var(--fd);font-size:1.15rem;font-weight:700;color:var(--navy);margin-bottom:4px" data-i18n-html="profileMyTiolas">Tiola <em style="font-style:italic;color:var(--b)">larım</em></div>
-        <div style="font-size:.78rem;color:var(--t2);margin-bottom:14px" data-i18n="profileMyTiolasSub">Yazdığın onaylı ve bekleyen Tiola'lar</div>
+        <div class="profile-tiola-title" data-i18n-html="profileMyTiolas">Tiola <em class="em-accent">larım</em></div>
+        <div class="profile-tiola-sub" data-i18n="profileMyTiolasSub">Yazdığın onaylı ve bekleyen Tiola'lar</div>
         <div class="pgrid" id="myTiolaList"></div>
         <div class="empty-state" id="tiolaListEmpty"><div class="empty-icon">✈️</div><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.<br>Bir yere yorum yazdığında burada görünür.</p></div>
       </div>
@@ -532,26 +532,26 @@
       </div>
       <div class="ptab-c" id="ptab-write">
         <div class="write-card">
-          <div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:14px" data-i18n="writeNew">Yeni Tiola veya Blog</div>
-          <div class="ptabs" style="margin-bottom:14px">
+          <div class="write-card-title" data-i18n="writeNew">Yeni Tiola veya Blog</div>
+          <div class="ptabs write-mode-tabs">
             <div class="ptab on" id="write-tiola-tab" onclick="showWriteMode('tiola',this)" data-i18n="writeTiolaTab">✨ Tiola</div>
             <div class="ptab" id="write-blog-tab" onclick="showWriteMode('blog',this)" data-i18n="writeBlogTab">📝 Blog</div>
           </div>
           <div id="writeTiolaForm">
           <select class="w-sel" id="arcPlace"><option value="" data-i18n="placeOptional">Mekân (isteğe bağlı)</option></select>
-          <input class="w-sel" id="arcCity" data-i18n-placeholder="cityTagPh" placeholder="Şehir etiketi (genel Tiola için, isteğe bağlı)" style="margin-bottom:8px"/>
-          <input type="file" id="arcPhoto" accept="image/*" style="font-size:.75rem;margin-bottom:10px"/>
-          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px">
-            <div class="me-g"><div class="me-lbl" style="font-size:.64rem;margin-bottom:4px" data-i18n="memberRating">Puanınız (Üyeler)</div>
+          <input class="w-sel" id="arcCity" data-i18n-placeholder="cityTagPh" placeholder="Şehir etiketi (genel Tiola için, isteğe bağlı)"/>
+          <input type="file" id="arcPhoto" accept="image/*"/>
+          <div class="write-member-row">
+            <div class="me-g"><div class="me-lbl" data-i18n="memberRating">Puanınız (Üyeler)</div>
               <div class="rfstars" id="arcStars"><span onclick="arcRate(1)">★</span><span onclick="arcRate(2)">★</span><span onclick="arcRate(3)">★</span><span onclick="arcRate(4)">★</span><span onclick="arcRate(5)">★</span></div>
             </div>
-            <div class="me-g"><div class="me-lbl" style="font-size:.64rem;margin-bottom:4px" data-i18n="memberCategory">Kategori (Üyeler)</div>
+            <div class="me-g"><div class="me-lbl" data-i18n="memberCategory">Kategori (Üyeler)</div>
               <select class="me-sel" id="arcCat"><option value="" data-i18n="selectCat">Seçin...</option><option>🏛️ Tarihi Yer</option><option>🍽️ Restoran</option><option>☕ Kafe</option><option>🏖️ Plaj</option><option>⛰️ Doğa</option><option>🌙 Gece Hayatı</option></select>
             </div>
           </div>
           <textarea class="rft" id="arcTxt" data-i18n-placeholder="shareExperience" placeholder="Deneyiminizi paylaşın..."></textarea>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-size:.62rem;color:var(--t3)" data-i18n="oneRatingPer">🛡️ Kişi başı bir puan</div>
+          <div class="write-submit-row">
+            <div class="write-rating-note" data-i18n="oneRatingPer">🛡️ Kişi başı bir puan</div>
             <button class="btn bp bsm" onclick="submitArc()" data-i18n="sendTiola">Tiola Gönder</button></div>
           <div id="writeBlogForm" style="display:none">
           <input class="w-sel" id="blogTitle" data-i18n-placeholder="blogTitlePh" placeholder="Blog başlığı"/>
@@ -562,7 +562,7 @@
             <option value="nature" data-i18n="blogCatNatureOpt">Doğa</option>
             <option value="culture" data-i18n="blogCatCultureOpt">Kültür</option>
           </select>
-          <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..." style="height:120px"></textarea>
+          <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..."></textarea>
           <button class="btn bp bsm" onclick="submitBlog()" data-i18n="submitBlog">Blog Gönder</button>
           </div>
           </div>
