@@ -1,4 +1,5 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const { db } = require('../db');
 const { authOptional, authRequired } = require('../middleware/auth');
 const { sanitizeText } = require('../lib/sanitize');
@@ -51,10 +52,18 @@ router.get('/', authOptional, (req, res) => {
   res.json({ blogs: rows.map(mapBlog) });
 });
 
-router.post('/', authRequired, (req, res) => {
-  const { title, excerpt, body, category, imageUrl, placeId } = req.body || {};
+router.post('/', authRequired, [
+  body('imageUrl')
+    .optional({ nullable: true, checkFalsy: true })
+    .isURL({ protocols: ['https'], require_protocol: true })
+    .withMessage('Görsel URL geçerli bir HTTPS adresi olmalı'),
+], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  const { title, excerpt, body: bodyText, category, imageUrl, placeId } = req.body || {};
   const cleanTitle = sanitizeText(title, MAX_TITLE);
-  const cleanBody = sanitizeText(body, MAX_BODY);
+  const cleanBody = sanitizeText(bodyText, MAX_BODY);
   if (!cleanTitle || !cleanBody) {
     return res.status(400).json({ error: 'Başlık ve içerik gerekli' });
   }
@@ -68,7 +77,7 @@ router.post('/', authRequired, (req, res) => {
     cleanTitle,
     cleanExcerpt,
     cleanBody,
-    imageUrl ? sanitizeText(imageUrl, 500) : null,
+    imageUrl || null,
     placeId ? Number(placeId) : null,
   );
   const row = db.prepare(`

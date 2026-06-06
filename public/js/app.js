@@ -44,7 +44,6 @@ function imgFallback(el, category, placeId) {
   el.src = fallbackImgUrl(category, placeId);
 }
 
-let token = localStorage.getItem('tl_token');
 let user = JSON.parse(localStorage.getItem('tl_user') || 'null');
 let places = [];
 let activePlace = null;
@@ -384,7 +383,6 @@ const API = '/api';
 async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -396,12 +394,10 @@ async function api(path, opts = {}) {
   return data;
 }
 
-function setAuth(u, tok) {
+function setAuth(u) {
   user = u;
-  token = tok;
-  if (u && tok) {
+  if (u) {
     localStorage.setItem('tl_user', JSON.stringify(u));
-    localStorage.setItem('tl_token', tok);
   } else {
     localStorage.removeItem('tl_user');
     localStorage.removeItem('tl_token');
@@ -1217,7 +1213,7 @@ async function doLoginSubmit() {
         password: document.getElementById('loginPass').value,
       }),
     });
-    setAuth(data.user, data.token);
+    setAuth(data.user);
     closeAuth();
     window.TL_TOAST?.success(t('loginSuccess'));
     if (activePlace) updateRevForm();
@@ -1237,7 +1233,7 @@ async function doRegSubmit() {
         kvkkAccepted: true,
       }),
     });
-    setAuth(data.user, data.token);
+    setAuth(data.user);
     closeAuth();
     window.TL_TOAST?.success(t('registerSuccess'));
   } catch { /* toast from api */ }
@@ -1246,10 +1242,10 @@ async function doRegSubmit() {
 async function doLogout() {
   try {
     await api('/auth/logout', { method: 'POST' });
-    setAuth(null, null);
+    setAuth(null);
     window.TL_TOAST?.info(t('logoutSuccess'));
     updateProfilePage();
-  } catch { setAuth(null, null); }
+  } catch { setAuth(null); }
 }
 
 function toggleNavMenu() {
@@ -1334,15 +1330,15 @@ async function init() {
     await loadCategoryMeta();
     await applyFilters();
     if (isExploreMapTabActive()) await loadMapMarkers();
-    if (user && token) {
-      try {
-        const me = await api('/auth/me');
-        setAuth(me.user, token);
+    try {
+      const me = await api('/auth/me');
+      if (me.user) {
+        setAuth(me.user);
         const saved = await api('/places/saved/all');
         savedIds = new Set(saved.places.map((p) => p.id));
-      } catch {
-        setAuth(null, null);
       }
+    } catch {
+      setAuth(null);
     }
   } catch (e) {
     console.error(e);

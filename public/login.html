@@ -36,8 +36,8 @@ async function doLogin(){
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error);
-    localStorage.setItem('tl_token', data.token);
-    localStorage.setItem('tl_user', JSON.stringify(data.user));
+    const payload = data.data || data;
+    localStorage.setItem('tl_user', JSON.stringify(payload.user));
     location.href = '/profile';
   } catch(e){ alert(e.message); }
 }

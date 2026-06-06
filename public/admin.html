@@ -196,7 +196,6 @@ function escapeHtml(s) {
 }
 
 const API = '/api';
-let token = localStorage.getItem('tl_token');
 let currentUser = null;
 let categoryOptions = [];
 let placesDebounce = null;
@@ -275,7 +274,6 @@ async function api(path, opts = {}) {
   } else if (!isForm && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
-  if (token) headers.Authorization = 'Bearer ' + token;
   const res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
   let data = {};
   try { data = await res.json(); } catch { /* boş yanıt */ }
@@ -376,17 +374,16 @@ async function adminLogin() {
       showErr('Admin, moderatör veya editör yetkisi gerekli', 'loginErr');
       return;
     }
-    token = data.token;
     currentUser = data.user;
-    localStorage.setItem('tl_token', token);
     localStorage.setItem('tl_user', JSON.stringify(data.user));
     showPanel(data.user);
   } catch (e) { showErr(e.message, 'loginErr'); }
 }
 
 function adminLogout() {
-  token = null;
+  fetch(API + '/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
   currentUser = null;
+  localStorage.removeItem('tl_user');
   localStorage.removeItem('tl_token');
   document.getElementById('loginScreen').style.display = 'block';
   document.getElementById('adminPanel').style.display = 'none';
@@ -927,15 +924,13 @@ async function approveBlog(id) { try { await api('/admin/blogs/' + id + '/approv
 async function rejectBlog(id) { try { await api('/admin/blogs/' + id + '/reject', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
 
 (async () => {
-  if (token) {
-    try {
-      const me = await api('/auth/me');
-      if (['admin', 'moderator', 'editor'].includes(me.user.role)) {
-        currentUser = me.user;
-        showPanel(me.user);
-      }
-    } catch { adminLogout(); }
-  }
+  try {
+    const me = await api('/auth/me');
+    if (['admin', 'moderator', 'editor'].includes(me.user.role)) {
+      currentUser = me.user;
+      showPanel(me.user);
+    }
+  } catch { adminLogout(); }
 })();
 </script>
 </body>

@@ -32,4 +32,12 @@ const adminToolLimiter = rateLimit({
   message: { error: 'Admin araç limiti aşıldı. Lütfen bekleyin.' },
 });
 
-module.exports = { apiLimiter, authLimiter, searchLimiter, adminToolLimiter };
+const liveDataLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.LIVE_DATA_RATE_LIMIT_MAX) || 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Çok fazla istek. Bir dakika bekleyin.' },
+});
+
+module.exports = { apiLimiter, authLimiter, searchLimiter, adminToolLimiter, liveDataLimiter };

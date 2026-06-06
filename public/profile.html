@@ -50,10 +50,10 @@ function safeUrl(url) {
   return '/images/icon.svg';
 }
 async function api(path){
-  const token = localStorage.getItem('tl_token');
-  const res = await fetch('/api'+path, { credentials:'include', headers: token ? {Authorization:'Bearer '+token} : {} });
+  const res = await fetch('/api'+path, { credentials:'include' });
   const data = await res.json();
   if(!res.ok) throw new Error(data.error);
+  if (data.success === true && data.data != null) return data.data;
   return data;
 }
 async function init(){

@@ -1,5 +1,4 @@
 const { ok, fail } = require('../../lib/apiResponse');
-
 const authService = require('./auth.service');
 
 async function register(req, res) {
@@ -8,7 +7,6 @@ async function register(req, res) {
   authService.setAuthCookie(res, result.cookie);
   return ok(res, {
     user: result.user,
-    token: result.token,
     emailVerificationSent: result.emailVerificationSent,
   }, result.status);
 }
@@ -17,7 +15,7 @@ function login(req, res) {
   const result = authService.login(req);
   if (result.error) return fail(res, result.error, result.status);
   authService.setAuthCookie(res, result.cookie);
-  return ok(res, { user: result.user, token: result.token });
+  return ok(res, { user: result.user });
 }
 
 function logout(_req, res) {

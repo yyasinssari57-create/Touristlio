@@ -7,10 +7,17 @@ const { sanitizeText } = require('../lib/sanitize');
 
 const router = express.Router();
 
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
 const storage = multer.diskStorage({
   destination: path.join(__dirname, '..', '..', 'uploads'),
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
     cb(null, `tiola-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
   },
 });

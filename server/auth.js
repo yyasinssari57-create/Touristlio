@@ -19,7 +19,7 @@ function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
     JWT_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn: '7d' },
   );
 }
 
@@ -70,7 +70,6 @@ function createUser({ name, email, password, role = 'member' }) {
 }
 
 module.exports = {
-  JWT_SECRET,
   validateJwtSecret,
   signToken,
   verifyToken,
