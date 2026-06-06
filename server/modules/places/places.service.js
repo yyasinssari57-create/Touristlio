@@ -468,9 +468,13 @@ function getMetaCategories() {
   }, META_CACHE_TTL);
 }
 
+function invalidateMetaCategories() {
+  clear(`places-meta-categories-${CACHE_VERSION}`);
+}
+
 function invalidatePlacesCache() {
   clear(`places-list-${CACHE_VERSION}`);
-  clear(`places-meta-categories-${CACHE_VERSION}`);
+  invalidateMetaCategories();
   cachedAllStats = null;
   cachedAllStatsAt = 0;
 }
@@ -494,6 +498,7 @@ module.exports = {
   getMetaCategories,
 
   invalidatePlacesCache,
+  invalidateMetaCategories,
 
   TURKEY_CITIES,
 

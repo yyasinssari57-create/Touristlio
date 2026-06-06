@@ -1,4 +1,5 @@
 node_modules/
+backups/
 uploads/*
 !uploads/.gitkeep
 data/*.db
@@ -17,3 +18,12 @@ public/images/logo-transparent.png
 scripts/_write-logo*
 scripts/_decode-logo*
 scripts/_run-logo*
+
+# Local dev scripts (not required for npm start)
+*.bat
+*.cmd
+*.ps1
+_git_restore.js
+_restore_public.js
+_restore_result.txt
+npm-audit-result.txt

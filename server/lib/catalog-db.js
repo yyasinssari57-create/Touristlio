@@ -20,6 +20,22 @@ function slugify(value) {
     .replace(/^-|-$/g, '') || 'item';
 }
 
+function normalizeCategorySlug(value) {
+  const raw = sanitizeText(value, 60);
+  if (!raw) return '';
+  const fromSlugify = slugify(raw);
+  return (fromSlugify || raw.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_|_$/g, ''));
+}
+
+/** Category codes: English lowercase slug (historical, museum) — not the Turkish display name. */
+function normalizeCategorySlug(value) {
+  const slug = slugify(sanitizeText(value, 60));
+  if (!slug || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+    throw new Error('Kategori kodu geçersiz — küçük İngilizce harf, rakam ve tire (ör. museum, historical)');
+  }
+  return slug;
+}
+
 function mapDbError(err, fallback) {
   const msg = String(err?.message || '');
   if (msg.includes('UNIQUE constraint failed: cities')) {
@@ -234,9 +250,10 @@ function listCategories({ includeInactive = false } = {}) {
 
 function createCategory(body) {
   const db = getDb();
-  const slug = sanitizeText(body.slug || slugify(body.nameTr || body.name), 60).replace(/-/g, '_');
   const nameTr = sanitizeName(body.nameTr || body.name);
-  if (!slug || !nameTr) throw new Error('Kategori kodu ve Türkçe ad zorunlu');
+  if (!nameTr) throw new Error('Kategori kodu ve Türkçe ad zorunlu');
+  const slug = normalizeCategorySlug(body.slug || body.nameTr || body.name);
+  if (!slug) throw new Error('Geçerli bir kategori kodu (slug) girin — örn. dance, museum');
   const exists = db.prepare('SELECT id FROM place_categories WHERE slug = ?').get(slug);
   if (exists) throw new Error('Bu kategori kodu zaten var');
   const nameEn = sanitizeName(body.nameEn || body.name_en || nameTr, 120);
@@ -267,7 +284,7 @@ function updateCategory(id, body) {
   const isActive = body.isActive != null ? (body.isActive ? 1 : 0) : existing.is_active;
   let slug = existing.slug;
   if (body.slug && body.slug !== existing.slug) {
-    const newSlug = sanitizeText(body.slug, 60);
+    const newSlug = normalizeCategorySlug(body.slug);
     const taken = db.prepare('SELECT id FROM place_categories WHERE slug = ? AND id != ?').get(newSlug, id);
     if (taken) throw new Error('Bu kategori kodu kullanılıyor');
     db.prepare('UPDATE places SET category = ? WHERE category = ?').run(newSlug, existing.slug);

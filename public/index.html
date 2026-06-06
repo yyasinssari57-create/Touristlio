@@ -14,7 +14,7 @@
 <meta property="og:locale" content="tr_TR"/>
 <meta property="og:locale:alternate" content="en_US"/>
 <link rel="canonical" href="https://touristlio.com/"/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
@@ -23,12 +23,22 @@
 </head>
 <body>
 
+<!-- PAGE LOADER -->
+<div id="pageLoader" class="page-loader active" aria-live="polite" aria-busy="true">
+  <div class="page-loader-inner">
+    <p class="page-loader-word" aria-label="Touristlio">
+      <span class="load-t">T</span><span class="load-mid">ourist</span><span class="load-lio">lio</span>
+    </p>
+    <div class="page-loader-track" role="progressbar" aria-hidden="true"><span class="page-loader-bar"></span></div>
+  </div>
+</div>
+
 <!-- AUTH MODAL -->
 <div class="auth-ov" id="authOv">
   <div class="auth-box">
     <button class="aclose" onclick="closeAuth()">✕</button>
     <img src="/images/logo.png" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
-    <div class="asub" data-i18n="authSub">Seyahatini puanla, kaydet ve paylaş</div>
+    <div class="asub" data-i18n="authSub">Seyahatini yıldızla, kaydet ve paylaş</div>
     <div class="atabs">
       <div class="atab on" id="tabA" onclick="swTab('login',this)" data-i18n="authTabLogin">Giriş Yap</div>
       <div class="atab" id="tabB" onclick="swTab('reg',this)" data-i18n="authTabReg">Kayıt Ol</div>
@@ -67,7 +77,7 @@
           <div class="lb on" onclick="setLang('tr',this)">TR</div>
         </div>
         <button class="btn nav-btn-ghost" id="authBtn" onclick="openAuth()">Giriş Yap</button>
-        <button class="btn nav-btn-primary" onclick="openAuth()" data-i18n="join">Katıl</button>
+        <button class="btn nav-btn-primary" id="joinBtn" onclick="openAuth('register')" data-i18n="join">Katıl</button>
       </div>
     </div>
   </div>
@@ -343,18 +353,22 @@
 <div class="page" id="page-blog">
   <div class="blog-wrap">
     <div class="blog-hero-card">
-      <h1 data-i18n-html="blogHeroTitle">Seyahat <em>Hikayeleri</em></h1>
-      <p data-i18n="blogSub">Yerel yazarlardan özenle seçilmiş gezi rehberleri, gizli köşeler ve kültürel keşifler.</p>
-      <div class="bcats">
-        <div class="bcat-chip on" onclick="setBlogCat('all',this)" data-i18n="blogCatAll">Tümü</div>
-        <div class="bcat-chip" onclick="setBlogCat('guide',this)" data-i18n="blogCatGuide">🗺️ Rehberler</div>
-        <div class="bcat-chip" onclick="setBlogCat('hidden',this)" data-i18n="blogCatHidden">💎 Gizli Köşeler</div>
-        <div class="bcat-chip" onclick="setBlogCat('food',this)" data-i18n="blogCatFood">🍜 Yemek</div>
-        <div class="bcat-chip" onclick="setBlogCat('nature',this)" data-i18n="blogCatNature">🌿 Doğa</div>
-        <div class="bcat-chip" onclick="setBlogCat('culture',this)" data-i18n="blogCatCulture">🎭 Kültür</div>
+      <h1 id="blogHeroTitle">Seyahat <em>Hikayeleri</em></h1>
+      <p id="blogHeroSub">Yerel yazarlardan özenle seçilmiş gezi rehberleri, gizli köşeler ve kültürel keşifler.</p>
+      <div class="blog-search-row">
+        <input class="blog-search-inp" id="blogSearch" type="search" placeholder="Blog ara…" aria-label="Blog ara" oninput="debounceBlogSearch()"/>
       </div>
+      <div class="bcats" id="blogCatChips"></div>
     </div>
     <div class="blog-grid" id="blogGrid"></div>
+  </div>
+</div>
+
+<!-- BLOG DETAIL OVERLAY -->
+<div class="auth-ov" id="blogDetailOv">
+  <div class="auth-box blog-detail-box">
+    <button class="aclose" onclick="closeBlogDetail()" aria-label="Kapat">✕</button>
+    <div id="blogDetailBody"></div>
   </div>
 </div>
 
@@ -409,7 +423,7 @@
               </div>
               <div class="member-ex" id="memberEx" style="display:none">
                 <div class="me-g">
-                  <div class="me-lbl" data-i18n="yourRating">Puanınız</div>
+                  <div class="me-lbl" data-i18n="yourRating">Yıldızınız</div>
                   <div class="rfstars" id="rfStars"><span onclick="rate(1)">★</span><span onclick="rate(2)">★</span><span onclick="rate(3)">★</span><span onclick="rate(4)">★</span><span onclick="rate(5)">★</span></div>
                 </div>
                 <div class="me-g">
@@ -422,11 +436,6 @@
                     <option>🧘 Spa</option><option>🪂 Macera</option><option>🔭 Manzara</option>
                     <option>⛪ Dini Yer</option><option>🏪 Pazar</option>
                   </select>
-                </div>
-              </div>
-              <div class="member-ex" id="starStep">
-                <div class="me-g"><div class="me-lbl" data-i18n="starOptional">1. Yıldız (isteğe bağlı)</div>
-                  <div class="rfstars" id="rfStars"><span onclick="rate(1)">★</span><span onclick="rate(2)">★</span><span onclick="rate(3)">★</span><span onclick="rate(4)">★</span><span onclick="rate(5)">★</span></div>
                 </div>
               </div>
               <textarea class="rft" id="rfTxt" data-i18n-placeholder="tiolaPlaceholder" placeholder="2. Deneyimini yaz (Tiola)..."></textarea>
@@ -443,8 +452,7 @@
         <div>
           <div class="tiola-rating-box">
             <div class="dr-lbl t">Touristlio</div>
-            <div id="pdTS"></div>
-            <div class="dr-num t" id="pdTR"></div>
+            <div class="dr-stars t" id="pdTS"></div>
             <div class="dr-cnt" id="pdTC"></div>
           </div>
           <div id="pdMap" role="region" aria-label="Yer haritası"></div>
@@ -485,38 +493,60 @@
     </div>
     <div id="pContent" style="display:none">
       <div class="prof-hd">
-        <div class="prof-av">M</div>
-        <div>
+        <div class="prof-av" id="profAv">M</div>
+        <div class="prof-hd-info">
           <div class="prof-name" data-i18n="profileMember">Üye</div>
-          <div class="prof-stats">
-            <div class="psi"><span class="psi-n" id="pRevCnt">0</span> <span data-i18n="profileStatReviews">Yorum</span></div>
-            <div class="psi"><span class="psi-n" id="pSavedCnt">0</span> <span data-i18n="profileStatSaved">Kaydedilen</span></div>
-            <div class="psi"><span class="psi-n" id="pCntCnt">0</span> <span data-i18n="profileStatCountries">Ülke</span></div>
-            <div class="psi"><span class="psi-n" id="pVisitedCnt">0</span> <span data-i18n="profileStatVisited">Ziyaret</span></div>
+          <div class="prof-meta" id="profMeta"></div>
+          <div class="prof-stats-grid">
+            <div class="prof-stat-card">
+              <span class="psi-n" id="pRevCnt">0</span>
+              <span class="psi-l" data-i18n="profileStatReviews">Tiola</span>
+            </div>
+            <div class="prof-stat-card">
+              <span class="psi-n" id="pSavedCnt">0</span>
+              <span class="psi-l" data-i18n="profileStatSaved">Kaydedilen</span>
+            </div>
+            <div class="prof-stat-card">
+              <span class="psi-n" id="pCntCnt">0</span>
+              <span class="psi-l" data-i18n="profileStatCountries">Ülke</span>
+            </div>
+            <div class="prof-stat-card">
+              <span class="psi-n" id="pVisitedCnt">0</span>
+              <span class="psi-l" data-i18n="profileStatVisited">Ziyaret</span>
+            </div>
           </div>
         </div>
       </div>
+      <div class="prof-activity-bar" id="profActivityBar" style="display:none" aria-live="polite"></div>
       <div class="ptabs">
-        <div class="ptab on" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</div>
-        <div class="ptab" onclick="showPTab('visited',this)" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</div>
-        <div class="ptab" onclick="showPTab('blogs',this)" data-i18n="profileTabBlogs">📝 Bloglarım</div>
-        <div class="ptab" onclick="showPTab('pending',this)" data-i18n="profileTabPending">⏳ Bekleyenler</div>
-        <div class="ptab" onclick="showPTab('saved',this)" data-i18n="profileTabSaved">❤️ Kaydedilenler</div>
-        <div class="ptab" onclick="showPTab('write',this)" data-i18n="profileTabWrite">✏️ Tiola / Blog Yaz</div>
+        <div class="ptab on" data-ptab="tiolas" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</div>
+        <div class="ptab" data-ptab="visited" onclick="showPTab('visited',this)" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</div>
+        <div class="ptab" data-ptab="blogs" onclick="showPTab('blogs',this)" data-i18n="profileTabBlogs">✏️ Blog yaz</div>
+        <div class="ptab" data-ptab="pending" onclick="showPTab('pending',this)" data-i18n="profileTabPending">⏳ Bekleyenler</div>
+        <div class="ptab" data-ptab="saved" onclick="showPTab('saved',this)" data-i18n="profileTabSaved">❤️ Kaydedilenler</div>
+        <div class="ptab" data-ptab="write" onclick="showPTab('write',this)" data-i18n="profileTabWrite">✏️ Tiola Yaz</div>
+        <div class="ptab" data-ptab="settings" onclick="showPTab('settings',this)" data-i18n="profileTabSettings">⚙️ Ayarlar</div>
       </div>
       <div class="ptab-c" id="ptab-visited">
         <div id="visitedGrid" class="pgrid"></div>
         <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n="emptyVisited">Henüz ziyaret kaydı yok.</p></div>
       </div>
       <div class="ptab-c active" id="ptab-tiolas">
+        <div id="profileNotifications" class="profile-notifications" style="display:none" aria-live="polite"></div>
         <div class="profile-tiola-title" data-i18n-html="profileMyTiolas">Tiola <em class="em-accent">larım</em></div>
         <div class="profile-tiola-sub" data-i18n="profileMyTiolasSub">Yazdığın onaylı ve bekleyen Tiola'lar</div>
         <div class="pgrid" id="myTiolaList"></div>
         <div class="empty-state" id="tiolaListEmpty"><div class="empty-icon">✈️</div><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.<br>Bir yere yorum yazdığında burada görünür.</p></div>
       </div>
       <div class="ptab-c" id="ptab-blogs">
-        <div id="myBlogList"></div>
-        <div class="empty-state" id="blogListEmpty"><div class="empty-icon">📝</div><p data-i18n="emptyBlog">Henüz blog yazmadınız.</p></div>
+        <div class="write-card">
+          <div class="write-card-title" data-i18n="profileWriteBlogTitle">Blog yaz</div>
+          <p class="profile-tiola-sub" data-i18n="profileWriteBlogSub">Uzun rehber yazınız; onay sonrası ana sayfadaki Blog bölümünde yayınlanır.</p>
+          <input class="w-sel" id="blogTitle" data-i18n-placeholder="blogTitlePh" placeholder="Blog başlığı"/>
+          <select class="w-sel" id="blogCat" aria-label="Blog kategorisi"></select>
+          <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..." style="min-height:140px"></textarea>
+          <button class="btn bp bsm" type="button" onclick="submitBlog()" data-i18n="submitBlog">Blog Gönder</button>
+        </div>
       </div>
       <div class="ptab-c" id="ptab-pending">
         <div id="myPendingList"></div>
@@ -532,39 +562,83 @@
       </div>
       <div class="ptab-c" id="ptab-write">
         <div class="write-card">
-          <div class="write-card-title" data-i18n="writeNew">Yeni Tiola veya Blog</div>
-          <div class="ptabs write-mode-tabs">
-            <div class="ptab on" id="write-tiola-tab" onclick="showWriteMode('tiola',this)" data-i18n="writeTiolaTab">✨ Tiola</div>
-            <div class="ptab" id="write-blog-tab" onclick="showWriteMode('blog',this)" data-i18n="writeBlogTab">📝 Blog</div>
-          </div>
+          <div class="write-card-title" data-i18n="writeNew">Yeni Tiola</div>
           <div id="writeTiolaForm">
-          <select class="w-sel" id="arcPlace"><option value="" data-i18n="placeOptional">Mekân (isteğe bağlı)</option></select>
-          <input class="w-sel" id="arcCity" data-i18n-placeholder="cityTagPh" placeholder="Şehir etiketi (genel Tiola için, isteğe bağlı)"/>
-          <input type="file" id="arcPhoto" accept="image/*"/>
-          <div class="write-member-row">
-            <div class="me-g"><div class="me-lbl" data-i18n="memberRating">Puanınız (Üyeler)</div>
-              <div class="rfstars" id="arcStars"><span onclick="arcRate(1)">★</span><span onclick="arcRate(2)">★</span><span onclick="arcRate(3)">★</span><span onclick="arcRate(4)">★</span><span onclick="arcRate(5)">★</span></div>
+            <select class="w-sel" id="arcPlace"><option value="" data-i18n="placeOptional">Mekân (isteğe bağlı)</option></select>
+            <input class="w-sel" id="arcCity" data-i18n-placeholder="cityTagPh" placeholder="Şehir etiketi (genel Tiola için, isteğe bağlı)"/>
+            <input type="file" id="arcPhoto" accept="image/*"/>
+            <div class="write-member-row">
+              <div class="me-g"><div class="me-lbl" data-i18n="memberRating">Yıldızınız</div>
+                <div class="rfstars" id="arcStars"><span onclick="arcRate(1)">★</span><span onclick="arcRate(2)">★</span><span onclick="arcRate(3)">★</span><span onclick="arcRate(4)">★</span><span onclick="arcRate(5)">★</span></div>
+              </div>
+              <div class="me-g"><div class="me-lbl" data-i18n="memberCategory">Kategori (Üyeler)</div>
+                <select class="me-sel" id="arcCat"><option value="" data-i18n="selectCat">Seçin...</option><option>🏛️ Tarihi Yer</option><option>🍽️ Restoran</option><option>☕ Kafe</option><option>🏖️ Plaj</option><option>⛰️ Doğa</option><option>🌙 Gece Hayatı</option></select>
+              </div>
             </div>
-            <div class="me-g"><div class="me-lbl" data-i18n="memberCategory">Kategori (Üyeler)</div>
-              <select class="me-sel" id="arcCat"><option value="" data-i18n="selectCat">Seçin...</option><option>🏛️ Tarihi Yer</option><option>🍽️ Restoran</option><option>☕ Kafe</option><option>🏖️ Plaj</option><option>⛰️ Doğa</option><option>🌙 Gece Hayatı</option></select>
+            <textarea class="rft" id="arcTxt" data-i18n-placeholder="shareExperience" placeholder="Deneyiminizi paylaşın..."></textarea>
+            <div class="write-submit-row">
+              <div class="write-rating-note" data-i18n="oneRatingPer">🛡️ Kişi başı bir yıldız</div>
+              <button class="btn bp bsm" type="button" onclick="submitArc()" data-i18n="sendTiola">Tiola Gönder</button>
             </div>
           </div>
-          <textarea class="rft" id="arcTxt" data-i18n-placeholder="shareExperience" placeholder="Deneyiminizi paylaşın..."></textarea>
-          <div class="write-submit-row">
-            <div class="write-rating-note" data-i18n="oneRatingPer">🛡️ Kişi başı bir puan</div>
-            <button class="btn bp bsm" onclick="submitArc()" data-i18n="sendTiola">Tiola Gönder</button></div>
-          <div id="writeBlogForm" style="display:none">
-          <input class="w-sel" id="blogTitle" data-i18n-placeholder="blogTitlePh" placeholder="Blog başlığı"/>
-          <select class="w-sel" id="blogCat">
-            <option value="guide" data-i18n="blogCatGuideOpt">Rehber</option>
-            <option value="hidden" data-i18n="blogCatHiddenOpt">Gizli Köşe</option>
-            <option value="food" data-i18n="blogCatFoodOpt">Yemek</option>
-            <option value="nature" data-i18n="blogCatNatureOpt">Doğa</option>
-            <option value="culture" data-i18n="blogCatCultureOpt">Kültür</option>
-          </select>
-          <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..."></textarea>
-          <button class="btn bp bsm" onclick="submitBlog()" data-i18n="submitBlog">Blog Gönder</button>
-          </div>
+        </div>
+      </div>
+      <div class="ptab-c" id="ptab-settings">
+        <div class="profile-settings-card">
+          <h3 class="profile-settings-title" data-i18n="settingsTitle">Hesap Ayarları</h3>
+          <p class="profile-settings-lead" data-i18n="settingsLead">Profilinizi, güvenliğinizi ve görünümünüzü buradan yönetin.</p>
+          <section class="settings-section">
+            <h4 class="settings-section-title" data-i18n="settingsSectionAvatar">Görünüm</h4>
+            <div class="settings-block avatar-settings-block">
+              <h4 class="settings-subtitle" data-i18n="avatarTitle">Profil avatarı</h4>
+              <p class="settings-note" data-i18n="avatarSub">Gezi ve hayvan sembollerinden seçin veya kendi fotoğrafınızı yükleyin.</p>
+              <div class="avatar-preview-row">
+                <div class="avatar-preview-wrap"><div class="prof-av" id="avatarPreview"></div></div>
+                <div class="avatar-picker-panel">
+                  <div id="avatarPickGrid" class="avatar-pick-grid"></div>
+                  <div class="avatar-color-label" data-i18n="avatarColorLabel">Arka plan rengi</div>
+                  <div id="avatarColorRow" class="av-color-row"></div>
+                  <div class="avatar-upload-row">
+                    <label class="btn bo bsm">
+                      <span data-i18n="avatarUpload">Fotoğraf yükle</span>
+                      <input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden/>
+                    </label>
+                    <button type="button" class="btn bp bsm" id="btnSaveAvatar" onclick="saveAvatarPreset()" data-i18n="avatarSave">Kaydet</button>
+                  </div>
+                  <p class="avatar-upload-hint" data-i18n="avatarHint">Yuvarlak kırpılmış görünüm · max 3 MB</p>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h4 class="settings-section-title" data-i18n="settingsSectionAccount">Hesap</h4>
+            <div class="settings-block">
+              <label class="settings-label" data-i18n="settingsEmailLabel">E-posta adresi</label>
+              <div class="settings-email-row">
+                <span id="settingsEmail" class="settings-email">—</span>
+                <span id="settingsEmailBadge" class="settings-badge"></span>
+              </div>
+              <button type="button" class="btn bo bsm" id="btnResendVerify" style="display:none" onclick="resendVerificationEmail()" data-i18n="settingsResendVerify">Doğrulama e-postası gönder</button>
+            </div>
+            <div class="settings-block">
+              <h4 class="settings-subtitle" data-i18n="settingsChangeEmail">E-posta değiştir</h4>
+              <input class="ain settings-inp" id="emailNew" type="email" autocomplete="email" data-i18n-placeholder="settingsNewEmail" placeholder="Yeni e-posta"/>
+              <input class="ain settings-inp" id="emailPass" type="password" autocomplete="current-password" data-i18n-placeholder="settingsConfirmPassword" placeholder="Onay için mevcut şifre"/>
+              <button type="button" class="btn bp bsm" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h4 class="settings-section-title" data-i18n="settingsSectionSecurity">Güvenlik</h4>
+            <div class="settings-block">
+              <h4 class="settings-subtitle" data-i18n="settingsChangePassword">Şifre değiştir</h4>
+              <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
+              <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 8 karakter)"/>
+              <button type="button" class="btn bp bsm" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
+            </div>
+            <p class="settings-note" data-i18n="settingsNote">Şifre en az 8 karakter, bir büyük harf ve bir rakam içermelidir.</p>
+          </section>
+          <div class="settings-block settings-logout-block">
+            <button type="button" class="btn bo bsm bdanger" onclick="doLogout()" data-i18n="settingsLogout">Çıkış Yap</button>
           </div>
         </div>
       </div>
@@ -575,8 +649,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="/js/i18n.js"></script>
+<script src="/js/avatars.js"></script>
+<script src="/js/avatar-crop.js"></script>
+<script src="/js/reports.js"></script>
 <script src="/js/toast.js"></script>
 <script src="/js/skeleton.js"></script>
+<script src="/js/page-loader.js"></script>
 <script src="/js/cookie-banner.js"></script>
 <script src="/js/map.js"></script>
 <script src="/js/map-discover.js"></script>

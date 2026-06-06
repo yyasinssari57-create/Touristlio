@@ -20,8 +20,18 @@ npm start
 
 - **Site:** http://localhost:3000  
 - **Admin:** http://localhost:3000/admin  
-- **Giriş/Kayıt:** `/login` · `/register` · `/profile`  
+- **Giriş/Kayıt:** `/login` · `/register` · `/profile` · `/reset-password`  
 - **Derin link:** `/?place=1`
+
+## Veritabanı yedeği
+
+SQLite dosyası `data/touristlio.db` içindedir. Manuel veya günlük yedek için:
+
+```powershell
+npm run backup:db
+```
+
+Yedekler `backups/touristlio-YYYY-MM-DD_HH-mm-ss.db` olarak kaydedilir (git’e eklenmez). Windows Görev Zamanlayıcı veya cron ile günde bir kez çalıştırabilirsiniz.
 
 ## Admin (.env)
 
@@ -74,6 +84,52 @@ touristlio/
 | `npm run seed` | places.json → SQLite |
 | `npm run sitemap` | sitemap.xml |
 
+## Production kurulum
+
+1. Sunucuda `.env.production.example` dosyasını `.env` olarak kopyalayın.
+2. Güçlü JWT üretin: `npm run generate:jwt-secret` → çıktıyı `.env` içindeki `JWT_SECRET=` satırına yapıştırın.
+3. `ADMIN_PASSWORD`, `CORS_ORIGIN`, `SITE_URL` ve `TRUST_PROXY=true` (Render/Railway) değerlerini ayarlayın.
+4. SMTP bilgilerini doldurun (e-posta doğrulama açıksa zorunlu), ardından `npm run verify:smtp` ile test edin.
+5. Veritabanı ve seed: `npm run seed` (ilk kurulum).
+6. Başlat: `npm run start:prod` (veya process manager ile `NODE_ENV=production npm start`).
+
+Sunucu production modunda zayıf `JWT_SECRET` ile **başlamaz**. SMTP yapılandırılmamışsa ve `REQUIRE_EMAIL_VERIFICATION=true` ise uyarı loglanır.
+
+### Render (önerilen)
+
+Repoda `render.yaml` blueprint dosyası vardır.
+
+1. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint** → GitHub reposunu bağlayın.
+2. Deploy tamamlanınca **Environment** sekmesinde şunları doldurun:
+   - `CORS_ORIGIN` = `https://touristlio.com`
+   - `SITE_URL` = `https://touristlio.com`
+   - `ADMIN_PASSWORD` = güçlü şifre
+   - `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+3. İlk deploy shell'inde (veya lokalden bağlanıp): `npm run seed`
+4. Kalıcı disk `data/` klasörüne bağlıdır (SQLite). `uploads/` için ayrı volume gerekir; üretimde Tiola fotoğrafları için ek disk veya harici depolama planlayın.
+5. Sağlık kontrolü: `GET /api/health`
+
+### Railway
+
+1. [Railway](https://railway.app) → **New Project** → GitHub repo.
+2. **Start command:** `npm run start:prod`
+3. **Variables:** `.env.production.example` satırlarını kopyalayın; `TRUST_PROXY=true` ekleyin.
+4. **Volume** ekleyin → mount: `/app/data` (SQLite kalıcılığı).
+5. Deploy sonrası Railway shell: `npm run seed`
+6. Özel domain → `CORS_ORIGIN` ve `SITE_URL` güncelleyin.
+
+### VPS (manuel)
+
+```bash
+git clone <repo> && cd touristlio
+cp .env.production.example .env
+# .env düzenle
+npm ci
+npm run seed
+NODE_ENV=production npm run start:prod
+# pm2: pm2 start server/scripts/start-prod.js --name touristlio
+```
+
 ## Güvenlik (v2.2)
 
 - Production: `JWT_SECRET` zorunlu (32+ karakter), Helmet CSP, API hata maskeleme
@@ -91,7 +147,14 @@ touristlio/
 
 ## E-posta (SMTP)
 
-`.env` içinde `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` tanımlanırsa kayıt doğrulama ve şifre sıfırlama e-postası gönderilir; aksi halde yalnızca log.
+`.env` içinde `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` tanımlanırsa kayıt doğrulama ve şifre sıfırlama e-postası gönderilir; aksi halde yalnızca log. Bağlantı testi: `npm run verify:smtp`.
+
+| Sağlayıcı | SMTP_HOST örneği | Port |
+|-----------|------------------|------|
+| SendGrid | `smtp.sendgrid.net` | 587 |
+| Mailgun | `smtp.mailgun.org` | 587 |
+| Brevo | `smtp-relay.brevo.com` | 587 |
+| Google Workspace | `smtp.gmail.com` | 587 (App Password) |
 
 ## v2.1 (ertelenen)
 

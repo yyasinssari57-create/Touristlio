@@ -5,8 +5,12 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "start:prod": "node server/scripts/start-prod.js",
     "dev": "node --watch server/index.js",
+    "generate:jwt-secret": "node server/scripts/generate-jwt-secret.js",
+    "verify:smtp": "node server/scripts/verify-smtp.js",
     "seed": "node server/seed.js",
+    "admin:ensure": "node server/scripts/ensure-admin.js",
     "places:merge": "node server/scripts/build-places-500.js",
     "places:enrich": "node server/scripts/enrich-content.js",
     "places:fetch-photos": "node server/scripts/fetch-photos.js",
@@ -15,7 +19,8 @@
     "logo:extract": "node server/scripts/extract-nav-logo.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
-    "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\""
+    "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",
+    "backup:db": "node server/scripts/backup-db.js"
   },
   "engines": {
     "node": ">=18"
@@ -31,8 +36,8 @@
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.2",
-    "nodemailer": "^6.10.1",
+    "multer": "^2.0.1",
+    "nodemailer": "^7.0.11",
     "node-cron": "^3.0.3",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0"

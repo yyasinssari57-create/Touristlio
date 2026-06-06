@@ -102,6 +102,36 @@ function markEmailVerified(userId) {
 
 
 
+function updatePasswordHash(userId, passwordHash) {
+
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
+
+}
+
+
+
+function updateEmailAddress(userId, email) {
+
+  db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email.toLowerCase().trim(), userId);
+
+}
+
+function updateAvatarPreset(userId, preset, color) {
+  db.prepare('UPDATE users SET avatar_preset = ?, avatar_color = ?, avatar_url = NULL WHERE id = ?')
+    .run(preset, color, userId);
+}
+
+function updateAvatarUrl(userId, url) {
+  db.prepare('UPDATE users SET avatar_url = ?, avatar_preset = NULL WHERE id = ?')
+    .run(url, userId);
+}
+
+function clearAvatarPhoto(userId) {
+  db.prepare('UPDATE users SET avatar_url = NULL WHERE id = ?').run(userId);
+}
+
+
+
 module.exports = {
 
   findByEmail,
@@ -123,6 +153,16 @@ module.exports = {
   verifyEmailToken,
 
   markEmailVerified,
+
+  updatePasswordHash,
+
+  updateEmailAddress,
+
+  updateAvatarPreset,
+
+  updateAvatarUrl,
+
+  clearAvatarPhoto,
 
 };
 

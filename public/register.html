@@ -6,6 +6,7 @@
 <title>Kayıt — Touristlio</title>
 <meta name="robots" content="noindex, nofollow"/>
 <link rel="stylesheet" href="/css/style.css"/>
+<link rel="stylesheet" href="/css/inline-overrides.css"/>
 </head>
 <body class="auth-page">
 <nav class="tl-nav"><div class="nav-inner">
@@ -14,12 +15,12 @@
 </div></nav>
 <div class="auth-page-box">
   <h1 data-i18n="authTabReg">Kayıt Ol</h1>
-  <p class="auth-page-sub" data-i18n="authSub">Seyahatini puanla, kaydet ve paylaş</p>
+  <p class="auth-page-sub" data-i18n="authSub">Seyahatini yıldızla, kaydet ve paylaş</p>
   <input class="ain" id="regName" type="text" data-i18n-placeholder="authName" placeholder="Ad Soyad"/>
   <input class="ain" id="regEmail" type="email" data-i18n-placeholder="authEmail" placeholder="E-posta"/>
   <input class="ain" id="regPass" type="password" data-i18n-placeholder="authPassMin" placeholder="Şifre (min 8 karakter)"/>
   <label class="kvkk-check"><input type="checkbox" id="gC"/> <span data-i18n-html="authKvkkLabel">KVKK ve Kullanım Şartları kabul ediyorum</span></label>
-  <button class="btn bp" style="width:100%" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
+  <button class="btn bp" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
   <p class="auth-page-link"><span data-i18n="hasAccount">Zaten hesabınız var mı?</span> <a href="/login" data-i18n="login">Giriş Yap</a></p>
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
@@ -28,6 +29,11 @@
 const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
 function t(k){ return window.TL_I18N.t(lang,k); }
+function authErrorMessage(data) {
+  if (typeof data?.error === 'string' && data.error) return data.error;
+  if (Array.isArray(data?.errors) && data.errors[0]?.msg) return data.errors[0].msg;
+  return t('requestFailed');
+}
 async function doReg(){
   if(!gC.checked){ alert(t('kvkkRequired')); return; }
   try {
@@ -36,12 +42,12 @@ async function doReg(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ name: regName.value, email: regEmail.value, password: regPass.value, kvkkAccepted: true }),
     });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error);
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok) throw new Error(authErrorMessage(data));
     const payload = data.data || data;
     localStorage.setItem('tl_user', JSON.stringify(payload.user));
     location.href = '/profile';
-  } catch(e){ alert(e.message); }
+  } catch(e){ alert(e.message || t('requestFailed')); }
 }
 </script>
 </body>

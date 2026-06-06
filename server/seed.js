@@ -3,8 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { db } = require('./db');
-const { createUser, findUserByEmail } = require('./auth');
+const { createUser, findUserByEmail, hashPassword } = require('./auth');
 const { enrichContentFields } = require('./lib/place-content');
+const { slugify } = require('./lib/catalog-db');
 
 const placesPath = path.join(__dirname, 'data', 'places.json');
 const blogsSeed = [
@@ -79,16 +80,45 @@ function seedPlaces() {
   console.log('Seeded', places.length, 'places');
 }
 
+function markEmailVerified(userId) {
+  db.prepare('UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?').run(userId);
+}
+
+function clearLockout(userId) {
+  db.prepare('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = ?').run(userId);
+}
+
 function seedAdmin() {
-  const email = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase();
+  const email = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase().trim();
   const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
   const name = process.env.ADMIN_NAME || 'Yasin';
-  if (findUserByEmail(email)) {
-    console.log('Admin already exists:', email);
+  const existing = findUserByEmail(email);
+  if (existing) {
+    const hash = hashPassword(password);
+    db.prepare('UPDATE users SET password_hash = ?, name = ?, role = ? WHERE id = ?').run(
+      hash, name.trim(), 'admin', existing.id,
+    );
+    markEmailVerified(existing.id);
+    clearLockout(existing.id);
+    console.log('Admin updated from .env:', email);
     return;
   }
-  createUser({ name, email, password, role: 'admin' });
+  const user = createUser({ name, email, password, role: 'admin' });
+  markEmailVerified(user.id);
   console.log('Admin created:', email, '(password from .env or default ChangeMe123!)');
+}
+
+function syncLegacyAdminPassword(password) {
+  const legacyEmail = 'yasin@touristlio.local';
+  const envEmail = (process.env.ADMIN_EMAIL || legacyEmail).toLowerCase().trim();
+  if (envEmail === legacyEmail) return;
+  const legacy = findUserByEmail(legacyEmail);
+  if (!legacy || legacy.role !== 'admin') return;
+  const hash = hashPassword(password);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, legacy.id);
+  markEmailVerified(legacy.id);
+  clearLockout(legacy.id);
+  console.log('Legacy admin password synced:', legacyEmail);
 }
 
 function seedDemoBlogs() {
@@ -97,16 +127,31 @@ function seedDemoBlogs() {
   const count = db.prepare('SELECT COUNT(*) AS c FROM blogs').get().c;
   if (count > 0) return;
   const insert = db.prepare(`
-    INSERT INTO blogs (user_id, category, title, excerpt, body, image_url, place_id, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'approved')
+    INSERT INTO blogs (
+      user_id, category, title, slug, excerpt, body, image_url, place_id,
+      tags, featured, author_name, status, published_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', datetime('now'))
   `);
   for (const b of blogsSeed) {
-    insert.run(userId, b.category, b.title, b.excerpt, b.excerpt, b.imageUrl, b.placeId);
+    insert.run(
+      userId,
+      b.category,
+      b.title,
+      slugify(b.title) || `blog-${b.id}`,
+      b.excerpt,
+      b.excerpt,
+      b.imageUrl,
+      b.placeId,
+      JSON.stringify([b.catLabel].filter(Boolean)),
+      b.featured ? 1 : 0,
+      b.author || null,
+    );
   }
   console.log('Seeded', blogsSeed.length, 'demo blogs');
 }
 
 seedPlaces();
 seedAdmin();
+syncLegacyAdminPassword(process.env.ADMIN_PASSWORD || 'ChangeMe123!');
 seedDemoBlogs();
 console.log('Seed complete.');

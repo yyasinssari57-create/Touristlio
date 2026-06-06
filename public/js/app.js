@@ -45,6 +45,7 @@ function imgFallback(el, category, placeId) {
 }
 
 let user = JSON.parse(localStorage.getItem('tl_user') || 'null');
+window.user = user;
 let places = [];
 let activePlace = null;
 let rating = 0;
@@ -58,6 +59,9 @@ let sortMode = 'popularity';
 let placesLoading = false;
 let prevTab = 'explore';
 let blogCat = 'all';
+let blogMeta = null;
+let blogSearchQ = '';
+let blogSearchTimer;
 let savedIds = new Set();
 let authMode = 'login';
 let lang = localStorage.getItem('tl_lang') || 'tr';
@@ -356,6 +360,7 @@ function renderDetailWidgets(data) {
 function statusLabel(status) {
   if (status === 'pending') return t('statusPending');
   if (status === 'approved') return t('statusApproved');
+  if (status === 'draft') return t('statusDraft');
   if (status === 'rejected') return t('statusRejected');
   return status;
 }
@@ -380,13 +385,26 @@ function setCollapsibleText(textEl, btnEl, text) {
 
 const API = '/api';
 
-async function api(path, opts = {}) {
+function apiErrorMessage(data) {
+  const err = data?.error;
+  if (typeof err === 'string' && err) return err;
+  if (err && typeof err === 'object') {
+    if (typeof err.message === 'string' && err.message) return err.message;
+    if (Array.isArray(err) && err[0]?.msg) return err[0].msg;
+  }
+  if (Array.isArray(data?.errors) && data.errors[0]?.msg) return data.errors[0].msg;
+  return t('requestFailed');
+}
+
+window.api = async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
-  if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  const res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
+  const isForm = opts.body instanceof FormData;
+  if (!isForm && opts.body != null) headers['Content-Type'] = 'application/json';
+  const body = isForm ? opts.body : (opts.body != null ? JSON.stringify(opts.body) : undefined);
+  const res = await fetch(API + path, { ...opts, headers, body, credentials: 'include' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = data.error || t('requestFailed');
+    const msg = apiErrorMessage(data);
     if (window.TL_TOAST) window.TL_TOAST.error(msg);
     throw new Error(msg);
   }
@@ -396,6 +414,7 @@ async function api(path, opts = {}) {
 
 function setAuth(u) {
   user = u;
+  window.user = u;
   if (u) {
     localStorage.setItem('tl_user', JSON.stringify(u));
   } else {
@@ -407,14 +426,19 @@ function setAuth(u) {
 
 function updateAuthUI() {
   const btn = document.getElementById('authBtn');
-  if (!btn) return;
-  if (user) {
-    btn.textContent = t('profile');
-    btn.onclick = () => showMainTab('profile');
-  } else {
-    btn.textContent = t('login');
-    btn.onclick = () => openAuth();
+  const joinBtn = document.getElementById('joinBtn');
+  if (btn) {
+    if (user) {
+      btn.textContent = t('profile');
+      btn.onclick = () => showMainTab('profile');
+      btn.style.display = '';
+    } else {
+      btn.textContent = t('login');
+      btn.onclick = () => openAuth();
+      btn.style.display = '';
+    }
   }
+  if (joinBtn) joinBtn.style.display = user ? 'none' : '';
 }
 
 async function loadPlaces(params = {}, append = false) {
@@ -472,7 +496,7 @@ function renderGrid(list, append = false) {
         <div class="pc-loc">📍 ${escapeHtml(p.location)}</div>
         <div class="pc-name">${escapeHtml(p.name)}</div>
         <div class="pc-rats">
-          <div class="rat"><span class="rl">${t('touristlio')}</span><span class="st">${stars(p.tiolaRating)}</span><span class="rn" style="color:var(--star2)">${p.tiolaRating || '—'}</span><span class="rc">(${p.tiolaCount || 0} ${t('tiolaCount')})</span></div>
+          <div class="rat"><span class="rl">${t('touristlio')}</span><span class="st">${stars(p.tiolaRating)}</span><span class="rc">(${p.tiolaCount || 0} ${t('tiolaCount')})</span></div>
         </div>
         <div class="pc-foot"><div class="pc-type">${catLabel(p.category)}</div><div style="font-size:.61rem;color:var(--t3)">${escapeHtml(p.country)}</div></div>
       </div>
@@ -615,34 +639,174 @@ function setCanonical(href) {
   link.href = href || `${location.origin}/`;
 }
 
-function showMainTab(tab) {
+let restoringRoute = false;
+
+function getActiveExploreTab() {
+  const sec = document.querySelector('.explore-section.active');
+  return sec?.id?.replace('es-', '') || 'discover';
+}
+
+function getActiveProfileTab() {
+  const active = document.querySelector('#pContent .ptab-c.active');
+  return active?.id?.replace('ptab-', '') || 'tiolas';
+}
+
+function getActiveDetailTab() {
+  const panel = document.querySelector('.dtab-panel.active');
+  return panel?.id?.replace('dtab-', '') || 'overview';
+}
+
+function getCurrentRoute() {
+  const page = document.querySelector('.page.active');
+  const main = page?.id?.replace('page-', '') || 'explore';
+  const route = { main };
+  if (main === 'explore') route.explore = getActiveExploreTab();
+  if (main === 'profile') route.profileTab = getActiveProfileTab();
+  if (main === 'blog' && blogCat !== 'all') route.blogCat = blogCat;
+  if (main === 'detail' && activePlace?.id) {
+    route.placeId = activePlace.id;
+    route.detailTab = getActiveDetailTab();
+  }
+  return route;
+}
+
+function readRouteFromUrl() {
+  const onPlacesPath = location.pathname.replace(/\/+$/, '') === '/gezilecek-yerler';
+  const params = new URLSearchParams(location.search);
+  const hash = location.hash.replace(/^#/, '');
+  const segments = hash ? hash.split('/').filter(Boolean) : [];
+
+  const placeParam = params.get('place');
+  if (placeParam && /^\d+$/.test(placeParam)) {
+    return { main: 'detail', placeId: Number(placeParam), detailTab: segments[2] || 'overview' };
+  }
+  if (segments[0] === 'place' && segments[1] && /^\d+$/.test(segments[1])) {
+    return { main: 'detail', placeId: Number(segments[1]), detailTab: segments[2] || 'overview' };
+  }
+
+  const tabParam = params.get('tab');
+  if (tabParam === 'places' || onPlacesPath || segments[0] === 'places') {
+    return { main: 'places' };
+  }
+
+  if (segments[0] === 'explore') {
+    return { main: 'explore', explore: segments[1] || 'discover' };
+  }
+  if (segments[0] === 'profile') {
+    return { main: 'profile', profileTab: segments[1] || 'tiolas' };
+  }
+  if (segments[0] === 'blog') {
+    const route = { main: 'blog' };
+    if (segments[1] === 'cat' && segments[2]) route.blogCat = segments[2];
+    return route;
+  }
+  if (['blog', 'profile'].includes(segments[0])) {
+    return { main: segments[0] };
+  }
+  if (tabParam && ['explore', 'blog', 'profile'].includes(tabParam)) {
+    return { main: tabParam };
+  }
+
+  if (!hash) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('tl_route') || 'null');
+      if (saved?.main) return saved;
+    } catch { /* ignore */ }
+  }
+
+  return { main: 'explore', explore: 'discover' };
+}
+
+function writeRouteToUrl(route, replace = true) {
+  if (restoringRoute) return;
+  localStorage.setItem('tl_route', JSON.stringify(route));
+
+  let path = '/';
+  let search = '';
+  let hash = '#explore';
+
+  if (route.main === 'detail' && route.placeId) {
+    search = `?place=${route.placeId}`;
+    hash = route.detailTab && route.detailTab !== 'overview'
+      ? `#place/${route.placeId}/${route.detailTab}`
+      : `#place/${route.placeId}`;
+  } else if (route.main === 'places') {
+    path = '/gezilecek-yerler';
+    hash = '#places';
+  } else if (route.main === 'explore') {
+    hash = route.explore && route.explore !== 'discover' ? `#explore/${route.explore}` : '#explore';
+  } else if (route.main === 'profile') {
+    hash = route.profileTab && route.profileTab !== 'tiolas' ? `#profile/${route.profileTab}` : '#profile';
+  } else if (route.main === 'blog') {
+    hash = route.blogCat && route.blogCat !== 'all' ? `#blog/cat/${route.blogCat}` : '#blog';
+  }
+
+  const url = `${path}${search}${hash}`;
+  if (replace) history.replaceState(route, '', url);
+  else history.pushState(route, '', url);
+}
+
+function syncRoute(replace = true) {
+  writeRouteToUrl(getCurrentRoute(), replace);
+}
+
+async function showMainTab(tab, skipRoute) {
+  if (!skipRoute) window.TL_LOADER?.show();
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
   document.querySelectorAll('.ntab').forEach((n) => n.classList.remove('on'));
-  document.getElementById('nt-' + tab)?.classList.add('on');
-  prevTab = tab;
+  const navTab = tab === 'detail' ? prevTab : tab;
+  document.getElementById('nt-' + navTab)?.classList.add('on');
+  if (tab !== 'detail') prevTab = tab;
   if (tab === 'places') setCanonical(`${location.origin}/gezilecek-yerler`);
   else if (tab !== 'detail') setCanonical(`${location.origin}/`);
-  if (tab === 'blog') renderBlog();
-  if (tab === 'profile') updateProfilePage();
-  if (tab === 'explore') loadTiolaFeed();
+  const tasks = [];
+  if (tab === 'blog') tasks.push(loadBlogPage().then(renderBlog));
+  if (tab === 'profile') tasks.push(Promise.resolve(updateProfilePage()));
+  if (tab === 'explore') tasks.push(loadTiolaFeed());
   if (tab === 'places') window.TL_DISCOVER?.onTabShown();
   window.scrollTo(0, 0);
+  if (!skipRoute) syncRoute(true);
+  if (!skipRoute) {
+    try {
+      await Promise.all(tasks);
+    } finally {
+      window.TL_LOADER?.hide();
+    }
+  }
 }
 
-function showExploreTab(name, el) {
+async function showExploreTab(name, el, skipRoute) {
+  if (!skipRoute) window.TL_LOADER?.show();
   document.querySelectorAll('.explore-section').forEach((s) => s.classList.remove('active'));
   document.getElementById('es-' + name).classList.add('active');
   document.querySelectorAll('.etab').forEach((e) => e.classList.remove('on'));
   el.classList.add('on');
-  if (name === 'tiolas') loadTiolaFeed();
-  if (name === 'categories') loadCategoryStats();
+  const tasks = [];
+  if (name === 'tiolas') tasks.push(loadTiolaFeed());
+  if (name === 'categories') tasks.push(loadCategoryStats());
   if (name === 'map' && window.TL_MAP) {
-    setTimeout(() => {
-      window.TL_MAP.invalidateExplore('exploreMapFull');
-      loadMapMarkers();
-    }, 200);
+    tasks.push(new Promise((resolve) => {
+      setTimeout(async () => {
+        window.TL_MAP.invalidateExplore('exploreMapFull');
+        await loadMapMarkers();
+        resolve();
+      }, 200);
+    }));
   }
+  if (!skipRoute && getActiveMainTab() === 'explore') syncRoute(true);
+  if (!skipRoute) {
+    try {
+      await Promise.all(tasks);
+    } finally {
+      window.TL_LOADER?.hide();
+    }
+  }
+}
+
+function getActiveMainTab() {
+  const page = document.querySelector('.page.active');
+  return page?.id?.replace('page-', '') || 'explore';
 }
 
 async function loadTiolaFeed() {
@@ -660,14 +824,30 @@ async function loadTiolaFeed() {
 
 function renderTiolaCard(ti) {
   const place = ti.placeName ? `<strong>${escapeHtml(ti.placeName)}</strong>` : (ti.cityTag ? `📍 ${escapeHtml(ti.cityTag)}` : t('generalTiola'));
+  const statusBadge = ti.status && ti.status !== 'approved'
+    ? `<span class="status-${ti.status}">${statusLabel(ti.status)}</span>` : '';
+  const rejectionNote = ti.status === 'rejected' && ti.rejectionReason
+    ? `<div class="tiola-reject-reason"><strong>${t('rejectionReason')}:</strong> ${escapeHtml(ti.rejectionReason)}</div>` : '';
+  const avUser = { name: ti.userName, avatarColor: ti.avatarColor, avatarUrl: ti.avatarUrl, avatarPreset: ti.avatarPreset };
+  const reportBtn = window.TL_REPORTS?.menuButton('tiola', ti.id, ti.text?.slice(0, 40) || ti.userName, ti.userId) || '';
+  const canReportProfile = user && ti.userId && user.id !== ti.userId;
+  const nameHtml = canReportProfile
+    ? `<button type="button" class="report-name-btn" onclick="event.stopPropagation();TL_REPORTS.open('profile',${ti.userId},'${String(ti.userName || '').replace(/'/g, "\\'")}')">${escapeHtml(ti.userName)}</button>`
+    : escapeHtml(ti.userName);
   return `
-    <div class="tiola-card" ${ti.placeId ? `onclick="openDetail(${ti.placeId})"` : ''}>
+    <div class="tiola-card" ${ti.placeId && ti.status === 'approved' ? `onclick="openDetail(${ti.placeId})"` : ''}>
+      ${reportBtn}
       ${ti.photoUrl ? `<img src="${ti.photoUrl}" alt=""/>` : (ti.placeImage ? `<img src="${ti.placeImage}" alt=""/>` : '')}
       <div class="tiola-body">
-        <div class="tiola-meta">${ti.userName} · ${formatDate(ti.createdAt)}</div>
+        <div class="tiola-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="width:22px;height:22px;display:inline-block;flex-shrink:0">${window.TL_AVATARS?.renderHtml(avUser, 'tiola-mini') || ''}</span>
+          <span>${nameHtml}</span>
+          <span>· ${formatDate(ti.createdAt)} ${statusBadge}</span>
+        </div>
         <div>${place}</div>
         ${ti.stars ? `<div class="tiola-stars">${stars(ti.stars)}</div>` : ''}
         <div class="tiola-txt">${escapeHtml(ti.text)}</div>
+        ${rejectionNote}
       </div>
     </div>`;
 }
@@ -819,14 +999,16 @@ function renderDetailGallery(p) {
   });
 }
 
-function showDetailTab(name, el) {
+function showDetailTab(name, el, skipRoute) {
   document.querySelectorAll('.dtab').forEach((t) => t.classList.remove('on'));
   if (el) el.classList.add('on');
   document.querySelectorAll('.dtab-panel').forEach((p) => p.classList.remove('active'));
   document.getElementById('dtab-' + name)?.classList.add('active');
+  if (!skipRoute) syncRoute(true);
 }
 
-async function openDetail(id) {
+async function openDetail(id, skipRoute) {
+  if (!skipRoute) window.TL_LOADER?.show();
   const detailBody = document.querySelector('#page-detail .pd-body');
   if (detailBody && window.TL_SKELETON) {
     const prev = detailBody.innerHTML;
@@ -873,8 +1055,7 @@ async function openDetail(id) {
     }
     setCanonical(`${location.origin}/?place=${p.id}`);
     if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
-    document.getElementById('pdTS').textContent = stars(p.tiolaRating);
-    document.getElementById('pdTR').textContent = (p.tiolaRating || '—') + ' / 5';
+    document.getElementById('pdTS').textContent = stars(p.tiolaRating) || '—';
     document.getElementById('pdTC').textContent = (p.tiolaCount || 0) + ' ' + t('tiolaCount');
     document.getElementById('icCountry').textContent = p.country;
     document.getElementById('icCity').textContent = p.city;
@@ -883,9 +1064,12 @@ async function openDetail(id) {
     document.getElementById('icBest').textContent = placeField(p, 'bestTime') || '—';
     await renderRevList();
     updateRevForm();
-    showMainTab('detail');
+    showMainTab('detail', !!skipRoute);
+    if (!skipRoute) syncRoute(true);
   } catch (e) {
     if (window.TL_TOAST) window.TL_TOAST.error(e.message);
+  } finally {
+    if (!skipRoute) window.TL_LOADER?.hide();
   }
 }
 
@@ -902,9 +1086,12 @@ async function renderRevList() {
     <div class="ri">
       <div class="ri-hd">
         <div class="ri-user">
-          <div class="riav" style="background:${r.avatarColor}">${r.userName[0]}</div>
-          <div><div class="rinm">${escapeHtml(r.userName)}</div><div class="ridt">${formatDate(r.createdAt)}</div></div>
+          <div class="riav">${window.TL_AVATARS?.renderHtml({ name: r.userName, avatarColor: r.avatarColor, avatarUrl: r.avatarUrl, avatarPreset: r.avatarPreset }) || r.userName[0]}</div>
+          <div><div class="rinm">${user && r.userId && user.id !== r.userId
+            ? `<button type="button" class="report-name-btn" onclick="TL_REPORTS.open('profile',${r.userId},'${String(r.userName || '').replace(/'/g, "\\'")}')">${escapeHtml(r.userName)}</button>`
+            : escapeHtml(r.userName)}</div><div class="ridt">${formatDate(r.createdAt)}</div></div>
         </div>
+        ${window.TL_REPORTS?.menuButton('tiola', r.id, r.text?.slice(0, 40), r.userId) || ''}
         ${r.stars ? `<div class="ristars">${stars(r.stars)}</div>` : `<span style="font-size:.62rem;color:var(--t3)">${t('noRating')}</span>`}
       </div>
       ${r.photoUrl ? `<img src="${r.photoUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-bottom:8px"/>` : ''}
@@ -918,19 +1105,15 @@ function updateRevForm() {
   const tp = document.getElementById('rfTp');
   const me = document.getElementById('memberEx');
   const nt = document.getElementById('rfNote');
-  const starStep = document.getElementById('starStep');
   if (!user) {
     av.textContent = '?'; nm.textContent = t('notLoggedIn'); tp.textContent = '';
     if (me) me.style.display = 'none';
-    if (starStep) starStep.style.display = 'none';
     nt.innerHTML = `<a href="#" onclick="openAuth();return false;">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
   } else {
-    av.textContent = user.name[0];
-    av.style.background = user.avatarColor || 'var(--b)';
+    window.TL_AVATARS?.applyToElement(av, user);
     nm.textContent = user.name;
     tp.textContent = t('writeTiola');
     if (me) me.style.display = 'flex';
-    if (starStep) starStep.style.display = 'flex';
     nt.textContent = t('tiolaModeration');
   }
 }
@@ -967,31 +1150,94 @@ async function postTiola() {
   }
 }
 
-async function renderBlog() {
+function blogPageLabels() {
+  const page = blogMeta?.page || {};
+  return {
+    empty: page.empty || t('blogEmpty'),
+    searchPh: page.searchPh || t('blogSearchPh'),
+    featuredLbl: page.featuredLbl || t('blogFeaturedLbl'),
+    viewPlace: page.viewPlace || t('viewPlace'),
+  };
+}
+
+function debounceBlogSearch() {
+  clearTimeout(blogSearchTimer);
+  blogSearchTimer = setTimeout(() => {
+    blogSearchQ = document.getElementById('blogSearch')?.value?.trim() || '';
+    renderBlog();
+  }, 280);
+}
+
+async function loadBlogPage() {
   try {
-    const data = await api('/blogs' + (blogCat !== 'all' ? '?category=' + blogCat : ''));
-    const blogs = data.blogs;
+    blogMeta = await api('/blogs/meta?lang=' + lang);
+    const page = blogMeta.page || {};
+    const labels = blogPageLabels();
+    const hero = document.getElementById('blogHeroTitle');
+    const sub = document.getElementById('blogHeroSub');
+    const searchInp = document.getElementById('blogSearch');
+    if (hero) hero.innerHTML = `${escapeHtml(page.heroTitle || t('blogTitle'))} <em class="em-accent">${escapeHtml(page.heroTitleEm || t('blogTitleEm'))}</em>`;
+    if (sub) sub.textContent = page.subtitle || t('blogSub');
+    if (searchInp) searchInp.placeholder = labels.searchPh;
+    const chips = document.getElementById('blogCatChips');
+    if (chips) {
+      const allLabel = page.catAll || t('blogCatAll');
+      const cats = blogMeta.categories || [];
+      chips.innerHTML = `<div class="bcat-chip ${blogCat === 'all' ? 'on' : ''}" onclick="setBlogCat('all',this)">${escapeHtml(allLabel)}</div>`
+        + cats.map((c) => `<div class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" onclick="setBlogCat('${escapeHtml(c.slug)}',this)">${escapeHtml(c.label || c.nameTr)}</div>`).join('');
+    }
+    const writeCat = document.getElementById('blogCat');
+    if (writeCat && blogMeta.categories?.length) {
+      writeCat.innerHTML = blogMeta.categories.map((c) =>
+        `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.label || c.nameTr)}</option>`
+      ).join('');
+    }
+  } catch (e) {
+    console.error('Blog meta', e);
+  }
+}
+
+async function renderBlog() {
+  const grid = document.getElementById('blogGrid');
+  if (!grid) return;
+  try {
+    if (!blogMeta) await loadBlogPage();
+    const labels = blogPageLabels();
+    const qs = new URLSearchParams({ lang });
+    if (blogCat !== 'all') qs.set('category', blogCat);
+    if (blogSearchQ) qs.set('q', blogSearchQ);
+    const data = await api('/blogs?' + qs);
+    const blogs = data.blogs || [];
     if (!blogs.length) {
-      document.getElementById('blogGrid').innerHTML = `<div class="no-res">${t('blogEmpty')}</div>`;
+      grid.innerHTML = `<div class="no-res">${escapeHtml(labels.empty)}</div>`;
       return;
     }
-    const feat = blogs[0];
-    const rest = blogs.slice(1);
-    document.getElementById('blogGrid').innerHTML = `
-      <div class="bcard feat" onclick="${feat.placeId ? `openDetail(${feat.placeId})` : ''}">
-        <img class="bimg" src="${safeUrl(feat.imageUrl) || placeImg({ category: 'guide', id: feat.id })}" alt=""/>
-        <div class="bbody"><div class="bcat-lbl">${feat.category}</div><div class="btitle">${escapeHtml(feat.title)}</div>
-        <div class="bexc">${escapeHtml(feat.excerpt || '')}</div>
-        <div class="bmeta"><div class="bauthor"><div class="bav" style="background:var(--b)">${feat.authorName[0]}</div><span>${escapeHtml(feat.authorName)}</span></div></div></div>
-      </div>
-      ${rest.slice(0, 4).map((b) => `
-        <div class="bcard" onclick="${b.placeId ? `openDetail(${b.placeId})` : ''}">
-          <img class="bimg" src="${safeUrl(b.imageUrl) || placeImg({ category: 'guide', id: b.id })}" alt=""/>
-          <div class="bbody"><div class="bcat-lbl">${b.category}</div><div class="btitle">${escapeHtml(b.title)}</div>
-          <div class="bmeta"><div class="bauthor"><div class="bav" style="background:var(--b2)">${b.authorName[0]}</div><span>${escapeHtml(b.authorName)}</span></div></div></div>
-        </div>`).join('')}`;
+    const feat = blogs.find((b) => b.featured) || blogs[0];
+    const rest = blogs.filter((b) => b.id !== feat.id);
+    const card = (b, isFeat) => {
+      const bav = window.TL_AVATARS?.renderHtml({
+        name: b.authorName,
+        avatarColor: b.avatarColor || (isFeat ? 'var(--b)' : 'var(--b2)'),
+        avatarUrl: b.avatarUrl,
+        avatarPreset: b.avatarPreset,
+      }) || `<div class="bav" style="background:${isFeat ? 'var(--b)' : 'var(--b2)'}">${(b.authorName || '?')[0]}</div>`;
+      const reportBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
+      return `
+      <div class="bcard${isFeat ? ' feat' : ''}" onclick="openBlogDetail('${escapeHtml(b.slug || b.id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBlogDetail('${escapeHtml(b.slug || b.id)}')">
+        ${reportBtn}
+        <img class="bimg" src="${safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id })}" alt=""/>
+        ${b.featured ? `<div class="bfeat-badge">${escapeHtml(labels.featuredLbl)}</div>` : ''}
+        <div class="bbody">
+          <div class="bcat-lbl">${escapeHtml(b.categoryLabel || b.category || '')}</div>
+          <div class="btitle">${escapeHtml(b.title)}</div>
+          ${isFeat ? `<div class="bexc">${escapeHtml(b.excerpt || '')}</div>` : ''}
+          <div class="bmeta"><div class="bauthor">${bav}<span>${escapeHtml(b.authorName || '')}</span></div></div>
+        </div>
+      </div>`;
+    };
+    grid.innerHTML = card(feat, true) + rest.map((b) => card(b, false)).join('');
   } catch (e) {
-    document.getElementById('blogGrid').innerHTML = `<div class="no-res">${e.message}</div>`;
+    grid.innerHTML = `<div class="no-res">${e.message}</div>`;
   }
 }
 
@@ -1000,13 +1246,48 @@ function setBlogCat(cat, el) {
   document.querySelectorAll('.bcat-chip').forEach((c) => c.classList.remove('on'));
   el.classList.add('on');
   renderBlog();
+  syncRoute(true);
 }
 
-function showPTab(name, el) {
-  document.querySelectorAll('.ptab').forEach((t) => t.classList.remove('on'));
+async function openBlogDetail(slug) {
+  if (!slug) return;
+  try {
+    const data = await api('/blogs/' + encodeURIComponent(slug) + '?lang=' + lang);
+    const b = data.blog;
+    const img = safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id });
+    const tags = (b.tags || []).map((tag) => `<span class="bd-tag">${escapeHtml(tag)}</span>`).join('');
+    document.getElementById('blogDetailBody').innerHTML = `
+      ${img ? `<img class="bd-cover" src="${img}" alt=""/>` : ''}
+      <div class="bd-cat">${escapeHtml(b.categoryLabel || b.category || '')}</div>
+      <h2 class="bd-title">${escapeHtml(b.title)}</h2>
+      <div class="bd-meta">${escapeHtml(b.authorName || '')}${b.publishedAt ? ' · ' + new Date(b.publishedAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'tr-TR') : ''}</div>
+      ${b.excerpt ? `<p style="color:var(--t2);font-size:.85rem;margin-bottom:12px">${escapeHtml(b.excerpt)}</p>` : ''}
+      <div class="bd-body">${escapeHtml(b.body || '')}</div>
+      ${tags ? `<div class="bd-tags">${tags}</div>` : ''}
+      ${b.placeId ? `<p style="margin-top:16px"><button class="btn bp bsm" type="button" onclick="closeBlogDetail();openDetail(${b.placeId})">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
+      <div class="bd-report-row">
+        ${window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) ? `<button type="button" class="btn bo bsm" onclick="TL_REPORTS.open('blog',${b.id},'${String(b.title || '').replace(/'/g, "\\'")}')">${t('reportBtn')}</button>` : ''}
+        ${window.TL_REPORTS?.menuButton('profile', b.userId, b.authorName, b.userId) ? `<button type="button" class="btn bo bsm" style="margin-left:6px" onclick="TL_REPORTS.open('profile',${b.userId},'${String(b.authorName || '').replace(/'/g, "\\'")}')">${t('reportProfileBtn')}</button>` : ''}
+      </div>`;
+    document.getElementById('blogDetailOv').classList.add('on');
+    document.body.style.overflow = 'hidden';
+  } catch (e) {
+    window.TL_TOAST?.error?.(e.message) || alert(e.message);
+  }
+}
+
+function closeBlogDetail() {
+  document.getElementById('blogDetailOv')?.classList.remove('on');
+  document.body.style.overflow = '';
+}
+
+function showPTab(name, el, skipRoute) {
+  document.querySelectorAll('#pContent > .ptabs .ptab').forEach((t) => t.classList.remove('on'));
   el.classList.add('on');
   document.querySelectorAll('.ptab-c').forEach((t) => t.classList.remove('active'));
   document.getElementById('ptab-' + name).classList.add('active');
+  if (name === 'blogs') loadBlogPage().catch(() => {});
+  if (!skipRoute) syncRoute(true);
 }
 
 async function updateProfilePage() {
@@ -1018,13 +1299,27 @@ async function updateProfilePage() {
   document.getElementById('pLoginNotice').style.display = 'none';
   document.getElementById('pContent').style.display = 'block';
   document.querySelector('.prof-name').textContent = user.name;
-  document.querySelector('.prof-av').textContent = user.name[0];
+  window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), user);
+  renderProfileMeta(user);
+  initAvatarSettings(user);
 
-  const [myTiolas, myBlogs, saved, visitedStats] = await Promise.all([
+  try {
+    const me = await api('/auth/me');
+    if (me.user) {
+      setAuth(me.user);
+      renderProfileSettings(me.user);
+      renderProfileMeta(me.user);
+    }
+  } catch {
+    renderProfileSettings(user);
+  }
+
+  const [myTiolas, myBlogs, saved, visitedStats, myNotifications] = await Promise.all([
     api('/tiolas?mine=1'),
     api('/blogs?mine=1'),
     api('/places/saved/all'),
     api('/travel-lists/visited/stats').catch(() => ({ totalVisited: 0, countriesVisited: 0 })),
+    api('/notifications?unread=1').catch(() => ({ notifications: [] })),
   ]);
 
   savedIds = new Set(saved.places.map((p) => p.id));
@@ -1036,6 +1331,14 @@ async function updateProfilePage() {
   document.getElementById('pCntCnt').textContent = visitedStats.countriesVisited || new Set(approvedT.map((t) => t.countryTag || t.placeId)).size;
   const pVis = document.getElementById('pVisitedCnt');
   if (pVis) pVis.textContent = visitedStats.totalVisited || 0;
+
+  renderProfileActivitySummary({
+    tiolas: myTiolas.tiolas.length,
+    saved: savedIds.size,
+    visited: visitedStats.totalVisited || 0,
+    pending: pending.length,
+    countries: visitedStats.countriesVisited || 0,
+  });
 
   try {
     const visited = await api('/travel-lists/visited/all');
@@ -1054,23 +1357,12 @@ async function updateProfilePage() {
     }
   } catch { /* optional */ }
 
+  renderProfileNotifications(myNotifications.notifications || []);
+
   const tiList = document.getElementById('myTiolaList');
   const tiEmpty = document.getElementById('tiolaListEmpty');
   if (!myTiolas.tiolas.length) { tiList.innerHTML = ''; tiEmpty.style.display = 'block'; }
   else { tiEmpty.style.display = 'none'; tiList.innerHTML = myTiolas.tiolas.map((t) => renderTiolaCard(t)).join(''); }
-
-  const bl = document.getElementById('myBlogList');
-  const be = document.getElementById('blogListEmpty');
-  if (!myBlogs.blogs.length) { bl.innerHTML = ''; be.style.display = 'block'; }
-  else {
-    be.style.display = 'none';
-    bl.innerHTML = myBlogs.blogs.map((b) => `
-      <div class="my-rev-item">
-        <div><div style="font-weight:600;color:var(--navy)">${escapeHtml(b.title)}</div>
-        <span class="status-${b.status}">${statusLabel(b.status)}</span>
-        <div style="font-size:.77rem;color:var(--t2);margin-top:4px">${escapeHtml((b.excerpt || '').slice(0, 100))}</div></div>
-      </div>`).join('');
-  }
 
   const pl = document.getElementById('myPendingList');
   const pe = document.getElementById('pendingEmpty');
@@ -1098,13 +1390,170 @@ async function updateProfilePage() {
 
   const arcSel = document.getElementById('arcPlace');
   arcSel.innerHTML = `<option value="">${t('placeOptional')}</option>` + places.map((p) => `<option value="${p.id}">${escapeHtml(p.name)} — ${escapeHtml(p.country)}</option>`).join('');
+
+  loadBlogPage().catch(() => {});
 }
 
-function showWriteMode(mode, el) {
-  document.querySelectorAll('#ptab-write .ptabs .ptab').forEach((t) => t.classList.remove('on'));
-  el.classList.add('on');
-  document.getElementById('writeTiolaForm').style.display = mode === 'tiola' ? 'block' : 'none';
-  document.getElementById('writeBlogForm').style.display = mode === 'blog' ? 'block' : 'none';
+function renderProfileMeta(u) {
+  const meta = document.getElementById('profMeta');
+  if (!meta || !u) return;
+  const verified = u.emailVerified ? t('settingsEmailVerified') : t('settingsEmailPending');
+  meta.textContent = u.email ? `${u.email} · ${verified}` : '';
+}
+
+function renderProfileActivitySummary({ tiolas = 0, saved = 0, visited = 0, pending = 0, countries = 0 }) {
+  const bar = document.getElementById('profActivityBar');
+  if (!bar) return;
+  if (!tiolas && !saved && !visited && !pending) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  const items = [];
+  if (tiolas) items.push(`<div class="prof-activity-item"><strong>${tiolas}</strong><span>${t('profileStatReviews')}</span></div>`);
+  if (saved) items.push(`<div class="prof-activity-item"><strong>${saved}</strong><span>${t('profileStatSaved')}</span></div>`);
+  if (visited) items.push(`<div class="prof-activity-item"><strong>${visited}</strong><span>${t('profileStatVisited')}</span></div>`);
+  if (pending) items.push(`<div class="prof-activity-item prof-activity-pending"><strong>${pending}</strong><span>${t('profileActivityPending')}</span></div>`);
+  if (countries && !visited) items.push(`<div class="prof-activity-item"><strong>${countries}</strong><span>${t('profileStatCountries')}</span></div>`);
+  bar.innerHTML = items.join('');
+}
+
+function renderProfileNotifications(items) {
+  const host = document.getElementById('profileNotifications');
+  if (!host) return;
+  if (!items.length) { host.innerHTML = ''; host.style.display = 'none'; return; }
+  host.style.display = 'block';
+  host.innerHTML = items.map((n) => `
+    <div class="profile-notice" role="status">
+      <strong>${escapeHtml(n.title)}</strong>
+      <p>${escapeHtml(n.body)}</p>
+    </div>`).join('');
+  api('/notifications/read-all', { method: 'POST' }).catch(() => {});
+}
+
+function renderProfileSettings(u) {
+  const emailEl = document.getElementById('settingsEmail');
+  const badgeEl = document.getElementById('settingsEmailBadge');
+  const resendBtn = document.getElementById('btnResendVerify');
+  if (!emailEl) return;
+  emailEl.textContent = u.email || '—';
+  if (badgeEl) {
+    const verified = !!u.emailVerified;
+    badgeEl.textContent = verified ? t('settingsEmailVerified') : t('settingsEmailPending');
+    badgeEl.className = 'settings-badge ' + (verified ? 'ok' : 'pending');
+  }
+  if (resendBtn) resendBtn.style.display = u.emailVerified ? 'none' : '';
+  renderProfileMeta(u);
+}
+
+async function submitChangePassword() {
+  const currentPassword = document.getElementById('pwdCurrent')?.value;
+  const password = document.getElementById('pwdNew')?.value;
+  if (!currentPassword || !password) return;
+  try {
+    await api('/auth/change-password', { method: 'POST', body: { currentPassword, password } });
+    document.getElementById('pwdCurrent').value = '';
+    document.getElementById('pwdNew').value = '';
+    window.TL_TOAST?.success(t('settingsPasswordUpdated'));
+  } catch { /* toast from api */ }
+}
+
+async function submitChangeEmail() {
+  const email = document.getElementById('emailNew')?.value;
+  const password = document.getElementById('emailPass')?.value;
+  if (!email || !password) return;
+  try {
+    const data = await api('/auth/change-email', { method: 'POST', body: { email, password } });
+    if (data.user) setAuth(data.user);
+    renderProfileSettings(data.user || user);
+    document.getElementById('emailNew').value = '';
+    document.getElementById('emailPass').value = '';
+    window.TL_TOAST?.success(t('settingsEmailUpdated'));
+  } catch { /* toast from api */ }
+}
+
+async function resendVerificationEmail() {
+  try {
+    await api('/auth/resend-verification', { method: 'POST', body: {} });
+    window.TL_TOAST?.success(t('settingsVerifySent'));
+  } catch { /* toast from api */ }
+}
+
+let avatarPick = { preset: 'traveler', color: '#0ea5e9' };
+
+function initAvatarSettings(u) {
+  const grid = document.getElementById('avatarPickGrid');
+  const colors = document.getElementById('avatarColorRow');
+  const preview = document.getElementById('avatarPreview');
+  if (!grid || !window.TL_AVATARS) return;
+  avatarPick.preset = u.avatarUrl ? avatarPick.preset : (u.avatarPreset || 'none');
+  avatarPick.color = u.avatarColor || avatarPick.color;
+  const picker = window.TL_AVATARS.renderPickerGrid(avatarPick.preset, avatarPick.color, ({ preset, color }) => {
+    if (preset) avatarPick.preset = preset;
+    if (color) avatarPick.color = color;
+    initAvatarSettings({ ...u, avatarPreset: avatarPick.preset, avatarColor: avatarPick.color, avatarUrl: null });
+  });
+  grid.innerHTML = picker.presetHtml;
+  colors.innerHTML = picker.colorHtml;
+  picker.bind(grid.parentElement);
+  const previewUser = { name: u.name, avatarPreset: avatarPick.preset, avatarColor: avatarPick.color, avatarUrl: u.avatarUrl };
+  window.TL_AVATARS.applyToElement(preview, previewUser);
+  const fileInp = document.getElementById('avatarFile');
+  if (fileInp && !fileInp._bound) {
+    fileInp._bound = true;
+    fileInp.onchange = () => {
+      const file = fileInp.files?.[0];
+      fileInp.value = '';
+      if (!file) return;
+      window.TL_AVATAR_CROP?.open(file, (cropped) => uploadAvatarFile(cropped));
+    };
+  }
+}
+
+async function saveAvatarPreset() {
+  if (!user) { window.TL_TOAST?.warning(t('login')); return; }
+  try {
+    const data = await api('/auth/avatar', { method: 'PATCH', body: { avatarPreset: avatarPick.preset, avatarColor: avatarPick.color } });
+    if (data.user) {
+      setAuth(data.user);
+      initAvatarSettings(data.user);
+      window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), data.user);
+      updateRevForm();
+      window.TL_TOAST?.success(t('avatarSaved'));
+    } else {
+      window.TL_TOAST?.error(t('avatarSaveFailed'));
+    }
+  } catch { /* toast from api */ }
+}
+
+async function uploadAvatarFile(file) {
+  if (!user) { window.TL_TOAST?.warning(t('login')); return; }
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    window.TL_TOAST?.error(t('avatarFileTooBig'));
+    return;
+  }
+  if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+    window.TL_TOAST?.error(t('avatarFileType'));
+    return;
+  }
+  const fd = new FormData();
+  fd.append('photo', file);
+  try {
+    const data = await api('/auth/avatar-upload', { method: 'POST', body: fd });
+    if (data.user) {
+      setAuth(data.user);
+      initAvatarSettings(data.user);
+      window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), data.user);
+      updateRevForm();
+      window.TL_TOAST?.success(t('avatarSaved'));
+    } else {
+      window.TL_TOAST?.error(t('avatarUploadFailed'));
+    }
+  } catch { /* toast from api */ }
+  const inp = document.getElementById('avatarFile');
+  if (inp) inp.value = '';
 }
 
 async function toggleSave(id, btn) {
@@ -1162,9 +1611,9 @@ async function submitBlog() {
   try {
     const data = await api('/blogs', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         title, body, category: document.getElementById('blogCat').value,
-      }),
+      },
     });
     alert(data.message || t('tiolaPending'));
     document.getElementById('blogTitle').value = '';
@@ -1173,7 +1622,8 @@ async function submitBlog() {
   } catch (e) { alert(e.message); }
 }
 
-function openAuth() {
+function openAuth(mode) {
+  if (mode) authMode = mode;
   document.getElementById('authOv').classList.add('on');
   buildAuthForm(authMode);
 }
@@ -1193,7 +1643,8 @@ function buildAuthForm(m) {
   document.getElementById('authForm').innerHTML = m === 'login'
     ? `<input class="ain" id="loginEmail" type="email" placeholder="${t('authEmail')}"/>
        <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}"/>
-       <button class="btn bp" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>`
+       <button class="btn bp" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
+       <p class="auth-page-link" style="margin-top:10px"><a href="#" onclick="doForgotPassword();return false">${t('forgotPassword')}</a></p>`
     : `<input class="ain" id="regName" type="text" placeholder="${t('authName')}"/>
        <input class="ain" id="regEmail" type="email" placeholder="${t('authEmail')}"/>
        <input class="ain" id="regPass" type="password" placeholder="${t('authPassMin')}"/>
@@ -1204,14 +1655,29 @@ function buildAuthForm(m) {
        <button class="btn bp" style="width:100%;padding:11px" onclick="doRegSubmit()">${t('authCreate')}</button>`;
 }
 
+async function doForgotPassword() {
+  const email = document.getElementById('loginEmail')?.value?.trim();
+  if (!email) {
+    window.TL_TOAST?.warning(t('authEmailRequired'));
+    return;
+  }
+  try {
+    const data = await api('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    });
+    window.TL_TOAST?.success(data.message || t('forgotPasswordSent'));
+  } catch { /* toast from api */ }
+}
+
 async function doLoginSubmit() {
   try {
     const data = await api('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         email: document.getElementById('loginEmail').value,
         password: document.getElementById('loginPass').value,
-      }),
+      },
     });
     setAuth(data.user);
     closeAuth();
@@ -1226,12 +1692,12 @@ async function doRegSubmit() {
   try {
     const data = await api('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({
+      body: {
         name: document.getElementById('regName').value,
         email: document.getElementById('regEmail').value,
         password: document.getElementById('regPass').value,
         kvkkAccepted: true,
-      }),
+      },
     });
     setAuth(data.user);
     closeAuth();
@@ -1289,7 +1755,11 @@ function refreshAfterLang() {
   if (document.getElementById('page-explore')?.classList.contains('active')) {
     loadTiolaFeed();
   }
-  if (document.getElementById('page-blog')?.classList.contains('active')) renderBlog();
+  if (document.getElementById('page-blog')?.classList.contains('active')) {
+    blogMeta = null;
+    blogSearchQ = document.getElementById('blogSearch')?.value?.trim() || '';
+    loadBlogPage().then(renderBlog);
+  }
   if (document.getElementById('page-profile')?.classList.contains('active')) updateProfilePage();
   if (document.getElementById('authOv')?.classList.contains('on')) buildAuthForm(authMode);
   if (window.TL_COOKIE) window.TL_COOKIE.render(lang);
@@ -1309,13 +1779,32 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.srch-wrap')) document.getElementById('srchDrop')?.classList.remove('show');
 });
 
-function handleDeepLink() {
-  const params = new URLSearchParams(location.search);
-  const tab = params.get('tab');
-  const onPlacesPath = location.pathname.replace(/\/+$/, '') === '/gezilecek-yerler';
-  if (tab === 'places' || onPlacesPath) showMainTab('places');
-  const id = params.get('place');
-  if (id && /^\d+$/.test(id)) openDetail(Number(id));
+async function applyRouteFromUrl() {
+  const route = readRouteFromUrl();
+  restoringRoute = true;
+  try {
+    if (route.main === 'detail' && route.placeId) {
+      await openDetail(route.placeId, true);
+      if (route.detailTab && route.detailTab !== 'overview') {
+        const el = document.querySelector(`.dtab[onclick*="'${route.detailTab}'"]`);
+        if (el) showDetailTab(route.detailTab, el, true);
+      }
+      return;
+    }
+    if (route.main === 'blog' && route.blogCat) blogCat = route.blogCat;
+    showMainTab(route.main, true);
+    if (route.main === 'explore' && route.explore && route.explore !== 'discover') {
+      const el = document.getElementById('et-' + route.explore);
+      if (el) showExploreTab(route.explore, el, true);
+    }
+    if (route.main === 'profile' && route.profileTab) {
+      const el = document.querySelector(`.ptab[data-ptab="${route.profileTab}"]`);
+      if (el) showPTab(route.profileTab, el, true);
+    }
+  } finally {
+    restoringRoute = false;
+    syncRoute(true);
+  }
 }
 
 async function init() {
@@ -1343,7 +1832,16 @@ async function init() {
   } catch (e) {
     console.error(e);
   }
-  handleDeepLink();
+  try {
+    await applyRouteFromUrl();
+  } finally {
+    window.TL_LOADER?.hide();
+  }
 }
+
+window.addEventListener('popstate', () => {
+  window.TL_LOADER?.show();
+  applyRouteFromUrl().finally(() => window.TL_LOADER?.hide());
+});
 
 init();

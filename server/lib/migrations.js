@@ -15,6 +15,9 @@ const USER_COLUMNS = [
   ['locked_until', 'TEXT'],
   ['verification_token', 'TEXT'],
   ['risk_score', 'INTEGER DEFAULT 0'],
+  ['is_blocked', 'INTEGER DEFAULT 0'],
+  ['avatar_url', 'TEXT'],
+  ['avatar_preset', 'TEXT'],
 ];
 
 function columnExists(db, table, col) {
@@ -49,6 +52,13 @@ function runMigrations(db) {
 
   addColumnIfMissing(db, 'travel_lists', 'share_token', 'TEXT');
   addColumnIfMissing(db, 'places', 'status', "TEXT DEFAULT 'published'");
+  addColumnIfMissing(db, 'tiolas', 'rejection_reason', 'TEXT');
+
+  addColumnIfMissing(db, 'blogs', 'slug', 'TEXT');
+  addColumnIfMissing(db, 'blogs', 'tags', 'TEXT');
+  addColumnIfMissing(db, 'blogs', 'featured', 'INTEGER DEFAULT 0');
+  addColumnIfMissing(db, 'blogs', 'author_name', 'TEXT');
+  addColumnIfMissing(db, 'blogs', 'published_at', 'TEXT');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS cities (
@@ -76,6 +86,52 @@ function runMigrations(db) {
 
     CREATE INDEX IF NOT EXISTS idx_cities_country ON cities(country, is_active);
     CREATE INDEX IF NOT EXISTS idx_places_status ON places(status);
+
+    CREATE TABLE IF NOT EXISTS user_notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      link TEXT,
+      read_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON user_notifications(user_id, read_at);
+
+    CREATE TABLE IF NOT EXISTS blog_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name_tr TEXT NOT NULL,
+      name_en TEXT,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
+    CREATE INDEX IF NOT EXISTS idx_blogs_featured ON blogs(featured, created_at);
+
+    CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reporter_id INTEGER NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      resolved_by INTEGER,
+      resolved_at TEXT,
+      FOREIGN KEY (reporter_id) REFERENCES users(id),
+      FOREIGN KEY (resolved_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);
+    CREATE INDEX IF NOT EXISTS idx_reports_target ON reports(target_type, target_id);
   `);
 
   const catalogPerms = [
@@ -90,8 +146,11 @@ function runMigrations(db) {
   }
 
   const { seedCategoriesIfEmpty, seedCitiesFromPlaces } = require('./catalog-db');
+  const { seedBlogCategoriesIfEmpty, backfillBlogSlugs } = require('./blog-db');
   seedCategoriesIfEmpty(db);
   seedCitiesFromPlaces(db);
+  seedBlogCategoriesIfEmpty(db);
+  backfillBlogSlugs(db);
 }
 
 module.exports = { runMigrations };

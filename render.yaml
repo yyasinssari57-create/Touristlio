@@ -1,0 +1,49 @@
+# Touristlio — Render Blueprint
+# Dashboard: New > Blueprint > connect repo with this file
+# İlk deploy sonrası: Environment sekmesinde JWT_SECRET, ADMIN_PASSWORD, SMTP_* değerlerini girin.
+
+services:
+  - type: web
+    name: touristlio
+    runtime: node
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    disk:
+      name: touristlio-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "true"
+      - key: SITEMAP_ON_START
+        value: "true"
+      - key: LIVE_DATA_CRON
+        value: "true"
+      - key: AFFILIATE_ENABLED
+        value: "false"
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SITE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false

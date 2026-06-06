@@ -76,12 +76,18 @@ html = html.replace(
   'Yazdığın onaylı ve bekleyen Tiola\'lar'
 );
 
-// Add blog tab content
+// Add blog tab content — profile: write-only (no blog list)
 html = html.replace(
   '<div class="ptab-c" id="ptab-revs">',
   `<div class="ptab-c" id="ptab-blogs">
-        <div id="myBlogList"></div>
-        <div class="empty-state" id="blogListEmpty"><div class="empty-icon">📝</div><p>Henüz blog yazmadınız.</p></div>
+        <div class="write-card">
+          <div class="write-card-title">Blog yaz</div>
+          <p class="profile-tiola-sub">Uzun rehber yazınız; onay sonrası ana sayfadaki Blog bölümünde yayınlanır.</p>
+          <input class="w-sel" id="blogTitle" placeholder="Blog başlığı"/>
+          <select class="w-sel" id="blogCat" aria-label="Blog kategorisi"></select>
+          <textarea class="rft" id="blogBody" placeholder="Uzun rehber yazınız..." style="min-height:140px"></textarea>
+          <button class="btn bp bsm" type="button" onclick="submitBlog()">Blog Gönder</button>
+        </div>
       </div>
       <div class="ptab-c" id="ptab-pending">
         <div id="myPendingList"></div>

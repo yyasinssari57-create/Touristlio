@@ -6,13 +6,14 @@
 <meta name="robots" content="noindex, nofollow"/>
 <title>500 — Touristlio</title>
 <link rel="stylesheet" href="/css/style.css"/>
+<link rel="stylesheet" href="/css/inline-overrides.css"/>
 </head>
 <body class="error-page">
 <div class="error-box">
   <img src="/images/logo-round.png?v=5" alt="Touristlio" class="brand-mark"/>
   <h1>500</h1>
   <p data-i18n="err500">Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.</p>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px">
+  <div class="error-actions">
     <a href="/" class="btn bp" data-i18n="errHome">Ana sayfaya dön</a>
     <button type="button" class="btn bo" onclick="location.reload()" data-i18n="errRetry">Tekrar dene</button>
   </div>

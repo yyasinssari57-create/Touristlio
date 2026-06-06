@@ -1,17 +1,31 @@
 const { db } = require('../db');
 const { fail } = require('../lib/apiResponse');
 
+const ROLE_DEFAULT_PERMS = {
+  moderator: [
+    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.categories', 'admin.content',
+  ],
+  editor: ['admin.dashboard', 'admin.content'],
+};
+
 function rolePermissions(roleSlug) {
   return db.prepare(`
     SELECT permission_slug FROM role_permissions WHERE role_slug = ?
   `).all(roleSlug).map((r) => r.permission_slug);
 }
 
+function effectivePermissions(roleSlug) {
+  const perms = rolePermissions(roleSlug);
+  if (perms.length) return perms;
+  return ROLE_DEFAULT_PERMS[roleSlug] || [];
+}
+
 function checkPermission(...required) {
   return (req, res, next) => {
     if (!req.user) return fail(res, 'Giriş gerekli', 401);
-    const perms = rolePermissions(req.user.role);
     if (req.user.role === 'admin') return next();
+    const perms = effectivePermissions(req.user.role);
     if (required.some((p) => perms.includes(p))) return next();
     return fail(res, 'Yetki yok', 403);
   };
@@ -31,4 +45,4 @@ function computeUserRiskScore(userId) {
   return score;
 }
 
-module.exports = { rolePermissions, checkPermission, computeUserRiskScore };
+module.exports = { rolePermissions, effectivePermissions, checkPermission, computeUserRiskScore, ROLE_DEFAULT_PERMS };

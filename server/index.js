@@ -8,11 +8,13 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const logger = require('./lib/logger');
 const { validateJwtSecret } = require('./auth');
+const { validateProductionEnv } = require('./lib/production-env');
 const { apiLimiter } = require('./middleware/rateLimit');
 const { clear: clearCache } = require('./lib/cache');
 const { authRequired, requireRole } = require('./middleware/auth');
 
 validateJwtSecret();
+validateProductionEnv();
 
 const authRoutes = require('./modules/auth/auth.routes');
 const placesRoutes = require('./routes/places');
@@ -28,10 +30,16 @@ const settingsRoutes = require('./modules/settings/settings.routes');
 const usersRoutes = require('./modules/users/users.routes');
 const moderationRoutes = require('./modules/moderation/moderation.routes');
 const analyticsRoutes = require('./modules/analytics/analytics.routes');
+const notificationsRoutes = require('./routes/notifications');
+const { router: reportsRoutes } = require('./routes/reports');
 
 const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
 const app = express();
+
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
 
 const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
   .split(',')
@@ -91,6 +99,8 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/moderation', moderationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'Touristlio', version: '2.0.0', ts: new Date().toISOString() });
@@ -144,6 +154,14 @@ app.get('/register', (_req, res) => {
 
 app.get('/profile', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'profile.html'));
+});
+
+app.get('/verify-email', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'verify-email.html'));
+});
+
+app.get('/reset-password', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));
 });
 
 app.get('/search', (_req, res) => {

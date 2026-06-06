@@ -1,32 +1,40 @@
 const { verifyToken, sanitizeUser, findUserById } = require('../auth');
 const { fail } = require('../lib/apiResponse');
 
-function authOptional(req, res, next) {
+function loadUserFromToken(req) {
   const header = req.headers.authorization;
   const cookieToken = req.cookies?.tl_token;
   let raw = null;
   if (header?.startsWith('Bearer ')) raw = header.slice(7);
   else if (cookieToken) raw = cookieToken;
 
-  if (!raw) {
-    req.user = null;
-    return next();
-  }
+  if (!raw) return { user: null, blocked: false };
   try {
     const payload = verifyToken(raw);
     const row = findUserById(payload.id);
-    req.user = sanitizeUser(row);
+    if (!row) return { user: null, blocked: false };
+    if (row.is_blocked) return { user: null, blocked: true };
+    return { user: sanitizeUser(row), blocked: false };
   } catch {
-    req.user = null;
+    return { user: null, blocked: false };
   }
+}
+
+function authOptional(req, res, next) {
+  const { user } = loadUserFromToken(req);
+  req.user = user;
   next();
 }
 
 function authRequired(req, res, next) {
-  authOptional(req, res, () => {
-    if (!req.user) return fail(res, 'Giriş gerekli', 401);
-    next();
-  });
+  const { user, blocked } = loadUserFromToken(req);
+  if (blocked) {
+    res.clearCookie('tl_token', { path: '/' });
+    return fail(res, 'Hesabınız engellenmiştir', 403);
+  }
+  if (!user) return fail(res, 'Giriş gerekli', 401);
+  req.user = user;
+  next();
 }
 
 function requireRole(...roles) {

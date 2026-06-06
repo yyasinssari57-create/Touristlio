@@ -1,6 +1,9 @@
 const crypto = require('crypto');
 const { validationResult } = require('express-validator');
-const { createUser, comparePassword, sanitizeUser, signToken, hashPassword } = require('../../auth');
+const path = require('path');
+const fs = require('fs');
+const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById } = require('../../auth');
+const { AVATAR_PRESETS, AVATAR_COLORS, isValidPreset, isValidColor } = require('../../lib/avatars');
 const authModel = require('./auth.model');
 const logger = require('../../lib/logger');
 const mailer = require('../../lib/mailer');
@@ -37,6 +40,10 @@ function isLocked(row) {
 
 function siteBase() {
   return (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+}
+
+function isLocalDevEmail(email) {
+  return String(email || '').toLowerCase().endsWith('@touristlio.local');
 }
 
 async function register(req) {
@@ -79,7 +86,14 @@ function login(req) {
     authModel.recordFailedLogin(row, MAX_FAILED, LOCK_MINUTES);
     return { error: 'E-posta veya şifre hatalı', status: 401 };
   }
-  if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && !row.email_verified) {
+  if (row.is_blocked) {
+    return { error: 'Hesabınız engellenmiştir', status: 403 };
+  }
+  if (
+    process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+    && !row.email_verified
+    && !isLocalDevEmail(row.email)
+  ) {
     return { error: 'Lütfen önce e-posta adresinizi doğrulayın.', status: 403 };
   }
   authModel.clearFailedLogin(row.id);
@@ -126,6 +140,93 @@ function verifyEmail(req) {
   return { status: 200, message: 'E-posta doğrulandı' };
 }
 
+async function changePassword(req, userId) {
+  const err = validationError(req);
+  if (err) return { error: err, status: 400 };
+  const { currentPassword, password } = req.body;
+  const row = authModel.findById(userId);
+  if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
+  if (!comparePassword(currentPassword, row.password_hash)) {
+    return { error: 'Mevcut şifre hatalı', status: 401 };
+  }
+  authModel.updatePasswordHash(userId, hashPassword(password));
+  authModel.clearFailedLogin(userId);
+  return { status: 200, message: 'Şifre güncellendi' };
+}
+
+async function changeEmail(req, userId) {
+  const err = validationError(req);
+  if (err) return { error: err, status: 400 };
+  const { email, password } = req.body;
+  const row = authModel.findById(userId);
+  if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
+  if (!comparePassword(password, row.password_hash)) {
+    return { error: 'Şifre hatalı', status: 401 };
+  }
+  const normalized = email.toLowerCase().trim();
+  const existing = authModel.findByEmail(normalized);
+  if (existing && existing.id !== userId) {
+    return { error: 'Bu e-posta zaten kayıtlı', status: 409 };
+  }
+  authModel.updateEmailAddress(userId, normalized);
+  const verifyToken = crypto.randomBytes(24).toString('hex');
+  authModel.updateVerification(userId, verifyToken);
+  const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
+  try {
+    await mailer.sendVerificationEmail(normalized, verifyUrl);
+  } catch (e) {
+    logger.warn({ msg: 'Verification email failed after email change', email: normalized, err: e.message });
+  }
+  const updated = authModel.findById(userId);
+  return { status: 200, message: 'E-posta güncellendi. Lütfen yeni adresinizi doğrulayın.', user: sanitizeUser(updated) };
+}
+
+function getAvatarOptions() {
+  return { presets: AVATAR_PRESETS, colors: AVATAR_COLORS };
+}
+
+function updateAvatarPreset(userId, { avatarPreset, avatarColor }) {
+  if (!isValidPreset(avatarPreset)) {
+    return { error: 'Geçersiz avatar karakteri', status: 400 };
+  }
+  const color = avatarColor && isValidColor(avatarColor) ? avatarColor : null;
+  const row = authModel.findById(userId);
+  if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
+  authModel.updateAvatarPreset(userId, avatarPreset, color || row.avatar_color || '#0ea5e9');
+  return { status: 200, user: sanitizeUser(findUserById(userId)) };
+}
+
+function updateAvatarPhoto(userId, file) {
+  if (!file) return { error: 'Fotoğraf gerekli', status: 400 };
+  const row = authModel.findById(userId);
+  if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
+
+  if (row.avatar_url) {
+    const oldPath = path.join(__dirname, '..', '..', '..', row.avatar_url.replace(/^\//, ''));
+    try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch { /* ignore */ }
+  }
+
+  const url = `/uploads/${path.basename(file.filename || file.path)}`;
+  authModel.updateAvatarUrl(userId, url);
+  return { status: 200, user: sanitizeUser(findUserById(userId)) };
+}
+
+async function resendVerification(userId) {
+  const row = authModel.findById(userId);
+  if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
+  if (row.email_verified) return { error: 'E-posta zaten doğrulanmış', status: 400 };
+  const verifyToken = crypto.randomBytes(24).toString('hex');
+  authModel.updateVerification(userId, verifyToken);
+  const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
+  try {
+    await mailer.sendVerificationEmail(row.email, verifyUrl);
+  } catch (e) {
+    logger.warn({ msg: 'Verification resend failed', email: row.email, err: e.message });
+    return { error: 'Doğrulama e-postası gönderilemedi', status: 500 };
+  }
+  return { status: 200, message: 'Doğrulama e-postası gönderildi' };
+}
+
 module.exports = {
   validationError,
   setAuthCookie,
@@ -135,4 +236,10 @@ module.exports = {
   forgotPassword,
   resetPassword,
   verifyEmail,
+  changePassword,
+  changeEmail,
+  resendVerification,
+  getAvatarOptions,
+  updateAvatarPreset,
+  updateAvatarPhoto,
 };

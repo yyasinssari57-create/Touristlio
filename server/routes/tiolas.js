@@ -44,6 +44,8 @@ function mapTiola(row) {
     userId: row.user_id,
     userName: row.user_name,
     avatarColor: row.avatar_color,
+    avatarUrl: row.avatar_url || null,
+    avatarPreset: row.avatar_preset || null,
     placeId: row.place_id,
     placeName: row.place_name,
     placeImage: row.place_image,
@@ -54,13 +56,14 @@ function mapTiola(row) {
     cityTag: row.city_tag,
     countryTag: row.country_tag,
     status: row.status,
+    rejectionReason: row.rejection_reason || null,
     createdAt: row.created_at,
   };
 }
 
 function tiolaSelect(extra = '') {
   return `
-    SELECT t.*, u.name AS user_name, u.avatar_color,
+    SELECT t.*, u.name AS user_name, u.avatar_color, u.avatar_url, u.avatar_preset,
            p.name AS place_name, p.image_url AS place_image
     FROM tiolas t
     JOIN users u ON u.id = t.user_id

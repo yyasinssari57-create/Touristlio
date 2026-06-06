@@ -45,6 +45,42 @@ function verifyEmail(req, res) {
   return ok(res, { message: result.message });
 }
 
+async function changePassword(req, res) {
+  const result = await authService.changePassword(req, req.user.id);
+  if (result.error) return fail(res, result.error, result.status);
+  return ok(res, { message: result.message });
+}
+
+async function changeEmail(req, res) {
+  const result = await authService.changeEmail(req, req.user.id);
+  if (result.error) return fail(res, result.error, result.status);
+  return ok(res, { message: result.message, user: result.user });
+}
+
+async function resendVerification(req, res) {
+  const result = await authService.resendVerification(req.user.id);
+  if (result.error) return fail(res, result.error, result.status);
+  return ok(res, { message: result.message });
+}
+
+function avatarOptions(_req, res) {
+  return ok(res, authService.getAvatarOptions());
+}
+
+function updateAvatarPreset(req, res) {
+  const err = authService.validationError(req);
+  if (err) return fail(res, err, 400);
+  const result = authService.updateAvatarPreset(req.user.id, req.body || {});
+  if (result.error) return fail(res, result.error, result.status);
+  return ok(res, { user: result.user });
+}
+
+function updateAvatarPhoto(req, res) {
+  const result = authService.updateAvatarPhoto(req.user.id, req.file);
+  if (result.error) return fail(res, result.error, result.status);
+  return ok(res, { user: result.user });
+}
+
 module.exports = {
   register,
   login,
@@ -53,4 +89,10 @@ module.exports = {
   forgotPassword,
   resetPassword,
   verifyEmail,
+  changePassword,
+  changeEmail,
+  resendVerification,
+  avatarOptions,
+  updateAvatarPreset,
+  updateAvatarPhoto,
 };

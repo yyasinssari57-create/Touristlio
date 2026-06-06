@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Touristlio Admin</title>
 <meta name="robots" content="noindex, nofollow"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/style.css"/>
 <link rel="stylesheet" href="/css/inline-overrides.css"/>
 </head>
@@ -38,6 +38,7 @@
       <button type="button" role="tab" aria-selected="false" data-section="cities" data-permission="admin.cities" onclick="showAdminSection('cities',this)">Şehirler</button>
       <button type="button" role="tab" aria-selected="false" data-section="categories" data-permission="admin.categories" onclick="showAdminSection('categories',this)">Kategoriler</button>
       <button type="button" role="tab" aria-selected="false" data-section="moderation" data-permission="admin.moderate" onclick="showAdminSection('moderation',this)">Moderasyon</button>
+      <button type="button" role="tab" aria-selected="false" data-section="reports" data-permission="admin.moderate" onclick="showAdminSection('reports',this)">Şikayetler</button>
       <button type="button" role="tab" aria-selected="false" data-section="users" data-role="admin" data-permission="admin.users" onclick="showAdminSection('users',this)">Kullanıcılar</button>
       <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" onclick="showAdminSection('content',this)">İçerik</button>
       <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.dashboard" onclick="showAdminSection('analytics',this)">Analitik</button>
@@ -55,27 +56,44 @@
       <section id="adm-places" class="adm-section" style="display:none" role="tabpanel" aria-label="Yerler">
         <h2 class="adm-h2">Yeni yer ekle</h2>
         <div class="admin-card">
+          <div id="placeFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
           <div class="admin-form" id="placeForm">
             <input class="ain" id="plName" placeholder="Yer adı *" aria-label="Yer adı"/>
             <input class="ain" id="plCountry" placeholder="Ülke *" aria-label="Ülke"/>
             <input class="ain" id="plCity" placeholder="Şehir *" aria-label="Şehir"/>
             <input class="ain" id="plDistrict" placeholder="İlçe / bölge" aria-label="İlçe"/>
             <input class="ain full" id="plLocation" placeholder="Konum metni" aria-label="Konum"/>
-            <select class="ain" id="plCat" aria-label="Kategori"></select>
+            <label class="adm-label-sm full" for="plCat">Kategori (kod / slug)</label>
+            <select class="ain full" id="plCat" aria-label="Kategori kodu"></select>
+            <p class="adm-field-hint">Yerin kategori kodu; Keşfet filtreleriyle eşleşir. Türkçe ad değil — listedeki <em>kod</em> seçilir (ör. <code>museum</code> → sitede Müze).</p>
+            <label class="adm-label-sm" for="plStatus">Yayın durumu</label>
+            <select class="ain" id="plStatus" aria-label="Yayın durumu">
+              <option value="published">Yayında</option>
+              <option value="draft">Taslak</option>
+              <option value="archived">Arşiv</option>
+            </select>
             <input class="ain" id="plAliases" placeholder="Arama alias (virgülle)" aria-label="Arama aliasları"/>
             <input class="ain" id="plLat" placeholder="Enlem" aria-label="Enlem" type="number" step="any"/>
             <input class="ain" id="plLng" placeholder="Boylam" aria-label="Boylam" type="number" step="any"/>
             <input class="ain full" id="plImage" placeholder="Görsel URL (opsiyonel)" aria-label="Görsel URL"/>
-            <div class="full">
-              <label for="plPhotos" class="adm-label-sm">Görseller (dosya yükle)</label>
-              <input type="file" id="plPhotos" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yer görselleri yükle"/>
+            <div class="adm-photo-section full">
+              <p class="adm-photo-title">Fotoğraflar</p>
+              <p class="adm-photo-sub">Yer için görsel yükleyin veya aşağıdaki URL alanını kullanın.</p>
+              <div id="plPhotoExisting" class="photo-preview-row" aria-live="polite"></div>
+              <div class="adm-photo-drop">
+                <label class="adm-photo-btn">
+                  Fotoğraf ekle
+                  <input type="file" id="plPhotos" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yer fotoğrafları yükle"/>
+                </label>
+                <span id="plPhotoCount" class="adm-photo-count" aria-live="polite"></span>
+              </div>
               <div id="plPhotoPreview" class="photo-preview-row" aria-live="polite"></div>
-              <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · max 5 MB</p>
+              <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP, GIF · dosya başına max 5 MB</p>
             </div>
             <textarea class="ain full adm-textarea-sm" id="plDesc" placeholder="Açıklama (TR)" aria-label="Açıklama Türkçe"></textarea>
             <textarea class="ain full adm-textarea-sm" id="plDescEn" placeholder="Description (EN)" aria-label="Açıklama İngilizce"></textarea>
           </div>
-          <button class="btn bp bsm" type="button" onclick="addPlace()" aria-label="Yeni yeri kaydet">Yeri kaydet</button>
+          <button class="btn bp bsm" type="button" id="btnAddPlace" onclick="addPlace()" aria-label="Yeni yeri kaydet">Yeri kaydet</button>
         </div>
         <h2 class="adm-h2-spaced">Yer listesi</h2>
         <div class="admin-card">
@@ -87,12 +105,15 @@
 
       <section id="adm-cities" class="adm-section" style="display:none" role="tabpanel" aria-label="Şehirler">
         <h2 class="adm-h2">Yeni şehir ekle</h2>
-        <div class="admin-card admin-form">
+        <div class="admin-card">
+          <div id="cityFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
+          <div class="admin-form">
           <input class="ain" id="ctName" placeholder="Şehir adı *" aria-label="Şehir adı"/>
           <input class="ain" id="ctCountry" placeholder="Ülke *" aria-label="Ülke"/>
           <input class="ain" id="ctNameEn" placeholder="İngilizce ad" aria-label="İngilizce ad"/>
           <input class="ain" id="ctSlug" placeholder="Slug (opsiyonel)" aria-label="Slug"/>
-          <button class="btn bp bsm full" type="button" onclick="addCity()" aria-label="Şehir ekle">Şehir ekle</button>
+          <button class="btn bp bsm full" type="button" id="btnAddCity" onclick="addCity()" aria-label="Şehir ekle">Şehir ekle</button>
+          </div>
         </div>
         <h2 class="adm-h2-spaced">Şehir listesi</h2>
         <div class="admin-card" id="citiesTableWrap" aria-live="polite"></div>
@@ -100,17 +121,28 @@
 
       <section id="adm-categories" class="adm-section" style="display:none" role="tabpanel" aria-label="Kategoriler">
         <p class="adm-cat-hint">
-          <strong>Keşfet filtre çipleri:</strong> Burada eklediğiniz veya düzenlediğiniz kategoriler, Keşfet sayfasında
-          <em>Destinasyonlar</em> ve <em>Harita</em> sekmelerindeki tek filtre şeridinde (Tümü + gruplar + kategoriler) görünür.
-          Grup çipleri (Tarihi, Doğa…) yer sayısına göre otomatik oluşur; tek tek kategoriler bu listeden yönetilir.
+          <strong>Buraya eklediğiniz kategoriler ana sitede Keşfet/Harita filtre çubuğunda otomatik görünür.</strong>
+          Sayfayı yeniledikten sonra yeni çip listede belirir. Pasif işaretli kategoriler filtrelerde gizlenir.
+          <br><br>
+          <strong>Slug (kod) nedir?</strong> Kullanıcının gördüğü Türkçe ad (<em>nameTr</em>) ile veritabanı kodu (<em>slug</em>) farklıdır —
+          örn. kod <code>museum</code>, görünen ad <strong>Müze</strong>. Grup çipleri (Tarihi, Doğa…) yalnızca tanımlı grup slug'larıyla eşleşen kategoriler varsa görünür;
+          özel kategoriler (ör. <code>dance</code>) doğrudan kategori satırında listelenir.
         </p>
         <h2 class="adm-h2">Yeni kategori ekle</h2>
-        <div class="admin-card admin-form">
-          <input class="ain" id="catSlug" placeholder="Kod (slug) *" aria-label="Kategori kodu"/>
-          <input class="ain" id="catNameTr" placeholder="Türkçe ad *" aria-label="Türkçe ad"/>
-          <input class="ain" id="catNameEn" placeholder="İngilizce ad" aria-label="İngilizce ad"/>
-          <input class="ain" id="catIcon" placeholder="İkon (emoji)" aria-label="İkon" maxlength="4"/>
-          <button class="btn bp bsm full" type="button" onclick="addCategory()" aria-label="Kategori ekle">Kategori ekle</button>
+        <div class="admin-card">
+          <div id="catFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
+          <div class="admin-form">
+          <label class="adm-label-sm full" for="catSlug">Kod (slug) *</label>
+          <input class="ain full" id="catSlug" placeholder="örn. historical, landmark, museum" aria-label="Kategori kodu (slug)" aria-describedby="catSlugHelp"/>
+          <p class="adm-field-hint" id="catSlugHelp">İngilizce, küçük harf, boşluksuz teknik kod. Örnekler: <code>historical</code>, <code>landmark</code>, <code>museum</code>. Türkçe ad aşağıda ayrı girilir.</p>
+          <label class="adm-label-sm" for="catNameTr">Türkçe ad (nameTr) * — sitede görünen</label>
+          <input class="ain" id="catNameTr" placeholder="örn. Müze, Tarihi, Simge yapı" aria-label="Türkçe ad"/>
+          <label class="adm-label-sm" for="catNameEn">İngilizce ad (nameEn)</label>
+          <input class="ain" id="catNameEn" placeholder="örn. Museum, Historical" aria-label="İngilizce ad"/>
+          <label class="adm-label-sm" for="catIcon">İkon (emoji)</label>
+          <input class="ain" id="catIcon" placeholder="🏛️" aria-label="İkon" maxlength="4"/>
+          <button class="btn bp bsm full" type="button" id="btnAddCategory" onclick="addCategory()" aria-label="Kategori ekle">Kategori ekle</button>
+          </div>
         </div>
         <h2 class="adm-h2-spaced">Kategori listesi</h2>
         <div class="admin-card" id="categoriesTableWrap" aria-live="polite"></div>
@@ -121,23 +153,201 @@
         <div id="pendingTiolas"></div>
       </section>
 
-      <section id="adm-users" class="adm-section" style="display:none" role="tabpanel" aria-label="Kullanıcılar">
-        <h2 class="adm-h2-tight">Kullanıcılar</h2>
-        <div id="userList"></div>
-        <div id="modSection">
-          <h2 class="adm-h2-tight">Moderatör ekle</h2>
-          <div class="admin-card admin-form">
-            <input class="ain" id="modName" placeholder="Ad" aria-label="Moderatör adı"/>
-            <input class="ain" id="modEmail" placeholder="E-posta" aria-label="Moderatör e-posta" type="email"/>
-            <input class="ain full" id="modPass" type="password" placeholder="Geçici şifre" aria-label="Geçici şifre"/>
-            <button class="btn bp bsm full" type="button" onclick="addModerator()" aria-label="Moderatör oluştur">Moderatör oluştur</button>
+      <section id="adm-reports" class="adm-section" style="display:none" role="tabpanel" aria-label="Şikayetler">
+        <h2 class="adm-h2-tight">Şikayetler</h2>
+        <div class="adm-report-tabs" id="reportSubTabs" role="tablist" aria-label="Şikayet filtreleri">
+          <button type="button" class="on" data-rfilter="pending" onclick="setReportFilter('pending',this)">Bekleyen</button>
+          <button type="button" data-rfilter="resolved" onclick="setReportFilter('resolved',this)">İşlenen</button>
+          <button type="button" data-rfilter="all" onclick="setReportFilter('all',this)">Tümü</button>
+        </div>
+        <div id="reportsList" aria-live="polite"></div>
+      </section>
+
+      <section id="adm-users" class="adm-section content-layout content-sidebar-open" style="display:none" role="tabpanel" aria-label="Kullanıcılar">
+        <div class="content-layout-frame">
+          <header class="content-frame-toolbar">
+            <button type="button" class="content-sidebar-toggle" id="usersSidebarToggle" onclick="toggleUsersSidebar()" aria-expanded="true" aria-controls="usersSubTabs" aria-label="Kullanıcı menüsünü daralt">
+              <svg class="content-sidebar-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="content-layout-title">
+              <h2 class="content-layout-heading">Kullanıcılar</h2>
+              <p class="content-layout-desc">Üyeleri görüntüleyin, engelleyin ve moderatör hesapları oluşturun.</p>
+            </div>
+          </header>
+
+          <div class="content-layout-body">
+            <aside class="content-sidebar" id="usersSidebar">
+              <div class="content-sidebar-inner">
+                <p class="content-sidebar-heading">Bölümler</p>
+                <nav class="content-sidebar-nav" id="usersSubTabs" role="tablist" aria-label="Kullanıcı alt bölümleri">
+                  <button type="button" role="tab" class="on" aria-selected="true" data-sub="users-all" onclick="showUsersSub('users-all',this)">
+                    <span class="content-nav-icon" aria-hidden="true">👥</span>
+                    <span class="content-nav-label">Tüm kullanıcılar</span>
+                  </button>
+                  <button type="button" role="tab" aria-selected="false" data-sub="users-blocked" onclick="showUsersSub('users-blocked',this)">
+                    <span class="content-nav-icon" aria-hidden="true">🚫</span>
+                    <span class="content-nav-label">Engellenenler</span>
+                  </button>
+                  <button type="button" role="tab" aria-selected="false" data-sub="users-moderators" onclick="showUsersSub('users-moderators',this)">
+                    <span class="content-nav-icon" aria-hidden="true">🛡</span>
+                    <span class="content-nav-label">Moderatörler</span>
+                  </button>
+                </nav>
+              </div>
+            </aside>
+
+            <div class="content-main" id="usersMain">
+              <div id="content-users-all" class="content-sub content-panel active" data-panel="users-all">
+                <h2 class="adm-h2 content-panel-title">Tüm kullanıcılar</h2>
+                <div id="userListAll" aria-live="polite"></div>
+              </div>
+
+              <div id="content-users-blocked" class="content-sub content-panel" data-panel="users-blocked">
+                <h2 class="adm-h2 content-panel-title">Engellenenler</h2>
+                <div id="userListBlocked" aria-live="polite"></div>
+              </div>
+
+              <div id="content-users-moderators" class="content-sub content-panel" data-panel="users-moderators">
+                <h2 class="adm-h2 content-panel-title">Moderatörler</h2>
+                <p class="adm-cat-hint">Moderatörler siteye <strong>/admin</strong> adresinden, oluşturduğunuz e-posta ve şifre ile giriş yapar. Ayrı bir giriş sayfası yoktur.</p>
+                <div id="userListModerators" aria-live="polite"></div>
+                <h3 class="content-panel-subtitle">Yeni moderatör ekle</h3>
+                <div class="admin-card" id="modSection">
+                  <div id="modFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
+                  <div class="admin-form">
+                    <input class="ain" id="modName" placeholder="Ad" aria-label="Moderatör adı"/>
+                    <input class="ain" id="modEmail" placeholder="E-posta" aria-label="Moderatör e-posta" type="email"/>
+                    <input class="ain full" id="modPass" type="password" placeholder="Geçici şifre" aria-label="Geçici şifre"/>
+                    <button class="btn bp bsm full" type="button" id="btnAddModerator" onclick="addModerator()" aria-label="Moderatör oluştur">Moderatör oluştur</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="adm-content" class="adm-section" style="display:none" role="tabpanel" aria-label="İçerik">
-        <h2 class="adm-h2-tight">Bekleyen Bloglar</h2>
-        <div id="pendingBlogs"></div>
+      <section id="adm-content" class="adm-section content-layout content-sidebar-open" style="display:none" role="tabpanel" aria-label="İçerik">
+        <div class="content-layout-frame">
+          <header class="content-frame-toolbar">
+            <button type="button" class="content-sidebar-toggle" id="contentSidebarToggle" onclick="toggleContentSidebar()" aria-expanded="true" aria-controls="contentSubTabs" aria-label="Blog menüsünü daralt">
+              <svg class="content-sidebar-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="content-layout-title">
+              <h2 class="content-layout-heading">Blog / İçerik</h2>
+              <p class="content-layout-desc">Sayfa metinleri, kategoriler ve yazıları buradan yönetin.</p>
+            </div>
+          </header>
+
+          <div class="content-layout-body">
+            <aside class="content-sidebar" id="contentSidebar">
+              <div class="content-sidebar-inner">
+                <p class="content-sidebar-heading">Bölümler</p>
+                <nav class="content-sidebar-nav" id="contentSubTabs" role="tablist" aria-label="Blog alt bölümleri">
+                  <button type="button" role="tab" class="on" aria-selected="true" data-sub="blog-page" onclick="showContentSub('blog-page',this)">
+                    <span class="content-nav-icon" aria-hidden="true">⚙</span>
+                    <span class="content-nav-label">Sayfa ayarları</span>
+                  </button>
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-cats" onclick="showContentSub('blog-cats',this)">
+                    <span class="content-nav-icon" aria-hidden="true">🏷</span>
+                    <span class="content-nav-label">Kategoriler</span>
+                  </button>
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-posts" onclick="showContentSub('blog-posts',this)">
+                    <span class="content-nav-icon" aria-hidden="true">📝</span>
+                    <span class="content-nav-label">Tüm yazılar</span>
+                  </button>
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-pending" onclick="showContentSub('blog-pending',this)">
+                    <span class="content-nav-icon" aria-hidden="true">⏳</span>
+                    <span class="content-nav-label">Bekleyenler</span>
+                  </button>
+                </nav>
+              </div>
+            </aside>
+
+            <div class="content-main" id="contentMain">
+        <div id="content-blog-page" class="content-sub content-panel active" data-panel="blog-page">
+          <h2 class="adm-h2 content-panel-title">Blog sayfası metinleri</h2>
+          <div class="admin-card">
+            <div id="blogPageFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
+            <div class="admin-form" id="blogPageForm"></div>
+            <button class="btn bp bsm" type="button" id="btnSaveBlogPage" onclick="saveBlogPageSettings()" aria-label="Blog sayfa ayarlarını kaydet">Kaydet</button>
+          </div>
+        </div>
+
+        <div id="content-blog-cats" class="content-sub content-panel" data-panel="blog-cats">
+          <p class="adm-cat-hint">Blog sekmesindeki kategori çipleri buradan yönetilir. Pasif kategoriler sitede gizlenir.</p>
+          <h2 class="adm-h2 content-panel-title">Blog kategorileri</h2>
+          <h3 class="content-panel-subtitle">Yeni blog kategorisi</h3>
+          <div class="admin-card">
+            <div id="blogCatFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
+            <div class="admin-form">
+              <label class="adm-label-sm full" for="blCatSlug">Kod (slug) *</label>
+              <input class="ain full" id="blCatSlug" placeholder="örn. guide, food, culture" aria-label="Blog kategori kodu"/>
+              <label class="adm-label-sm" for="blCatNameTr">Türkçe ad *</label>
+              <input class="ain" id="blCatNameTr" placeholder="örn. Rehberler" aria-label="Türkçe ad"/>
+              <label class="adm-label-sm" for="blCatNameEn">İngilizce ad</label>
+              <input class="ain" id="blCatNameEn" placeholder="örn. Guides" aria-label="İngilizce ad"/>
+              <label class="adm-label-sm" for="blCatIcon">İkon (emoji)</label>
+              <input class="ain" id="blCatIcon" placeholder="🗺️" aria-label="İkon" maxlength="4"/>
+              <button class="btn bp bsm full" type="button" id="btnAddBlogCat" onclick="addBlogCategory()" aria-label="Blog kategorisi ekle">Kategori ekle</button>
+            </div>
+          </div>
+          <h2 class="adm-h2-spaced">Kategori listesi</h2>
+          <div class="admin-card" id="blogCategoriesWrap" aria-live="polite"></div>
+        </div>
+
+        <div id="content-blog-posts" class="content-sub content-panel" data-panel="blog-posts">
+          <h2 class="adm-h2 content-panel-title">Blog yazıları</h2>
+          <h3 class="content-panel-subtitle">Yeni blog yazısı</h3>
+          <div class="admin-card">
+            <div id="blogPostFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
+            <div class="admin-form" id="blogPostForm">
+              <input class="ain full" id="bpTitle" placeholder="Başlık *" aria-label="Blog başlığı"/>
+              <input class="ain" id="bpSlug" placeholder="Slug (SEO URL)" aria-label="Slug"/>
+              <select class="ain" id="bpCategory" aria-label="Kategori"></select>
+              <select class="ain" id="bpStatus" aria-label="Durum">
+                <option value="approved">Yayında</option>
+                <option value="draft">Taslak</option>
+                <option value="pending">Onay bekliyor</option>
+              </select>
+              <input class="ain" id="bpAuthor" placeholder="Yazar adı (görünen)" aria-label="Yazar"/>
+              <input class="ain" id="bpPlaceId" placeholder="Mekân ID (isteğe bağlı)" aria-label="Mekân ID" inputmode="numeric"/>
+              <input class="ain full" id="bpImage" placeholder="Kapak görseli URL" aria-label="Kapak görseli"/>
+              <input class="ain full" id="bpTags" placeholder="Etiketler (virgülle)" aria-label="Etiketler"/>
+              <label class="full adm-settings-toggle" style="display:flex;align-items:center;gap:8px;font-size:.85rem">
+                <input type="checkbox" id="bpFeatured" aria-label="Öne çıkan"/> Öne çıkan yazı
+              </label>
+              <textarea class="ain full adm-textarea-sm" id="bpExcerpt" placeholder="Özet" aria-label="Özet"></textarea>
+              <textarea class="ain full" id="bpBody" placeholder="İçerik *" aria-label="İçerik" style="min-height:120px"></textarea>
+            </div>
+            <button class="btn bp bsm" type="button" id="btnAddBlogPost" onclick="addBlogPost()" aria-label="Blog yazısı ekle">Yazı ekle</button>
+          </div>
+          <h2 class="adm-h2-spaced">Yazı listesi</h2>
+          <div class="admin-card">
+            <div class="admin-form" style="margin-bottom:12px">
+              <input class="ain" id="blogPostSearch" placeholder="Başlık veya slug ara…" oninput="debounceLoadBlogPosts()" aria-label="Blog ara"/>
+              <select class="ain" id="blogPostCategoryFilter" onchange="loadBlogPostsList()" aria-label="Kategori filtresi">
+                <option value="all">Tüm kategoriler</option>
+              </select>
+              <select class="ain" id="blogPostStatusFilter" onchange="loadBlogPostsList()" aria-label="Durum filtresi">
+                <option value="all">Tüm durumlar</option>
+                <option value="approved">Yayında</option>
+                <option value="draft">Taslak</option>
+                <option value="pending">Onay bekliyor</option>
+                <option value="rejected">Reddedildi</option>
+              </select>
+            </div>
+            <div id="blogPostsWrap" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <div id="content-blog-pending" class="content-sub content-panel" data-panel="blog-pending">
+          <h2 class="adm-h2-tight content-panel-title">Bekleyen bloglar</h2>
+          <div id="pendingBlogs"></div>
+        </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section id="adm-analytics" class="adm-section" style="display:none" role="tabpanel" aria-label="Analitik">
@@ -146,10 +356,11 @@
       </section>
 
       <section id="adm-settings" class="adm-section" style="display:none" role="tabpanel" aria-label="Ayarlar">
-        <div class="admin-card">
+        <div class="admin-card adm-settings">
           <h3>Site ayarları</h3>
+          <div id="settingsFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
           <div class="admin-form" id="settingsForm"></div>
-          <button class="btn bp bsm" type="button" onclick="saveSettings()" aria-label="Ayarları kaydet">Kaydet</button>
+          <button class="btn bp bsm" type="button" id="btnSaveSettings" onclick="saveSettings()" aria-label="Ayarları kaydet">Kaydet</button>
         </div>
       </section>
 
@@ -168,6 +379,12 @@
   </div>
 </div>
 
+<div id="adminLightbox" class="admin-lightbox" style="display:none" role="dialog" aria-modal="true" aria-label="Görsel önizleme">
+  <button type="button" class="admin-lightbox-close" onclick="closeAdminLightbox()" aria-label="Kapat">×</button>
+  <p class="admin-lightbox-hint">Tekerlek veya çift tık ile yakınlaştırın</p>
+  <img id="adminLightboxImg" src="" alt="Tiola fotoğrafı"/>
+</div>
+
 <script>
 function escapeHtml(s) {
   if (s == null) return '';
@@ -183,6 +400,7 @@ let currentUser = null;
 let categoryOptions = [];
 let placesDebounce = null;
 let editExistingPhotos = [];
+let pendingTiolaCache = {};
 
 const ROLE_DEFAULT_PERMS = {
   moderator: [
@@ -191,6 +409,88 @@ const ROLE_DEFAULT_PERMS = {
   ],
   editor: ['admin.dashboard', 'admin.content'],
 };
+
+const PERM_LABELS = {
+  'admin.dashboard': 'Özet paneli',
+  'admin.moderate': 'Moderasyon',
+  'admin.users': 'Kullanıcı yönetimi',
+  'admin.places': 'Yer yönetimi',
+  'admin.cities': 'Şehir yönetimi',
+  'admin.categories': 'Kategori yönetimi',
+  'admin.content': 'İçerik / blog',
+  'admin.settings': 'Site ayarları',
+  'admin.roles': 'Roller',
+  'admin.analytics': 'Analitik',
+};
+
+const ROLE_LABELS = { admin: 'Yönetici', moderator: 'Moderatör', editor: 'Editör', member: 'Üye' };
+
+const SETTING_FIELDS = [
+  { key: 'site_name', label: 'Site adı', type: 'text' },
+  { key: 'site_tagline', label: 'Slogan', type: 'text' },
+  { key: 'logo_url', label: 'Logo URL', type: 'text' },
+  { key: 'theme_primary', label: 'Tema rengi', type: 'text' },
+  { key: 'map_default_lat', label: 'Harita varsayılan enlem', type: 'text' },
+  { key: 'map_default_lng', label: 'Harita varsayılan boylam', type: 'text' },
+  { key: 'map_default_zoom', label: 'Harita yakınlık (zoom)', type: 'number' },
+  { key: 'feature_blog', label: 'Blog özelliği', type: 'toggle' },
+  { key: 'feature_discover', label: 'Keşfet özelliği', type: 'toggle' },
+  { key: 'seo_title', label: 'SEO başlık', type: 'text' },
+  { key: 'seo_description', label: 'SEO açıklama', type: 'textarea' },
+];
+
+const STATUS_LABELS = { published: 'Yayında', draft: 'Taslak', archived: 'Arşiv' };
+const BLOG_STATUS_LABELS = { approved: 'Yayında', draft: 'Taslak', pending: 'Onay bekliyor', rejected: 'Reddedildi' };
+const BLOG_PAGE_FIELDS = [
+  { key: 'heroTitleTr', label: 'Başlık (TR)' },
+  { key: 'heroTitleEmTr', label: 'Başlık vurgusu (TR, italik)' },
+  { key: 'subtitleTr', label: 'Alt metin (TR)', type: 'textarea' },
+  { key: 'catAllTr', label: '"Tümü" sekmesi (TR)' },
+  { key: 'searchPhTr', label: 'Arama kutusu (TR)' },
+  { key: 'emptyTr', label: 'Boş liste mesajı (TR)' },
+  { key: 'featuredLblTr', label: 'Öne çıkan rozeti (TR)' },
+  { key: 'viewPlaceTr', label: '"Mekânı gör" butonu (TR)' },
+  { key: 'heroTitleEn', label: 'Başlık (EN)' },
+  { key: 'heroTitleEmEn', label: 'Başlık vurgusu (EN)' },
+  { key: 'subtitleEn', label: 'Alt metin (EN)', type: 'textarea' },
+  { key: 'catAllEn', label: '"All" sekmesi (EN)' },
+  { key: 'searchPhEn', label: 'Arama kutusu (EN)' },
+  { key: 'emptyEn', label: 'Boş liste mesajı (EN)' },
+  { key: 'featuredLblEn', label: 'Öne çıkan rozeti (EN)' },
+  { key: 'viewPlaceEn', label: '"View place" butonu (EN)' },
+];
+let blogPostSearchTimer;
+let blogCategoryOptions = [];
+let allUsersCache = [];
+
+function permLabel(slug) { return PERM_LABELS[slug] || slug; }
+
+function showFormErr(elId, msg) {
+  const el = document.getElementById(elId);
+  if (!el) { showErr(msg); return; }
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.focus();
+}
+
+function clearFormErr(elId) {
+  const el = document.getElementById(elId);
+  if (el) { el.textContent = ''; el.style.display = 'none'; }
+}
+
+function setBtnLoading(btn, loading, busyLabel) {
+  if (!btn) return;
+  if (loading) {
+    if (!btn.dataset.origText) btn.dataset.origText = btn.textContent;
+    btn.textContent = busyLabel || 'Kaydediliyor…';
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+  } else {
+    btn.textContent = btn.dataset.origText || btn.textContent;
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+  }
+}
 
 function effectivePermissions(user) {
   if (!user) return [];
@@ -208,19 +508,28 @@ function hasAdminPerm(slug) {
   return effectivePermissions(currentUser).includes(slug);
 }
 
-function bindPhotoInput(inputId, previewId) {
+function bindPhotoInput(inputId, previewId, countId) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
   if (!input || !preview) return;
   input.onchange = () => {
     preview.innerHTML = '';
-    [...(input.files || [])].forEach((file) => {
+    const files = [...(input.files || [])];
+    files.forEach((file) => {
       const url = URL.createObjectURL(file);
       const wrap = document.createElement('div');
       wrap.className = 'photo-thumb';
-      wrap.innerHTML = `<img src="${url}" alt="Önizleme"/>`;
+      wrap.innerHTML = `<img src="${url}" alt="Önizleme: ${escapeHtml(file.name)}"/>`;
       preview.appendChild(wrap);
     });
+    if (countId) {
+      const countEl = document.getElementById(countId);
+      if (countEl) {
+        countEl.textContent = files.length
+          ? `${files.length} dosya seçildi`
+          : '';
+      }
+    }
   };
 }
 
@@ -269,11 +578,13 @@ async function api(path, opts = {}) {
 
 function showErr(msg, elId) {
   const el = document.getElementById(elId || 'globalErr');
-  if (!el) { alert(msg); return; }
+  if (!el) return;
   el.textContent = msg;
   el.style.display = 'block';
   el.focus();
-  setTimeout(() => { el.style.display = 'none'; }, 6000);
+  if (elId !== 'loginErr') {
+    setTimeout(() => { if (el.textContent === msg) el.style.display = 'none'; }, 8000);
+  }
 }
 
 function closeModal() {
@@ -282,9 +593,11 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
-function openModal(title, bodyHtml, actions) {
+function openModal(title, bodyHtml, actions, wide) {
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalBody').innerHTML = bodyHtml;
+  const modal = document.querySelector('#modalOverlay .admin-modal');
+  if (modal) modal.classList.toggle('admin-modal-wide', !!wide);
   const actEl = document.getElementById('modalActions');
   actEl.innerHTML = '';
   (actions || []).forEach((a) => {
@@ -305,6 +618,72 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
   if (e.target.id === 'modalOverlay') closeModal();
 });
 
+let adminLbZoom = 1;
+
+function setAdminLightboxZoom(z) {
+  adminLbZoom = Math.min(4, Math.max(1, z));
+  const img = document.getElementById('adminLightboxImg');
+  if (img) img.style.transform = `scale(${adminLbZoom})`;
+}
+
+function openAdminLightbox(url) {
+  const img = document.getElementById('adminLightboxImg');
+  adminLbZoom = 1;
+  img.style.transform = 'scale(1)';
+  img.src = url;
+  document.getElementById('adminLightbox').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAdminLightbox() {
+  document.getElementById('adminLightbox').style.display = 'none';
+  const img = document.getElementById('adminLightboxImg');
+  img.src = '';
+  adminLbZoom = 1;
+  img.style.transform = 'scale(1)';
+  if (document.getElementById('modalOverlay').style.display !== 'flex') {
+    document.body.style.overflow = '';
+  }
+}
+
+document.getElementById('adminLightbox').addEventListener('click', (e) => {
+  if (e.target.id === 'adminLightbox' || e.target.classList.contains('admin-lightbox-close')) {
+    closeAdminLightbox();
+  }
+});
+
+document.getElementById('adminLightboxImg').addEventListener('dblclick', (e) => {
+  e.stopPropagation();
+  setAdminLightboxZoom(adminLbZoom >= 2 ? 1 : 2);
+});
+
+document.getElementById('adminLightbox').addEventListener('wheel', (e) => {
+  if (document.getElementById('adminLightbox').style.display !== 'flex') return;
+  e.preventDefault();
+  setAdminLightboxZoom(adminLbZoom + (e.deltaY < 0 ? 0.2 : -0.2));
+}, { passive: false });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('adminLightbox').style.display === 'flex') {
+    closeAdminLightbox();
+  }
+});
+
+function openTiolaPreview(id) {
+  const item = pendingTiolaCache[id];
+  if (!item) return;
+  const photoHtml = item.photoUrl
+    ? `<img src="${escapeHtml(item.photoUrl)}" class="adm-tiola-preview-img" role="button" tabindex="0" alt="Tiola fotoğrafı" title="Tıklayın: büyüt" onclick="openAdminLightbox('${escapeHtml(item.photoUrl)}')" onkeydown="if(event.key==='Enter')openAdminLightbox('${escapeHtml(item.photoUrl)}')"/>`
+    : '';
+  openModal('Tiola önizleme', `
+    ${photoHtml}
+    <div class="adm-tiola-fulltext">${escapeHtml(item.text)}</div>
+    <p style="margin:12px 0 0;font-size:.78rem;color:var(--t3)">${escapeHtml(item.userName)} · ${escapeHtml(item.placeName)}${item.status === 'spam' ? ' · Spam' : ''}${item.stars ? ' · ' + '★'.repeat(item.stars) : ''}</p>`,
+    [{ label: 'Kapat', primary: true, onClick: closeModal }],
+    true
+  );
+}
+
 function showAdminSection(id, btn) {
   document.querySelectorAll('.adm-section').forEach((s) => { s.style.display = 'none'; s.classList.remove('active'); });
   const el = document.getElementById('adm-' + id);
@@ -317,7 +696,588 @@ function showAdminSection(id, btn) {
   if (id === 'places') loadPlacesList();
   if (id === 'cities') loadCitiesList();
   if (id === 'categories') loadCategoriesList();
+  if (id === 'content') loadContentSection();
+  if (id === 'users' && currentUser?.role === 'admin') loadUsersSection();
   if (id === 'roles' && currentUser?.role === 'admin') loadRoles();
+  if (id === 'analytics' && hasAdminPerm('admin.dashboard')) loadAnalytics();
+  if (id === 'reports' && hasAdminPerm('admin.moderate')) loadReportsList();
+}
+
+let reportFilter = 'pending';
+
+const REPORT_TYPE_LABELS = { profile: 'Profil', tiola: 'Tiola', blog: 'Blog' };
+const REPORT_STATUS_LABELS = { pending: 'Bekliyor', reviewed: 'İncelendi', dismissed: 'Reddedildi', actioned: 'İşlem yapıldı' };
+
+function setReportFilter(filter, btn) {
+  reportFilter = filter;
+  document.querySelectorAll('#reportSubTabs button').forEach((b) => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  loadReportsList();
+}
+
+async function loadReportsList() {
+  const el = document.getElementById('reportsList');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const data = await api('/admin/reports?status=' + encodeURIComponent(reportFilter));
+    const items = data.reports || [];
+    if (!items.length) {
+      el.innerHTML = '<p style="color:var(--t3)">Şikayet bulunamadı.</p>';
+      return;
+    }
+    el.innerHTML = items.map((r) => `
+      <div class="admin-card admin-item">
+        <div>
+          <span class="adm-report-badge ${escapeHtml(r.status)}">${escapeHtml(REPORT_STATUS_LABELS[r.status] || r.status)}</span>
+          <strong style="margin-left:8px">${escapeHtml(REPORT_TYPE_LABELS[r.targetType] || r.targetType)}</strong>
+          · ${escapeHtml(r.reasonLabel || r.reason)}
+          <div style="font-size:.8rem;margin-top:6px;color:var(--t2)">
+            <strong>Hedef:</strong> ${escapeHtml(r.targetLabel || '#' + r.targetId)}
+            ${r.targetUserName ? ` · <strong>Kullanıcı:</strong> ${escapeHtml(r.targetUserName)}` : ''}
+          </div>
+          <div style="font-size:.75rem;color:var(--t3);margin-top:4px">
+            <strong>Şikayetçi:</strong> ${escapeHtml(r.reporterName)} · ${escapeHtml(r.createdAt || '')}
+            ${r.note ? `<br><em>${escapeHtml(r.note)}</em>` : ''}
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="btn bo bsm" type="button" onclick="openReportDetail(${r.id})">İncele</button>
+          ${r.status === 'pending' ? `<button class="btn bo bsm" type="button" onclick="resolveReport(${r.id},'dismissed')">Reddet</button>` : ''}
+          ${r.status === 'pending' ? `<button class="btn bp bsm" type="button" onclick="gotoReportModeration('${r.targetType}',${r.targetId},${r.targetUserId || 'null'},${r.id})">İşlem yap</button>` : ''}
+          ${r.targetUserId ? `<button class="btn-no bsm" type="button" onclick="blockReportUser(${r.targetUserId},${r.id})">Engelle kullanıcı</button>` : ''}
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function openReportDetail(id) {
+  try {
+    const data = await api('/admin/reports?status=all');
+    const r = (data.reports || []).find((x) => x.id === id);
+    if (!r) return showErr('Şikayet bulunamadı');
+    openModal('Şikayet detayı', `
+      <p><strong>Tür:</strong> ${escapeHtml(REPORT_TYPE_LABELS[r.targetType] || r.targetType)}</p>
+      <p><strong>Hedef:</strong> ${escapeHtml(r.targetLabel || '#' + r.targetId)}</p>
+      ${r.targetUserName ? `<p><strong>İlgili kullanıcı:</strong> ${escapeHtml(r.targetUserName)}</p>` : ''}
+      <p><strong>Neden:</strong> ${escapeHtml(r.reasonLabel || r.reason)}</p>
+      ${r.note ? `<p><strong>Not:</strong> ${escapeHtml(r.note)}</p>` : ''}
+      <p><strong>Şikayetçi:</strong> ${escapeHtml(r.reporterName)}</p>
+      <p><strong>Durum:</strong> ${escapeHtml(REPORT_STATUS_LABELS[r.status] || r.status)}</p>
+      <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(r.createdAt || '')}${r.resolvedAt ? ' · Çözüldü: ' + escapeHtml(r.resolvedAt) : ''}</p>`,
+      [{ label: 'Kapat', primary: true, onClick: closeModal }]
+    );
+    if (r.status === 'pending') {
+      await api('/admin/reports/' + id, { method: 'PATCH', body: { status: 'reviewed' } });
+      loadReportsList();
+    }
+  } catch (e) { showErr(e.message); }
+}
+
+async function resolveReport(id, status) {
+  try {
+    await api('/admin/reports/' + id, { method: 'PATCH', body: { status } });
+    await loadReportsList();
+  } catch (e) { showErr(e.message); }
+}
+
+function gotoReportModeration(type, targetId, userId, reportId) {
+  if (type === 'tiola') {
+    const btn = document.querySelector('#adminTabs button[data-section="moderation"]');
+    showAdminSection('moderation', btn);
+    if (pendingTiolaCache[targetId]) openTiolaPreview(targetId);
+    else showErr('Tiola moderasyon kuyruğunda değil; listeden arayın.');
+  } else if (type === 'blog') {
+    const btn = document.querySelector('#adminTabs button[data-section="content"]');
+    showAdminSection('content', btn);
+    const subBtn = document.querySelector('#contentSubTabs button[data-sub="blog-posts"]');
+    showContentSub('blog-posts', subBtn);
+    openBlogEdit(targetId).catch(() => showErr('Blog bulunamadı'));
+  } else if (type === 'profile' && userId) {
+    const btn = document.querySelector('#adminTabs button[data-section="users"]');
+    showAdminSection('users', btn);
+    const subBtn = document.querySelector('#usersSubTabs button[data-sub="users-all"]');
+    showUsersSub('users-all', subBtn);
+  }
+  if (reportId) resolveReport(reportId, 'actioned').catch(() => {});
+}
+
+async function blockReportUser(userId, reportId) {
+  if (!confirm('Bu kullanıcıyı engellemek istediğinize emin misiniz?')) return;
+  try {
+    await api('/admin/users/' + userId + '/block', { method: 'POST', body: { blocked: true } });
+    if (reportId) await api('/admin/reports/' + reportId, { method: 'PATCH', body: { status: 'actioned' } });
+    await loadDashboard();
+    await loadReportsList();
+  } catch (e) { showErr(e.message); }
+}
+
+function isContentSidebarCollapsed() {
+  return document.getElementById('adm-content')?.classList.contains('content-sidebar-collapsed');
+}
+
+function isContentPanelVisible(id) {
+  if (isContentSidebarCollapsed()) return true;
+  return document.getElementById('content-' + id)?.classList.contains('active');
+}
+
+function applyContentLayoutMode() {
+  const layout = document.getElementById('adm-content');
+  const toggle = document.getElementById('contentSidebarToggle');
+  const collapsed = isContentSidebarCollapsed();
+  document.querySelectorAll('#adm-content .content-sub').forEach((el) => { el.style.display = ''; });
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    toggle.setAttribute('aria-label', collapsed ? 'Blog menüsünü aç' : 'Blog menüsünü daralt');
+  }
+  if (collapsed) {
+    loadAllContentPanels();
+  } else {
+    const active = document.querySelector('#contentSubTabs button.on')?.dataset.sub || 'blog-page';
+    const btn = document.querySelector(`#contentSubTabs button[data-sub="${active}"]`);
+    showContentSub(active, btn, true);
+  }
+}
+
+function toggleContentSidebar() {
+  const layout = document.getElementById('adm-content');
+  if (!layout) return;
+  layout.classList.toggle('content-sidebar-open');
+  layout.classList.toggle('content-sidebar-collapsed');
+  try { localStorage.setItem('adminContentSidebar', isContentSidebarCollapsed() ? 'collapsed' : 'open'); } catch (_) {}
+  applyContentLayoutMode();
+}
+
+function loadAllContentPanels() {
+  loadBlogPageForm();
+  loadBlogCategoriesList();
+  loadBlogCategorySelects();
+  loadBlogPostsList();
+  loadPendingBlogs();
+}
+
+function showContentSub(id, btn, skipScroll) {
+  const layout = document.getElementById('adm-content');
+  const panel = document.getElementById('content-' + id);
+  if (!panel) return;
+
+  if (isContentSidebarCollapsed()) {
+    document.querySelectorAll('#contentSubTabs button').forEach((b) => {
+      b.classList.remove('on');
+      b.setAttribute('aria-selected', 'false');
+    });
+    if (btn) { btn.classList.add('on'); btn.setAttribute('aria-selected', 'true'); }
+    if (!skipScroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (id === 'blog-page') loadBlogPageForm();
+    if (id === 'blog-cats') loadBlogCategoriesList();
+    if (id === 'blog-posts') { loadBlogCategorySelects(); loadBlogPostsList(); }
+    if (id === 'blog-pending') loadPendingBlogs();
+    return;
+  }
+
+  document.querySelectorAll('#adm-content .content-sub').forEach((el) => {
+    el.classList.remove('active');
+  });
+  panel.classList.add('active');
+  document.querySelectorAll('#contentSubTabs button').forEach((b) => {
+    b.classList.remove('on');
+    b.setAttribute('aria-selected', 'false');
+  });
+  if (btn) { btn.classList.add('on'); btn.setAttribute('aria-selected', 'true'); }
+  if (id === 'blog-page') loadBlogPageForm();
+  if (id === 'blog-cats') loadBlogCategoriesList();
+  if (id === 'blog-posts') { loadBlogCategorySelects(); loadBlogPostsList(); }
+  if (id === 'blog-pending') loadPendingBlogs();
+}
+
+async function loadContentSection() {
+  if (!hasAdminPerm('admin.content')) return;
+  const layout = document.getElementById('adm-content');
+  if (layout) {
+    try {
+      const saved = localStorage.getItem('adminContentSidebar');
+      if (saved === 'collapsed') {
+        layout.classList.remove('content-sidebar-open');
+        layout.classList.add('content-sidebar-collapsed');
+      }
+    } catch (_) {}
+  }
+  applyContentLayoutMode();
+}
+
+function isUsersSidebarCollapsed() {
+  return document.getElementById('adm-users')?.classList.contains('content-sidebar-collapsed');
+}
+
+function applyUsersLayoutMode() {
+  const layout = document.getElementById('adm-users');
+  const toggle = document.getElementById('usersSidebarToggle');
+  const collapsed = isUsersSidebarCollapsed();
+  document.querySelectorAll('#adm-users .content-sub').forEach((el) => { el.style.display = ''; });
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    toggle.setAttribute('aria-label', collapsed ? 'Kullanıcı menüsünü aç' : 'Kullanıcı menüsünü daralt');
+  }
+  if (collapsed) {
+    renderAllUserPanels();
+  } else {
+    const active = document.querySelector('#usersSubTabs button.on')?.dataset.sub || 'users-all';
+    const btn = document.querySelector(`#usersSubTabs button[data-sub="${active}"]`);
+    showUsersSub(active, btn, true);
+  }
+}
+
+function toggleUsersSidebar() {
+  const layout = document.getElementById('adm-users');
+  if (!layout) return;
+  layout.classList.toggle('content-sidebar-open');
+  layout.classList.toggle('content-sidebar-collapsed');
+  try { localStorage.setItem('adminUsersSidebar', isUsersSidebarCollapsed() ? 'collapsed' : 'open'); } catch (_) {}
+  applyUsersLayoutMode();
+}
+
+function renderUserCard(u) {
+  const isSelf = u.id === currentUser?.id;
+  const isAdminRole = u.role === 'admin';
+  const blockAction = isSelf || isAdminRole ? '' : (u.isBlocked
+    ? `<button class="btn-ok bsm" type="button" aria-label="${escapeHtml(u.name)} engelini kaldır" onclick="toggleUserBlock(${u.id}, false)">Engeli kaldır</button>`
+    : `<button class="btn-no bsm" type="button" aria-label="${escapeHtml(u.name)} engelle" onclick="toggleUserBlock(${u.id}, true)">Engelle</button>`);
+  return `
+    <div class="admin-card admin-item">
+      <div>
+        <strong>${escapeHtml(u.name)}</strong> · ${escapeHtml(u.email)}
+        · <span style="font-size:.72rem;color:var(--t3)">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span>
+        · <span class="adm-email-badge ${u.emailVerified ? 'ok' : 'pending'}">${u.emailVerified ? 'E-posta doğrulandı' : 'E-posta doğrulanmadı'}</span>
+        ${u.isBlocked ? ' · <span class="adm-spam-badge">Engelli</span>' : ''}
+      </div>
+      ${blockAction ? `<div class="admin-actions">${blockAction}</div>` : ''}
+    </div>`;
+}
+
+function renderUserPanel(users, elId, emptyMsg) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = users.length
+    ? users.map(renderUserCard).join('')
+    : `<p style="color:var(--t3)">${escapeHtml(emptyMsg)}</p>`;
+}
+
+function renderAllUserPanels() {
+  const all = allUsersCache;
+  renderUserPanel(all, 'userListAll', 'Kullanıcı yok.');
+  renderUserPanel(all.filter((u) => u.isBlocked), 'userListBlocked', 'Engellenmiş kullanıcı yok.');
+  renderUserPanel(all.filter((u) => u.role === 'moderator'), 'userListModerators', 'Moderatör hesabı yok.');
+}
+
+function showUsersSub(id, btn, skipScroll) {
+  const panel = document.getElementById('content-' + id);
+  if (!panel) return;
+
+  if (isUsersSidebarCollapsed()) {
+    document.querySelectorAll('#usersSubTabs button').forEach((b) => {
+      b.classList.remove('on');
+      b.setAttribute('aria-selected', 'false');
+    });
+    if (btn) { btn.classList.add('on'); btn.setAttribute('aria-selected', 'true'); }
+    if (!skipScroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    renderAllUserPanels();
+    return;
+  }
+
+  document.querySelectorAll('#adm-users .content-sub').forEach((el) => {
+    el.classList.remove('active');
+  });
+  panel.classList.add('active');
+  document.querySelectorAll('#usersSubTabs button').forEach((b) => {
+    b.classList.remove('on');
+    b.setAttribute('aria-selected', 'false');
+  });
+  if (btn) { btn.classList.add('on'); btn.setAttribute('aria-selected', 'true'); }
+  renderAllUserPanels();
+}
+
+async function loadUsersLists() {
+  if (currentUser?.role !== 'admin') return;
+  const targets = ['userListAll', 'userListBlocked', 'userListModerators'];
+  targets.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  });
+  try {
+    const ul = await api('/admin/users');
+    allUsersCache = ul.users || [];
+    renderAllUserPanels();
+  } catch (e) {
+    const msg = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+    targets.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = msg;
+    });
+  }
+}
+
+async function loadUsersSection() {
+  if (currentUser?.role !== 'admin') return;
+  const layout = document.getElementById('adm-users');
+  if (layout) {
+    try {
+      const saved = localStorage.getItem('adminUsersSidebar');
+      if (saved === 'collapsed') {
+        layout.classList.remove('content-sidebar-open');
+        layout.classList.add('content-sidebar-collapsed');
+      }
+    } catch (_) {}
+  }
+  await loadUsersLists();
+  applyUsersLayoutMode();
+}
+
+async function loadBlogPageForm() {
+  const form = document.getElementById('blogPageForm');
+  if (!form) return;
+  form.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const data = await api('/admin/blog-page');
+    const vals = data.page || {};
+    form.innerHTML = BLOG_PAGE_FIELDS.map((f) => {
+      const val = vals[f.key] ?? '';
+      if (f.type === 'textarea') {
+        return `<label class="full adm-label-sm" for="bp-set-${f.key}">${escapeHtml(f.label)}</label>
+          <textarea class="ain full adm-textarea-sm" id="bp-set-${f.key}" data-bp-key="${f.key}" aria-label="${escapeHtml(f.label)}">${escapeHtml(val)}</textarea>`;
+      }
+      return `<label class="full adm-label-sm" for="bp-set-${f.key}">${escapeHtml(f.label)}</label>
+        <input class="ain full" id="bp-set-${f.key}" data-bp-key="${f.key}" value="${String(val).replace(/"/g, '&quot;')}" aria-label="${escapeHtml(f.label)}"/>`;
+    }).join('');
+  } catch (e) {
+    form.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function saveBlogPageSettings() {
+  const btn = document.getElementById('btnSaveBlogPage');
+  clearFormErr('blogPageFormErr');
+  setBtnLoading(btn, true);
+  const page = {};
+  document.querySelectorAll('#blogPageForm [data-bp-key]').forEach((inp) => {
+    page[inp.dataset.bpKey] = inp.value;
+  });
+  try {
+    await api('/admin/blog-page', { method: 'PUT', body: { page } });
+    await loadBlogPageForm();
+  } catch (e) { showFormErr('blogPageFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
+async function loadBlogCategoriesList() {
+  const wrap = document.getElementById('blogCategoriesWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const data = await api('/admin/blog-categories?all=1');
+    const rows = data.categories || [];
+    blogCategoryOptions = rows;
+    wrap.innerHTML = rows.length ? `<table class="admin-table" aria-label="Blog kategorileri">
+      <thead><tr><th>Kod</th><th>Türkçe</th><th>İngilizce</th><th>Yazı</th><th>Durum</th><th></th></tr></thead>
+      <tbody>${rows.map((c) => `
+        <tr>
+          <td><code>${escapeHtml(c.slug)}</code></td>
+          <td>${escapeHtml(c.icon || '')} ${escapeHtml(c.nameTr)}</td>
+          <td>${escapeHtml(c.nameEn || '')}</td>
+          <td>${c.postCount || 0}</td>
+          <td>${c.isActive ? 'Aktif' : 'Pasif'}</td>
+          <td>
+            <button class="btn-edit" type="button" onclick="openBlogCategoryEdit(${c.id})">Düzenle</button>
+            <button class="btn-no" type="button" onclick="deleteBlogCategory(${c.id}, '${escapeHtml(c.slug)}')">Sil</button>
+          </td>
+        </tr>`).join('')}</tbody></table>` : '<p style="color:var(--t3)">Kategori yok.</p>';
+    loadBlogCategorySelects();
+  } catch (e) { wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+}
+
+function loadBlogCategorySelects() {
+  const active = (blogCategoryOptions || []).filter((c) => c.isActive);
+  const opts = active.map((c) =>
+    `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.icon || '')} ${escapeHtml(c.nameTr)}</option>`
+  ).join('') || '<option value="guide">Rehber</option>';
+  const sel = document.getElementById('bpCategory');
+  if (sel) sel.innerHTML = opts;
+  const catFilter = document.getElementById('blogPostCategoryFilter');
+  if (catFilter) {
+    const cur = catFilter.value || 'all';
+    catFilter.innerHTML = `<option value="all">Tüm kategoriler</option>${opts}`;
+    catFilter.value = [...catFilter.options].some((o) => o.value === cur) ? cur : 'all';
+  }
+}
+
+async function addBlogCategory() {
+  const btn = document.getElementById('btnAddBlogCat');
+  clearFormErr('blogCatFormErr');
+  setBtnLoading(btn, true);
+  try {
+    await api('/admin/blog-categories', {
+      method: 'POST',
+      body: {
+        slug: document.getElementById('blCatSlug').value,
+        nameTr: document.getElementById('blCatNameTr').value,
+        nameEn: document.getElementById('blCatNameEn').value,
+        icon: document.getElementById('blCatIcon').value,
+      },
+    });
+    document.getElementById('blCatSlug').value = '';
+    document.getElementById('blCatNameTr').value = '';
+    document.getElementById('blCatNameEn').value = '';
+    document.getElementById('blCatIcon').value = '';
+    await loadBlogCategoriesList();
+  } catch (e) { showFormErr('blogCatFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
+function openBlogCategoryEdit(id) {
+  const c = (blogCategoryOptions || []).find((x) => x.id === id);
+  if (!c) return;
+  openModal('Blog kategorisi düzenle', `
+    <div class="admin-form">
+      <p style="font-size:.8rem;color:var(--t2)">Kod: <code>${escapeHtml(c.slug)}</code></p>
+      <input class="ain" id="edBlCatNameTr" value="${escapeHtml(c.nameTr)}" aria-label="Türkçe ad"/>
+      <input class="ain" id="edBlCatNameEn" value="${escapeHtml(c.nameEn || '')}" aria-label="İngilizce ad"/>
+      <input class="ain" id="edBlCatIcon" value="${escapeHtml(c.icon || '')}" aria-label="İkon" maxlength="4"/>
+      <label class="full adm-settings-toggle" style="display:flex;align-items:center;gap:8px;font-size:.85rem">
+        <input type="checkbox" id="edBlCatActive" ${c.isActive ? 'checked' : ''} aria-label="Aktif"/> Aktif
+      </label>
+    </div>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Kaydet', primary: true, onClick: () => saveBlogCategoryEdit(id) },
+    ]
+  );
+}
+
+async function saveBlogCategoryEdit(id) {
+  const saveBtn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(saveBtn, true);
+  try {
+    await api('/admin/blog-categories/' + id, {
+      method: 'PUT',
+      body: {
+        nameTr: document.getElementById('edBlCatNameTr').value,
+        nameEn: document.getElementById('edBlCatNameEn').value,
+        icon: document.getElementById('edBlCatIcon').value,
+        isActive: document.getElementById('edBlCatActive').checked,
+      },
+    });
+    closeModal();
+    await loadBlogCategoriesList();
+  } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(saveBtn, false); }
+}
+
+async function deleteBlogCategory(id, slug) {
+  if (!confirm(`"${slug}" kategorisini silmek istiyor musunuz?`)) return;
+  try {
+    await api('/admin/blog-categories/' + id, { method: 'DELETE' });
+    await loadBlogCategoriesList();
+  } catch (e) {
+    const reassign = prompt(e.message + '\n\nTaşımak için hedef kategori kodunu yazın (ör. guide):');
+    if (!reassign) return;
+    try {
+      await api('/admin/blog-categories/' + id, { method: 'DELETE', body: { reassignTo: reassign.trim() } });
+      await loadBlogCategoriesList();
+    } catch (err) { showErr(err.message); }
+  }
+}
+
+function debounceLoadBlogPosts() {
+  clearTimeout(blogPostSearchTimer);
+  blogPostSearchTimer = setTimeout(loadBlogPostsList, 300);
+}
+
+async function loadBlogPostsList() {
+  const wrap = document.getElementById('blogPostsWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  const q = document.getElementById('blogPostSearch')?.value?.trim() || '';
+  const status = document.getElementById('blogPostStatusFilter')?.value || 'all';
+  const category = document.getElementById('blogPostCategoryFilter')?.value || 'all';
+  const qs = new URLSearchParams();
+  if (q) qs.set('q', q);
+  if (status !== 'all') qs.set('status', status);
+  if (category !== 'all') qs.set('category', category);
+  try {
+    const data = await api('/admin/blogs' + (qs.toString() ? '?' + qs : ''));
+    const rows = data.blogs || [];
+    wrap.innerHTML = rows.length ? rows.map((b) => `
+      <div class="admin-card admin-item">
+        <div style="flex:1">
+          <strong>${escapeHtml(b.title)}</strong>
+          ${b.featured ? ' <span style="font-size:.7rem;color:var(--b)">★ Öne çıkan</span>' : ''}
+          <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(b.slug || '')} · ${escapeHtml(BLOG_STATUS_LABELS[b.status] || b.status)} · ${escapeHtml(b.authorName || b.userName)}</p>
+          <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(b.excerpt || '')}</p>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-edit" type="button" onclick="openBlogEdit(${b.id})">Düzenle</button>
+          <button class="btn-no" type="button" onclick="deleteBlogPost(${b.id})">Sil</button>
+        </div>
+      </div>`).join('') : '<p style="color:var(--t3)">Yazı bulunamadı.</p>';
+  } catch (e) { wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+}
+
+async function addBlogPost() {
+  const btn = document.getElementById('btnAddBlogPost');
+  clearFormErr('blogPostFormErr');
+  setBtnLoading(btn, true);
+  try {
+    await api('/admin/blogs', {
+      method: 'POST',
+      body: {
+        title: document.getElementById('bpTitle').value,
+        slug: document.getElementById('bpSlug').value,
+        category: document.getElementById('bpCategory').value,
+        status: document.getElementById('bpStatus').value,
+        authorName: document.getElementById('bpAuthor').value,
+        placeId: document.getElementById('bpPlaceId').value || null,
+        imageUrl: document.getElementById('bpImage').value,
+        tags: document.getElementById('bpTags').value,
+        featured: document.getElementById('bpFeatured').checked,
+        excerpt: document.getElementById('bpExcerpt').value,
+        body: document.getElementById('bpBody').value,
+      },
+    });
+    ['bpTitle', 'bpSlug', 'bpAuthor', 'bpPlaceId', 'bpImage', 'bpTags', 'bpExcerpt', 'bpBody'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('bpFeatured').checked = false;
+    await loadBlogPostsList();
+  } catch (e) { showFormErr('blogPostFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
+async function deleteBlogPost(id) {
+  if (!confirm('Bu blog yazısını silmek istiyor musunuz?')) return;
+  try {
+    await api('/admin/blogs/' + id, { method: 'DELETE' });
+    await loadBlogPostsList();
+  } catch (e) { showErr(e.message); }
+}
+
+async function loadPendingBlogs() {
+  const blEl = document.getElementById('pendingBlogs');
+  if (!blEl || !hasAdminPerm('admin.content')) return;
+  try {
+    const bl = await api('/admin/pending/blogs');
+    blEl.innerHTML = bl.items.length ? bl.items.map((item) => `
+      <div class="admin-card admin-item">
+        <div style="flex:1"><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.userName)}
+          <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(item.excerpt || '')}</p></div>
+        <div class="admin-actions">
+          <button class="btn-edit" type="button" aria-label="Blog düzenle" onclick="openBlogEdit(${item.id})">Düzenle</button>
+          <button class="btn-ok" type="button" aria-label="Blog onayla" onclick="approveBlog(${item.id})">Onayla</button>
+          <button class="btn-no" type="button" aria-label="Blog reddet" onclick="rejectBlog(${item.id})">Reddet</button>
+        </div>
+      </div>`).join('') : '<p style="color:var(--t3)">Bekleyen blog yok.</p>';
+  } catch (e) { blEl.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
 }
 
 function applyAdminRbac(user) {
@@ -347,11 +1307,16 @@ function applyAdminRbac(user) {
 }
 
 async function adminLogin() {
+  const btn = document.querySelector('#loginScreen .btn.bp');
   document.getElementById('loginErr').style.display = 'none';
+  setBtnLoading(btn, true, 'Giriş yapılıyor…');
   try {
     const data = await api('/auth/login', {
       method: 'POST',
-      body: { email: document.getElementById('admEmail').value, password: document.getElementById('admPass').value },
+      body: {
+        email: document.getElementById('admEmail').value.trim(),
+        password: document.getElementById('admPass').value,
+      },
     });
     if (!['admin', 'moderator', 'editor'].includes(data.user.role)) {
       showErr('Admin, moderatör veya editör yetkisi gerekli', 'loginErr');
@@ -361,6 +1326,7 @@ async function adminLogin() {
     localStorage.setItem('tl_user', JSON.stringify(data.user));
     showPanel(data.user);
   } catch (e) { showErr(e.message, 'loginErr'); }
+  finally { setBtnLoading(btn, false); }
 }
 
 function adminLogout() {
@@ -378,7 +1344,7 @@ async function showPanel(user) {
   document.getElementById('adminPanel').style.display = 'block';
   document.getElementById('admUser').textContent = user.name + ' (' + user.role + ')';
   applyAdminRbac(user);
-  bindPhotoInput('plPhotos', 'plPhotoPreview');
+  bindPhotoInput('plPhotos', 'plPhotoPreview', 'plPhotoCount');
   await loadCategoryOptions();
   await refresh();
 }
@@ -389,7 +1355,7 @@ async function loadCategoryOptions() {
     categoryOptions = data.categories || [];
     const sel = document.getElementById('plCat');
     sel.innerHTML = categoryOptions.map((c) =>
-      `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.icon)} ${escapeHtml(c.nameTr)} (${escapeHtml(c.slug)})</option>`
+      `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.icon)} ${escapeHtml(c.nameTr)} — kod: ${escapeHtml(c.slug)}</option>`
     ).join('');
   } catch (e) {
     console.warn('Kategoriler yüklenemedi', e);
@@ -414,13 +1380,14 @@ async function loadPlacesList() {
       return;
     }
     wrap.innerHTML = `<table class="admin-table" aria-label="Yer listesi">
-      <thead><tr><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>İşlem</th></tr></thead>
+      <thead><tr><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>Durum</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((p) => `<tr>
         <td>${p.id}</td>
         <td>${escapeHtml(p.name)}</td>
         <td>${escapeHtml(p.city)}</td>
         <td>${escapeHtml(p.country)}</td>
         <td>${escapeHtml(p.category)}</td>
+        <td>${escapeHtml(STATUS_LABELS[p.status] || p.status || 'Yayında')}</td>
         <td class="admin-actions">
           <button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" onclick="openPlaceEdit(${p.id})">Düzenle</button>
           <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" onclick="confirmDeletePlace(${p.id})">Sil</button>
@@ -438,23 +1405,39 @@ async function openPlaceEdit(id) {
     const p = data.place;
     editExistingPhotos = [...(p.photos || [])];
     const catOpts = categoryOptions.map((c) =>
-      `<option value="${escapeHtml(c.slug)}" ${c.slug === p.category ? 'selected' : ''}>${escapeHtml(c.nameTr)}</option>`
+      `<option value="${escapeHtml(c.slug)}" ${c.slug === p.category ? 'selected' : ''}>${escapeHtml(c.nameTr)} — kod: ${escapeHtml(c.slug)}</option>`
     ).join('');
     openModal('Yer düzenle: ' + p.name, `
       <div class="admin-form">
         <input class="ain" id="edName" value="${escapeHtml(p.name)}" aria-label="Ad"/>
         <input class="ain" id="edCountry" value="${escapeHtml(p.country)}" aria-label="Ülke"/>
         <input class="ain" id="edCity" value="${escapeHtml(p.city)}" aria-label="Şehir"/>
-        <select class="ain" id="edCat" aria-label="Kategori">${catOpts}</select>
+        <label class="adm-label-sm full" for="edCat">Kategori (kod / slug)</label>
+        <select class="ain full" id="edCat" aria-label="Kategori kodu">${catOpts}</select>
+        <p class="adm-field-hint">Türkçe ad değil; yerin kategori kodu seçilir (ör. <code>museum</code>).</p>
+        <label class="adm-label-sm" for="edStatus">Yayın durumu</label>
+        <select class="ain" id="edStatus" aria-label="Yayın durumu">
+          <option value="published" ${(p.status || 'published') === 'published' ? 'selected' : ''}>Yayında</option>
+          <option value="draft" ${p.status === 'draft' ? 'selected' : ''}>Taslak</option>
+          <option value="archived" ${p.status === 'archived' ? 'selected' : ''}>Arşiv</option>
+        </select>
         <input class="ain" id="edLat" value="${p.lat ?? ''}" aria-label="Enlem" type="number" step="any"/>
         <input class="ain" id="edLng" value="${p.lng ?? ''}" aria-label="Boylam" type="number" step="any"/>
         <input class="ain full" id="edImage" value="${escapeHtml(p.imageUrl || '')}" aria-label="Görsel URL (opsiyonel)"/>
-        <div class="full">
-          <p style="font-size:.75rem;color:var(--t2);margin:0 0 6px">Mevcut görseller</p>
+        <div class="adm-photo-section full">
+          <p class="adm-photo-title">Fotoğraflar</p>
+          <p class="adm-photo-sub">Mevcut görselleri kaldırabilir veya yeni fotoğraf ekleyebilirsiniz.</p>
+          <p class="adm-label-sm">Mevcut görseller</p>
           <div id="edPhotoExisting" class="photo-preview-row"></div>
-          <label for="edPhotos" style="font-size:.75rem;color:var(--t2);display:block;margin:8px 0 4px">Yeni görsel ekle</label>
-          <input type="file" id="edPhotos" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yeni görseller yükle"/>
+          <div class="adm-photo-drop">
+            <label class="adm-photo-btn">
+              Fotoğraf ekle
+              <input type="file" id="edPhotos" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yeni fotoğraflar yükle"/>
+            </label>
+            <span id="edPhotoCount" class="adm-photo-count" aria-live="polite"></span>
+          </div>
           <div id="edPhotoNewPreview" class="photo-preview-row"></div>
+          <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP, GIF · dosya başına max 5 MB</p>
         </div>
         <textarea class="ain full" id="edDesc" aria-label="Açıklama" style="height:60px">${escapeHtml(p.description || '')}</textarea>
       </div>
@@ -462,16 +1445,19 @@ async function openPlaceEdit(id) {
       [
         { label: 'İptal', onClick: closeModal },
         { label: 'Kaydet', primary: true, onClick: () => savePlaceEdit(id) },
-      ]
+      ],
+      true
     );
     renderExistingPhotos('edPhotoExisting', editExistingPhotos);
-    bindPhotoInput('edPhotos', 'edPhotoNewPreview');
+    bindPhotoInput('edPhotos', 'edPhotoNewPreview', 'edPhotoCount');
   } catch (e) { showErr(e.message); }
 }
 
 async function savePlaceEdit(id) {
+  const saveBtn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(saveBtn, true, 'Kaydediliyor…');
   try {
-    const photos = editExistingPhotos.length ? editExistingPhotos : undefined;
+    const photos = editExistingPhotos;
     const imageUrl = document.getElementById('edImage').value;
     await api('/admin/places/' + id, {
       method: 'PUT',
@@ -480,6 +1466,7 @@ async function savePlaceEdit(id) {
         country: document.getElementById('edCountry').value,
         city: document.getElementById('edCity').value,
         category: document.getElementById('edCat').value,
+        status: document.getElementById('edStatus').value,
         lat: parseFloat(document.getElementById('edLat').value) || undefined,
         lng: parseFloat(document.getElementById('edLng').value) || undefined,
         imageUrl: imageUrl || (photos?.[0] || undefined),
@@ -493,6 +1480,7 @@ async function savePlaceEdit(id) {
     await loadPlacesList();
     await refresh();
   } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(saveBtn, false); }
 }
 
 async function confirmDeletePlace(id) {
@@ -524,6 +1512,9 @@ async function deletePlace(id) {
 }
 
 async function addPlace() {
+  const btn = document.getElementById('btnAddPlace');
+  clearFormErr('placeFormErr');
+  setBtnLoading(btn, true, 'Kaydediliyor…');
   try {
     const created = await api('/admin/places', {
       method: 'POST',
@@ -534,6 +1525,7 @@ async function addPlace() {
         district: document.getElementById('plDistrict').value,
         location: document.getElementById('plLocation').value,
         category: document.getElementById('plCat').value,
+        status: document.getElementById('plStatus').value,
         imageUrl: document.getElementById('plImage').value,
         description: document.getElementById('plDesc').value,
         descriptionEn: document.getElementById('plDescEn').value,
@@ -544,16 +1536,21 @@ async function addPlace() {
     });
     const placeId = created.id || created.place?.id;
     if (placeId) await uploadPlacePhotos(placeId, 'plPhotos');
-    document.getElementById('placeForm').querySelectorAll('input,textarea').forEach((i) => {
-      if (i.id !== 'plCat' && i.type !== 'file') i.value = '';
+    document.getElementById('placeForm').querySelectorAll('input,textarea,select').forEach((i) => {
+      if (i.id === 'plCat') return;
+      if (i.id === 'plStatus') { i.value = 'published'; return; }
+      if (i.type !== 'file') i.value = '';
     });
     const photoPreview = document.getElementById('plPhotoPreview');
     if (photoPreview) photoPreview.innerHTML = '';
     const photoInput = document.getElementById('plPhotos');
     if (photoInput) photoInput.value = '';
+    const photoCount = document.getElementById('plPhotoCount');
+    if (photoCount) photoCount.textContent = '';
     await loadPlacesList();
     await refresh();
-  } catch (e) { showErr(e.message); }
+  } catch (e) { showFormErr('placeFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
 }
 
 async function loadCitiesList() {
@@ -576,6 +1573,9 @@ async function loadCitiesList() {
 }
 
 async function addCity() {
+  const btn = document.getElementById('btnAddCity');
+  clearFormErr('cityFormErr');
+  setBtnLoading(btn, true);
   try {
     await api('/admin/cities', {
       method: 'POST',
@@ -588,7 +1588,8 @@ async function addCity() {
     });
     ['ctName','ctCountry','ctNameEn','ctSlug'].forEach((id) => { document.getElementById(id).value = ''; });
     await loadCitiesList();
-  } catch (e) { showErr(e.message); }
+  } catch (e) { showFormErr('cityFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
 }
 
 async function openCityEdit(id) {
@@ -663,22 +1664,27 @@ async function loadCategoriesList() {
     categoryOptions = rows;
     if (!rows.length) { wrap.innerHTML = '<p style="color:var(--t3)">Kategori yok.</p>'; return; }
     wrap.innerHTML = `<table class="admin-table" aria-label="Kategori listesi">
-      <thead><tr><th>Kod</th><th>TR</th><th>EN</th><th>Yer</th><th>İşlem</th></tr></thead>
-      <tbody>${rows.map((c) => `<tr>
+      <thead><tr><th>Kod</th><th>TR</th><th>EN</th><th>Durum</th><th>Yer</th><th>İşlem</th></tr></thead>
+      <tbody>${rows.map((c) => `<tr${c.isActive ? '' : ' style="opacity:.65"'}>
         <td>${escapeHtml(c.icon)} ${escapeHtml(c.slug)}</td>
-        <td>${escapeHtml(c.nameTr)}</td><td>${escapeHtml(c.nameEn)}</td><td>${c.placeCount}</td>
+        <td>${escapeHtml(c.nameTr)}</td><td>${escapeHtml(c.nameEn)}</td>
+        <td>${c.isActive ? '<span style="color:#15803d">Aktif</span>' : '<span style="color:#b45309">Pasif</span>'}</td>
+        <td>${c.placeCount}</td>
         <td class="admin-actions">
           <button class="btn-edit" type="button" aria-label="${escapeHtml(c.nameTr)} düzenle" onclick="openCategoryEdit(${c.id})">Düzenle</button>
           <button class="btn-no" type="button" aria-label="${escapeHtml(c.nameTr)} sil" onclick="confirmDeleteCategory(${c.id},'${escapeHtml(c.slug)}',${c.placeCount})">Sil</button>
         </td></tr>`).join('')}</tbody></table>`;
     const sel = document.getElementById('plCat');
     if (sel) sel.innerHTML = rows.filter((c) => c.isActive).map((c) =>
-      `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.icon)} ${escapeHtml(c.nameTr)}</option>`
+      `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.icon)} ${escapeHtml(c.nameTr)} — kod: ${escapeHtml(c.slug)}</option>`
     ).join('');
   } catch (e) { wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
 }
 
 async function addCategory() {
+  const btn = document.getElementById('btnAddCategory');
+  clearFormErr('catFormErr');
+  setBtnLoading(btn, true);
   try {
     await api('/admin/categories', {
       method: 'POST',
@@ -691,7 +1697,9 @@ async function addCategory() {
     });
     ['catSlug','catNameTr','catNameEn','catIcon'].forEach((id) => { document.getElementById(id).value = ''; });
     await loadCategoriesList();
-  } catch (e) { showErr(e.message); }
+    await loadCategoryOptions();
+  } catch (e) { showFormErr('catFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
 }
 
 async function openCategoryEdit(id) {
@@ -701,11 +1709,16 @@ async function openCategoryEdit(id) {
     if (!c) throw new Error('Kategori bulunamadı');
     openModal('Kategori düzenle', `
       <div class="admin-form">
-        <input class="ain" id="edCatSlug" value="${escapeHtml(c.slug)}" aria-label="Kod"/>
+        <label class="adm-label-sm full" for="edCatSlug">Kod (slug)</label>
+        <input class="ain full" id="edCatSlug" value="${escapeHtml(c.slug)}" placeholder="örn. historical, museum" aria-label="Kategori kodu"/>
+        <p class="adm-field-hint">İngilizce teknik kod; Türkçe ad ayrı alandadır.</p>
+        <label class="adm-label-sm" for="edCatNameTr">Türkçe ad (nameTr) — sitede görünen</label>
         <input class="ain" id="edCatNameTr" value="${escapeHtml(c.nameTr)}" aria-label="Türkçe ad"/>
+        <label class="adm-label-sm" for="edCatNameEn">İngilizce ad (nameEn)</label>
         <input class="ain" id="edCatNameEn" value="${escapeHtml(c.nameEn)}" aria-label="İngilizce ad"/>
+        <label class="adm-label-sm" for="edCatIcon">İkon (emoji)</label>
         <input class="ain" id="edCatIcon" value="${escapeHtml(c.icon)}" aria-label="İkon"/>
-        <label style="font-size:.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="edCatActive" ${c.isActive ? 'checked' : ''}/> Aktif</label>
+        <label class="full" style="font-size:.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="edCatActive" ${c.isActive ? 'checked' : ''}/> Aktif (işaretsiz = Keşfet/Harita filtrelerinde gizli)</label>
       </div>`,
       [
         { label: 'İptal', onClick: closeModal },
@@ -729,12 +1742,13 @@ async function saveCategoryEdit(id) {
     });
     closeModal();
     await loadCategoriesList();
+    await loadCategoryOptions();
   } catch (e) { showErr(e.message); }
 }
 
 function confirmDeleteCategory(id, slug, placeCount) {
   const others = categoryOptions.filter((c) => c.slug !== slug && c.isActive);
-  const opts = others.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.nameTr)} (${escapeHtml(c.slug)})</option>`).join('');
+  const opts = others.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.nameTr)} — kod: ${escapeHtml(c.slug)}</option>`).join('');
   if (placeCount > 0) {
     openModal('Kategori sil — yerleri taşı', `
       <p><strong>${escapeHtml(slug)}</strong> kategorisinde <strong>${placeCount}</strong> yer var.</p>
@@ -770,23 +1784,42 @@ async function deleteCategory(id, reassignTo) {
     });
     closeModal();
     await loadCategoriesList();
+    await loadCategoryOptions();
   } catch (e) { showErr(e.message); }
 }
 
 async function loadRoles() {
   const el = document.getElementById('rolesPanel');
+  el.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
   try {
     const data = await api('/admin/roles');
     el.innerHTML = `<h3 style="margin:0 0 12px;color:var(--navy)">Roller ve yetkiler</h3>
       ${(data.roles || []).map((r) => `
         <div style="margin-bottom:14px;padding:12px;background:var(--l);border-radius:8px">
-          <strong>${escapeHtml(r.name)}</strong> <span style="font-size:.72rem;color:var(--t3)">(${escapeHtml(r.slug)})</span>
-          <p style="font-size:.75rem;color:var(--t2);margin-top:6px">${(r.permissions || []).map(escapeHtml).join(' · ') || 'Yetki yok'}</p>
+          <strong>${escapeHtml(ROLE_LABELS[r.slug] || r.name)}</strong>
+          <span style="font-size:.72rem;color:var(--t3)">(${escapeHtml(r.slug)})</span>
+          <p style="font-size:.75rem;color:var(--t2);margin-top:6px">${(r.permissions || []).map(permLabel).map(escapeHtml).join(' · ') || 'Yetki yok'}</p>
         </div>`).join('')}`;
   } catch (e) { el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
 }
 
+async function toggleUserBlock(userId, blocked) {
+  const msg = blocked
+    ? 'Bu kullanıcıyı engellemek istediğinize emin misiniz? Giriş yapamayacak ve oturumu sonlandırılacaktır.'
+    : 'Bu kullanıcının engelini kaldırmak istediğinize emin misiniz?';
+  if (!confirm(msg)) return;
+  try {
+    await api(`/admin/users/${userId}/block`, { method: 'POST', body: { blocked } });
+    await refresh();
+  } catch (e) {
+    showErr(e.message);
+  }
+}
+
 async function addModerator() {
+  const btn = document.getElementById('btnAddModerator');
+  clearFormErr('modFormErr');
+  setBtnLoading(btn, true, 'Oluşturuluyor…');
   try {
     await api('/admin/moderators', {
       method: 'POST',
@@ -800,111 +1833,266 @@ async function addModerator() {
     document.getElementById('modEmail').value = '';
     document.getElementById('modPass').value = '';
     await refresh();
-  } catch (e) { showErr(e.message); }
+  } catch (e) { showFormErr('modFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
 }
 
 let siteSettings = {};
 
 async function loadSettingsForm() {
   if (!hasAdminPerm('admin.settings')) return;
+  const form = document.getElementById('settingsForm');
+  if (!form) return;
+  form.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
   try {
     siteSettings = await api('/settings');
-    const form = document.getElementById('settingsForm');
-    if (!form || !siteSettings.settings) return;
-    form.innerHTML = Object.entries(siteSettings.settings).map(([key, val]) => `
-      <label class="full" style="font-size:.72rem;color:var(--t2)" for="set-${key}">${escapeHtml(key)}</label>
-      <input class="ain full" id="set-${key}" data-set-key="${escapeHtml(key)}" value="${String(val).replace(/"/g, '&quot;')}" aria-label="${escapeHtml(key)} ayarı"/>`).join('');
-  } catch (e) { console.warn('Ayarlar yüklenemedi', e); }
+    const vals = siteSettings.settings || {};
+    form.innerHTML = SETTING_FIELDS.map((f) => {
+      const val = vals[f.key] ?? '';
+      if (f.type === 'toggle') {
+        const on = String(val) === 'true';
+        return `<label class="full adm-settings-toggle" style="display:flex;align-items:center;gap:8px;font-size:.85rem">
+          <input type="checkbox" id="set-${f.key}" data-set-key="${f.key}" data-set-type="toggle" ${on ? 'checked' : ''} aria-label="${escapeHtml(f.label)}"/>
+          ${escapeHtml(f.label)}
+        </label>`;
+      }
+      if (f.type === 'textarea') {
+        return `<label class="full adm-label-sm" for="set-${f.key}">${escapeHtml(f.label)}</label>
+          <textarea class="ain full adm-textarea-sm" id="set-${f.key}" data-set-key="${f.key}" aria-label="${escapeHtml(f.label)}">${escapeHtml(val)}</textarea>`;
+      }
+      return `<label class="full adm-label-sm" for="set-${f.key}">${escapeHtml(f.label)}</label>
+        <input class="ain full" id="set-${f.key}" data-set-key="${f.key}" type="${f.type === 'number' ? 'number' : 'text'}" value="${String(val).replace(/"/g, '&quot;')}" aria-label="${escapeHtml(f.label)}"/>`;
+    }).join('');
+  } catch (e) {
+    form.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+  }
 }
 
 async function saveSettings() {
+  const btn = document.getElementById('btnSaveSettings');
+  clearFormErr('settingsFormErr');
+  setBtnLoading(btn, true);
   const body = {};
   document.querySelectorAll('#settingsForm [data-set-key]').forEach((inp) => {
-    body[inp.dataset.setKey] = inp.value;
+    if (inp.dataset.setType === 'toggle') body[inp.dataset.setKey] = inp.checked ? 'true' : 'false';
+    else body[inp.dataset.setKey] = inp.value;
   });
   try {
     await api('/settings', { method: 'PUT', body: { settings: body } });
     await loadSettingsForm();
-  } catch (e) { showErr(e.message); }
+  } catch (e) { showFormErr('settingsFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
 }
 
 async function loadAnalytics() {
+  if (!hasAdminPerm('admin.dashboard')) return;
   const sumEl = document.getElementById('analyticsSummary');
   const qEl = document.getElementById('analyticsQuality');
   if (!sumEl) return;
+  sumEl.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  if (qEl) qEl.innerHTML = '';
   try {
     const stats = await api('/analytics/summary');
     const quality = await api('/analytics/quality');
+    const cats = await api('/analytics/categories');
     sumEl.innerHTML = `<h3 style="margin:0 0 10px">Özet</h3>
       <p>Yer: <strong>${stats.places}</strong> · Kullanıcı: <strong>${stats.users}</strong> · Onaylı Tiola: <strong>${stats.tiolasApproved}</strong></p>
-      <p>Bekleyen Tiola: <strong>${stats.tiolasPending}</strong> · Bekleyen blog: <strong>${stats.blogsPending}</strong></p>`;
+      <p>Bekleyen Tiola: <strong>${stats.tiolasPending}</strong> · Bekleyen blog: <strong>${stats.blogsPending}</strong></p>
+      <p style="font-size:.8rem;color:var(--t2)">Ziyaret kaydı: ${stats.visitedRecords || 0} · Seyahat listesi: ${stats.travelLists || 0}</p>`;
     if (qEl) {
+      const catRows = (cats.categories || []).slice(0, 8).map((c) =>
+        `<tr><td>${escapeHtml(c.category)}</td><td>${c.c}</td></tr>`
+      ).join('');
       qEl.innerHTML = `<h3 style="margin:0 0 10px">İçerik kalitesi</h3>
         <p>Skor: <strong>${quality.score}%</strong> (${quality.total} yer)</p>
-        <p style="font-size:.8rem;color:var(--t2)">Foto eksik: ${quality.issues.noPhoto} · FAQ: ${quality.issues.noFaq} · Koordinat: ${quality.issues.noCoords}</p>`;
+        <p style="font-size:.8rem;color:var(--t2)">Foto eksik: ${quality.issues.noPhoto} · FAQ: ${quality.issues.noFaq} · Koordinat: ${quality.issues.noCoords}</p>
+        ${catRows ? `<h4 style="margin:16px 0 8px;font-size:.85rem;color:var(--navy)">Kategoriye göre yer sayısı</h4>
+          <table class="admin-table" aria-label="Kategori dağılımı"><thead><tr><th>Kategori</th><th>Yer</th></tr></thead><tbody>${catRows}</tbody></table>` : ''}`;
     }
   } catch (e) {
-    sumEl.innerHTML = `<p style="color:var(--t3)">${escapeHtml(e.message)}</p>`;
+    sumEl.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
   }
 }
 
 async function refresh() {
-  try {
-    const stats = await api('/admin/stats');
-    document.getElementById('statsRow').innerHTML = `
-      <div class="admin-card"><strong>${stats.places}</strong><br><span style="font-size:.75rem;color:var(--t2)">Yer</span></div>
-      <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
-      <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
-      <div class="admin-card"><strong>${stats.blogsPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Blog</span></div>
-      <div class="admin-card"><strong>${stats.users}</strong><br><span style="font-size:.75rem;color:var(--t2)">Kullanıcı</span></div>`;
-  } catch (e) { showErr(e.message); }
-
-  if (currentUser?.role === 'admin') {
+  const statsRow = document.getElementById('statsRow');
+  if (hasAdminPerm('admin.dashboard')) {
+    statsRow.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
     try {
-      const ul = await api('/admin/users');
-      document.getElementById('userList').innerHTML = ul.users.length ? ul.users.map((u) => `
-        <div class="admin-card"><strong>${escapeHtml(u.name)}</strong> · ${escapeHtml(u.email)} · <span style="font-size:.72rem;color:var(--t3)">${escapeHtml(u.role)}</span></div>`).join('') : '<p style="color:var(--t3)">Kullanıcı yok.</p>';
-    } catch { document.getElementById('userList').innerHTML = ''; }
+      const stats = await api('/admin/stats');
+      statsRow.innerHTML = `
+        <div class="admin-card"><strong>${stats.places}</strong><br><span style="font-size:.75rem;color:var(--t2)">Yer</span></div>
+        <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
+        <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
+        <div class="admin-card"><strong>${stats.blogsPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Blog</span></div>
+        <div class="admin-card"><strong>${stats.users}</strong><br><span style="font-size:.75rem;color:var(--t2)">Kullanıcı</span></div>`;
+    } catch (e) { statsRow.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+  } else if (statsRow) {
+    statsRow.innerHTML = '<p style="color:var(--t3)">Özet için yetkiniz yok.</p>';
   }
 
-  try {
-    const ti = await api('/admin/pending/tiolas');
-    document.getElementById('pendingTiolas').innerHTML = ti.items.length ? ti.items.map((item) => `
-      <div class="admin-card admin-item">
-        <div style="flex:1">
-          ${item.photoUrl ? `<img src="${item.photoUrl}" alt="Tiola fotoğrafı"/>` : ''}
-          <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}</div>
-          ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}
-          <p style="font-size:.85rem;color:var(--t2);margin-top:6px">${escapeHtml(item.text)}</p>
-        </div>
-        <div class="admin-actions">
-          <button class="btn-ok" type="button" aria-label="Tiola onayla" onclick="approveTiola(${item.id})">Onayla</button>
-          <button class="btn-no" type="button" aria-label="Tiola reddet" onclick="rejectTiola(${item.id})">Reddet</button>
-        </div>
-      </div>`).join('') : '<p style="color:var(--t3)">Bekleyen Tiola yok.</p>';
-  } catch (e) { document.getElementById('pendingTiolas').innerHTML = `<p style="color:var(--t3)">${escapeHtml(e.message)}</p>`; }
+  if (currentUser?.role === 'admin') {
+    await loadUsersLists();
+  }
 
-  await loadAnalytics();
-  await loadSettingsForm();
+  const tiEl = document.getElementById('pendingTiolas');
+  if (hasAdminPerm('admin.moderate')) {
+    try {
+      const ti = await api('/admin/pending/tiolas');
+      pendingTiolaCache = Object.fromEntries((ti.items || []).map((item) => [item.id, item]));
+      tiEl.innerHTML = ti.items.length ? ti.items.map((item) => `
+        <div class="admin-card admin-item">
+          <div class="adm-tiola-main">
+            ${item.photoUrl ? `<img src="${escapeHtml(item.photoUrl)}" alt="Tiola fotoğrafı" class="adm-tiola-thumb" role="button" tabindex="0" title="Büyüt" onclick="openAdminLightbox('${escapeHtml(item.photoUrl)}')" onkeydown="if(event.key==='Enter')openAdminLightbox('${escapeHtml(item.photoUrl)}')"/>` : ''}
+            <div class="adm-tiola-body">
+              <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}${item.status === 'spam' ? ' · <span class="adm-spam-badge">Spam</span>' : ''}</div>
+              ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}
+              <p class="adm-tiola-snippet">${escapeHtml(item.text.length > 140 ? item.text.slice(0, 140) + '…' : item.text)}</p>
+              <button type="button" class="btn bo bsm adm-preview-btn" onclick="openTiolaPreview(${item.id})">Önizle</button>
+            </div>
+          </div>
+          <div class="admin-actions">
+            <button class="btn-ok" type="button" aria-label="Tiola onayla" onclick="approveTiola(${item.id})">Onayla</button>
+            <button class="btn-no" type="button" aria-label="Tiola reddet" onclick="rejectTiola(${item.id})">Reddet</button>
+          </div>
+        </div>`).join('') : '<p style="color:var(--t3)">Bekleyen Tiola yok.</p>';
+    } catch (e) { tiEl.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+  } else if (tiEl) {
+    tiEl.innerHTML = '<p style="color:var(--t3)">Moderasyon yetkisi gerekli.</p>';
+  }
 
+  if (hasAdminPerm('admin.content')) {
+    try {
+      const catData = await api('/admin/blog-categories?all=1');
+      blogCategoryOptions = catData.categories || [];
+    } catch { /* ignore */ }
+    await loadPendingBlogs();
+    if (isContentPanelVisible('blog-posts')) {
+      loadBlogCategorySelects();
+      await loadBlogPostsList();
+    }
+  } else {
+    const blEl = document.getElementById('pendingBlogs');
+    if (blEl) blEl.innerHTML = '<p style="color:var(--t3)">İçerik yetkisi gerekli.</p>';
+  }
+
+  if (hasAdminPerm('admin.dashboard')) await loadAnalytics();
+  if (hasAdminPerm('admin.settings')) await loadSettingsForm();
+}
+
+async function openBlogEdit(id) {
   try {
-    const bl = await api('/admin/pending/blogs');
-    document.getElementById('pendingBlogs').innerHTML = bl.items.length ? bl.items.map((item) => `
-      <div class="admin-card admin-item">
-        <div style="flex:1"><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.userName)}
-          <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(item.excerpt || '')}</p></div>
-        <div class="admin-actions">
-          <button class="btn-ok" type="button" aria-label="Blog onayla" onclick="approveBlog(${item.id})">Onayla</button>
-          <button class="btn-no" type="button" aria-label="Blog reddet" onclick="rejectBlog(${item.id})">Reddet</button>
-        </div>
-      </div>`).join('') : '<p style="color:var(--t3)">Bekleyen blog yok.</p>';
-  } catch (e) { document.getElementById('pendingBlogs').innerHTML = ''; }
+    if (!blogCategoryOptions.length) {
+      const catData = await api('/admin/blog-categories?all=1');
+      blogCategoryOptions = catData.categories || [];
+    }
+    const data = await api('/admin/blogs/' + id);
+    const b = data.blog;
+    const catOpts = (blogCategoryOptions.length ? blogCategoryOptions : [{ slug: b.category || 'guide', nameTr: b.category || 'guide' }])
+      .map((c) => `<option value="${escapeHtml(c.slug)}" ${c.slug === b.category ? 'selected' : ''}>${escapeHtml(c.nameTr || c.slug)}</option>`)
+      .join('');
+    openModal('Blog düzenle', `
+      <div class="admin-form">
+        <input class="ain full" id="edBlogTitle" value="${escapeHtml(b.title)}" aria-label="Başlık"/>
+        <input class="ain" id="edBlogSlug" value="${escapeHtml(b.slug || '')}" aria-label="Slug"/>
+        <select class="ain" id="edBlogCategory" aria-label="Kategori">${catOpts}</select>
+        <select class="ain" id="edBlogStatus" aria-label="Durum">
+          <option value="approved" ${b.status === 'approved' ? 'selected' : ''}>Yayında</option>
+          <option value="draft" ${b.status === 'draft' ? 'selected' : ''}>Taslak</option>
+          <option value="pending" ${b.status === 'pending' ? 'selected' : ''}>Onay bekliyor</option>
+          <option value="rejected" ${b.status === 'rejected' ? 'selected' : ''}>Reddedildi</option>
+        </select>
+        <input class="ain" id="edBlogAuthor" value="${escapeHtml(b.authorName || b.userName || '')}" aria-label="Yazar"/>
+        <input class="ain" id="edBlogPlaceId" value="${b.placeId || ''}" aria-label="Mekân ID" inputmode="numeric"/>
+        <input class="ain full" id="edBlogImage" value="${escapeHtml(b.imageUrl || '')}" aria-label="Kapak görseli"/>
+        <input class="ain full" id="edBlogTags" value="${escapeHtml((b.tags || []).join(', '))}" aria-label="Etiketler"/>
+        <label class="full adm-settings-toggle" style="display:flex;align-items:center;gap:8px;font-size:.85rem">
+          <input type="checkbox" id="edBlogFeatured" ${b.featured ? 'checked' : ''} aria-label="Öne çıkan"/> Öne çıkan
+        </label>
+        <textarea class="ain full" id="edBlogExcerpt" aria-label="Özet" style="height:50px">${escapeHtml(b.excerpt || '')}</textarea>
+        <textarea class="ain full" id="edBlogBody" aria-label="İçerik" style="height:120px">${escapeHtml(b.body || '')}</textarea>
+      </div>
+      <p style="font-size:.78rem;color:var(--t2)">Hesap: ${escapeHtml(b.userName)}</p>`,
+      [
+        { label: 'İptal', onClick: closeModal },
+        { label: 'Kaydet', primary: true, onClick: () => saveBlogEdit(id) },
+        { label: 'Kaydet ve onayla', primary: true, onClick: () => saveBlogEdit(id, true) },
+      ]
+    );
+  } catch (e) { showErr(e.message); }
+}
+
+async function saveBlogEdit(id, approveAfter) {
+  const saveBtn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(saveBtn, true);
+  try {
+    await api('/admin/blogs/' + id, {
+      method: 'PUT',
+      body: {
+        title: document.getElementById('edBlogTitle').value,
+        slug: document.getElementById('edBlogSlug').value,
+        category: document.getElementById('edBlogCategory').value,
+        status: approveAfter ? 'approved' : document.getElementById('edBlogStatus').value,
+        authorName: document.getElementById('edBlogAuthor').value,
+        placeId: document.getElementById('edBlogPlaceId').value || null,
+        imageUrl: document.getElementById('edBlogImage').value,
+        tags: document.getElementById('edBlogTags').value,
+        featured: document.getElementById('edBlogFeatured').checked,
+        excerpt: document.getElementById('edBlogExcerpt').value,
+        body: document.getElementById('edBlogBody').value,
+      },
+    });
+    if (approveAfter) {
+      await api('/admin/blogs/' + id + '/approve', { method: 'POST' }).catch(() => {});
+    }
+    closeModal();
+    await refresh();
+    if (isContentPanelVisible('blog-posts')) await loadBlogPostsList();
+  } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(saveBtn, false); }
 }
 
 async function approveTiola(id) { try { await api('/admin/tiolas/' + id + '/approve', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
-async function rejectTiola(id) { try { await api('/admin/tiolas/' + id + '/reject', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
-async function approveBlog(id) { try { await api('/admin/blogs/' + id + '/approve', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
-async function rejectBlog(id) { try { await api('/admin/blogs/' + id + '/reject', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
+
+function rejectTiola(id) {
+  openModal('Tiola reddet', `
+    <p style="font-size:.85rem;color:var(--t2);margin:0 0 12px">Kullanıcıya gösterilecek red nedenini yazın.</p>
+    <label class="adm-label-sm full" for="rejectReason">Red nedeni *</label>
+    <textarea class="ain full adm-textarea-sm" id="rejectReason" rows="4" placeholder="Örn: Fotoğraf mekânla ilgili değil, spam içerik, eksik bilgi…" aria-required="true"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Reddet', primary: true, onClick: () => submitRejectTiola(id) },
+    ]
+  );
+  setTimeout(() => document.getElementById('rejectReason')?.focus(), 50);
+}
+
+async function submitRejectTiola(id) {
+  const reason = document.getElementById('rejectReason')?.value?.trim();
+  if (!reason) { showErr('Red nedeni gerekli'); return; }
+  const btn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(btn, true, 'Reddediliyor…');
+  try {
+    await api('/admin/tiolas/' + id + '/reject', { method: 'POST', body: { reason } });
+    closeModal();
+    refresh();
+  } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+async function approveBlog(id) {
+  try {
+    await api('/admin/blogs/' + id + '/approve', { method: 'POST' });
+    await refresh();
+    if (isContentPanelVisible('blog-posts')) await loadBlogPostsList();
+  } catch (e) { showErr(e.message); }
+}
+async function rejectBlog(id) {
+  try {
+    await api('/admin/blogs/' + id + '/reject', { method: 'POST' });
+    await refresh();
+    if (isContentPanelVisible('blog-posts')) await loadBlogPostsList();
+  } catch (e) { showErr(e.message); }
+}
 
 (async () => {
   try {

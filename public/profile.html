@@ -1,90 +1,433 @@
 <!DOCTYPE html>
+
 <html lang="tr">
+
 <head>
+
 <meta charset="UTF-8"/>
+
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+
 <meta name="robots" content="noindex, nofollow"/>
+
 <title>Profilim — Touristlio</title>
+
 <link rel="stylesheet" href="/css/style.css"/>
+
+<link rel="stylesheet" href="/css/inline-overrides.css"/>
+
 </head>
+
 <body>
+
 <nav class="tl-nav"><div class="nav-inner">
+
   <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span></span></a>
+
   <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46"/></a>
-  <div class="nav-r"><a href="/" class="btn nav-btn-ghost" style="text-decoration:none" data-i18n="explore">Keşfet</a>
+
+  <div class="nav-r"><a href="/" class="btn nav-btn-ghost nav-link-plain" data-i18n="explore">Keşfet</a>
+
   <button class="btn nav-btn-ghost" id="logoutBtn" onclick="doLogout()" data-i18n="logout">Çıkış</button></div>
+
 </div></nav>
+
 <div class="profile-wrap" id="profileRoot">
-  <div id="pLoginNotice" style="text-align:center;padding:80px 20px">
-    <div style="font-size:3rem;margin-bottom:12px">🔒</div>
-    <div style="font-family:var(--fd);font-size:1.3rem;font-weight:700;color:var(--navy);margin-bottom:7px" data-i18n="profileLoginTitle">Giriş Yapın</div>
+
+  <div id="pLoginNotice">
+
+    <div class="profile-login-icon">🔒</div>
+
+    <div class="profile-login-title" data-i18n="profileLoginTitle">Giriş Yapın</div>
+
     <a href="/login" class="btn bp" data-i18n="profileLoginBtn">Giriş Yap / Kayıt Ol</a>
+
   </div>
+
   <div id="pContent" style="display:none">
+
     <div class="prof-hd">
+
       <div class="prof-av" id="profAv">?</div>
-      <div><div class="prof-name" id="profName">—</div>
-      <div class="prof-stats">
-        <div class="psi"><span class="psi-n" id="pSavedCnt">0</span> <span data-i18n="profileStatSaved">Kaydedilen</span></div>
-        <div class="psi"><span class="psi-n" id="pVisitedCnt">0</span> <span data-i18n="profileStatVisited">Ziyaret</span></div>
-        <div class="psi"><span class="psi-n" id="pCountriesCnt">0</span> <span data-i18n="profileStatCountries">Ülke</span></div>
-      </div></div>
+
+      <div class="prof-hd-info">
+        <div class="prof-name" id="profName">—</div>
+        <div class="prof-meta" id="profMeta"></div>
+        <div class="prof-stats-grid">
+          <div class="prof-stat-card">
+            <span class="psi-n" id="pSavedCnt">0</span>
+            <span class="psi-l" data-i18n="profileStatSaved">Kaydedilen</span>
+          </div>
+          <div class="prof-stat-card">
+            <span class="psi-n" id="pVisitedCnt">0</span>
+            <span class="psi-l" data-i18n="profileStatVisited">Ziyaret</span>
+          </div>
+          <div class="prof-stat-card">
+            <span class="psi-n" id="pCountriesCnt">0</span>
+            <span class="psi-l" data-i18n="profileStatCountries">Ülke</span>
+          </div>
+        </div>
+      </div>
+
     </div>
-    <h3 style="font-family:var(--fd);color:var(--navy)" data-i18n="profileTabSaved">❤️ Kaydedilenler</h3>
+
+    <div class="prof-activity-bar" id="profActivityBar" style="display:none" aria-live="polite"></div>
+
+    <div class="profile-content-card">
+    <h3 class="profile-section-title" data-i18n="profileTabSaved">❤️ Kaydedilenler</h3>
+
     <div class="pgrid" id="savedGrid"></div>
+
     <div class="empty-state" id="savedEmpty"><div class="empty-icon">❤️</div><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.</p></div>
+    </div>
+
+    <div class="profile-settings-card">
+
+      <h3 class="profile-settings-title" data-i18n="settingsTitle">Hesap Ayarları</h3>
+      <p class="profile-settings-lead" data-i18n="settingsLead">Profilinizi, güvenliğinizi ve görünümünüzü buradan yönetin.</p>
+
+      <section class="settings-section">
+        <h4 class="settings-section-title" data-i18n="settingsSectionAvatar">Görünüm</h4>
+        <div class="settings-block avatar-settings-block">
+          <h4 class="settings-subtitle" data-i18n="avatarTitle">Profil avatarı</h4>
+          <p class="settings-note" data-i18n="avatarSub">Gezi ve hayvan sembollerinden seçin veya kendi fotoğrafınızı yükleyin.</p>
+          <div class="avatar-preview-row">
+            <div class="avatar-preview-wrap"><div class="prof-av" id="avatarPreview"></div></div>
+            <div class="avatar-picker-panel">
+              <div id="avatarPickGrid" class="avatar-pick-grid"></div>
+              <div class="avatar-color-label" data-i18n="avatarColorLabel">Arka plan rengi</div>
+              <div id="avatarColorRow" class="av-color-row"></div>
+              <div class="avatar-upload-row">
+                <label class="btn bo bsm"><span data-i18n="avatarUpload">Fotoğraf yükle</span><input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden/></label>
+                <button type="button" class="btn bp bsm" id="btnSaveAvatar" onclick="saveAvatarPreset()" data-i18n="avatarSave">Kaydet</button>
+              </div>
+              <p class="avatar-upload-hint" data-i18n="avatarHint">Yuvarlak kırpılmış görünüm · max 3 MB</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h4 class="settings-section-title" data-i18n="settingsSectionAccount">Hesap</h4>
+        <div class="settings-block">
+          <label class="settings-label" data-i18n="settingsEmailLabel">E-posta adresi</label>
+          <div class="settings-email-row">
+            <span id="settingsEmail" class="settings-email">—</span>
+            <span id="settingsEmailBadge" class="settings-badge"></span>
+          </div>
+          <button type="button" class="btn bo bsm" id="btnResendVerify" style="display:none" onclick="resendVerificationEmail()" data-i18n="settingsResendVerify">Doğrulama e-postası gönder</button>
+        </div>
+        <div class="settings-block">
+          <h4 class="settings-subtitle" data-i18n="settingsChangeEmail">E-posta değiştir</h4>
+          <input class="ain settings-inp" id="emailNew" type="email" autocomplete="email" data-i18n-placeholder="settingsNewEmail" placeholder="Yeni e-posta"/>
+          <input class="ain settings-inp" id="emailPass" type="password" autocomplete="current-password" data-i18n-placeholder="settingsConfirmPassword" placeholder="Onay için mevcut şifre"/>
+          <button type="button" class="btn bp bsm" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h4 class="settings-section-title" data-i18n="settingsSectionSecurity">Güvenlik</h4>
+        <div class="settings-block">
+          <h4 class="settings-subtitle" data-i18n="settingsChangePassword">Şifre değiştir</h4>
+          <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
+          <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 8 karakter)"/>
+          <button type="button" class="btn bp bsm" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
+        </div>
+        <p class="settings-note" data-i18n="settingsNote">Şifre en az 8 karakter, bir büyük harf ve bir rakam içermelidir.</p>
+      </section>
+
+      <div class="settings-block settings-logout-block">
+        <button type="button" class="btn bo bsm bdanger" onclick="doLogout()" data-i18n="settingsLogout">Çıkış Yap</button>
+      </div>
+
+    </div>
+
   </div>
+
 </div>
+
 <script src="/js/i18n.js"></script>
+<script src="/js/avatars.js"></script>
+<script src="/js/avatar-crop.js"></script>
+<script src="/js/toast.js"></script>
+
 <script>
+
 const lang = localStorage.getItem('tl_lang') || 'tr';
+
 window.TL_I18N.apply(lang);
+
+function t(k){ return window.TL_I18N.t(lang,k); }
+
 function escapeHtml(s) {
+
   if (s == null) return '';
+
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
 }
+
 function safeUrl(url) {
+
   const s = String(url || '').trim();
+
   if (/^https?:\/\//i.test(s) && !/^javascript:/i.test(s)) return s;
+
   if (s.startsWith('/') && !s.startsWith('//')) return s;
+
   return '/images/icon.svg';
+
 }
-async function api(path){
-  const res = await fetch('/api'+path, { credentials:'include' });
-  const data = await res.json();
-  if(!res.ok) throw new Error(data.error);
+
+function apiErrorMessage(data) {
+  const err = data?.error;
+  if (typeof err === 'string' && err) return err;
+  if (err && typeof err === 'object') {
+    if (typeof err.message === 'string' && err.message) return err.message;
+    if (Array.isArray(err) && err[0]?.msg) return err[0].msg;
+  }
+  if (Array.isArray(data?.errors) && data.errors[0]?.msg) return data.errors[0].msg;
+  return t('requestFailed');
+}
+
+async function api(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  const isForm = opts.body instanceof FormData;
+  if (!isForm && opts.body != null) headers['Content-Type'] = 'application/json';
+  const body = isForm ? opts.body : (opts.body != null ? JSON.stringify(opts.body) : undefined);
+  const res = await fetch('/api' + path, { ...opts, headers, body, credentials: 'include' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = apiErrorMessage(data);
+    window.TL_TOAST?.error(msg);
+    throw new Error(msg);
+  }
   if (data.success === true && data.data != null) return data.data;
   return data;
 }
-async function init(){
+
+function renderProfileMeta(u) {
+  const meta = document.getElementById('profMeta');
+  if (!meta || !u) return;
+  const verified = u.emailVerified ? t('settingsEmailVerified') : t('settingsEmailPending');
+  meta.textContent = u.email ? `${u.email} · ${verified}` : '';
+}
+
+function renderProfileActivitySummary({ saved = 0, visited = 0, countries = 0 }) {
+  const bar = document.getElementById('profActivityBar');
+  if (!bar) return;
+  if (!saved && !visited && !countries) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <div class="prof-activity-item"><strong>${saved}</strong><span>${t('profileStatSaved')}</span></div>
+    <div class="prof-activity-item"><strong>${visited}</strong><span>${t('profileStatVisited')}</span></div>
+    <div class="prof-activity-item"><strong>${countries}</strong><span>${t('profileStatCountries')}</span></div>`;
+}
+
+function renderProfileSettings(u) {
+
+  document.getElementById('settingsEmail').textContent = u.email || '—';
+
+  const badgeEl = document.getElementById('settingsEmailBadge');
+
+  const verified = !!u.emailVerified;
+
+  badgeEl.textContent = verified ? t('settingsEmailVerified') : t('settingsEmailPending');
+
+  badgeEl.className = 'settings-badge ' + (verified ? 'ok' : 'pending');
+
+  document.getElementById('btnResendVerify').style.display = verified ? 'none' : '';
+
+  renderProfileMeta(u);
+
+}
+
+async function submitChangePassword() {
+
   try {
+
+    await api('/auth/change-password', { method:'POST', body: { currentPassword: pwdCurrent.value, password: pwdNew.value } });
+
+    pwdCurrent.value = ''; pwdNew.value = '';
+
+    alert(t('settingsPasswordUpdated'));
+
+  } catch (e) { alert(e.message); }
+
+}
+
+async function submitChangeEmail() {
+
+  try {
+
+    const data = await api('/auth/change-email', { method:'POST', body: { email: emailNew.value, password: emailPass.value } });
+
+    if (data.user) renderProfileSettings(data.user);
+
+    emailNew.value = ''; emailPass.value = '';
+
+    alert(t('settingsEmailUpdated'));
+
+  } catch (e) { alert(e.message); }
+
+}
+
+async function resendVerificationEmail() {
+
+  try {
+
+    await api('/auth/resend-verification', { method:'POST', body: {} });
+
+    alert(t('settingsVerifySent'));
+
+  } catch (e) { alert(e.message); }
+
+}
+
+async function init(){
+
+  try {
+
     const me = await api('/auth/me');
+
     document.getElementById('pLoginNotice').style.display='none';
+
     document.getElementById('pContent').style.display='block';
+
     document.getElementById('profName').textContent = me.user.name;
-    document.getElementById('profAv').textContent = me.user.name[0];
+
+    window.TL_AVATARS?.applyToElement(document.getElementById('profAv'), me.user);
+    renderProfileMeta(me.user);
+    initAvatarSettings(me.user);
+
+    renderProfileSettings(me.user);
+
     const [saved, visited] = await Promise.all([
+
       api('/places/saved/all'),
+
       api('/travel-lists/visited/stats'),
+
     ]);
+
     document.getElementById('pSavedCnt').textContent = saved.places.length;
+
     document.getElementById('pVisitedCnt').textContent = visited.totalVisited || 0;
+
     document.getElementById('pCountriesCnt').textContent = visited.countriesVisited || 0;
+
+    renderProfileActivitySummary({
+      saved: saved.places.length,
+      visited: visited.totalVisited || 0,
+      countries: visited.countriesVisited || 0,
+    });
+
     const sg = document.getElementById('savedGrid');
+
     const se = document.getElementById('savedEmpty');
+
     if(!saved.places.length){ sg.innerHTML=''; se.style.display='block'; }
+
     else {
+
       se.style.display='none';
+
       sg.innerHTML = saved.places.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img"><img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}"/></div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></div>`).join('');
+
     }
+
   } catch { /* login notice shown */ }
+
 }
+
+let avatarPick = { preset: 'traveler', color: '#0ea5e9' };
+
+function initAvatarSettings(u) {
+  const grid = document.getElementById('avatarPickGrid');
+  const colors = document.getElementById('avatarColorRow');
+  const preview = document.getElementById('avatarPreview');
+  if (!grid || !window.TL_AVATARS) return;
+  avatarPick.preset = u.avatarUrl ? avatarPick.preset : (u.avatarPreset || 'none');
+  avatarPick.color = u.avatarColor || avatarPick.color;
+  const picker = window.TL_AVATARS.renderPickerGrid(avatarPick.preset, avatarPick.color, ({ preset, color }) => {
+    if (preset) avatarPick.preset = preset;
+    if (color) avatarPick.color = color;
+    initAvatarSettings({ ...u, avatarPreset: avatarPick.preset, avatarColor: avatarPick.color, avatarUrl: null });
+  });
+  grid.innerHTML = picker.presetHtml;
+  colors.innerHTML = picker.colorHtml;
+  picker.bind(grid.parentElement);
+  window.TL_AVATARS.applyToElement(preview, { name: u.name, avatarPreset: avatarPick.preset, avatarColor: avatarPick.color, avatarUrl: u.avatarUrl });
+  const fileInp = document.getElementById('avatarFile');
+  if (fileInp && !fileInp._bound) {
+    fileInp._bound = true;
+    fileInp.onchange = () => {
+      const file = fileInp.files?.[0];
+      fileInp.value = '';
+      if (!file) return;
+      window.TL_AVATAR_CROP?.open(file, (cropped) => uploadAvatarFile(cropped));
+    };
+  }
+}
+
+async function saveAvatarPreset() {
+  try {
+    const data = await api('/auth/avatar', { method: 'PATCH', body: { avatarPreset: avatarPick.preset, avatarColor: avatarPick.color } });
+    if (data.user) {
+      window.TL_AVATARS.applyToElement(document.getElementById('profAv'), data.user);
+      initAvatarSettings(data.user);
+      window.TL_TOAST?.success(t('avatarSaved'));
+    } else {
+      window.TL_TOAST?.error(t('avatarSaveFailed'));
+    }
+  } catch { /* toast from api */ }
+}
+
+async function uploadAvatarFile(file) {
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    window.TL_TOAST?.error(t('avatarFileTooBig'));
+    return;
+  }
+  if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+    window.TL_TOAST?.error(t('avatarFileType'));
+    return;
+  }
+  const fd = new FormData();
+  fd.append('photo', file);
+  try {
+    const data = await api('/auth/avatar-upload', { method: 'POST', body: fd });
+    if (data.user) {
+      window.TL_AVATARS.applyToElement(document.getElementById('profAv'), data.user);
+      initAvatarSettings(data.user);
+      window.TL_TOAST?.success(t('avatarSaved'));
+    } else {
+      window.TL_TOAST?.error(t('avatarUploadFailed'));
+    }
+  } catch { /* toast from api */ }
+  const inp = document.getElementById('avatarFile');
+  if (inp) inp.value = '';
+}
+
 async function doLogout(){
+
   await fetch('/api/auth/logout', { method:'POST', credentials:'include' });
+
   localStorage.removeItem('tl_token'); localStorage.removeItem('tl_user');
+
   location.href='/login';
+
 }
+
 init();
+
 </script>
+
 </body>
+
 </html>
+

@@ -1,16 +1,22 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('./db');
-const { rolePermissions } = require('./middleware/rbac');
+const { effectivePermissions } = require('./middleware/rbac');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+
+const WEAK_JWT_SECRETS = new Set([
+  'dev-secret-change-me',
+  'change-this-to-a-long-random-string',
+  'touristlio-dev-secret-change-in-production',
+]);
 
 function validateJwtSecret() {
   const secret = process.env.JWT_SECRET;
   if (process.env.NODE_ENV !== 'production') return;
-  if (!secret || secret.length < 32 || secret === 'dev-secret-change-me') {
+  if (!secret || secret.length < 32 || WEAK_JWT_SECRETS.has(secret)) {
     throw new Error(
-      'JWT_SECRET must be set to a long random string (32+ chars) in production. See .env.example.',
+      'JWT_SECRET must be set to a long random string (32+ chars) in production. Run: npm run generate:jwt-secret',
     );
   }
 }
@@ -37,13 +43,15 @@ function comparePassword(password, hash) {
 
 function sanitizeUser(row) {
   if (!row) return null;
-  const permissions = row.role === 'admin' ? null : rolePermissions(row.role);
+  const permissions = row.role === 'admin' ? null : effectivePermissions(row.role);
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     role: row.role,
     avatarColor: row.avatar_color,
+    avatarUrl: row.avatar_url || null,
+    avatarPreset: row.avatar_preset || null,
     createdAt: row.created_at,
     emailVerified: !!row.email_verified,
     riskScore: row.risk_score || 0,
