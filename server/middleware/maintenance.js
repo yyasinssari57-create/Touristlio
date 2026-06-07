@@ -6,6 +6,7 @@ function maintenanceMiddleware(req, res, next) {
   if (req.path.startsWith('/api/auth/me')) return next();
   if (req.path.startsWith('/api/auth/logout')) return next();
   if (req.path.startsWith('/api/admin')) return next();
+  if (req.path.startsWith('/api/analytics')) return next();
 
   const settings = settingsService.getAll();
   if (settings.maintenance_mode !== 'true') return next();

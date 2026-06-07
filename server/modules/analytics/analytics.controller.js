@@ -12,21 +12,27 @@ function track(req, res) {
 }
 
 function visitors(_req, res) {
-  return ok(res, visitorService.visitorDashboard());
+  try {
+    return ok(res, visitorService.visitorDashboard());
+  } catch (err) {
+    return fail(res, 'Ziyaretçi analitiği yüklenemedi', err.status || 500);
+  }
 }
 
 function summary(_req, res) {
-
-  return ok(res, analyticsService.dashboard());
-
+  try {
+    return ok(res, analyticsService.dashboard());
+  } catch (err) {
+    return fail(res, 'Özet istatistikler yüklenemedi', err.status || 500);
+  }
 }
 
-
-
 function quality(_req, res) {
-
-  return ok(res, analyticsService.contentQuality());
-
+  try {
+    return ok(res, analyticsService.contentQuality());
+  } catch (err) {
+    return fail(res, 'Kalite metrikleri yüklenemedi', err.status || 500);
+  }
 }
 
 
@@ -38,15 +44,27 @@ function categories(_req, res) {
 }
 
 function timeseries(_req, res) {
-  return ok(res, analyticsService.timeseries());
+  try {
+    return ok(res, analyticsService.timeseries());
+  } catch (err) {
+    return fail(res, 'Zaman serisi yüklenemedi', err.status || 500);
+  }
 }
 
 function topPlaces(_req, res) {
-  return ok(res, { places: analyticsService.topPlaces() });
+  try {
+    return ok(res, { places: analyticsService.topPlaces() });
+  } catch (err) {
+    return fail(res, 'En çok Tiola listesi yüklenemedi', err.status || 500);
+  }
 }
 
 function topUsers(_req, res) {
-  return ok(res, { users: analyticsService.topUsers() });
+  try {
+    return ok(res, { users: analyticsService.topUsers() });
+  } catch (err) {
+    return fail(res, 'En aktif kullanıcılar yüklenemedi', err.status || 500);
+  }
 }
 
 module.exports = {

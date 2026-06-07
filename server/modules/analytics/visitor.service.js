@@ -121,6 +121,34 @@ function trackEvent(req, res, payload) {
   return { ok: true };
 }
 
+function analyticsTablesReady() {
+  const count = db.prepare(
+    "SELECT COUNT(*) AS c FROM sqlite_master WHERE type='table' AND name IN ('analytics_sessions', 'analytics_events')",
+  ).get().c;
+  return count === 2;
+}
+
+function emptyVisitorDashboard() {
+  const days = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    days.push(db.prepare(`SELECT date('now', '-' || ? || ' days') AS day`).get(i).day);
+  }
+  return {
+    onlineNow: 0,
+    todayPageViews: 0,
+    todayUniqueVisitors: 0,
+    todayAvgDurationSec: 0,
+    todayAvgDurationLabel: '0 sn',
+    members: 0,
+    guests: 0,
+    memberPercent: 0,
+    guestPercent: 0,
+    topTabs: [],
+    timeseries: { days, visits: days.map(() => 0), visitors: days.map(() => 0) },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function formatDuration(sec) {
   const s = Math.max(0, Math.round(sec || 0));
   if (s < 60) return `${s} sn`;
@@ -133,6 +161,8 @@ function formatDuration(sec) {
 }
 
 function visitorDashboard() {
+  if (!analyticsTablesReady()) return emptyVisitorDashboard();
+
   const onlineNow = db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_sessions
     WHERE datetime(last_seen_at) >= datetime('now', '-5 minutes')

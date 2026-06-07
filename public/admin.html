@@ -1400,6 +1400,17 @@ async function uploadPlacePhotos(placeId, inputId, opts = {}) {
   return data;
 }
 
+function turkishFetchError(err) {
+  const msg = String(err?.message || '');
+  if (msg === 'Failed to fetch' || err?.name === 'TypeError') {
+    return 'Analitik verileri alınamadı. Sunucuya bağlanılamadı — sunucunun çalıştığından ve oturumunuzun açık olduğundan emin olun.';
+  }
+  if (/network|aborted|timeout/i.test(msg)) {
+    return 'Ağ bağlantısı kesildi. Lütfen tekrar deneyin.';
+  }
+  return msg || 'Veri getirilemedi';
+}
+
 async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   const isForm = opts.body instanceof FormData;
@@ -1409,7 +1420,12 @@ async function api(path, opts = {}) {
   } else if (!isForm && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
-  const res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
+  let res;
+  try {
+    res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
+  } catch (err) {
+    throw new Error(turkishFetchError(err));
+  }
   let data = {};
   try { data = await res.json(); } catch { /* boş yanıt */ }
   if (!res.ok || data.success === false) {
@@ -3809,8 +3825,17 @@ async function loadAnalytics() {
       }, 30000);
     }
   } catch (e) {
-    visitorCardsEl.innerHTML = `<p class="adm-analytics-error">${escapeHtml(e.message)}</p>`;
-    cardsEl.innerHTML = '';
+    const errMsg = escapeHtml(e.message || 'Analitik verileri yüklenemedi.');
+    visitorCardsEl.innerHTML = `<p class="adm-analytics-error">${errMsg}</p>`;
+    cardsEl.innerHTML = `<p class="adm-analytics-error">${errMsg}</p>`;
+    if (liveEl) liveEl.innerHTML = '';
+    if (visitorChartEl) visitorChartEl.innerHTML = `<p class="adm-analytics-error">${errMsg}</p>`;
+    if (topTabsEl) topTabsEl.innerHTML = '';
+    if (memberGuestEl) memberGuestEl.innerHTML = '';
+    if (chartEl) chartEl.innerHTML = `<p class="adm-analytics-error">${errMsg}</p>`;
+    if (placesEl) placesEl.innerHTML = '';
+    if (usersEl) usersEl.innerHTML = '';
+    if (qEl) qEl.innerHTML = '';
   }
 }
 
