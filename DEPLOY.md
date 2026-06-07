@@ -44,7 +44,7 @@ Deploy başlamadan veya ilk deploy sonrası **Environment** sekmesinde aşağıd
 | Değişken | Örnek | Açıklama |
 |----------|-------|----------|
 | `SITE_URL` | `https://touristlio.onrender.com` veya `https://touristlio.com` | CSRF, e-posta ve sitemap linkleri. **Gerçek kullanıcı URL’si ile birebir aynı olmalı** (sondaki `/` yok). |
-| `CORS_ORIGIN` | Aynı URL | Tarayıcı CORS; genelde `SITE_URL` ile aynı |
+| `CORS_ORIGIN` | `https://touristlio.com` veya virgülle iki origin | Tarayıcı CORS; genelde `SITE_URL` ile aynı. Kod otomatik olarak `www` eşini de kabul eder; yine de `www` DNS’i apex’e yönlendiriyorsa sorun çıkmaz |
 | `ADMIN_EMAIL` | `admin@touristlio.com` | İlk admin hesabı |
 | `ADMIN_PASSWORD` | güçlü şifre | Seed/ensure-admin ile kullanılır |
 | `SMTP_HOST` | `smtp-relay.brevo.com` | E-posta doğrulama / şifre sıfırlama |
@@ -107,8 +107,9 @@ npm run verify:smtp
 
 1. Render → **Settings** → **Custom Domains** → `touristlio.com` ekle
 2. DNS’te Render’ın verdiği CNAME/A kaydını ayarla
-3. **Environment**’ta `SITE_URL` ve `CORS_ORIGIN` değerlerini `https://touristlio.com` yap
-4. **Manual Deploy** → redeploy
+3. **Environment**’ta `SITE_URL` ve `CORS_ORIGIN` değerlerini `https://touristlio.com` yap (`www` olmadan apex tercih edilir; sunucu `www` isteklerini apex’e 301 yönlendirir)
+4. İsteğe bağlı: `CORS_ORIGIN=https://touristlio.com,https://www.touristlio.com` (otomatik genişletme varken zorunlu değil)
+5. **Manual Deploy** → redeploy
 
 ### 7. Admin girişi
 
@@ -140,6 +141,7 @@ npm run verify:smtp
 | Build `npm ci` → `gyp ERR!` / `better-sqlite3` | Eski Node (ör. 20.3.0), prebuild yok | Repoyu çekin; `NODE_VERSION` / `.node-version` = `22.16.0`; Manual Deploy |
 | Sunucu hemen kapanıyor | `JWT_SECRET` eksik/zayıf | Environment’ta 32+ karakter secret; Blueprint `generateValue` kullanıyorsa redeploy |
 | Giriş/kayıt 403 CSRF | `SITE_URL` yanlış | Tarayıcıdaki URL ile `SITE_URL` origin’i eşleştir |
+| Admin/API 500, `www` ile açılıyor | `CORS_ORIGIN` sadece apex | `https://touristlio.com/admin` kullanın veya Render’da `CORS_ORIGIN`’e `https://www.touristlio.com` ekleyin; güncel kod apex+www’yi otomatik kabul eder |
 | E-posta gitmiyor | SMTP eksik/yanlış | Brevo SMTP anahtarı + doğrulanmış `SMTP_FROM`; `verify:smtp` |
 | Boş site / yer yok | Seed çalışmadı | Shell: `npm run seed` |
 | Kayıtlı kullanıcı admin’de yok / “sıfırlanmış” gibi | **Ücretsiz plan** — SQLite kalıcı değil; redeploy veya servis yeniden başlatınca `data/touristlio.db` silinir. `SEED_ON_START` sadece yerleri/admin’i doldurur, kullanıcı silmez. | Starter plan + disk (`STORAGE_PERSISTENT=true`) veya VPS/PostgreSQL; admin Özet’te uyarı görünür |

@@ -17,6 +17,7 @@ const { uploadsStaticHeaders } = require('./middleware/uploads-static');
 const { staticAssetHeaders } = require('./middleware/static-cache');
 const { sendPublicHtml, publicHtmlMiddleware } = require('./lib/send-public-html');
 const { getAppVersion } = require('./lib/app-version');
+const { parseCorsOrigins } = require('./lib/cors-origins');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -49,10 +50,24 @@ if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
 }
 
-const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
+
+if (isProd) {
+  app.use((req, res, next) => {
+    const siteUrl = process.env.SITE_URL;
+    if (!siteUrl) return next();
+    try {
+      const canonical = new URL(siteUrl.replace(/\/$/, ''));
+      if (canonical.hostname.startsWith('www.')) return next();
+      const host = (req.get('host') || '').split(':')[0];
+      if (host.startsWith('www.') && host.slice(4) === canonical.hostname) {
+        const port = canonical.port ? `:${canonical.port}` : '';
+        return res.redirect(301, `${canonical.protocol}//${canonical.hostname}${port}${req.originalUrl}`);
+      }
+    } catch { /* ignore invalid SITE_URL */ }
+    next();
+  });
+}
 
 app.use(helmet({
   contentSecurityPolicy: isProd ? {
