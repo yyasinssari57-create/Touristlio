@@ -2165,6 +2165,7 @@ async function init() {
     await applyRouteFromUrl();
   } finally {
     window.TL_LOADER?.hide();
+    document.documentElement.classList.add('tl-ready');
   }
 }
 

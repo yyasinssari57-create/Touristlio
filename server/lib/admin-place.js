@@ -28,7 +28,14 @@ function mapAdminPlace(row) {
   };
 }
 
-function listAdminPlaces({ q, limit = 100, offset = 0, status, includeArchived = false } = {}) {
+const ISSUE_FILTERS = {
+  noCoords: 'lat IS NULL OR lng IS NULL',
+  noPhoto: "photos IS NULL OR photos = '[]' OR photos = ''",
+  noFaq: "faq_tr IS NULL OR faq_tr = '[]'",
+  shortDesc: 'length(description) < 80',
+};
+
+function listAdminPlaces({ q, limit = 100, offset = 0, status, issue, includeArchived = false } = {}) {
   let where = '1=1';
   const params = [];
   if (status && VALID_STATUS.has(status)) {
@@ -36,6 +43,9 @@ function listAdminPlaces({ q, limit = 100, offset = 0, status, includeArchived =
     params.push(status);
   } else if (!includeArchived) {
     where += " AND COALESCE(status, 'published') != 'archived'";
+  }
+  if (issue && ISSUE_FILTERS[issue]) {
+    where += ` AND (${ISSUE_FILTERS[issue]})`;
   }
   if (q) {
     where += ' AND (name LIKE ? OR city LIKE ? OR country LIKE ?)';
@@ -285,4 +295,5 @@ module.exports = {
   countPlaceTiolas,
   mapAdminPlace,
   VALID_STATUS,
+  ISSUE_FILTERS,
 };

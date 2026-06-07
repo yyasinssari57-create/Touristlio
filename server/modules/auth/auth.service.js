@@ -17,8 +17,9 @@ const DUMMY_PASSWORD_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJ
 
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  secure: process.env.COOKIE_SECURE === 'true'
+    || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'),
+  sameSite: process.env.COOKIE_SAMESITE || 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: '/',
 };
@@ -34,7 +35,12 @@ function setAuthCookie(res, token) {
 }
 
 function clearAuthCookie(res) {
-  res.clearCookie('tl_token', { path: '/' });
+  res.clearCookie('tl_token', {
+    path: '/',
+    httpOnly: true,
+    secure: COOKIE_OPTS.secure,
+    sameSite: COOKIE_OPTS.sameSite,
+  });
 }
 
 function isLocked(row) {

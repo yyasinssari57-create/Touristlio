@@ -216,6 +216,35 @@ async function sendBlogRejectionEmail(email, { userName, title, reason, profileU
   });
 }
 
+async function sendAdminMessageEmail(email, { userName, subject, body, siteUrl }) {
+  const safeName = userName || 'Gezgin';
+  const safeSubject = subject || 'Touristlio';
+  const safeBody = body || '';
+  const text = [
+    `Touristlio — ${safeSubject}`,
+    '',
+    `Merhaba ${safeName},`,
+    '',
+    safeBody,
+    '',
+    siteUrl ? `Site: ${siteUrl}` : '',
+    '',
+    'Touristlio ekibi',
+  ].filter(Boolean).join('\n');
+  const html = buildHtmlEmail({
+    title: safeSubject,
+    intro: `Merhaba ${safeName},\n\n${safeBody}`,
+    actionLabel: 'Touristlio\'ya git',
+    actionUrl: siteUrl || (process.env.SITE_URL || 'http://localhost:3000'),
+  });
+  return sendMail({
+    to: email,
+    subject: `Touristlio — ${safeSubject}`,
+    text,
+    html,
+  });
+}
+
 module.exports = {
   isConfigured,
   sendMail,
@@ -223,4 +252,5 @@ module.exports = {
   sendVerificationEmail,
   sendTiolaRejectionEmail,
   sendBlogRejectionEmail,
+  sendAdminMessageEmail,
 };

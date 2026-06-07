@@ -22,7 +22,11 @@ router.get('/quality', controller.quality);
 
 router.get('/categories', controller.categories);
 
+router.get('/timeseries', controller.timeseries);
 
+router.get('/top-places', controller.topPlaces);
+
+router.get('/top-users', controller.topUsers);
 
 module.exports = router;
 

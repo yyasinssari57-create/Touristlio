@@ -28,6 +28,8 @@ const DEFAULTS = {
   blog_featured_lbl_en: 'Featured',
   blog_view_place_tr: 'Mekânı gör',
   blog_view_place_en: 'View place',
+  maintenance_mode: 'false',
+  maintenance_message: 'Site bakımda. Lütfen daha sonra tekrar deneyin.',
 };
 
 function getAll() {

@@ -115,10 +115,10 @@
       items.push(`<button type="button" role="menuitem" onclick="event.stopPropagation();TL_REPORTS.open('${targetType}',${targetId},'${safeLabel.replace(/"/g, '&quot;')}');TL_REPORTS.closeMenus()">${t('reportBtn') || 'Şikayet et'}</button>`);
     }
 
-    return `<div class="report-menu-wrap" onclick="event.stopPropagation()">
+    return `<div class="report-menu-wrap">
       <button type="button" class="report-menu-btn" title="Menü" aria-label="Menü" aria-haspopup="true"
-        onclick="event.stopPropagation();event.preventDefault();TL_REPORTS.toggleMenu('${menuId}',event)">⋯</button>
-      <div class="report-menu-drop" id="${menuId}" role="menu" hidden onclick="event.stopPropagation()">
+        aria-controls="${menuId}" data-menu-id="${menuId}">⋯</button>
+      <div class="report-menu-drop" id="${menuId}" role="menu" hidden>
         ${items.join('')}
       </div>
     </div>`;
@@ -126,8 +126,31 @@
 
   function closeMenus() {
     document.querySelectorAll('.report-menu-drop').forEach((el) => { el.hidden = true; });
-    document.querySelectorAll('.report-menu-wrap.is-open').forEach((el) => el.classList.remove('is-open'));
+    document.querySelectorAll('.report-menu-wrap.is-open').forEach((el) => {
+      el.classList.remove('is-open');
+      el.classList.remove('drop-up');
+    });
     document.querySelectorAll('.bcard.menu-open').forEach((el) => el.classList.remove('menu-open'));
+  }
+
+  function positionMenuDrop(wrap, drop) {
+    if (!wrap || !drop) return;
+    wrap.classList.remove('drop-up');
+    const scrollBox = drop.closest('.blog-detail-box');
+    if (scrollBox) {
+      wrap.classList.add('drop-up');
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (drop.hidden) return;
+      const dropRect = drop.getBoundingClientRect();
+      const overflowParent = drop.closest('.bcard, .tiola-card, .ri, .blog-detail-box');
+      if (!overflowParent) return;
+      const parentRect = overflowParent.getBoundingClientRect();
+      if (dropRect.bottom > parentRect.bottom - 4 || dropRect.height === 0) {
+        wrap.classList.add('drop-up');
+      }
+    });
   }
 
   function toggleMenu(menuId, ev) {
@@ -143,10 +166,23 @@
     if (!el.hidden) {
       wrap?.classList.add('is-open');
       card?.classList.add('menu-open');
+      positionMenuDrop(wrap, el);
     }
   }
 
   document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.report-menu-btn');
+    if (!btn) return;
+    const menuId = btn.dataset.menuId;
+    if (!menuId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleMenu(menuId, e);
+  }, true);
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.report-menu-btn')) return;
+    if (e.target.closest('.report-menu-drop')) return;
     if (e.target.closest('.report-menu-wrap')) return;
     closeMenus();
   });

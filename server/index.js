@@ -14,6 +14,11 @@ const { clear: clearCache } = require('./lib/cache');
 const { authRequired, requireRole } = require('./middleware/auth');
 const { csrfProtection } = require('./middleware/csrf');
 const { uploadsStaticHeaders } = require('./middleware/uploads-static');
+const { staticAssetHeaders } = require('./middleware/static-cache');
+const { sendPublicHtml, publicHtmlMiddleware } = require('./lib/send-public-html');
+const { getAppVersion } = require('./lib/app-version');
+
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 validateJwtSecret();
 validateProductionEnv();
@@ -53,7 +58,7 @@ app.use(helmet({
   contentSecurityPolicy: isProd ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
@@ -75,6 +80,8 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+const { maintenanceMiddleware } = require('./middleware/maintenance');
+app.use(maintenanceMiddleware);
 app.use('/api/', apiLimiter);
 
 app.use((req, res, next) => {
@@ -86,7 +93,11 @@ app.use((req, res, next) => {
 });
 
 app.use('/uploads', uploadsStaticHeaders, express.static(path.join(__dirname, '..', 'uploads')));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(publicHtmlMiddleware(PUBLIC_DIR));
+app.use(express.static(PUBLIC_DIR, {
+  index: false,
+  setHeaders: staticAssetHeaders,
+}));
 
 app.use('/api/auth', csrfProtection, authRoutes);
 app.use('/api/places', placesRoutes);
@@ -107,7 +118,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/profiles', csrfProtection, profilesRoutes);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'Touristlio', version: '2.0.0', ts: new Date().toISOString() });
+  res.json({ ok: true, service: 'Touristlio', version: getAppVersion(), ts: new Date().toISOString() });
 });
 
 app.get('/api/config/public', (_req, res) => {
@@ -145,43 +156,44 @@ app.get('/sitemap.xml', (_req, res, next) => {
 });
 
 app.get('/admin', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'admin.html');
 });
 
 app.get('/login', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'login.html');
 });
 
 app.get('/register', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'register.html');
 });
 
 app.get('/profile', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'profile.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'profile.html');
 });
 
 app.get('/verify-email', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'verify-email.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'verify-email.html');
 });
 
 app.get('/reset-password', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'reset-password.html');
 });
 
 app.get('/search', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'search.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'search.html');
 });
 
 app.get('/gezilecek-yerler', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   if (req.path.match(/\.(html|xml|txt|css|js|png|jpg|svg|webp|ico)$/)) {
-    return res.status(404).sendFile(path.join(__dirname, '..', 'public', '404.html'));
+    res.status(404);
+    return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });
 
 app.use((err, req, res, _next) => {
@@ -191,7 +203,8 @@ app.use((err, req, res, _next) => {
     const message = isProd ? 'Sunucu hatası' : (err.message || 'Sunucu hatası');
     return res.status(500).json({ error: message });
   }
-  res.status(500).sendFile(path.join(__dirname, '..', 'public', '500.html'));
+  res.status(500);
+  sendPublicHtml(res, PUBLIC_DIR, '500.html');
 });
 
 function spawnSitemapIfStale() {
@@ -218,14 +231,24 @@ app.listen(PORT, () => {
   logger.info(`Search → http://localhost:${PORT}/search`);
   logger.info(`Gezilecek Yerler → http://localhost:${PORT}/?tab=places`);
   spawnSitemapIfStale();
+  try {
+    const { publishDueBlogs } = require('./lib/blog-scheduler');
+    const n = publishDueBlogs();
+    if (n) logger.info({ msg: 'Startup scheduled blog publish', count: n });
+  } catch { /* scheduler optional */ }
 });
 
 if (process.env.LIVE_DATA_CRON !== 'false') {
   const cron = require('node-cron');
   const { refreshAllPlaces } = require('./services/liveDataService');
+  const { publishDueBlogs } = require('./lib/blog-scheduler');
   cron.schedule('0 */6 * * *', () => {
     const n = refreshAllPlaces();
     logger.info({ msg: 'Live data cron', places: n });
+  });
+  cron.schedule('*/5 * * * *', () => {
+    const n = publishDueBlogs();
+    if (n) logger.info({ msg: 'Scheduled blogs published', count: n });
   });
 }
 

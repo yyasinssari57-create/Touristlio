@@ -31,18 +31,37 @@ function checkPermission(...required) {
   };
 }
 
-function computeUserRiskScore(userId) {
+function computeUserRiskReasons(userId) {
   const user = db.prepare('SELECT created_at FROM users WHERE id = ?').get(userId);
-  if (!user) return 0;
+  if (!user) return [];
+  const reasons = [];
   const ageDays = (Date.now() - new Date(user.created_at + 'Z').getTime()) / 86400000;
+  if (ageDays < 2) {
+    reasons.push({ code: 'new_account', label: 'Hesap 2 günden yeni', points: 30 });
+  }
   const pending = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'pending'").get(userId).c;
+  if (pending > 3) {
+    reasons.push({ code: 'many_pending', label: `${pending} bekleyen Tiola`, points: 20 });
+  }
   const rejected = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'rejected'").get(userId).c;
-  let score = 0;
-  if (ageDays < 2) score += 30;
-  if (pending > 3) score += 20;
-  if (rejected > 1) score += 25;
+  if (rejected > 1) {
+    reasons.push({ code: 'rejected_history', label: `${rejected} reddedilen Tiola`, points: 25 });
+  }
+  return reasons;
+}
+
+function computeUserRiskScore(userId) {
+  const reasons = computeUserRiskReasons(userId);
+  const score = reasons.reduce((sum, r) => sum + r.points, 0);
   db.prepare('UPDATE users SET risk_score = ? WHERE id = ?').run(score, userId);
   return score;
 }
 
-module.exports = { rolePermissions, effectivePermissions, checkPermission, computeUserRiskScore, ROLE_DEFAULT_PERMS };
+module.exports = {
+  rolePermissions,
+  effectivePermissions,
+  checkPermission,
+  computeUserRiskScore,
+  computeUserRiskReasons,
+  ROLE_DEFAULT_PERMS,
+};

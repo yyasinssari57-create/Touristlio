@@ -6,12 +6,18 @@ const { db } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
 const { createUser, findUserByEmail, sanitizeUser } = require('../auth');
 const { clear: clearCache } = require('../lib/cache');
-const { computeUserRiskScore, checkPermission } = require('../middleware/rbac');
+const { computeUserRiskScore, computeUserRiskReasons, checkPermission } = require('../middleware/rbac');
+const auditLog = require('../lib/auditLog');
+const contentFilter = require('../lib/contentFilter');
+const { parsePagination, buildTiolaListFilters, buildBlogListFilters } = require('../lib/moderation-query');
 const { spawnSync } = require('child_process');
 const { adminToolLimiter } = require('../middleware/rateLimit');
 const { parsePositiveInt, sanitizeText } = require('../lib/sanitize');
 const notifications = require('../lib/notifications');
-const { sendTiolaRejectionEmail, sendBlogRejectionEmail } = require('../lib/mailer');
+const { sendTiolaRejectionEmail, sendBlogRejectionEmail, sendAdminMessageEmail } = require('../lib/mailer');
+const moderationHistory = require('../lib/moderation-history');
+const blogScheduler = require('../lib/blog-scheduler');
+const placesImportExport = require('../lib/places-import-export');
 const profileChanges = require('../lib/profile-changes');
 const { getUserTiolaLikeCount } = require('../lib/likes');
 const { upsertLiveData, applyInfoBoxUpdates, buildInfoBoxesResponse } = require('../services/liveDataService');
@@ -28,6 +34,28 @@ const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
 router.use(authRequired, requireRole('admin', 'moderator', 'editor'));
+
+function logAdmin(req, action, targetType, targetId, detail) {
+  auditLog.log({
+    adminId: req.user.id,
+    adminName: req.user.name,
+    action,
+    targetType,
+    targetId,
+    detail,
+  });
+}
+
+function logModeration(req, contentType, contentId, action, reason) {
+  moderationHistory.log({
+    contentType,
+    contentId,
+    action,
+    adminId: req.user.id,
+    adminName: req.user.name,
+    reason,
+  });
+}
 
 const uploadRoot = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadRoot)) fs.mkdirSync(uploadRoot, { recursive: true });
@@ -67,34 +95,67 @@ function mapPendingTiola(row) {
   };
 }
 
-router.get('/pending/tiolas', checkPermission('admin.moderate'), (_req, res) => {
+function queryTiolaList(req, res, { approvedOnly, pendingOnly }) {
+  const { page, limit, offset } = parsePagination(req.query);
+  const { where, params } = buildTiolaListFilters(req.query, { approvedOnly, pendingOnly });
+  const total = db.prepare(`
+    SELECT COUNT(*) AS c FROM tiolas t
+    JOIN users u ON u.id = t.user_id
+    LEFT JOIN places p ON p.id = t.place_id
+    ${where}
+  `).get(...params).c;
   const rows = db.prepare(`
     SELECT t.*, u.name AS user_name, p.name AS place_name
     FROM tiolas t
     JOIN users u ON u.id = t.user_id
     LEFT JOIN places p ON p.id = t.place_id
-    WHERE t.status IN ('pending', 'spam')
-    ORDER BY t.created_at ASC
-  `).all();
-  return ok(res, { items: rows.map(mapPendingTiola) });
-});
+    ${where}
+    ORDER BY t.created_at ${approvedOnly ? 'DESC' : 'ASC'}
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+  return ok(res, { items: rows.map(mapPendingTiola), total, page, limit });
+}
 
-router.get('/pending/blogs', checkPermission('admin.content'), (_req, res) => {
+function queryBlogList(req, res, { approvedOnly, pendingOnly }) {
+  const { page, limit, offset } = parsePagination(req.query);
+  const { where, params } = buildBlogListFilters(req.query, { approvedOnly, pendingOnly });
+  const total = db.prepare(`
+    SELECT COUNT(*) AS c FROM blogs b
+    JOIN users u ON u.id = b.user_id
+    ${where}
+  `).get(...params).c;
   const rows = db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id
-    WHERE b.status = 'pending'
-    ORDER BY b.created_at ASC
-  `).all();
+    ${where}
+    ORDER BY datetime(COALESCE(b.published_at, b.created_at)) ${approvedOnly ? 'DESC' : 'ASC'}
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
   return ok(res, {
     items: rows.map((r) => ({
       id: r.id,
       userName: r.user_name,
       title: r.title,
       excerpt: r.excerpt,
+      slug: r.slug,
+      status: r.status,
+      placeId: r.place_id,
+      publishedAt: r.published_at,
       createdAt: r.created_at,
     })),
+    total,
+    page,
+    limit,
   });
+}
+
+router.get('/pending/tiolas', checkPermission('admin.moderate'), (req, res) => {
+  return queryTiolaList(req, res, { pendingOnly: true });
+});
+
+router.get('/pending/blogs', checkPermission('admin.content'), (req, res) => {
+  blogScheduler.publishDueBlogs();
+  return queryBlogList(req, res, { pendingOnly: true });
 });
 
 function runAdminScript(scriptRel) {
@@ -115,28 +176,13 @@ router.post('/tiolas/:id/approve', checkPermission('admin.moderate'), (req, res)
     UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
+  logAdmin(req, 'tiola.approve', 'tiola', id, null);
+  logModeration(req, 'tiola', id, 'approve', null);
   return ok(res, { approved: true });
 });
 
 router.get('/approved/tiolas', checkPermission('admin.moderate'), (req, res) => {
-  const q = sanitizeText(req.query.q, 80);
-  const params = [];
-  let where = "WHERE t.status = 'approved' AND t.parent_id IS NULL";
-  if (q) {
-    where += ' AND (t.text LIKE ? OR u.name LIKE ? OR p.name LIKE ?)';
-    const like = `%${q}%`;
-    params.push(like, like, like);
-  }
-  const rows = db.prepare(`
-    SELECT t.*, u.name AS user_name, p.name AS place_name
-    FROM tiolas t
-    JOIN users u ON u.id = t.user_id
-    LEFT JOIN places p ON p.id = t.place_id
-    ${where}
-    ORDER BY t.created_at DESC
-    LIMIT 100
-  `).all(...params);
-  return ok(res, { items: rows.map(mapPendingTiola) });
+  return queryTiolaList(req, res, { approvedOnly: true });
 });
 
 router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req, res) => {
@@ -181,6 +227,8 @@ router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req,
     /* e-posta isteğe bağlı */
   }
 
+  logAdmin(req, 'tiola.remove', 'tiola', id, reason);
+  logModeration(req, 'tiola', id, 'remove', reason);
   return ok(res, { removed: true, rejectionReason: reason });
 });
 
@@ -228,7 +276,115 @@ router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req,
     /* e-posta isteğe bağlı */
   }
 
+  logAdmin(req, 'tiola.reject', 'tiola', id, reason);
+  logModeration(req, 'tiola', id, 'reject', reason);
   return ok(res, { rejected: true, rejectionReason: reason });
+});
+
+router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) => {
+  const { ids, action, reason } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return fail(res, 'ID listesi gerekli');
+  if (!['approve', 'reject', 'remove'].includes(action)) return fail(res, 'Geçersiz işlem');
+
+  const cleanReason = sanitizeText(reason, 1000);
+  if (['reject', 'remove'].includes(action) && !cleanReason) {
+    return fail(res, 'Neden gerekli');
+  }
+
+  let processed = 0;
+  const errors = [];
+
+  for (const rawId of ids) {
+    const id = Number(rawId);
+    if (!Number.isFinite(id)) {
+      errors.push({ id: rawId, error: 'Geçersiz ID' });
+      continue;
+    }
+    try {
+      if (action === 'approve') {
+        const r = db.prepare(`
+          UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
+          WHERE id = ? AND status IN ('pending', 'spam')
+        `).run(req.user.id, id);
+        if (!r.changes) { errors.push({ id, error: 'Onaylanamadı' }); continue; }
+        logAdmin(req, 'tiola.approve', 'tiola', id, 'bulk');
+        logModeration(req, 'tiola', id, 'approve', 'bulk');
+        processed += 1;
+      } else if (action === 'reject') {
+        const row = db.prepare(`
+          SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
+          FROM tiolas t JOIN users u ON u.id = t.user_id LEFT JOIN places p ON p.id = t.place_id
+          WHERE t.id = ?
+        `).get(id);
+        if (!row || !['pending', 'spam'].includes(row.status)) {
+          errors.push({ id, error: 'Reddedilemedi' });
+          continue;
+        }
+        db.prepare(`
+          UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+          WHERE id = ? AND status IN ('pending', 'spam')
+        `).run(req.user.id, cleanReason, id);
+        const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
+        notifications.createNotification({
+          userId: row.user_id,
+          type: 'tiola_rejected',
+          title: 'Tiola reddedildi',
+          body: `${placeLabel}: ${cleanReason}`,
+          link: '/profile',
+        });
+        try {
+          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+          await sendTiolaRejectionEmail(row.user_email, {
+            userName: row.user_name,
+            placeName: placeLabel,
+            reason: cleanReason,
+            profileUrl: `${siteUrl}/profile`,
+          });
+        } catch { /* optional */ }
+        logAdmin(req, 'tiola.reject', 'tiola', id, cleanReason);
+        logModeration(req, 'tiola', id, 'reject', cleanReason);
+        processed += 1;
+      } else if (action === 'remove') {
+        const row = db.prepare(`
+          SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
+          FROM tiolas t JOIN users u ON u.id = t.user_id LEFT JOIN places p ON p.id = t.place_id
+          WHERE t.id = ?
+        `).get(id);
+        if (!row || row.status !== 'approved') {
+          errors.push({ id, error: 'Kaldırılamadı' });
+          continue;
+        }
+        db.prepare(`
+          UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+          WHERE id = ? AND status = 'approved'
+        `).run(req.user.id, cleanReason, id);
+        const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
+        notifications.createNotification({
+          userId: row.user_id,
+          type: 'tiola_removed',
+          title: 'Tiola kaldırıldı',
+          body: `${placeLabel}: ${cleanReason}`,
+          link: '/profile',
+        });
+        try {
+          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+          await sendTiolaRejectionEmail(row.user_email, {
+            userName: row.user_name,
+            placeName: placeLabel,
+            reason: cleanReason,
+            profileUrl: `${siteUrl}/profile`,
+          });
+        } catch { /* optional */ }
+        logAdmin(req, 'tiola.remove', 'tiola', id, cleanReason);
+        logModeration(req, 'tiola', id, 'remove', cleanReason);
+        processed += 1;
+      }
+    } catch (err) {
+      errors.push({ id, error: err.message || 'Hata' });
+    }
+  }
+
+  return ok(res, { processed, errors });
 });
 
 router.post('/blogs/:id/approve', checkPermission('admin.content'), (req, res) => {
@@ -237,38 +393,15 @@ router.post('/blogs/:id/approve', checkPermission('admin.content'), (req, res) =
   db.prepare(`
     UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
       published_at = COALESCE(published_at, datetime('now'))
-    WHERE id = ? AND status = 'pending'
+    WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
+  logAdmin(req, 'blog.approve', 'blog', id, null);
+  logModeration(req, 'blog', id, 'approve', null);
   return ok(res, { approved: true });
 });
 
 router.get('/approved/blogs', checkPermission('admin.content'), (req, res) => {
-  const q = sanitizeText(req.query.q, 80);
-  const params = [];
-  let where = "WHERE b.status = 'approved'";
-  if (q) {
-    where += ' AND (b.title LIKE ? OR b.excerpt LIKE ? OR u.name LIKE ?)';
-    const like = `%${q}%`;
-    params.push(like, like, like);
-  }
-  const rows = db.prepare(`
-    SELECT b.*, u.name AS user_name FROM blogs b
-    JOIN users u ON u.id = b.user_id
-    ${where}
-    ORDER BY datetime(COALESCE(b.published_at, b.created_at)) DESC
-    LIMIT 100
-  `).all(...params);
-  return ok(res, {
-    items: rows.map((r) => ({
-      id: r.id,
-      userName: r.user_name,
-      title: r.title,
-      excerpt: r.excerpt,
-      slug: r.slug,
-      publishedAt: r.published_at,
-      createdAt: r.created_at,
-    })),
-  });
+  return queryBlogList(req, res, { approvedOnly: true });
 });
 
 router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, res) => {
@@ -312,6 +445,8 @@ router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, r
     /* e-posta isteğe bağlı */
   }
 
+  logAdmin(req, 'blog.remove', 'blog', id, reason);
+  logModeration(req, 'blog', id, 'remove', reason);
   return ok(res, { removed: true, rejectionReason: reason });
 });
 
@@ -328,11 +463,11 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
     WHERE b.id = ?
   `).get(id);
   if (!row) return fail(res, 'Blog bulunamadı', 404);
-  if (row.status !== 'pending') return fail(res, 'Bu blog zaten işlendi', 409);
+  if (!['pending', 'spam'].includes(row.status)) return fail(res, 'Bu blog zaten işlendi', 409);
 
   db.prepare(`
     UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
-    WHERE id = ? AND status = 'pending'
+    WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, reason, id);
 
   notifications.createNotification({
@@ -355,7 +490,113 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
     /* e-posta isteğe bağlı */
   }
 
+  logAdmin(req, 'blog.reject', 'blog', id, reason);
+  logModeration(req, 'blog', id, 'reject', reason);
   return ok(res, { rejected: true, rejectionReason: reason });
+});
+
+router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) => {
+  const { ids, action, reason } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return fail(res, 'ID listesi gerekli');
+  if (!['approve', 'reject', 'remove'].includes(action)) return fail(res, 'Geçersiz işlem');
+
+  const cleanReason = sanitizeText(reason, 1000);
+  if (['reject', 'remove'].includes(action) && !cleanReason) {
+    return fail(res, 'Neden gerekli');
+  }
+
+  let processed = 0;
+  const errors = [];
+
+  for (const rawId of ids) {
+    const id = Number(rawId);
+    if (!Number.isFinite(id)) {
+      errors.push({ id: rawId, error: 'Geçersiz ID' });
+      continue;
+    }
+    try {
+      if (action === 'approve') {
+        const r = db.prepare(`
+          UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
+            published_at = COALESCE(published_at, datetime('now'))
+          WHERE id = ? AND status IN ('pending', 'spam')
+        `).run(req.user.id, id);
+        if (!r.changes) { errors.push({ id, error: 'Onaylanamadı' }); continue; }
+        logAdmin(req, 'blog.approve', 'blog', id, 'bulk');
+        logModeration(req, 'blog', id, 'approve', 'bulk');
+        processed += 1;
+      } else if (action === 'reject') {
+        const row = db.prepare(`
+          SELECT b.*, u.email AS user_email, u.name AS user_name
+          FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ?
+        `).get(id);
+        if (!row || !['pending', 'spam'].includes(row.status)) {
+          errors.push({ id, error: 'Reddedilemedi' });
+          continue;
+        }
+        db.prepare(`
+          UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+          WHERE id = ? AND status IN ('pending', 'spam')
+        `).run(req.user.id, cleanReason, id);
+        notifications.createNotification({
+          userId: row.user_id,
+          type: 'blog_rejected',
+          title: 'Blog reddedildi',
+          body: `${row.title}: ${cleanReason}`,
+          link: '/profile',
+        });
+        try {
+          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+          await sendBlogRejectionEmail(row.user_email, {
+            userName: row.user_name,
+            title: row.title,
+            reason: cleanReason,
+            profileUrl: `${siteUrl}/profile`,
+          });
+        } catch { /* optional */ }
+        logAdmin(req, 'blog.reject', 'blog', id, cleanReason);
+        logModeration(req, 'blog', id, 'reject', cleanReason);
+        processed += 1;
+      } else if (action === 'remove') {
+        const row = db.prepare(`
+          SELECT b.*, u.email AS user_email, u.name AS user_name
+          FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ?
+        `).get(id);
+        if (!row || row.status !== 'approved') {
+          errors.push({ id, error: 'Kaldırılamadı' });
+          continue;
+        }
+        db.prepare(`
+          UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
+            rejection_reason = ?, published_at = NULL
+          WHERE id = ? AND status = 'approved'
+        `).run(req.user.id, cleanReason, id);
+        notifications.createNotification({
+          userId: row.user_id,
+          type: 'blog_removed',
+          title: 'Blog kaldırıldı',
+          body: `${row.title}: ${cleanReason}`,
+          link: '/profile',
+        });
+        try {
+          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+          await sendBlogRejectionEmail(row.user_email, {
+            userName: row.user_name,
+            title: row.title,
+            reason: cleanReason,
+            profileUrl: `${siteUrl}/profile`,
+          });
+        } catch { /* optional */ }
+        logAdmin(req, 'blog.remove', 'blog', id, cleanReason);
+        logModeration(req, 'blog', id, 'remove', cleanReason);
+        processed += 1;
+      }
+    } catch (err) {
+      errors.push({ id, error: err.message || 'Hata' });
+    }
+  }
+
+  return ok(res, { processed, errors });
 });
 
 router.post('/moderators', requireRole('admin'), (req, res) => {
@@ -376,10 +617,47 @@ router.get('/places', checkPermission('admin.places'), (req, res) => {
     const q = req.query.q || '';
     const limit = Number(req.query.limit) || 100;
     const offset = Number(req.query.offset) || 0;
-    const data = adminPlace.listAdminPlaces({ q, limit, offset, includeArchived: req.query.all === '1' });
+    const issue = req.query.issue || null;
+    const data = adminPlace.listAdminPlaces({
+      q, limit, offset, issue, includeArchived: req.query.all === '1',
+    });
     return ok(res, data);
   } catch (err) {
     return fail(res, err.message || 'Yerler getirilemedi', 500);
+  }
+});
+
+router.get('/places/export', checkPermission('admin.places'), (req, res) => {
+  const format = String(req.query.format || 'json').toLowerCase();
+  if (format === 'csv') {
+    const csv = placesImportExport.exportPlacesCsv();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="places-export.csv"');
+    return res.send(`\uFEFF${csv}`);
+  }
+  const places = placesImportExport.exportPlacesJson();
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="places-export.json"');
+  return res.json(places);
+});
+
+const placesImportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+});
+
+router.post('/places/import', checkPermission('admin.places'), placesImportUpload.single('file'), (req, res) => {
+  try {
+    const items = placesImportExport.parseImportPayload(req.body, req.file);
+    const result = placesImportExport.importPlaces(items, {
+      updateExisting: req.body?.updateExisting !== false && req.body?.updateExisting !== '0',
+    });
+    clearCache('places-list');
+    clearCache('search');
+    logAdmin(req, 'places.import', 'place', null, `${result.created} yeni, ${result.updated} güncellendi`);
+    return ok(res, result);
+  } catch (err) {
+    return fail(res, err.message || 'İçe aktarma başarısız');
   }
 });
 
@@ -394,6 +672,7 @@ router.get('/places/:id', checkPermission('admin.places'), (req, res) => {
 router.post('/places', checkPermission('admin.places'), (req, res) => {
   try {
     const created = adminPlace.insertPlace(req.body || {});
+    logAdmin(req, 'place.create', 'place', created.id, created.name || null);
     clearCache('places-list');
     clearCache('search');
     return ok(res, created, 201);
@@ -408,6 +687,7 @@ router.put('/places/:id', checkPermission('admin.places'), (req, res) => {
   try {
     const updated = adminPlace.updatePlace(id, req.body || {});
     if (!updated) return fail(res, 'Yer bulunamadı', 404);
+    logAdmin(req, 'place.update', 'place', id, updated.name || null);
     clearCache('places-list');
     clearCache('search');
     return ok(res, { place: updated });
@@ -422,6 +702,7 @@ router.delete('/places/:id', checkPermission('admin.places'), (req, res) => {
   const preview = adminPlace.getAdminPlace(id);
   if (!preview) return fail(res, 'Yer bulunamadı', 404);
   const result = adminPlace.deletePlace(id);
+  logAdmin(req, 'place.delete', 'place', id, preview.name || null);
   clearCache('places-list');
   clearCache('search');
   return ok(res, result);
@@ -755,7 +1036,8 @@ router.get('/users/:id', requireRole('admin'), (req, res) => {
       avatarColor: row.avatar_color,
       avatarUrl: row.avatar_url || null,
       avatarPreset: row.avatar_preset || null,
-      riskScore: row.risk_score || 0,
+      riskScore: computeUserRiskScore(id),
+      riskScoreReasons: computeUserRiskReasons(id),
       createdAt: row.created_at,
       failedLoginCount: row.failed_login_count || 0,
       lockedUntil: row.locked_until || null,
@@ -919,7 +1201,63 @@ router.post('/users/:id/block', requireRole('admin'), (req, res) => {
     return fail(res, 'Yönetici hesabı engellenemez', 403);
   }
   db.prepare('UPDATE users SET is_blocked = ? WHERE id = ?').run(blocked ? 1 : 0, id);
+  logAdmin(req, blocked ? 'user.block' : 'user.unblock', 'user', id, null);
   return ok(res, { id, blocked });
+});
+
+router.post('/users/:id/send-message', requireRole('admin'), async (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const subject = sanitizeText(req.body?.subject, 200);
+  const body = sanitizeText(req.body?.body, 5000);
+  if (!subject || !body) return fail(res, 'Konu ve mesaj gerekli');
+
+  const target = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(id);
+  if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
+
+  const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+  let emailSent = false;
+  try {
+    emailSent = await sendAdminMessageEmail(target.email, {
+      userName: target.name,
+      subject,
+      body,
+      siteUrl,
+    });
+  } catch (err) {
+    return fail(res, err.message || 'E-posta gönderilemedi', 500);
+  }
+
+  notifications.createNotification({
+    userId: target.id,
+    type: 'admin_message',
+    title: subject,
+    body: body.slice(0, 500),
+    link: '/profile',
+  });
+
+  logAdmin(req, 'user.send_message', 'user', id, subject);
+  return ok(res, { sent: true, emailSent });
+});
+
+router.patch('/users/:id/role', requireRole('admin'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  if (id === req.user.id) return fail(res, 'Kendi rolünüzü değiştiremezsiniz', 400);
+
+  const role = String(req.body?.role || '').trim();
+  if (!['member', 'editor', 'moderator'].includes(role)) {
+    return fail(res, 'Geçersiz rol (member, editor, moderator)', 400);
+  }
+
+  const target = db.prepare('SELECT id, role, name FROM users WHERE id = ?').get(id);
+  if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
+  if (target.role === 'admin') return fail(res, 'Yönetici rolü değiştirilemez', 403);
+
+  const prevRole = target.role;
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+  logAdmin(req, 'user.role_change', 'user', id, `${prevRole} → ${role}`);
+  return ok(res, { id, role, previousRole: prevRole });
 });
 
 router.get('/roles', requireRole('admin'), (_req, res) => {
@@ -959,9 +1297,25 @@ router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) =
   const shortDesc = db.prepare('SELECT COUNT(*) AS c FROM places WHERE length(description) < 80').get().c;
   return ok(res, {
     total,
-    issues: { noPhoto, noFaq, noCoords, shortDesc },
+    issues: {
+      noPhoto: { count: noPhoto, label: 'Fotoğraf eksik' },
+      noFaq: { count: noFaq, label: 'FAQ eksik' },
+      noCoords: { count: noCoords, label: 'Koordinat eksik' },
+      shortDesc: { count: shortDesc, label: 'Kısa açıklama' },
+    },
     score: Math.round(100 - ((noPhoto + noFaq + noCoords + shortDesc) / Math.max(total, 1)) * 25),
   });
+});
+
+router.get('/moderation-history/:contentType/:contentId', checkPermission('admin.moderate', 'admin.content'), (req, res) => {
+  const contentType = String(req.params.contentType || '').trim();
+  const contentId = parsePositiveInt(req.params.contentId, res);
+  if (!contentId) return;
+  if (!['tiola', 'blog'].includes(contentType)) {
+    return fail(res, 'Geçersiz içerik türü', 400);
+  }
+  const items = moderationHistory.listForContent(contentType, contentId);
+  return ok(res, { items });
 });
 
 router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, (_req, res) => {
@@ -1059,7 +1413,14 @@ router.delete('/blog-categories/:id', checkPermission('admin.content'), (req, re
 });
 
 /* ── Blogs CRUD ── */
+router.get('/blogs/scheduled', checkPermission('admin.content'), (_req, res) => {
+  const published = blogScheduler.publishDueBlogs();
+  const blogs = blogScheduler.listScheduled();
+  return ok(res, { blogs, published });
+});
+
 router.get('/blogs', checkPermission('admin.content'), (req, res) => {
+  blogScheduler.publishDueBlogs();
   const { status, category, q } = req.query;
   const params = [];
   let where = 'WHERE 1=1';
@@ -1088,7 +1449,7 @@ router.get('/blogs', checkPermission('admin.content'), (req, res) => {
 router.post('/blogs', checkPermission('admin.content'), (req, res) => {
   const {
     title, excerpt, body: bodyText, category, imageUrl, placeId,
-    slug, tags, featured, authorName, status, userId,
+    slug, tags, featured, authorName, status, userId, publishedAt: rawPublishedAt,
   } = req.body || {};
   const cleanTitle = sanitizeText(title, 200);
   const cleanBody = sanitizeText(bodyText, 20000);
@@ -1096,8 +1457,17 @@ router.post('/blogs', checkPermission('admin.content'), (req, res) => {
   const cleanExcerpt = sanitizeText(excerpt || cleanBody, 500);
   const baseSlug = sanitizeText(slug, 120) || blogDb.slugify(cleanTitle) || `blog-${Date.now()}`;
   const uniqueSlug = blogDb.uniqueBlogSlug(db, baseSlug);
-  const nextStatus = ['pending', 'approved', 'rejected', 'draft'].includes(status) ? status : 'approved';
-  const publishedAt = nextStatus === 'approved' ? new Date().toISOString() : null;
+  let nextStatus = ['pending', 'approved', 'rejected', 'draft'].includes(status) ? status : 'approved';
+  const publishedAtInput = blogScheduler.normalizePublishedAt(rawPublishedAt);
+  let publishedAt = null;
+  if (publishedAtInput && blogScheduler.isFutureDate(publishedAtInput)) {
+    publishedAt = publishedAtInput;
+    if (nextStatus === 'approved') nextStatus = 'draft';
+  } else if (nextStatus === 'approved') {
+    publishedAt = publishedAtInput || new Date().toISOString();
+  } else if (publishedAtInput) {
+    publishedAt = publishedAtInput;
+  }
   const info = db.prepare(`
     INSERT INTO blogs (
       user_id, category, title, slug, excerpt, body, image_url, place_id,
@@ -1143,7 +1513,7 @@ router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
   if (!existing) return fail(res, 'Blog bulunamadı', 404);
   const {
     title, excerpt, body: bodyText, category, imageUrl, status,
-    slug, tags, featured, authorName, placeId,
+    slug, tags, featured, authorName, placeId, publishedAt: rawPublishedAt,
   } = req.body || {};
   const cleanTitle = title != null ? sanitizeText(title, 200) : existing.title;
   const cleanBody = bodyText != null ? sanitizeText(bodyText, 20000) : existing.body;
@@ -1160,9 +1530,17 @@ router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
     nextSlug = blogDb.uniqueBlogSlug(db, blogDb.slugify(cleanTitle) || `blog-${id}`, id);
   }
   let publishedAt = existing.published_at;
+  if (rawPublishedAt !== undefined) {
+    publishedAt = blogScheduler.normalizePublishedAt(rawPublishedAt);
+  }
+  if (publishedAt && blogScheduler.isFutureDate(publishedAt) && nextStatus === 'approved') {
+    nextStatus = 'draft';
+  }
   if (nextStatus === 'approved' && existing.status !== 'approved') {
-    publishedAt = new Date().toISOString();
-  } else if (nextStatus !== 'approved') {
+    if (!publishedAt || !blogScheduler.isFutureDate(publishedAt)) {
+      publishedAt = publishedAt || new Date().toISOString();
+    }
+  } else if (nextStatus !== 'approved' && rawPublishedAt === null) {
     publishedAt = null;
   }
   db.prepare(`
@@ -1198,6 +1576,7 @@ router.delete('/blogs/:id', checkPermission('admin.content'), (req, res) => {
   const existing = db.prepare('SELECT id FROM blogs WHERE id = ?').get(id);
   if (!existing) return fail(res, 'Blog bulunamadı', 404);
   db.prepare('DELETE FROM blogs WHERE id = ?').run(id);
+  logAdmin(req, 'blog.delete', 'blog', id, null);
   return ok(res, { deleted: true });
 });
 
@@ -1215,9 +1594,11 @@ function enrichReportRow(row) {
 
 function fetchReportRow(id) {
   return db.prepare(`
-    SELECT r.*, rep.name AS reporter_name, res.name AS resolved_by_name
+    SELECT r.*,
+           COALESCE(rep.name, 'Silinmiş kullanıcı') AS reporter_name,
+           res.name AS resolved_by_name
     FROM reports r
-    JOIN users rep ON rep.id = r.reporter_id
+    LEFT JOIN users rep ON rep.id = r.reporter_id
     LEFT JOIN users res ON res.id = r.resolved_by
     WHERE r.id = ?
   `).get(id);
@@ -1230,14 +1611,14 @@ router.get('/reports', checkPermission('admin.moderate'), (req, res) => {
   if (status === 'pending') {
     where += " AND r.status IN ('pending', 'reviewed')";
   } else if (status === 'resolved') {
-    where += " AND r.status IN ('reviewed', 'resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned')";
+    where += " AND r.status IN ('resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned')";
   }
   const rows = db.prepare(`
     SELECT r.*,
-           rep.name AS reporter_name,
+           COALESCE(rep.name, 'Silinmiş kullanıcı') AS reporter_name,
            res.name AS resolved_by_name
     FROM reports r
-    JOIN users rep ON rep.id = r.reporter_id
+    LEFT JOIN users rep ON rep.id = r.reporter_id
     LEFT JOIN users res ON res.id = r.resolved_by
     ${where}
     ORDER BY r.created_at DESC
@@ -1282,6 +1663,7 @@ router.post('/reports/:id/resolve-remove', checkPermission('admin.moderate'), as
   }
 
   reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
+  logAdmin(req, 'report.resolve_remove', 'report', id, reason);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
 });
@@ -1303,6 +1685,7 @@ router.post('/reports/:id/dismiss', checkPermission('admin.moderate'), (req, res
   }
 
   reportMod.setReportDismissed(id, req.user.id, note);
+  logAdmin(req, 'report.dismiss', 'report', id, note);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
 });
@@ -1322,6 +1705,7 @@ router.post('/reports/:id/reopen', checkPermission('admin.moderate'), (req, res)
   }
 
   reportMod.clearReportResolution(id);
+  logAdmin(req, 'report.reopen', 'report', id, null);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
 });
@@ -1348,6 +1732,7 @@ router.post('/reports/:id/change-decision', checkPermission('admin.moderate'), a
       reportMod.restoreReportedContent(row);
     }
     reportMod.setReportDismissed(id, req.user.id, note || row.resolution_reason);
+    logAdmin(req, 'report.change_decision', 'report', id, 'dismiss');
     const updated = fetchReportRow(id);
     return ok(res, { report: enrichReportRow(updated) });
   }
@@ -1365,6 +1750,7 @@ router.post('/reports/:id/change-decision', checkPermission('admin.moderate'), a
   }
 
   reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
+  logAdmin(req, 'report.change_decision', 'report', id, `remove: ${reason}`);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
 });
@@ -1384,9 +1770,164 @@ router.patch('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
     UPDATE reports SET status = ?, resolved_by = ?, resolved_at = datetime('now')
     WHERE id = ?
   `).run(normalized === 'reviewed' ? 'reviewed' : normalized, req.user.id, id);
+  logAdmin(req, 'report.status_change', 'report', id, status);
 
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
+});
+
+router.get('/audit-log', requireRole('admin'), (req, res) => {
+  const data = auditLog.list({
+    page: req.query.page,
+    limit: req.query.limit,
+    action: req.query.action,
+    adminId: req.query.adminId,
+    targetType: req.query.targetType,
+  });
+  return ok(res, data);
+});
+
+router.get('/banned-words', requireRole('admin'), (_req, res) => {
+  const rows = db.prepare(`
+    SELECT bw.id, bw.word, bw.created_at, u.name AS added_by_name
+    FROM banned_words bw
+    LEFT JOIN users u ON u.id = bw.added_by
+    ORDER BY bw.word ASC
+  `).all();
+  return ok(res, {
+    words: rows.map((r) => ({
+      id: r.id,
+      word: r.word,
+      addedByName: r.added_by_name,
+      createdAt: r.created_at,
+    })),
+  });
+});
+
+router.post('/banned-words', requireRole('admin'), (req, res) => {
+  const word = sanitizeText(req.body?.word, 80)?.toLowerCase().trim();
+  if (!word || word.length < 2) return fail(res, 'Kelime en az 2 karakter olmalı');
+  try {
+    const info = db.prepare('INSERT INTO banned_words (word, added_by) VALUES (?, ?)').run(word, req.user.id);
+    contentFilter.invalidateCache();
+    logAdmin(req, 'banned_word.add', 'banned_word', info.lastInsertRowid, word);
+    return ok(res, { id: info.lastInsertRowid, word }, 201);
+  } catch (err) {
+    if (String(err.message).includes('UNIQUE')) return fail(res, 'Kelime zaten listede', 409);
+    return fail(res, err.message || 'Eklenemedi');
+  }
+});
+
+router.delete('/banned-words/:id', requireRole('admin'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const row = db.prepare('SELECT word FROM banned_words WHERE id = ?').get(id);
+  if (!row) return fail(res, 'Kelime bulunamadı', 404);
+  db.prepare('DELETE FROM banned_words WHERE id = ?').run(id);
+  contentFilter.invalidateCache();
+  logAdmin(req, 'banned_word.delete', 'banned_word', id, row.word);
+  return ok(res, { deleted: true });
+});
+
+const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+
+function scanUploadsDir(dir, baseRel, placeIdFilter, q, acc) {
+  if (!fs.existsSync(dir)) return;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const ent of entries) {
+    const full = path.join(dir, ent.name);
+    if (ent.isDirectory()) {
+      const subRel = baseRel ? `${baseRel}/${ent.name}` : ent.name;
+      if (/^\d+$/.test(ent.name)) {
+        const pid = Number(ent.name);
+        if (placeIdFilter && pid !== placeIdFilter) continue;
+      }
+      scanUploadsDir(full, subRel, placeIdFilter, q, acc);
+      continue;
+    }
+    const ext = path.extname(ent.name).toLowerCase();
+    if (!IMAGE_EXT.has(ext)) continue;
+    const relPath = baseRel ? `${baseRel}/${ent.name}` : ent.name;
+    const urlPath = `/uploads/${relPath.replace(/\\/g, '/')}`;
+    let linkedPlaceId = null;
+    const placeMatch = relPath.match(/^(\d+)\//);
+    if (placeMatch) linkedPlaceId = Number(placeMatch[1]);
+    if (placeIdFilter && linkedPlaceId !== placeIdFilter) continue;
+    if (q && !ent.name.toLowerCase().includes(q.toLowerCase()) && !relPath.toLowerCase().includes(q.toLowerCase())) {
+      continue;
+    }
+    let size = 0;
+    try { size = fs.statSync(full).size; } catch { /* ignore */ }
+    acc.push({
+      path: relPath.replace(/\\/g, '/'),
+      url: urlPath,
+      filename: ent.name,
+      placeId: linkedPlaceId,
+      sizeBytes: size,
+      modifiedAt: fs.statSync(full).mtime.toISOString(),
+    });
+  }
+}
+
+router.get('/media', checkPermission('admin.places', 'admin.content'), (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query, 24);
+  const q = sanitizeText(req.query.q, 80);
+  const placeId = Number(req.query.placeId);
+  const placeIdFilter = Number.isFinite(placeId) && placeId > 0 ? placeId : null;
+
+  const all = [];
+  scanUploadsDir(uploadRoot, '', placeIdFilter, q, all);
+  all.sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
+  const total = all.length;
+  const totalBytes = all.reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
+  const items = all.slice(offset, offset + limit);
+
+  return ok(res, { items, total, page, limit, totalBytes });
+});
+
+router.delete('/media', checkPermission('admin.places', 'admin.content'), (req, res) => {
+  const relPath = String(req.body?.path || '').trim().replace(/\\/g, '/');
+  if (!relPath || relPath.includes('..') || relPath.startsWith('/')) {
+    return fail(res, 'Geçersiz dosya yolu', 400);
+  }
+
+  const normalized = path.normalize(relPath);
+  if (normalized.startsWith('..')) return fail(res, 'Geçersiz dosya yolu', 400);
+
+  const fullPath = path.join(uploadRoot, normalized);
+  const resolved = path.resolve(fullPath);
+  const rootResolved = path.resolve(uploadRoot);
+  if (!resolved.startsWith(rootResolved + path.sep) && resolved !== rootResolved) {
+    return fail(res, 'Geçersiz dosya yolu', 400);
+  }
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    return fail(res, 'Dosya bulunamadı', 404);
+  }
+
+  const urlPath = `/uploads/${normalized.replace(/\\/g, '/')}`;
+  const placeMatch = normalized.match(/^(\d+)\//);
+  if (placeMatch) {
+    const placeId = Number(placeMatch[1]);
+    const row = db.prepare('SELECT id, photos, image_url FROM places WHERE id = ?').get(placeId);
+    if (row) {
+      let photos = [];
+      try { photos = JSON.parse(row.photos || '[]'); } catch { photos = []; }
+      const nextPhotos = photos.filter((u) => u !== urlPath);
+      let nextImage = row.image_url;
+      if (nextImage === urlPath) nextImage = nextPhotos[0] || null;
+      db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
+        JSON.stringify(nextPhotos),
+        nextImage,
+        placeId,
+      );
+      clearCache('places-list');
+      clearCache('search');
+    }
+  }
+
+  fs.unlinkSync(resolved);
+  logAdmin(req, 'media.delete', 'media', null, normalized);
+  return ok(res, { deleted: true, path: normalized });
 });
 
 router.get('/moderation/risk', checkPermission('admin.moderate'), (_req, res) => {

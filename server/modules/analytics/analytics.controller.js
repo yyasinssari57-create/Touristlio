@@ -26,7 +26,17 @@ function categories(_req, res) {
 
 }
 
+function timeseries(_req, res) {
+  return ok(res, analyticsService.timeseries());
+}
 
+function topPlaces(_req, res) {
+  return ok(res, { places: analyticsService.topPlaces() });
+}
 
-module.exports = { summary, quality, categories };
+function topUsers(_req, res) {
+  return ok(res, { users: analyticsService.topUsers() });
+}
+
+module.exports = { summary, quality, categories, timeseries, topPlaces, topUsers };
 

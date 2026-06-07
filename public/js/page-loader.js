@@ -9,6 +9,11 @@
     return document.getElementById('pageLoader');
   }
 
+  function markReady() {
+    document.documentElement.classList.add('tl-ready');
+    if (document.body) document.body.classList.add('tl-ready');
+  }
+
   function showPageLoader() {
     const el = node();
     if (!el) return;
@@ -30,6 +35,7 @@
       if (pending > 0) return;
       el.classList.remove('active');
       el.setAttribute('aria-busy', 'false');
+      markReady();
     }, delay);
   }
 

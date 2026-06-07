@@ -1,5 +1,6 @@
 const { verifyToken, sanitizeUser, findUserById } = require('../auth');
 const { fail } = require('../lib/apiResponse');
+const authService = require('../modules/auth/auth.service');
 
 function loadUserFromToken(req) {
   const header = req.headers.authorization;
@@ -15,8 +16,13 @@ function loadUserFromToken(req) {
     if (!row) return { user: null, blocked: false };
     if (row.is_blocked) return { user: null, blocked: true };
     if (row.password_changed_at && payload.iat) {
-      const changedAt = Math.floor(new Date(`${row.password_changed_at}Z`).getTime() / 1000);
-      if (payload.iat < changedAt) return { user: null, blocked: false, stale: true };
+      const raw = String(row.password_changed_at).trim();
+      const iso = raw.includes('T') ? raw : raw.replace(' ', 'T');
+      const changedMs = Date.parse(iso.endsWith('Z') ? iso : `${iso}Z`);
+      if (!Number.isNaN(changedMs)) {
+        const changedAt = Math.floor(changedMs / 1000);
+        if (payload.iat < changedAt) return { user: null, blocked: false, stale: true };
+      }
     }
     return { user: sanitizeUser(row), blocked: false };
   } catch {
@@ -33,11 +39,11 @@ function authOptional(req, res, next) {
 function authRequired(req, res, next) {
   const { user, blocked, stale } = loadUserFromToken(req);
   if (blocked) {
-    res.clearCookie('tl_token', { path: '/' });
+    authService.clearAuthCookie(res);
     return fail(res, 'Hesabınız engellenmiştir', 403);
   }
   if (stale) {
-    res.clearCookie('tl_token', { path: '/' });
+    authService.clearAuthCookie(res);
     return fail(res, 'Oturum süresi doldu, lütfen tekrar giriş yapın', 401);
   }
   if (!user) return fail(res, 'Giriş gerekli', 401);

@@ -7,6 +7,7 @@ const blogDb = require('../lib/blog-db');
 const settingsService = require('../modules/settings/settings.service');
 const { enrichBlogLikes, toggleBlogLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
+const { containsBannedWord } = require('../lib/contentFilter');
 
 const router = express.Router();
 
@@ -176,9 +177,11 @@ router.post('/', authRequired, [
   }
   const cleanExcerpt = sanitizeText(excerpt || cleanBody, MAX_EXCERPT).slice(0, MAX_EXCERPT);
   const slug = blogDb.uniqueBlogSlug(db, blogDb.slugify(cleanTitle) || `blog-${Date.now()}`);
+  const combined = `${cleanTitle} ${cleanExcerpt} ${cleanBody}`;
+  const initialStatus = containsBannedWord(combined) ? 'spam' : 'pending';
   const info = db.prepare(`
     INSERT INTO blogs (user_id, category, title, slug, excerpt, body, image_url, place_id, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     req.user.id,
     category || 'guide',
@@ -188,6 +191,7 @@ router.post('/', authRequired, [
     cleanBody,
     imageUrl || null,
     placeId ? Number(placeId) : null,
+    initialStatus,
   );
   const row = db.prepare(`
     SELECT b.*, u.name AS author_name_user FROM blogs b
@@ -195,7 +199,9 @@ router.post('/', authRequired, [
   `).get(info.lastInsertRowid);
   res.status(201).json({
     blog: mapBlog(row, 'tr', req.user.id),
-    message: 'Blog yazın alındı. Onay sonrası yayınlanacak.',
+    message: initialStatus === 'spam'
+      ? 'Blog yazınız spam olarak işaretlendi ve yayınlanmayacak.'
+      : 'Blog yazın alındı. Onay sonrası yayınlanacak.',
   });
 });
 

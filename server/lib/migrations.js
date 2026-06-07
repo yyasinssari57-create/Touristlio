@@ -193,6 +193,47 @@ function runMigrations(db) {
 
     CREATE INDEX IF NOT EXISTS idx_tiolas_parent ON tiolas(parent_id);
     CREATE INDEX IF NOT EXISTS idx_tiolas_user_place_month ON tiolas(user_id, place_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER NOT NULL,
+      admin_name TEXT,
+      action TEXT NOT NULL,
+      target_type TEXT,
+      target_id INTEGER,
+      detail TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (admin_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_log_created ON admin_audit_log(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_action ON admin_audit_log(action, created_at);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_admin ON admin_audit_log(admin_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS banned_words (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      word TEXT NOT NULL UNIQUE,
+      added_by INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (added_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_banned_words_word ON banned_words(word);
+
+    CREATE TABLE IF NOT EXISTS moderation_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content_type TEXT NOT NULL,
+      content_id INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      admin_id INTEGER NOT NULL,
+      admin_name TEXT,
+      reason TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (admin_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_mod_history_content ON moderation_history(content_type, content_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mod_history_admin ON moderation_history(admin_id, created_at DESC);
   `);
 
   const catalogPerms = [

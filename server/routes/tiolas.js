@@ -13,6 +13,7 @@ const { sanitizeText } = require('../lib/sanitize');
 const { enrichTiolaLikes, toggleTiolaLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
 const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
+const { containsBannedWord } = require('../lib/contentFilter');
 
 
 
@@ -169,6 +170,8 @@ function tiolaSelect(extra = '') {
 function looksLikeSpam(text) {
 
   const lower = text.toLowerCase();
+
+  if (containsBannedWord(text)) return true;
 
   if (SPAM_WORDS.some((w) => lower.includes(w))) return true;
 

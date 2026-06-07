@@ -44,7 +44,12 @@ function contentQuality() {
 
     total,
 
-    issues: { noPhoto, noFaq, noCoords, shortDesc },
+    issues: {
+      noPhoto: { count: noPhoto, label: 'Fotoğraf eksik' },
+      noFaq: { count: noFaq, label: 'FAQ eksik' },
+      noCoords: { count: noCoords, label: 'Koordinat eksik' },
+      shortDesc: { count: shortDesc, label: 'Kısa açıklama' },
+    },
 
     score: Math.round(100 - ((noPhoto + noFaq + noCoords + shortDesc) / Math.max(total, 1)) * 25),
 
@@ -66,7 +71,85 @@ function byCategory() {
 
 }
 
+function timeseries() {
+  const days = [];
+  for (let i = 29; i >= 0; i -= 1) {
+    const row = db.prepare(`SELECT date('now', '-' || ? || ' days') AS day`).get(i);
+    days.push(row.day);
+  }
 
+  const usersByDay = db.prepare(`
+    SELECT date(created_at) AS day, COUNT(*) AS c
+    FROM users
+    WHERE created_at >= datetime('now', '-30 days')
+    GROUP BY date(created_at)
+  `).all();
+  const tiolasByDay = db.prepare(`
+    SELECT date(created_at) AS day, COUNT(*) AS c
+    FROM tiolas
+    WHERE created_at >= datetime('now', '-30 days') AND parent_id IS NULL
+    GROUP BY date(created_at)
+  `).all();
+  const blogsByDay = db.prepare(`
+    SELECT date(created_at) AS day, COUNT(*) AS c
+    FROM blogs
+    WHERE created_at >= datetime('now', '-30 days')
+    GROUP BY date(created_at)
+  `).all();
 
-module.exports = { dashboard, contentQuality, byCategory };
+  const mapCounts = (rows) => Object.fromEntries(rows.map((r) => [r.day, r.c]));
+  const uMap = mapCounts(usersByDay);
+  const tMap = mapCounts(tiolasByDay);
+  const bMap = mapCounts(blogsByDay);
+
+  return {
+    days,
+    users: days.map((d) => uMap[d] || 0),
+    tiolas: days.map((d) => tMap[d] || 0),
+    blogs: days.map((d) => bMap[d] || 0),
+  };
+}
+
+function topPlaces() {
+  const rows = db.prepare(`
+    SELECT p.id, p.name, p.city, p.country,
+      (SELECT COUNT(*) FROM tiolas t WHERE t.place_id = p.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiolaCount,
+      (SELECT COUNT(*) FROM saved_places sp WHERE sp.place_id = p.id) AS saveCount
+    FROM places p
+    ORDER BY tiolaCount DESC, saveCount DESC
+    LIMIT 10
+  `).all();
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    city: r.city,
+    country: r.country,
+    tiolaCount: r.tiolaCount,
+    saveCount: r.saveCount,
+  }));
+}
+
+function topUsers() {
+  const rows = db.prepare(`
+    SELECT u.id, u.name, u.email,
+      (SELECT COUNT(*) FROM tiolas t WHERE t.user_id = u.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiolaCount,
+      (SELECT COUNT(*) FROM blogs b WHERE b.user_id = u.id AND b.status = 'approved') AS blogCount,
+      (SELECT COUNT(*) FROM tiola_likes tl JOIN tiolas t ON t.id = tl.tiola_id WHERE t.user_id = u.id) AS likeCount
+    FROM users u
+    WHERE u.role = 'member'
+    ORDER BY (tiolaCount + blogCount + likeCount) DESC
+    LIMIT 10
+  `).all();
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    tiolaCount: r.tiolaCount,
+    blogCount: r.blogCount,
+    likeCount: r.likeCount,
+    activityScore: r.tiolaCount + r.blogCount + r.likeCount,
+  }));
+}
+
+module.exports = { dashboard, contentQuality, byCategory, timeseries, topPlaces, topUsers };
 
