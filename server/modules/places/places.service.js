@@ -1,4 +1,4 @@
-const { db, allPlaceStats } = require('../../db');
+const { db } = require('../../db');
 
 const { normalizeSearch, matchesQuery } = require('../../lib/search-normalize');
 
@@ -9,6 +9,8 @@ const { mapPlaceRow, mapMarker } = require('../../lib/place-map');
 const catalogDb = require('../../lib/catalog-db');
 const { FILTER_GROUPS, GROUP_VISIBILITY } = require('../../lib/place-content');
 const { cacheKey, wrap, clear } = require('../../lib/cache');
+const { getStatsMap, invalidateStatsCache } = require('../../lib/stats-cache');
+const { searchPlacesRows } = require('../../lib/places-search');
 
 const CACHE_VERSION = 'v2';
 const META_CACHE_TTL = 60 * 1000;
@@ -26,19 +28,6 @@ function normalizeCountry(value) {
 
 
 const STATS_CACHE_TTL = 60 * 1000;
-const LIST_STATS_CACHE_TTL = 2 * 60 * 1000;
-let cachedAllStats = null;
-let cachedAllStatsAt = 0;
-
-function getAllStatsMap() {
-  const now = Date.now();
-  if (cachedAllStats && now - cachedAllStatsAt < LIST_STATS_CACHE_TTL) {
-    return cachedAllStats;
-  }
-  cachedAllStats = allPlaceStats();
-  cachedAllStatsAt = now;
-  return cachedAllStats;
-}
 
 function mapPlace(row, statsMap) {
   const stats = statsMap
@@ -99,7 +88,7 @@ function toApiPlace(p) {
 
 
 
-function filterPlaces(rows, queryParams, statsMap = getAllStatsMap()) {
+function filterPlaces(rows, queryParams, statsMap = getStatsMap(), options = {}) {
 
   const {
 
@@ -113,10 +102,8 @@ function filterPlaces(rows, queryParams, statsMap = getAllStatsMap()) {
 
 
 
-  if (qNorm) {
-
+  if (qNorm && !options.skipTextSearch) {
     filtered = filtered.filter((row) => matchesQuery(mapPlace(row, statsMap), qNorm));
-
   }
 
   if (group && group !== 'all') {
@@ -282,11 +269,16 @@ function listPlaces(queryParams) {
 
 
   return wrap(key, () => {
-
-    const rows = db.prepare('SELECT * FROM places').all();
-    const statsMap = getAllStatsMap();
-
-    let { places, qNorm } = filterPlaces(rows, queryParams, statsMap);
+    const { q, country, city } = queryParams;
+    let rows;
+    if (q || country || city) {
+      rows = searchPlacesRows({ q, country, city });
+    } else {
+      rows = db.prepare('SELECT * FROM places').all();
+    }
+    const statsMap = getStatsMap();
+    const skipTextSearch = !!q;
+    let { places, qNorm } = filterPlaces(rows, queryParams, statsMap, { skipTextSearch });
 
     places = sortPlaces(places, sort);
 
@@ -324,7 +316,7 @@ function listMarkers(queryParams, lang = 'tr') {
 
   if (!rows.length) rows = db.prepare('SELECT * FROM places').all();
 
-  const statsMap = getAllStatsMap();
+  const statsMap = getStatsMap();
 
   const { places } = filterPlaces(rows, queryParams, statsMap);
 
@@ -484,8 +476,7 @@ function invalidateMetaCategories() {
 function invalidatePlacesCache() {
   clear(`places-list-${CACHE_VERSION}`);
   invalidateMetaCategories();
-  cachedAllStats = null;
-  cachedAllStatsAt = 0;
+  invalidateStatsCache();
 }
 
 module.exports = {

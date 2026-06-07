@@ -7,6 +7,7 @@ const { authRequired } = require('../../middleware/auth');
 const { authLimiter } = require('../../middleware/rateLimit');
 const { fail } = require('../../lib/apiResponse');
 const controller = require('./auth.controller');
+const { imageFileFilter, validateUploadedImage } = require('../../lib/image-mime');
 
 const uploadRoot = path.join(__dirname, '..', '..', '..', 'uploads');
 if (!fs.existsSync(uploadRoot)) fs.mkdirSync(uploadRoot, { recursive: true });
@@ -21,10 +22,7 @@ const avatarStorage = multer.diskStorage({
 const avatarUpload = multer({
   storage: avatarStorage,
   limits: { fileSize: 3 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
-    else cb(new Error('Sadece resim dosyaları (JPG, PNG, WebP)'));
-  },
+  fileFilter: imageFileFilter,
 });
 
 const router = express.Router();
@@ -91,6 +89,6 @@ router.post('/avatar-upload', authRequired, (req, res, next) => {
     }
     next();
   });
-}, controller.updateAvatarPhoto);
+}, validateUploadedImage(), controller.updateAvatarPhoto);
 
 module.exports = router;

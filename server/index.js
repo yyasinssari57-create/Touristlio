@@ -12,6 +12,8 @@ const { validateProductionEnv } = require('./lib/production-env');
 const { apiLimiter } = require('./middleware/rateLimit');
 const { clear: clearCache } = require('./lib/cache');
 const { authRequired, requireRole } = require('./middleware/auth');
+const { csrfProtection } = require('./middleware/csrf');
+const { uploadsStaticHeaders } = require('./middleware/uploads-static');
 
 validateJwtSecret();
 validateProductionEnv();
@@ -83,13 +85,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use('/uploads', uploadsStaticHeaders, express.static(path.join(__dirname, '..', 'uploads')));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', csrfProtection, authRoutes);
 app.use('/api/places', placesRoutes);
-app.use('/api/tiolas', tiolasRoutes);
-app.use('/api/blogs', blogsRoutes);
+app.use('/api/tiolas', csrfProtection, tiolasRoutes);
+app.use('/api/blogs', csrfProtection, blogsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/osm', osmRoutes);
 app.use('/api/travel-lists', travelListsRoutes);
@@ -102,7 +104,7 @@ app.use('/api/moderation', moderationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reports', reportsRoutes);
-app.use('/api/profiles', profilesRoutes);
+app.use('/api/profiles', csrfProtection, profilesRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'Touristlio', version: '2.0.0', ts: new Date().toISOString() });
@@ -219,16 +221,12 @@ app.listen(PORT, () => {
 });
 
 if (process.env.LIVE_DATA_CRON !== 'false') {
-  try {
-    const cron = require('node-cron');
-    const { refreshAllPlaces } = require('./services/liveDataService');
-    cron.schedule('0 */6 * * *', () => {
-      const n = refreshAllPlaces();
-      logger.info({ msg: 'Live data cron', places: n });
-    });
-  } catch (e) {
-    logger.warn({ msg: 'node-cron not available', err: e.message });
-  }
+  const cron = require('node-cron');
+  const { refreshAllPlaces } = require('./services/liveDataService');
+  cron.schedule('0 */6 * * *', () => {
+    const n = refreshAllPlaces();
+    logger.info({ msg: 'Live data cron', places: n });
+  });
 }
 
 process.on('SIGINT', () => {

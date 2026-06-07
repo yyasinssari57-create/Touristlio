@@ -12,6 +12,9 @@ const mailer = require('../../lib/mailer');
 const MAX_FAILED = 5;
 const LOCK_MINUTES = 15;
 
+/** Constant-time dummy hash when user is not found (timing-attack mitigation). */
+const DUMMY_PASSWORD_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -79,7 +82,10 @@ function login(req) {
   if (err) return { error: err, status: 400 };
   const { email, password } = req.body;
   const row = authModel.findByEmail(email);
-  if (!row) return { error: 'E-posta veya şifre hatalı', status: 401 };
+  if (!row) {
+    comparePassword(password, DUMMY_PASSWORD_HASH);
+    return { error: 'E-posta veya şifre hatalı', status: 401 };
+  }
   if (isLocked(row)) {
     return { error: 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin.', status: 423 };
   }

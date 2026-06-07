@@ -12,6 +12,7 @@ const { sanitizeText } = require('../lib/sanitize');
 
 const { enrichTiolaLikes, toggleTiolaLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
+const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
 
 
 
@@ -59,13 +60,7 @@ const upload = multer({
 
   limits: { fileSize: 5 * 1024 * 1024 },
 
-  fileFilter: (_req, file, cb) => {
-
-    if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
-
-    else cb(new Error('Sadece resim dosyaları (JPG, PNG, WebP)'));
-
-  },
+  fileFilter: imageFileFilter,
 
 });
 
@@ -197,7 +192,7 @@ function countMonthlyPlaceComments(userId, placeId) {
 
     WHERE user_id = ? AND place_id = ? AND parent_id IS NULL
 
-      AND created_at >= datetime('now', '-30 days')
+      AND created_at >= datetime('now', 'start of month')
 
       AND status NOT IN ('rejected', 'deleted')
 
@@ -291,7 +286,7 @@ router.get('/', authOptional, (req, res) => {
 
 
 
-router.post('/', authRequired, upload.single('photo'), (req, res) => {
+router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), (req, res) => {
 
   const { text, stars, category, placeId, cityTag, countryTag, parentId } = req.body || {};
 

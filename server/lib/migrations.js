@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const logger = require('./logger');
 
 const PLACE_COLUMNS = [
@@ -210,6 +212,35 @@ function runMigrations(db) {
   seedCitiesFromPlaces(db);
   seedBlogCategoriesIfEmpty(db);
   backfillBlogSlugs(db);
+
+  runFileMigrations(db);
+}
+
+function runFileMigrations(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  const migrationsDir = path.join(__dirname, '..', '..', 'db', 'migrations');
+  if (!fs.existsSync(migrationsDir)) return;
+
+  const helpers = { columnExists, addColumnIfMissing };
+  const files = fs.readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.js'))
+    .sort();
+
+  for (const file of files) {
+    const mod = require(path.join(migrationsDir, file));
+    const id = mod.id || file.replace(/\.js$/, '');
+    const applied = db.prepare('SELECT 1 FROM schema_migrations WHERE id = ?').get(id);
+    if (applied) continue;
+    mod.up(db, helpers);
+    db.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(id);
+    logger.info({ msg: 'Migration applied', id });
+  }
 }
 
 module.exports = { runMigrations };

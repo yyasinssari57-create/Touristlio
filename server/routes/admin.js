@@ -23,6 +23,7 @@ const placesService = require('../modules/places/places.service');
 const { ok, fail } = require('../lib/apiResponse');
 const { mapReport } = require('./reports');
 const reportMod = require('../lib/report-moderation');
+const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
@@ -50,10 +51,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024, files: 10 },
-  fileFilter(_req, file, cb) {
-    if (/^image\//.test(file.mimetype)) cb(null, true);
-    else cb(new Error('Yalnızca görsel yüklenebilir'));
-  },
+  fileFilter: imageFileFilter,
 });
 function mapPendingTiola(row) {
   return {
@@ -434,7 +432,7 @@ function isExternalPhotoUrl(url) {
   return /^https?:\/\//i.test(u) && !/\/uploads\//i.test(u);
 }
 
-router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), (req, res) => {
+router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), validateUploadedImage(), (req, res) => {
   const placeId = parsePositiveInt(req.params.id, res);
   if (!placeId) return;
   const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
@@ -480,13 +478,10 @@ const mediaUpload = multer({
     },
   }),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => {
-    if (/^image\//.test(file.mimetype)) cb(null, true);
-    else cb(new Error('Yalnızca görsel yüklenebilir'));
-  },
+  fileFilter: imageFileFilter,
 });
 
-router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), (req, res) => {
+router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), (req, res) => {
   if (!req.file) return fail(res, 'Görsel gerekli', 400);
   const url = `/uploads/media/${req.file.filename}`;
   return ok(res, { url });
@@ -603,10 +598,14 @@ router.delete('/categories/:id', checkPermission('admin.categories'), (req, res)
 });
 
 /* ── Users & roles (admin only) ── */
-router.get('/users', requireRole('admin'), (_req, res) => {
+router.get('/users', requireRole('admin'), (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const total = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
   const rows = db.prepare(`
-    SELECT id, name, email, role, email_verified, is_blocked, created_at FROM users ORDER BY created_at DESC LIMIT 200
-  `).all();
+    SELECT id, name, email, role, email_verified, is_blocked, created_at FROM users
+    ORDER BY created_at DESC LIMIT ? OFFSET ?
+  `).all(limit, offset);
   return ok(res, {
     users: rows.map((r) => ({
       id: r.id,
@@ -617,6 +616,9 @@ router.get('/users', requireRole('admin'), (_req, res) => {
       isBlocked: !!r.is_blocked,
       createdAt: r.created_at,
     })),
+    total,
+    limit,
+    offset,
   });
 });
 

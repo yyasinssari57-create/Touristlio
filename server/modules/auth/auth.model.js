@@ -77,11 +77,13 @@ function findPasswordReset(token) {
 
 
 function usePasswordReset(id, userId, passwordHash) {
-
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
-
+  touchPasswordChangedAt(userId);
   db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(id);
-
+  db.prepare(`
+    DELETE FROM password_reset_tokens
+    WHERE used = 1 OR expires_at <= datetime('now')
+  `).run();
 }
 
 
@@ -102,18 +104,21 @@ function markEmailVerified(userId) {
 
 
 
+function touchPasswordChangedAt(userId) {
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  db.prepare('UPDATE users SET password_changed_at = ? WHERE id = ?').run(now, userId);
+}
+
 function updatePasswordHash(userId, passwordHash) {
-
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
-
+  touchPasswordChangedAt(userId);
 }
 
 
 
 function updateEmailAddress(userId, email) {
-
   db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email.toLowerCase().trim(), userId);
-
+  touchPasswordChangedAt(userId);
 }
 
 function updateAvatarPreset(userId, preset, color) {
