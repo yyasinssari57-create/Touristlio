@@ -59,7 +59,7 @@
         <div id="statsRow"></div>
       </section>
 
-      <section id="adm-places" class="adm-section" style="display:none" role="tabpanel" aria-label="Yerler">
+      <section id="adm-places" class="adm-section" role="tabpanel" aria-label="Yerler">
         <h2 class="adm-h2">Yeni yer ekle</h2>
         <div class="admin-card">
           <div id="placeFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
@@ -122,7 +122,7 @@
         </div>
       </section>
 
-      <section id="adm-cities" class="adm-section" style="display:none" role="tabpanel" aria-label="Şehirler">
+      <section id="adm-cities" class="adm-section" role="tabpanel" aria-label="Şehirler">
         <h2 class="adm-h2">Yeni şehir ekle</h2>
         <div class="admin-card">
           <div id="cityFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
@@ -153,7 +153,7 @@
         <div class="admin-card" id="citiesTableWrap" aria-live="polite"></div>
       </section>
 
-      <section id="adm-categories" class="adm-section" style="display:none" role="tabpanel" aria-label="Kategoriler">
+      <section id="adm-categories" class="adm-section" role="tabpanel" aria-label="Kategoriler">
         <p class="adm-cat-hint">
           <strong>Buraya eklediğiniz kategoriler ana sitede Keşfet/Harita filtre çubuğunda otomatik görünür.</strong>
           Sayfayı yeniledikten sonra yeni çip listede belirir. Pasif işaretli kategoriler filtrelerde gizlenir.
@@ -196,7 +196,7 @@
         <div class="admin-card" id="categoriesTableWrap" aria-live="polite"></div>
       </section>
 
-      <section id="adm-moderation" class="adm-section" style="display:none" role="tabpanel" aria-label="Moderasyon">
+      <section id="adm-moderation" class="adm-section" role="tabpanel" aria-label="Moderasyon">
         <div class="adm-report-tabs" id="modSubTabs" role="tablist" aria-label="Moderasyon filtreleri">
           <button type="button" class="on" data-mfilter="pending" onclick="setModFilter('pending',this)">Bekleyen Tiola'lar</button>
           <button type="button" data-mfilter="approved" onclick="setModFilter('approved',this)">Yayında Tiola'lar</button>
@@ -237,7 +237,7 @@
         </div>
       </section>
 
-      <section id="adm-reports" class="adm-section" style="display:none" role="tabpanel" aria-label="Şikayetler">
+      <section id="adm-reports" class="adm-section" role="tabpanel" aria-label="Şikayetler">
         <h2 class="adm-h2-tight">Şikayetler</h2>
         <div class="adm-report-tabs" id="reportSubTabs" role="tablist" aria-label="Şikayet filtreleri">
           <button type="button" class="on" data-rfilter="pending" onclick="setReportFilter('pending',this)">Bekleyen</button>
@@ -247,7 +247,7 @@
         <div id="reportsList" aria-live="polite"></div>
       </section>
 
-      <section id="adm-users" class="adm-section content-layout content-sidebar-open" style="display:none" role="tabpanel" aria-label="Kullanıcılar">
+      <section id="adm-users" class="adm-section content-layout content-sidebar-open" role="tabpanel" aria-label="Kullanıcılar">
         <div class="content-layout-frame">
           <header class="content-frame-toolbar">
             <button type="button" class="content-sidebar-toggle" id="usersSidebarToggle" onclick="toggleUsersSidebar()" aria-expanded="true" aria-controls="usersSubTabs" aria-label="Kullanıcı menüsünü daralt">
@@ -328,7 +328,7 @@
         </div>
       </section>
 
-      <section id="adm-content" class="adm-section content-layout content-sidebar-open" style="display:none" role="tabpanel" aria-label="İçerik">
+      <section id="adm-content" class="adm-section content-layout content-sidebar-open" role="tabpanel" aria-label="İçerik">
         <div class="content-layout-frame">
           <header class="content-frame-toolbar">
             <button type="button" class="content-sidebar-toggle" id="contentSidebarToggle" onclick="toggleContentSidebar()" aria-expanded="true" aria-controls="contentSubTabs" aria-label="Blog menüsünü daralt">
@@ -509,7 +509,7 @@
         </div>
       </section>
 
-      <section id="adm-analytics" class="adm-section" style="display:none" role="tabpanel" aria-label="Analitik">
+      <section id="adm-analytics" class="adm-section" role="tabpanel" aria-label="Analitik">
         <div id="analyticsCards" class="adm-analytics-cards"></div>
         <div class="admin-card" id="analyticsChart"></div>
         <div class="adm-analytics-tables">
@@ -519,7 +519,7 @@
         <div class="admin-card" id="analyticsQuality"></div>
       </section>
 
-      <section id="adm-media" class="adm-section" style="display:none" role="tabpanel" aria-label="Medya">
+      <section id="adm-media" class="adm-section" role="tabpanel" aria-label="Medya">
         <h2 class="adm-h2-tight">Medya kütüphanesi</h2>
         <div class="admin-card adm-mod-filters">
           <div class="admin-form adm-mod-filter-row">
@@ -533,7 +533,7 @@
         <div id="mediaPagination" class="adm-pagination"></div>
       </section>
 
-      <section id="adm-settings" class="adm-section" style="display:none" role="tabpanel" aria-label="Ayarlar">
+      <section id="adm-settings" class="adm-section" role="tabpanel" aria-label="Ayarlar">
         <div class="admin-card adm-settings">
           <h3>Site Durumu</h3>
           <p class="adm-field-hint">Bakım modu açıkken site API'leri (giriş ve admin hariç) 503 döner.</p>
@@ -558,11 +558,11 @@
         </div>
       </section>
 
-      <section id="adm-roles" class="adm-section" style="display:none" role="tabpanel" aria-label="Roller">
+      <section id="adm-roles" class="adm-section" role="tabpanel" aria-label="Roller">
         <div class="admin-card" id="rolesPanel" aria-live="polite"></div>
       </section>
 
-      <section id="adm-audit-log" class="adm-section" style="display:none" role="tabpanel" aria-label="Audit Log">
+      <section id="adm-audit-log" class="adm-section" role="tabpanel" aria-label="Audit Log">
         <h2 class="adm-h2-tight">Audit Log</h2>
         <div class="admin-card adm-mod-filters">
           <div class="admin-form adm-mod-filter-row">
@@ -1491,7 +1491,10 @@ function openTiolaPreview(id) {
 
 function showAdminSection(id, btn) {
   if (id !== 'users') closeUserDetailPanel();
-  document.querySelectorAll('.adm-section').forEach((s) => s.classList.remove('active'));
+  document.querySelectorAll('.adm-section').forEach((s) => {
+    s.classList.remove('active');
+    s.style.removeProperty('display');
+  });
   const el = document.getElementById('adm-' + id);
   if (el) el.classList.add('active');
   document.querySelectorAll('#adminTabs button').forEach((b) => {
