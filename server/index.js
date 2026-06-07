@@ -58,8 +58,9 @@ app.use(helmet({
   contentSecurityPolicy: isProd ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
       connectSrc: ["'self'"],
@@ -231,6 +232,12 @@ app.listen(PORT, () => {
   logger.info(`Search → http://localhost:${PORT}/search`);
   logger.info(`Gezilecek Yerler → http://localhost:${PORT}/?tab=places`);
   spawnSitemapIfStale();
+  try {
+    const { maybeSeedOnStartup } = require('./lib/startup-seed');
+    maybeSeedOnStartup();
+  } catch (err) {
+    logger.warn({ msg: 'Startup seed hook skipped', err: err.message });
+  }
   try {
     const { publishDueBlogs } = require('./lib/blog-scheduler');
     const n = publishDueBlogs();

@@ -17,10 +17,15 @@ const blogsSeed = [
   { id: 6, category: 'guide', imageUrl: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=500&q=80', catLabel: 'Seyahat Rehberi', title: "Machu Picchu'ya Hazırlanmak", excerpt: 'Yükseklik hastalığından nasıl kaçınırsınız ve en az kalabalık hangi rota.', author: 'Roberto Lopez', placeId: 29, featured: false },
 ];
 
-function seedPlaces() {
+function seedPlaces(options = {}) {
+  const { fatal = true } = options;
   if (!fs.existsSync(placesPath)) {
-    console.error('places.json missing — run: npm run places:merge');
-    process.exit(1);
+    const msg = 'places.json missing — run: npm run places:merge';
+    if (fatal) {
+      console.error(msg);
+      process.exit(1);
+    }
+    throw new Error(msg);
   }
   const raw = JSON.parse(fs.readFileSync(placesPath, 'utf8'));
   const places = raw.map((p) => enrichContentFields(p, p.id));
@@ -150,8 +155,22 @@ function seedDemoBlogs() {
   console.log('Seeded', blogsSeed.length, 'demo blogs');
 }
 
-seedPlaces();
-seedAdmin();
-syncLegacyAdminPassword(process.env.ADMIN_PASSWORD || 'ChangeMe123!');
-seedDemoBlogs();
-console.log('Seed complete.');
+function runFullSeed(options = {}) {
+  seedPlaces(options);
+  seedAdmin();
+  syncLegacyAdminPassword(process.env.ADMIN_PASSWORD || 'ChangeMe123!');
+  seedDemoBlogs();
+}
+
+module.exports = {
+  seedPlaces,
+  seedAdmin,
+  syncLegacyAdminPassword,
+  seedDemoBlogs,
+  runFullSeed,
+};
+
+if (require.main === module) {
+  runFullSeed({ fatal: true });
+  console.log('Seed complete.');
+}
