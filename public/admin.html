@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Touristlio Admin</title>
 <meta name="robots" content="noindex, nofollow"/>
+<script>
+(function () {
+  var host = location.hostname;
+  if (host.indexOf('www.') === 0) {
+    location.replace(location.protocol + '//' + host.slice(4) + location.pathname + location.search + location.hash);
+  }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/style.css?v=__APP_VERSION__"/>
 <link rel="stylesheet" href="/css/inline-overrides.css?v=__APP_VERSION__"/>
@@ -1016,6 +1024,7 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/** Same-origin only — never use SITE_URL or absolute apex URL for admin fetches. */
 const API = '/api';
 let currentUser = null;
 let categoryOptions = [];
@@ -1412,14 +1421,16 @@ function turkishFetchError(err) {
 }
 
 async function api(path, opts = {}) {
+  const method = (opts.method || 'GET').toUpperCase();
   const headers = { ...(opts.headers || {}) };
   const isForm = opts.body instanceof FormData;
   if (!isForm && opts.body && typeof opts.body !== 'string') {
     headers['Content-Type'] = 'application/json';
     opts = { ...opts, body: JSON.stringify(opts.body) };
-  } else if (!isForm && !headers['Content-Type']) {
+  } else if (!isForm && opts.body != null && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
+  // Bodyless GET/HEAD must not send Content-Type or the browser sends a CORS preflight.
   let res;
   try {
     res = await fetch(API + path, { ...opts, headers, credentials: 'include' });
