@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+<script>
+(function () {
+  var host = location.hostname;
+  if (host.indexOf('www.') === 0) {
+    location.replace(location.protocol + '//' + host.slice(4) + location.pathname + location.search + location.hash);
+  }
+})();
+</script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Touristlio — Sadece Ziyaret Etme. Hisset.</title>

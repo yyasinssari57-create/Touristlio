@@ -11,8 +11,8 @@ function isAllowedOrigin(origin, corsOrigins) {
 function apiPreflightMiddleware(corsOrigins) {
   return (req, res, next) => {
     if (req.method !== 'OPTIONS') return next();
-    const path = req.path || '';
-    if (!path.startsWith('/api/')) return next();
+    const path = req.path || req.originalUrl || '';
+    if (!path.startsWith('/api')) return next();
 
     const origin = req.headers.origin;
     if (isAllowedOrigin(origin, corsOrigins)) {

@@ -8,8 +8,16 @@ const NO_CACHE_HEADERS = {
   Expires: '0',
 };
 
+const WWW_REDIRECT_SNIPPET = `<script>(function(){var h=location.hostname;if(h.indexOf('www.')===0)location.replace(location.protocol+'//'+h.slice(4)+location.pathname+location.search+location.hash);})();</script>`;
+
+function injectWwwRedirect(html) {
+  if (html.includes("host.indexOf('www.')")) return html;
+  if (!/<head[\s>]/i.test(html)) return html;
+  return html.replace(/<head([^>]*)>/i, `<head$1>\n${WWW_REDIRECT_SNIPPET}`);
+}
+
 function injectAppVersion(html) {
-  return html.replace(/__APP_VERSION__/g, getAppVersion());
+  return injectWwwRedirect(html.replace(/__APP_VERSION__/g, getAppVersion()));
 }
 
 function sendPublicHtml(res, publicDir, relativePath) {
@@ -42,4 +50,11 @@ function publicHtmlMiddleware(publicDir) {
   };
 }
 
-module.exports = { sendPublicHtml, publicHtmlMiddleware, NO_CACHE_HEADERS, injectAppVersion };
+module.exports = {
+  sendPublicHtml,
+  publicHtmlMiddleware,
+  NO_CACHE_HEADERS,
+  injectAppVersion,
+  injectWwwRedirect,
+  WWW_REDIRECT_SNIPPET,
+};

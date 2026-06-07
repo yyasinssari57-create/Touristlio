@@ -21,7 +21,8 @@ function canonicalHostMiddleware() {
 
   return (req, res, next) => {
     if (req.method === 'OPTIONS') return next();
-    if (req.path.startsWith('/api/')) return next();
+    const urlPath = req.path || req.originalUrl || '';
+    if (urlPath.startsWith('/api')) return next();
 
     const host = (req.headers.host || '').split(':')[0].toLowerCase();
     if (host !== wwwHost) return next();

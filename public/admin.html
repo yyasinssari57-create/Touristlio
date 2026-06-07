@@ -1409,15 +1409,18 @@ async function uploadPlacePhotos(placeId, inputId, opts = {}) {
   return data;
 }
 
-function turkishFetchError(err) {
+function turkishFetchError(err, context) {
   const msg = String(err?.message || '');
   if (msg === 'Failed to fetch' || err?.name === 'TypeError') {
-    return 'Analitik verileri alınamadı. Sunucuya bağlanılamadı — sunucunun çalıştığından ve oturumunuzun açık olduğundan emin olun.';
+    const wwwHint = location.hostname.indexOf('www.') === 0
+      ? ' www olmadan touristlio.com adresine yönlendiriliyorsunuz; sayfa yenilenmezse adres çubuğundaki www önekini kaldırın.'
+      : '';
+    return 'Sunucuya bağlanılamadı — bağlantınızı kontrol edin ve oturumunuzun açık olduğundan emin olun.' + wwwHint;
   }
   if (/network|aborted|timeout/i.test(msg)) {
     return 'Ağ bağlantısı kesildi. Lütfen tekrar deneyin.';
   }
-  return msg || 'Veri getirilemedi';
+  return msg || (context === 'analytics' ? 'Analitik verileri alınamadı.' : 'Veri getirilemedi');
 }
 
 async function api(path, opts = {}) {
