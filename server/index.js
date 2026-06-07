@@ -235,21 +235,37 @@ app.listen(PORT, () => {
     const { publishDueBlogs } = require('./lib/blog-scheduler');
     const n = publishDueBlogs();
     if (n) logger.info({ msg: 'Startup scheduled blog publish', count: n });
-  } catch { /* scheduler optional */ }
+  } catch (err) {
+    logger.warn({ msg: 'Startup blog scheduler skipped', err: err.message });
+  }
+  startBackgroundJobs();
 });
 
-if (process.env.LIVE_DATA_CRON !== 'false') {
-  const cron = require('node-cron');
-  const { refreshAllPlaces } = require('./services/liveDataService');
-  const { publishDueBlogs } = require('./lib/blog-scheduler');
-  cron.schedule('0 */6 * * *', () => {
-    const n = refreshAllPlaces();
-    logger.info({ msg: 'Live data cron', places: n });
-  });
-  cron.schedule('*/5 * * * *', () => {
-    const n = publishDueBlogs();
-    if (n) logger.info({ msg: 'Scheduled blogs published', count: n });
-  });
+function startBackgroundJobs() {
+  if (process.env.LIVE_DATA_CRON === 'false') return;
+  try {
+    const cron = require('node-cron');
+    const { refreshAllPlaces } = require('./services/liveDataService');
+    const { publishDueBlogs } = require('./lib/blog-scheduler');
+    cron.schedule('0 */6 * * *', () => {
+      try {
+        const n = refreshAllPlaces();
+        logger.info({ msg: 'Live data cron', places: n });
+      } catch (err) {
+        logger.warn({ msg: 'Live data cron failed', err: err.message });
+      }
+    });
+    cron.schedule('*/5 * * * *', () => {
+      try {
+        const n = publishDueBlogs();
+        if (n) logger.info({ msg: 'Scheduled blogs published', count: n });
+      } catch (err) {
+        logger.warn({ msg: 'Blog scheduler cron failed', err: err.message });
+      }
+    });
+  } catch (err) {
+    logger.warn({ msg: 'Background cron jobs disabled', err: err.message });
+  }
 }
 
 process.on('SIGINT', () => {

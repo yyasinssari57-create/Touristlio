@@ -1,6 +1,6 @@
 # Touristlio — Render Blueprint
 # Dashboard: New > Blueprint > connect repo with this file
-# İlk deploy sonrası: Environment sekmesinde JWT_SECRET, ADMIN_PASSWORD, SMTP_* değerlerini girin.
+# JWT_SECRET otomatik üretilir (generateValue). İsteğe bağlı: ADMIN_PASSWORD, SMTP_*, SITE_URL, CORS_ORIGIN.
 
 services:
   - type: web
@@ -41,6 +41,7 @@ services:
         sync: false
       - key: SITE_URL
         sync: false
+      # Auto-generated on first deploy; override in Dashboard for a stable secret across redeploys
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_EMAIL

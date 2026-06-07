@@ -307,15 +307,18 @@ seedRbac();
 
 const { runMigrations } = require('./lib/migrations');
 try {
+  logger.info({ msg: 'Running database migrations' });
   runMigrations(db);
+  logger.info({ msg: 'Database migrations complete' });
 } catch (err) {
+  const detail = `${err.code || 'SQLITE_ERROR'} — ${err.message}`;
   logger.error({
     msg: 'Database migrations failed on startup',
     code: err.code,
     err: err.message,
     stack: err.stack,
   });
-  throw err;
+  throw new Error(`Database migration failed: ${detail}`);
 }
 
 function placeStats(placeId) {

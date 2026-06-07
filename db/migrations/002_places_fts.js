@@ -40,4 +40,4 @@ function up(db) {
   `);
 }
 
-module.exports = { id: '002_places_fts', up };
+module.exports = { id: '002_places_fts', up, optional: true };

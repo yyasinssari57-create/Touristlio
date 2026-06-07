@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { db } = require('./db');
 const { effectivePermissions } = require('./middleware/rbac');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const crypto = require('crypto');
 
 const WEAK_JWT_SECRETS = new Set([
   'dev-secret-change-me',
@@ -11,12 +11,28 @@ const WEAK_JWT_SECRETS = new Set([
   'touristlio-dev-secret-change-in-production',
 ]);
 
-function validateJwtSecret() {
-  const secret = process.env.JWT_SECRET;
+function getJwtSecret() {
+  return process.env.JWT_SECRET || 'dev-secret-change-me';
+}
+
+function ensureJwtSecret() {
   if (process.env.NODE_ENV !== 'production') return;
+  const secret = process.env.JWT_SECRET;
+  if (secret && secret.length >= 32 && !WEAK_JWT_SECRETS.has(secret)) return;
+  process.env.JWT_SECRET = crypto.randomBytes(48).toString('hex');
+  console.warn(
+    '[auth] JWT_SECRET was missing or weak — auto-generated for this process. '
+    + 'Set a stable JWT_SECRET in Render Environment so sessions survive redeploys.',
+  );
+}
+
+function validateJwtSecret() {
+  if (process.env.NODE_ENV !== 'production') return;
+  ensureJwtSecret();
+  const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 32 || WEAK_JWT_SECRETS.has(secret)) {
     throw new Error(
-      'JWT_SECRET must be set to a long random string (32+ chars) in production. Run: npm run generate:jwt-secret',
+      'JWT_SECRET must be a long random string (32+ chars) in production. Run: npm run generate:jwt-secret',
     );
   }
 }
@@ -24,13 +40,13 @@ function validateJwtSecret() {
 function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: '7d' },
   );
 }
 
 function verifyToken(token) {
-  return jwt.verify(token, JWT_SECRET);
+  return jwt.verify(token, getJwtSecret());
 }
 
 function hashPassword(password) {

@@ -55,12 +55,39 @@ function addColumnIfMissing(db, table, col, type) {
   }
 }
 
+function ensureIndex(db, indexName, table, columns) {
+  if (!tableExists(db, table)) return;
+  const cols = Array.isArray(columns) ? columns : [columns];
+  if (!cols.every((col) => columnExists(db, table, col))) return;
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${table}(${cols.join(', ')})`);
+  } catch (err) {
+    logger.warn({
+      msg: 'Migration: index skipped',
+      indexName,
+      table,
+      code: err.code,
+      err: err.message,
+    });
+  }
+}
+
+function runOptional(label, fn) {
+  try {
+    fn();
+  } catch (err) {
+    logger.warn({
+      msg: 'Migration: optional step skipped',
+      step: label,
+      code: err.code,
+      err: err.message,
+    });
+  }
+}
+
 function runMigrations(db) {
   try {
-    if (!columnExists(db, 'places', 'search_aliases')) {
-      db.exec('ALTER TABLE places ADD COLUMN search_aliases TEXT');
-      logger.info({ msg: 'Migration: places.search_aliases' });
-    }
+    addColumnIfMissing(db, 'places', 'search_aliases', 'TEXT');
 
     for (const col of PLACE_COLUMNS) {
       const type = ['lat', 'lng', 'popularity'].includes(col) ? 'REAL' : 'TEXT';
@@ -115,7 +142,6 @@ function runMigrations(db) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_cities_country ON cities(country, is_active);
-    CREATE INDEX IF NOT EXISTS idx_places_status ON places(status);
 
     CREATE TABLE IF NOT EXISTS user_notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,9 +167,6 @@ function runMigrations(db) {
       is_active INTEGER DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
-
-    CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
-    CREATE INDEX IF NOT EXISTS idx_blogs_featured ON blogs(featured, created_at);
 
     CREATE TABLE IF NOT EXISTS reports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -205,7 +228,6 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_profile_changes_status ON profile_change_requests(status, created_at);
     CREATE INDEX IF NOT EXISTS idx_profile_changes_user ON profile_change_requests(user_id, status);
 
-    CREATE INDEX IF NOT EXISTS idx_tiolas_parent ON tiolas(parent_id);
     CREATE INDEX IF NOT EXISTS idx_tiolas_user_place_month ON tiolas(user_id, place_id, created_at);
 
     CREATE TABLE IF NOT EXISTS admin_audit_log (
@@ -256,6 +278,11 @@ function runMigrations(db) {
     addColumnIfMissing(db, 'reports', 'content_prev_status', 'TEXT');
     addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
 
+    ensureIndex(db, 'idx_places_status', 'places', 'status');
+    ensureIndex(db, 'idx_blogs_slug', 'blogs', 'slug');
+    ensureIndex(db, 'idx_blogs_featured', 'blogs', ['featured', 'created_at']);
+    ensureIndex(db, 'idx_tiolas_parent', 'tiolas', 'parent_id');
+
     const catalogPerms = [
       ['admin.cities', 'Manage cities'],
       ['admin.categories', 'Manage categories'],
@@ -270,14 +297,16 @@ function runMigrations(db) {
     const { seedCategoriesIfEmpty, seedCitiesFromPlaces } = require('./catalog-db');
     const { backfillCityImages } = require('./city-images');
     const { seedBlogCategoriesIfEmpty, backfillBlogSlugs } = require('./blog-db');
-    seedCategoriesIfEmpty(db);
-    seedCitiesFromPlaces(db);
-    const cityImagesFilled = backfillCityImages(db);
-    if (cityImagesFilled > 0) {
-      logger.info(`Backfilled ${cityImagesFilled} city cover images`);
-    }
-    seedBlogCategoriesIfEmpty(db);
-    backfillBlogSlugs(db);
+    runOptional('seedCategoriesIfEmpty', () => seedCategoriesIfEmpty(db));
+    runOptional('seedCitiesFromPlaces', () => seedCitiesFromPlaces(db));
+    runOptional('backfillCityImages', () => {
+      const cityImagesFilled = backfillCityImages(db);
+      if (cityImagesFilled > 0) {
+        logger.info(`Backfilled ${cityImagesFilled} city cover images`);
+      }
+    });
+    runOptional('seedBlogCategoriesIfEmpty', () => seedBlogCategoriesIfEmpty(db));
+    runOptional('backfillBlogSlugs', () => backfillBlogSlugs(db));
 
     runFileMigrations(db);
   } catch (err) {
@@ -317,15 +346,16 @@ function runFileMigrations(db) {
       db.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(id);
       logger.info({ msg: 'Migration applied', id });
     } catch (err) {
+      const optional = mod.optional === true || id === '002_places_fts';
       logger.error({
-        msg: 'File migration failed',
+        msg: optional ? 'File migration failed (non-fatal)' : 'File migration failed',
         id,
         file,
         code: err.code,
         err: err.message,
         stack: err.stack,
       });
-      throw err;
+      if (!optional) throw err;
     }
   }
 }
