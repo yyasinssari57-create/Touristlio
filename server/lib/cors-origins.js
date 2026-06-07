@@ -31,4 +31,12 @@ function parseCorsOrigins(raw) {
   return [...expanded];
 }
 
-module.exports = { parseCorsOrigins };
+/** CSP connect-src: 'self' plus apex/www variants from SITE_URL and CORS_ORIGIN. */
+function getConnectSrcOrigins() {
+  const raw = [process.env.CORS_ORIGIN, process.env.SITE_URL]
+    .filter(Boolean)
+    .join(',');
+  return ["'self'", ...parseCorsOrigins(raw)];
+}
+
+module.exports = { parseCorsOrigins, getConnectSrcOrigins };

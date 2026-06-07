@@ -17,7 +17,7 @@ const { uploadsStaticHeaders } = require('./middleware/uploads-static');
 const { staticAssetHeaders } = require('./middleware/static-cache');
 const { sendPublicHtml, publicHtmlMiddleware } = require('./lib/send-public-html');
 const { getAppVersion } = require('./lib/app-version');
-const { parseCorsOrigins } = require('./lib/cors-origins');
+const { parseCorsOrigins, getConnectSrcOrigins } = require('./lib/cors-origins');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -63,7 +63,7 @@ app.use(helmet({
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-      connectSrc: ["'self'"],
+      connectSrc: getConnectSrcOrigins(),
       frameAncestors: ["'self'"],
     },
   } : false,
