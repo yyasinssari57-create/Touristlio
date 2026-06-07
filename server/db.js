@@ -1,14 +1,67 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const logger = require('./lib/logger');
 
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const projectRoot = path.join(__dirname, '..');
 
-const dbPath = path.join(dataDir, 'touristlio.db');
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+function resolveDbCandidates() {
+  if (process.env.DATABASE_PATH) {
+    return [path.resolve(process.env.DATABASE_PATH)];
+  }
+  return [
+    path.join(projectRoot, 'data', 'touristlio.db'),
+    path.join('/tmp', 'touristlio', 'touristlio.db'),
+  ];
+}
+
+function ensureDataDir(dbPath) {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+}
+
+function openDatabase() {
+  const candidates = resolveDbCandidates();
+  let lastErr;
+
+  for (const dbPath of candidates) {
+    try {
+      ensureDataDir(dbPath);
+      const db = new Database(dbPath);
+      try {
+        db.pragma('journal_mode = WAL');
+      } catch (walErr) {
+        logger.warn({ msg: 'WAL mode unavailable, using default journal', err: walErr.message });
+      }
+      db.pragma('foreign_keys = ON');
+
+      if (!process.env.DATABASE_PATH && dbPath !== candidates[0]) {
+        logger.warn({
+          msg: 'Using fallback database path — data is ephemeral (Render Free plan has no persistent disk)',
+          dbPath,
+        });
+      } else {
+        logger.info({ msg: 'Database opened', dbPath });
+      }
+
+      return { db, dbPath };
+    } catch (err) {
+      lastErr = err;
+      logger.error({
+        msg: 'Database open failed',
+        dbPath,
+        code: err.code,
+        err: err.message,
+      });
+    }
+  }
+
+  const detail = lastErr
+    ? `${lastErr.code || 'SQLITE_ERROR'} — ${lastErr.message}`
+    : 'unknown error';
+  throw new Error(`Failed to open SQLite database: ${detail}`);
+}
+
+const { db } = openDatabase();
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -253,7 +306,17 @@ function seedRbac() {
 seedRbac();
 
 const { runMigrations } = require('./lib/migrations');
-runMigrations(db);
+try {
+  runMigrations(db);
+} catch (err) {
+  logger.error({
+    msg: 'Database migrations failed on startup',
+    code: err.code,
+    err: err.message,
+    stack: err.stack,
+  });
+  throw err;
+}
 
 function placeStats(placeId) {
   const all = allPlaceStats();

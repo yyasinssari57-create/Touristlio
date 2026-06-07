@@ -22,7 +22,13 @@ const USER_COLUMNS = [
   ['avatar_preset', 'TEXT'],
 ];
 
+function tableExists(db, table) {
+  const row = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table);
+  return !!row;
+}
+
 function columnExists(db, table, col) {
+  if (!tableExists(db, table)) return false;
   try {
     db.prepare(`SELECT ${col} FROM ${table} LIMIT 1`).get();
     return true;
@@ -32,51 +38,59 @@ function columnExists(db, table, col) {
 }
 
 function addColumnIfMissing(db, table, col, type) {
+  if (!tableExists(db, table)) return;
   if (columnExists(db, table, col)) return;
-  db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
-  logger.info({ msg: 'Migration: column added', table, col });
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+    logger.info({ msg: 'Migration: column added', table, col });
+  } catch (err) {
+    logger.error({
+      msg: 'Migration: add column failed',
+      table,
+      col,
+      code: err.code,
+      err: err.message,
+    });
+    throw err;
+  }
 }
 
 function runMigrations(db) {
-  if (!columnExists(db, 'places', 'search_aliases')) {
-    db.exec('ALTER TABLE places ADD COLUMN search_aliases TEXT');
-    logger.info({ msg: 'Migration: places.search_aliases' });
-  }
-
-  for (const col of PLACE_COLUMNS) {
-    const type = ['lat', 'lng', 'popularity'].includes(col) ? 'REAL' : 'TEXT';
-    addColumnIfMissing(db, 'places', col, type);
-  }
-
-  for (const [col, def] of USER_COLUMNS) {
-    addColumnIfMissing(db, 'users', col, def);
-  }
-
-  addColumnIfMissing(db, 'travel_lists', 'share_token', 'TEXT');
-  addColumnIfMissing(db, 'places', 'status', "TEXT DEFAULT 'published'");
-  addColumnIfMissing(db, 'tiolas', 'rejection_reason', 'TEXT');
-  addColumnIfMissing(db, 'tiolas', 'parent_id', 'INTEGER');
-  addColumnIfMissing(db, 'place_categories', 'image_url', 'TEXT');
-  addColumnIfMissing(db, 'blogs', 'rejection_reason', 'TEXT');
-  addColumnIfMissing(db, 'reports', 'resolution_reason', 'TEXT');
-  addColumnIfMissing(db, 'reports', 'action_taken', 'TEXT');
-  addColumnIfMissing(db, 'reports', 'content_prev_status', 'TEXT');
-
   try {
-    db.prepare("UPDATE reports SET status = 'resolved_dismissed' WHERE status = 'dismissed'").run();
-    db.prepare("UPDATE reports SET status = 'resolved_removed' WHERE status = 'actioned'").run();
-  } catch {
-    /* reports tablosu henüz yok */
-  }
+    if (!columnExists(db, 'places', 'search_aliases')) {
+      db.exec('ALTER TABLE places ADD COLUMN search_aliases TEXT');
+      logger.info({ msg: 'Migration: places.search_aliases' });
+    }
 
-  addColumnIfMissing(db, 'blogs', 'slug', 'TEXT');
-  addColumnIfMissing(db, 'blogs', 'tags', 'TEXT');
-  addColumnIfMissing(db, 'blogs', 'featured', 'INTEGER DEFAULT 0');
-  addColumnIfMissing(db, 'blogs', 'author_name', 'TEXT');
-  addColumnIfMissing(db, 'blogs', 'published_at', 'TEXT');
-  addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
+    for (const col of PLACE_COLUMNS) {
+      const type = ['lat', 'lng', 'popularity'].includes(col) ? 'REAL' : 'TEXT';
+      addColumnIfMissing(db, 'places', col, type);
+    }
 
-  db.exec(`
+    for (const [col, def] of USER_COLUMNS) {
+      addColumnIfMissing(db, 'users', col, def);
+    }
+
+    addColumnIfMissing(db, 'travel_lists', 'share_token', 'TEXT');
+    addColumnIfMissing(db, 'places', 'status', "TEXT DEFAULT 'published'");
+    addColumnIfMissing(db, 'tiolas', 'rejection_reason', 'TEXT');
+    addColumnIfMissing(db, 'tiolas', 'parent_id', 'INTEGER');
+    addColumnIfMissing(db, 'blogs', 'rejection_reason', 'TEXT');
+
+    try {
+      db.prepare("UPDATE reports SET status = 'resolved_dismissed' WHERE status = 'dismissed'").run();
+      db.prepare("UPDATE reports SET status = 'resolved_removed' WHERE status = 'actioned'").run();
+    } catch {
+      /* reports tablosu henüz yok */
+    }
+
+    addColumnIfMissing(db, 'blogs', 'slug', 'TEXT');
+    addColumnIfMissing(db, 'blogs', 'tags', 'TEXT');
+    addColumnIfMissing(db, 'blogs', 'featured', 'INTEGER DEFAULT 0');
+    addColumnIfMissing(db, 'blogs', 'author_name', 'TEXT');
+    addColumnIfMissing(db, 'blogs', 'published_at', 'TEXT');
+
+    db.exec(`
     CREATE TABLE IF NOT EXISTS cities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -236,30 +250,45 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_mod_history_admin ON moderation_history(admin_id, created_at DESC);
   `);
 
-  const catalogPerms = [
-    ['admin.cities', 'Manage cities'],
-    ['admin.categories', 'Manage categories'],
-    ['admin.analytics', 'View analytics'],
-  ];
-  for (const [slug, name] of catalogPerms) {
-    db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
-    db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('admin', slug);
-    db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('moderator', slug);
-  }
+    addColumnIfMissing(db, 'place_categories', 'image_url', 'TEXT');
+    addColumnIfMissing(db, 'reports', 'resolution_reason', 'TEXT');
+    addColumnIfMissing(db, 'reports', 'action_taken', 'TEXT');
+    addColumnIfMissing(db, 'reports', 'content_prev_status', 'TEXT');
+    addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
 
-  const { seedCategoriesIfEmpty, seedCitiesFromPlaces } = require('./catalog-db');
-  const { backfillCityImages } = require('./city-images');
-  const { seedBlogCategoriesIfEmpty, backfillBlogSlugs } = require('./blog-db');
-  seedCategoriesIfEmpty(db);
-  seedCitiesFromPlaces(db);
-  const cityImagesFilled = backfillCityImages(db);
-  if (cityImagesFilled > 0) {
-    logger.info(`Backfilled ${cityImagesFilled} city cover images`);
-  }
-  seedBlogCategoriesIfEmpty(db);
-  backfillBlogSlugs(db);
+    const catalogPerms = [
+      ['admin.cities', 'Manage cities'],
+      ['admin.categories', 'Manage categories'],
+      ['admin.analytics', 'View analytics'],
+    ];
+    for (const [slug, name] of catalogPerms) {
+      db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
+      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('admin', slug);
+      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('moderator', slug);
+    }
 
-  runFileMigrations(db);
+    const { seedCategoriesIfEmpty, seedCitiesFromPlaces } = require('./catalog-db');
+    const { backfillCityImages } = require('./city-images');
+    const { seedBlogCategoriesIfEmpty, backfillBlogSlugs } = require('./blog-db');
+    seedCategoriesIfEmpty(db);
+    seedCitiesFromPlaces(db);
+    const cityImagesFilled = backfillCityImages(db);
+    if (cityImagesFilled > 0) {
+      logger.info(`Backfilled ${cityImagesFilled} city cover images`);
+    }
+    seedBlogCategoriesIfEmpty(db);
+    backfillBlogSlugs(db);
+
+    runFileMigrations(db);
+  } catch (err) {
+    logger.error({
+      msg: 'runMigrations failed',
+      code: err.code,
+      err: err.message,
+      stack: err.stack,
+    });
+    throw err;
+  }
 }
 
 function runFileMigrations(db) {
@@ -273,7 +302,7 @@ function runFileMigrations(db) {
   const migrationsDir = path.join(__dirname, '..', '..', 'db', 'migrations');
   if (!fs.existsSync(migrationsDir)) return;
 
-  const helpers = { columnExists, addColumnIfMissing };
+  const helpers = { columnExists, addColumnIfMissing, tableExists };
   const files = fs.readdirSync(migrationsDir)
     .filter((f) => f.endsWith('.js'))
     .sort();
@@ -283,10 +312,22 @@ function runFileMigrations(db) {
     const id = mod.id || file.replace(/\.js$/, '');
     const applied = db.prepare('SELECT 1 FROM schema_migrations WHERE id = ?').get(id);
     if (applied) continue;
-    mod.up(db, helpers);
-    db.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(id);
-    logger.info({ msg: 'Migration applied', id });
+    try {
+      mod.up(db, helpers);
+      db.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(id);
+      logger.info({ msg: 'Migration applied', id });
+    } catch (err) {
+      logger.error({
+        msg: 'File migration failed',
+        id,
+        file,
+        code: err.code,
+        err: err.message,
+        stack: err.stack,
+      });
+      throw err;
+    }
   }
 }
 
-module.exports = { runMigrations };
+module.exports = { runMigrations, tableExists, columnExists, addColumnIfMissing };
