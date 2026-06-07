@@ -2844,8 +2844,9 @@ async function loadCitiesList() {
     const rows = data.cities || [];
     if (!rows.length) { wrap.innerHTML = '<p style="color:var(--t3)">Şehir yok.</p>'; return; }
     wrap.innerHTML = `<table class="admin-table" aria-label="Şehir listesi">
-      <thead><tr><th>ID</th><th>Şehir</th><th>Ülke</th><th>Yer sayısı</th><th>Durum</th><th>İşlem</th></tr></thead>
+      <thead><tr><th>Görsel</th><th>ID</th><th>Şehir</th><th>Ülke</th><th>Yer sayısı</th><th>Durum</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((c) => `<tr>
+        <td>${c.imageUrl ? `<img src="${escapeHtml(c.imageUrl)}" alt="" style="width:56px;height:32px;object-fit:cover;border-radius:4px"/>` : '—'}</td>
         <td>${c.id}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.country)}</td>
         <td>${c.placeCount}</td><td>${c.isActive ? 'Aktif' : 'Pasif'}</td>
         <td class="admin-actions">

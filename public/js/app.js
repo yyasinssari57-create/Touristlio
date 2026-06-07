@@ -1545,7 +1545,7 @@ async function openBlogDetail(slug) {
       <div class="bd-body">${escapeHtml(b.body || '')}</div>
       ${tags ? `<div class="bd-tags">${tags}</div>` : ''}
       ${b.placeId ? `<p style="margin-top:16px"><button class="btn bp bsm" type="button" onclick="closeBlogDetail();openDetail(${b.placeId})">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
-      <div class="tiola-actions-row bd-like-row">
+      <div class="tiola-actions-row bd-like-row" onclick="event.stopPropagation()">
         ${renderLikeBar('blog', b.id, b.likeCount, b.likedByMe)}
         ${menuBtn}
       </div>

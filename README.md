@@ -97,7 +97,7 @@ Sunucu production modunda zayıf `JWT_SECRET` ile **başlamaz**. SMTP yapıland�
 
 ### Render (önerilen)
 
-Repoda `render.yaml` blueprint dosyası vardır.
+Repoda `render.yaml` blueprint dosyası vardır. Ayrıntılı Türkçe adımlar: **[DEPLOY.md](./DEPLOY.md)**.
 
 1. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint** → GitHub reposunu bağlayın.
 2. Deploy tamamlanınca **Environment** sekmesinde şunları doldurun:

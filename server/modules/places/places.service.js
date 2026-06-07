@@ -7,6 +7,8 @@ const { matchesFilterGroup } = require('../../lib/place-content');
 const { mapPlaceRow, mapMarker } = require('../../lib/place-map');
 
 const catalogDb = require('../../lib/catalog-db');
+const { slugify } = catalogDb;
+const { getCityImage, TURKEY_CITY_META } = require('../../lib/city-images');
 const { FILTER_GROUPS, GROUP_VISIBILITY } = require('../../lib/place-content');
 const { cacheKey, wrap, clear } = require('../../lib/cache');
 const { getStatsMap, invalidateStatsCache } = require('../../lib/stats-cache');
@@ -326,29 +328,10 @@ function listMarkers(queryParams, lang = 'tr') {
 
 
 
-const TURKEY_CITIES = [
-
-  { slug: 'istanbul', name: 'İstanbul', nameEn: 'Istanbul', lat: 41.0082, lng: 28.9784, image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=600&q=80' },
-
-  { slug: 'ankara', name: 'Ankara', nameEn: 'Ankara', lat: 39.9334, lng: 32.8597, image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=600&q=80' },
-
-  { slug: 'antalya', name: 'Antalya', nameEn: 'Antalya', lat: 36.8969, lng: 30.7133, image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80' },
-
-  { slug: 'izmir', name: 'İzmir', nameEn: 'Izmir', lat: 38.4237, lng: 27.1428, image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=600&q=80' },
-
-  { slug: 'bursa', name: 'Bursa', nameEn: 'Bursa', lat: 40.1885, lng: 29.061, image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80' },
-
-  { slug: 'trabzon', name: 'Trabzon', nameEn: 'Trabzon', lat: 41.0027, lng: 39.7168, image: 'https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?w=600&q=80' },
-
-  { slug: 'nevsehir', name: 'Nevşehir', nameEn: 'Nevsehir', lat: 38.6244, lng: 34.7236, image: 'https://images.unsplash.com/photo-1527838832700-5059252407fa?w=600&q=80' },
-
-  { slug: 'denizli', name: 'Denizli', nameEn: 'Denizli', lat: 37.7765, lng: 29.0864, image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&q=80' },
-
-  { slug: 'mugla', name: 'Muğla', nameEn: 'Mugla', lat: 37.2153, lng: 28.3636, image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80' },
-
-  { slug: 'gaziantep', name: 'Gaziantep', nameEn: 'Gaziantep', lat: 37.0662, lng: 37.3833, image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80' },
-
-];
+const TURKEY_CITIES = TURKEY_CITY_META.map((c) => ({
+  ...c,
+  image: getCityImage(c.slug),
+}));
 
 
 
@@ -392,36 +375,39 @@ function citiesWithCounts(country) {
 
     });
 
-    const catalogImages = new Map(
+    const catalogBySlug = new Map(
       catalogDb.listCities({ includeInactive: true })
-        .filter((row) => row.imageUrl && /turkey|türkiye/i.test(row.country || ''))
-        .map((row) => [row.slug, row.imageUrl]),
+        .filter((row) => /turkey|türkiye/i.test(row.country || ''))
+        .map((row) => [row.slug, row]),
     );
 
     return TURKEY_CITIES.map((c) => {
-
       const matchKey = Object.keys(counts).find((k) => k.toLowerCase().replace(/ı/g, 'i') === c.slug || k.toLowerCase().includes(c.slug));
-      const image = catalogImages.get(c.slug) || c.image;
+      const catalog = catalogBySlug.get(c.slug);
+      const image = getCityImage(c.slug, catalog?.imageUrl) || c.image;
 
       return { ...c, image, placeCount: matchKey ? counts[matchKey] : counts[c.nameEn] || counts[c.name] || 0 };
-
     });
 
   }
 
-  return rows.map((r) => ({
+  const catalogRows = catalogDb.listCities({ includeInactive: true });
+  const catalogByKey = new Map(
+    catalogRows.map((row) => [`${row.country}|${row.slug}`, row]),
+  );
 
-    slug: (r.city || '').toLowerCase().replace(/\s+/g, '-'),
-
-    name: r.city,
-
-    nameEn: r.city,
-
-    country: r.country,
-
-    placeCount: r.c || 0,
-
-  }));
+  return rows.map((r) => {
+    const slug = slugify(r.city);
+    const catalog = catalogByKey.get(`${r.country}|${slug}`);
+    return {
+      slug,
+      name: r.city,
+      nameEn: catalog?.nameEn || r.city,
+      country: r.country,
+      image: getCityImage(slug, catalog?.imageUrl),
+      placeCount: r.c || 0,
+    };
+  });
 
 }
 

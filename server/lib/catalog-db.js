@@ -1,4 +1,5 @@
 const { sanitizeName, sanitizeText } = require('./sanitize');
+const { getCityImage } = require('./city-images');
 
 /** Lazy db access — avoids circular require with db.js → migrations → catalog-db */
 function getDb(externalDb) {
@@ -88,13 +89,14 @@ function seedCitiesFromPlaces(database) {
     ORDER BY country, city
   `).all();
   const ins = db.prepare(`
-    INSERT OR IGNORE INTO cities (name, name_en, slug, country, sort_order, is_active)
-    VALUES (?, ?, ?, ?, ?, 1)
+    INSERT OR IGNORE INTO cities (name, name_en, slug, country, sort_order, is_active, image_url)
+    VALUES (?, ?, ?, ?, ?, 1, ?)
   `);
   let order = 0;
   for (const r of rows) {
     const name = r.city;
-    ins.run(name, name, slugify(name), r.country, order++);
+    const slug = slugify(name);
+    ins.run(name, name, slug, r.country, order++, getCityImage(slug));
   }
 }
 
@@ -131,7 +133,7 @@ function createCity(body) {
   const slug = sanitizeText(body.slug || slugify(name), 80) || slugify(name);
   const nameEn = sanitizeName(body.nameEn || body.name_en || name, 120);
   const sortOrder = Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0;
-  const imageUrl = sanitizeText(body.imageUrl || body.image_url || '', 500) || null;
+  const imageUrl = sanitizeText(body.imageUrl || body.image_url || '', 500) || getCityImage(slug);
   try {
     const result = db.prepare(`
       INSERT INTO cities (name, name_en, slug, country, sort_order, is_active, image_url)

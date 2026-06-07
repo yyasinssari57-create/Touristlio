@@ -248,9 +248,14 @@ function runMigrations(db) {
   }
 
   const { seedCategoriesIfEmpty, seedCitiesFromPlaces } = require('./catalog-db');
+  const { backfillCityImages } = require('./city-images');
   const { seedBlogCategoriesIfEmpty, backfillBlogSlugs } = require('./blog-db');
   seedCategoriesIfEmpty(db);
   seedCitiesFromPlaces(db);
+  const cityImagesFilled = backfillCityImages(db);
+  if (cityImagesFilled > 0) {
+    logger.info(`Backfilled ${cityImagesFilled} city cover images`);
+  }
   seedBlogCategoriesIfEmpty(db);
   backfillBlogSlugs(db);
 

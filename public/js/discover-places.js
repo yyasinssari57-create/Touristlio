@@ -37,6 +37,14 @@ window.TL_DISCOVER = (function () {
     }
   }
 
+  function cityImg(c) {
+    const url = c?.image || c?.imageUrl;
+    if (url && /^https?:\/\//i.test(url)) return url;
+    if (url && String(url).startsWith('/')) return url;
+    if (typeof fallbackImgUrl === 'function') return fallbackImgUrl('city', c?.slug || c?.name);
+    return '/images/icon.svg';
+  }
+
   function placeImg(p) {
     const safe = typeof safeUrl === 'function' ? safeUrl : (url) => {
       const s = String(url || '').trim();
@@ -114,7 +122,7 @@ window.TL_DISCOVER = (function () {
     showView('cities');
     grid.innerHTML = window.TL_SKELETON?.card(8) || '<div class="discover-skeleton">...</div>';
     try {
-      const data = await fetchJson('/places/cities');
+      const data = await fetchJson('/places/cities?country=Turkey');
       cities = data.cities || [];
       renderCityGrid();
     } catch (e) {
@@ -127,7 +135,7 @@ window.TL_DISCOVER = (function () {
     if (!grid) return;
     grid.innerHTML = cities.map((c) => `
       <button type="button" class="city-card" data-slug="${c.slug}" aria-label="${escapeHtml(c.name)}">
-        <img src="${c.image}" alt="" loading="lazy"/>
+        <img src="${cityImg(c)}" alt="" loading="lazy"/>
         <div class="city-card-body">
           <h3>${escapeHtml(lang === 'en' ? c.nameEn : c.name)}</h3>
           <span>${c.placeCount || 0} ${t('placesFound')}</span>

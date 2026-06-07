@@ -10,11 +10,16 @@ services:
     buildCommand: npm ci
     startCommand: npm run start:prod
     healthCheckPath: /api/health
+    # Node 22 LTS — better-sqlite3 prebuilds; avoids gyp compile on old Node 20.3.x
     disk:
       name: touristlio-data
       mountPath: /opt/render/project/src/data
       sizeGB: 1
     envVars:
+      - key: NODE_VERSION
+        value: "22.16.0"
+      - key: npm_config_build_from_source
+        value: "false"
       - key: NODE_ENV
         value: production
       - key: TRUST_PROXY
@@ -35,8 +40,12 @@ services:
         generateValue: true
       - key: ADMIN_EMAIL
         sync: false
+      - key: ADMIN_NAME
+        value: Admin
       - key: ADMIN_PASSWORD
         sync: false
+      - key: LOG_LEVEL
+        value: info
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

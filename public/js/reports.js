@@ -153,10 +153,24 @@
     });
   }
 
-  function toggleMenu(menuId, ev) {
+  function resolveMenuDrop(btnOrDrop, menuId) {
+    if (btnOrDrop?.classList?.contains('report-menu-drop')) return btnOrDrop;
+    const wrap = btnOrDrop?.closest?.('.report-menu-wrap');
+    if (wrap) {
+      const scoped = wrap.querySelector('.report-menu-drop');
+      if (scoped) return scoped;
+    }
+    return menuId ? document.getElementById(menuId) : null;
+  }
+
+  function toggleMenu(menuIdOrDrop, ev) {
     ev?.stopPropagation?.();
     ev?.preventDefault?.();
-    const el = document.getElementById(menuId);
+    const btn = ev?.target?.closest?.('.report-menu-btn');
+    const menuId = typeof menuIdOrDrop === 'string' ? menuIdOrDrop : btn?.dataset?.menuId;
+    const el = typeof menuIdOrDrop === 'string'
+      ? resolveMenuDrop(btn, menuIdOrDrop)
+      : menuIdOrDrop;
     if (!el) return;
     const wrap = el.closest('.report-menu-wrap');
     const card = el.closest('.bcard');
@@ -173,11 +187,12 @@
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.report-menu-btn');
     if (!btn) return;
-    const menuId = btn.dataset.menuId;
-    if (!menuId) return;
+    const wrap = btn.closest('.report-menu-wrap');
+    const el = wrap?.querySelector('.report-menu-drop');
+    if (!el) return;
     e.preventDefault();
     e.stopPropagation();
-    toggleMenu(menuId, e);
+    toggleMenu(el, e);
   }, true);
 
   document.addEventListener('click', (e) => {
