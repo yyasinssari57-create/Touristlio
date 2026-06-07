@@ -8,9 +8,12 @@
 <script>
 (function () {
   var host = location.hostname;
-  if (host.indexOf('www.') === 0) {
-    location.replace(location.protocol + '//' + host.slice(4) + location.pathname + location.search + location.hash);
-  }
+  if (host.indexOf('www.') !== 0) return;
+  var key = 'tl-www-redir';
+  var n = +(sessionStorage.getItem(key) || 0);
+  if (n > 2) { sessionStorage.removeItem(key); return; }
+  sessionStorage.setItem(key, String(n + 1));
+  location.replace(location.protocol + '//' + host.slice(4) + location.pathname + location.search + location.hash);
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>

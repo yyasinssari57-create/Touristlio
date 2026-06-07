@@ -15,9 +15,9 @@ const { authRequired, requireRole } = require('./middleware/auth');
 const { csrfProtection } = require('./middleware/csrf');
 const { uploadsStaticHeaders } = require('./middleware/uploads-static');
 const { staticAssetHeaders } = require('./middleware/static-cache');
-const { sendPublicHtml, publicHtmlMiddleware } = require('./lib/send-public-html');
+const { sendPublicHtml, publicHtmlMiddleware, htmlPageRoutesMiddleware } = require('./lib/send-public-html');
 const { getAppVersion } = require('./lib/app-version');
-const { parseCorsOrigins, getConnectSrcOrigins } = require('./lib/cors-origins');
+const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require('./lib/cors-origins');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -72,16 +72,18 @@ app.use(helmet({
   } : false,
   crossOriginEmbedderPolicy: false,
 }));
-app.use(cors({
-  origin(origin, cb) {
-    if (!origin || corsOrigins.includes(origin) || corsOrigins.includes('*')) {
-      cb(null, true);
-    } else {
-      cb(new Error('CORS blocked'));
-    }
-  },
-  credentials: true,
-}));
+app.use((req, res, next) => {
+  cors({
+    origin(origin, cb) {
+      if (isCorsOriginAllowed(origin, corsOrigins, req.get('host'))) {
+        cb(null, true);
+      } else {
+        cb(new Error('CORS blocked'));
+      }
+    },
+    credentials: true,
+  })(req, res, next);
+});
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 const { maintenanceMiddleware } = require('./middleware/maintenance');
@@ -97,6 +99,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/uploads', uploadsStaticHeaders, express.static(path.join(__dirname, '..', 'uploads')));
+app.use(htmlPageRoutesMiddleware(PUBLIC_DIR));
 app.use(publicHtmlMiddleware(PUBLIC_DIR));
 app.use(express.static(PUBLIC_DIR, {
   index: false,
@@ -204,6 +207,9 @@ app.use((err, req, res, _next) => {
   logger.error({ err: err.message, stack: err.stack });
   if (res.headersSent) return;
   if (req.path.startsWith('/api/')) {
+    if (err.message === 'CORS blocked') {
+      return res.status(403).json({ error: 'İstek reddedildi (CORS)' });
+    }
     const message = isProd ? 'Sunucu hatası' : (err.message || 'Sunucu hatası');
     return res.status(500).json({ error: message });
   }

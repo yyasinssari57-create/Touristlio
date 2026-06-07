@@ -1,15 +1,25 @@
 /**
  * Parse CORS_ORIGIN (comma-separated) and auto-include www/apex pairs
  * so https://touristlio.com also allows https://www.touristlio.com.
+ * Also merges SITE_URL and Render's RENDER_EXTERNAL_URL when set.
  */
 function parseCorsOrigins(raw) {
-  const origins = (raw || 'http://localhost:3000')
+  const parts = (raw || 'http://localhost:3000')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
-  const expanded = new Set(origins);
-  for (const origin of origins) {
+  for (const extra of [process.env.SITE_URL, process.env.RENDER_EXTERNAL_URL]) {
+    if (!extra) continue;
+    try {
+      parts.push(new URL(extra.replace(/\/$/, '')).origin);
+    } catch {
+      /* ignore invalid URL */
+    }
+  }
+
+  const expanded = new Set(parts);
+  for (const origin of parts) {
     if (origin === '*') continue;
     try {
       const url = new URL(origin);
@@ -31,12 +41,23 @@ function parseCorsOrigins(raw) {
   return [...expanded];
 }
 
+/** http/https origins for the incoming Host header (same-origin behind proxy). */
+function hostOrigins(host) {
+  if (!host) return [];
+  return [`http://${host}`, `https://${host}`];
+}
+
+function isCorsOriginAllowed(origin, corsOrigins, host) {
+  if (!origin || corsOrigins.includes(origin) || corsOrigins.includes('*')) return true;
+  return hostOrigins(host).includes(origin);
+}
+
 /** CSP connect-src: 'self' plus apex/www variants from SITE_URL and CORS_ORIGIN. */
 function getConnectSrcOrigins() {
-  const raw = [process.env.CORS_ORIGIN, process.env.SITE_URL]
+  const raw = [process.env.CORS_ORIGIN, process.env.SITE_URL, process.env.RENDER_EXTERNAL_URL]
     .filter(Boolean)
     .join(',');
   return ["'self'", ...parseCorsOrigins(raw)];
 }
 
-module.exports = { parseCorsOrigins, getConnectSrcOrigins };
+module.exports = { parseCorsOrigins, hostOrigins, isCorsOriginAllowed, getConnectSrcOrigins };

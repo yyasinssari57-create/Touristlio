@@ -1,8 +1,4 @@
-const { parseCorsOrigins } = require('../lib/cors-origins');
-
-function isAllowedOrigin(origin, corsOrigins) {
-  return !origin || corsOrigins.includes(origin) || corsOrigins.includes('*');
-}
+const { parseCorsOrigins, isCorsOriginAllowed } = require('../lib/cors-origins');
 
 /**
  * Answer OPTIONS for /api/* with 204 before any host redirect or rate limit.
@@ -15,7 +11,7 @@ function apiPreflightMiddleware(corsOrigins) {
     if (!path.startsWith('/api')) return next();
 
     const origin = req.headers.origin;
-    if (isAllowedOrigin(origin, corsOrigins)) {
+    if (isCorsOriginAllowed(origin, corsOrigins, req.get('host'))) {
       if (origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
