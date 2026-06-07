@@ -142,6 +142,7 @@ npm run verify:smtp
 | Giriş/kayıt 403 CSRF | `SITE_URL` yanlış | Tarayıcıdaki URL ile `SITE_URL` origin’i eşleştir |
 | E-posta gitmiyor | SMTP eksik/yanlış | Brevo SMTP anahtarı + doğrulanmış `SMTP_FROM`; `verify:smtp` |
 | Boş site / yer yok | Seed çalışmadı | Shell: `npm run seed` |
+| Kayıtlı kullanıcı admin’de yok / “sıfırlanmış” gibi | **Ücretsiz plan** — SQLite kalıcı değil; redeploy veya servis yeniden başlatınca `data/touristlio.db` silinir. `SEED_ON_START` sadece yerleri/admin’i doldurur, kullanıcı silmez. | Starter plan + disk (`STORAGE_PERSISTENT=true`) veya VPS/PostgreSQL; admin Özet’te uyarı görünür |
 | Yüklenen foto kayboldu | `uploads/` ephemeral | İleride ikinci disk veya S3; şimdilik redeploy sonrası kayıp normal |
 
 ---

@@ -35,6 +35,8 @@ services:
         value: "true"
       - key: SEED_ON_START
         value: "true"
+      - key: STORAGE_PERSISTENT
+        value: "true"
       - key: LIVE_DATA_CRON
         value: "true"
       - key: AFFILIATE_ENABLED

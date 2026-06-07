@@ -1279,7 +1279,9 @@ router.get('/roles', requireRole('admin'), (_req, res) => {
 });
 
 router.get('/stats', checkPermission('admin.dashboard'), (_req, res) => {
+  const { isEphemeralStorage } = require('../db');
   const stats = {
+    storageEphemeral: isEphemeralStorage(),
     users: db.prepare('SELECT COUNT(*) AS c FROM users').get().c,
     places: db.prepare('SELECT COUNT(*) AS c FROM places').get().c,
     tiolasApproved: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'approved'").get().c,

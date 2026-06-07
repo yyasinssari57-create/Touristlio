@@ -61,7 +61,14 @@ function openDatabase() {
   throw new Error(`Failed to open SQLite database: ${detail}`);
 }
 
-const { db } = openDatabase();
+const { db, dbPath } = openDatabase();
+
+function isEphemeralStorage() {
+  if (process.env.STORAGE_PERSISTENT === 'true') return false;
+  if (process.env.STORAGE_PERSISTENT === 'false') return true;
+  // Render Free has no persistent disk — data/ and /tmp are wiped on redeploy.
+  return process.env.RENDER === 'true';
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -342,4 +349,4 @@ function allPlaceStats() {
   return map;
 }
 
-module.exports = { db, placeStats, allPlaceStats };
+module.exports = { db, dbPath, isEphemeralStorage, placeStats, allPlaceStats };

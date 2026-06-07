@@ -3764,7 +3764,14 @@ async function refresh() {
     statsRow.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
     try {
       const stats = await api('/admin/stats');
-      statsRow.innerHTML = `
+      const storageWarn = stats.storageEphemeral
+        ? `<div class="admin-status err" style="display:block;margin-bottom:12px" role="alert">
+            <strong>Kalıcı depolama yok.</strong> Render ücretsiz planda SQLite her redeploy veya yeniden başlatmada sıfırlanır;
+            kayıtlı kullanıcılar ve içerik kalıcı değildir. Kalıcılık için Starter plan + disk veya harici veritabanı kullanın.
+            (<code>STORAGE_PERSISTENT=true</code> + disk mount — bkz. DEPLOY.md)
+          </div>`
+        : '';
+      statsRow.innerHTML = `${storageWarn}
         <div class="admin-card"><strong>${stats.places}</strong><br><span style="font-size:.75rem;color:var(--t2)">Yer</span></div>
         <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
         <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
