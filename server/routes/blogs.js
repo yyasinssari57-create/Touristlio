@@ -142,7 +142,7 @@ router.get('/:slug', authOptional, (req, res) => {
 
   if (!row || row.status === 'deleted') return res.status(404).json({ error: 'Blog bulunamadı' });
   if (row.status !== 'approved') {
-    if (!req.user || (req.user.id !== row.user_id && !['admin', 'moderator', 'editor'].includes(req.user.role))) {
+    if (!req.user || (req.user.id !== row.user_id && !['admin', 'moderator', 'editor', 'staff'].includes(req.user.role))) {
       return res.status(404).json({ error: 'Blog bulunamadı' });
     }
   }
@@ -168,6 +168,12 @@ router.post('/', authRequired, [
 ], (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  if (!req.user.emailVerified) {
+    return res.status(403).json({
+      error: 'Blog yazmak için e-posta adresinizi doğrulamanız gerekir.',
+    });
+  }
 
   const { title, excerpt, body: bodyText, category, imageUrl, placeId } = req.body || {};
   const cleanTitle = sanitizeText(title, MAX_TITLE);

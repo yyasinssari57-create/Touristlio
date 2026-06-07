@@ -601,12 +601,17 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .admin-topnav button.on{background:rgba(255,255,255,.15);color:#fff;font-weight:600;}
 .admin-content{padding:24px 28px 60px;max-width:1200px;}
 .admin-content:has(#adm-content.active){max-width:1280px;}
+.adm-section{display:none;}
 .adm-section.active{display:block;}
+#adminPanel{display:none;}
+body.admin-session #adminPanel{display:block;}
+body.admin-session #loginScreen{display:none;}
 .admin-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:12px;}
 .admin-table th,.admin-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--l2);}
 .admin-table th{color:var(--t2);font-weight:600;font-size:.72rem;}
 .admin-table tr:hover td{background:var(--l);}
-.admin-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+.admin-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+.admin-modal-overlay.is-open{display:flex;}
 .admin-modal{background:#fff;border-radius:16px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--sh2);}
 .admin-modal.admin-modal-wide{max-width:640px;}
 .admin-modal h3{margin:0 0 16px;color:var(--navy);font-family:var(--fd);}

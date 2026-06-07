@@ -14,7 +14,7 @@ function listAll() {
 
 function updateRole(userId, role) {
 
-  const allowed = ['member', 'editor', 'moderator', 'admin'];
+  const allowed = ['member', 'editor', 'moderator', 'staff', 'admin'];
 
   if (!allowed.includes(role)) return false;
 

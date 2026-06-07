@@ -1,13 +1,33 @@
 const { db } = require('../db');
 const { fail } = require('../lib/apiResponse');
 
+const PANEL_ROLES = ['admin', 'moderator', 'editor', 'staff'];
+const ASSIGNABLE_ROLES = ['member', 'editor', 'moderator', 'staff'];
+const PROTECTED_USER_ROLES = ['admin'];
+
 const ROLE_DEFAULT_PERMS = {
   moderator: [
     'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
   editor: ['admin.dashboard', 'admin.content'],
+  staff: [
+    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.categories', 'admin.content',
+  ],
 };
+
+function isProtectedUserRole(role) {
+  return PROTECTED_USER_ROLES.includes(role);
+}
+
+function assertCanManageUser(actor, targetRole, res, failFn) {
+  if (isProtectedUserRole(targetRole) && actor.role !== 'admin') {
+    failFn(res, 'Yönetici hesapları üzerinde işlem yapılamaz', 403);
+    return false;
+  }
+  return true;
+}
 
 function rolePermissions(roleSlug) {
   return db.prepare(`
@@ -64,4 +84,8 @@ module.exports = {
   computeUserRiskScore,
   computeUserRiskReasons,
   ROLE_DEFAULT_PERMS,
+  PANEL_ROLES,
+  ASSIGNABLE_ROLES,
+  isProtectedUserRole,
+  assertCanManageUser,
 };

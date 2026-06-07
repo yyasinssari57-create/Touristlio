@@ -60,7 +60,9 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
+      // unsafe-inline: index.html critical <style> + admin panel visibility toggles (style="" / el.style)
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
+      styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
       connectSrc: ["'self'"],

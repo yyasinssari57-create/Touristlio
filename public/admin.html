@@ -24,8 +24,8 @@
 
 <div id="adminPanel">
   <nav class="tl-nav" aria-label="Üst menü"><div class="nav-inner">
-    <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span> Admin</span></a>
-    <a href="/" class="nav-brand-center" aria-label="Touristlio ana sayfa"><img src="/images/icon-white.svg" alt="" class="brand-mark brand-mark-white" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon.svg'"/></a>
+    <a href="/admin" class="brand admin-nav-stay"><span class="brand-text">Tourist<span class="brand-accent">lio</span> Admin</span></a>
+    <a href="/admin" class="nav-brand-center admin-nav-stay" aria-label="Touristlio admin"><img src="/images/icon-white.svg" alt="" class="brand-mark brand-mark-white" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon.svg'"/></a>
     <div class="nav-r"><span id="admUser"></span>
     <a href="/" class="btn nav-btn-ghost nav-link-plain">Site</a>
     <button class="btn nav-btn-ghost" onclick="adminLogout()" aria-label="Çıkış yap">Çıkış</button></div>
@@ -627,7 +627,7 @@
 
           <div id="guide-roller" class="admin-card adm-guide-block">
             <h3>Roller ve yetkiler</h3>
-            <p>Admin panele yalnızca <strong>yönetici (admin)</strong>, <strong>moderatör</strong> ve <strong>editör</strong> rolleri giriş yapabilir. Gördüğünüz sekmeler rolünüze ve atanmış yetkilere göre değişir.</p>
+            <p>Admin panele yalnızca <strong>yönetici (admin)</strong>, <strong>moderatör</strong>, <strong>editör</strong> ve <strong>içerik yöneticisi (staff)</strong> rolleri giriş yapabilir. Gördüğünüz sekmeler rolünüze ve atanmış yetkilere göre değişir.</p>
             <div class="adm-guide-role-grid">
               <div class="adm-guide-role-card">
                 <strong>Yönetici (admin)</strong>
@@ -655,8 +655,18 @@
                   <li>Moderasyon ve kullanıcı işlemleri <em>yok</em></li>
                 </ul>
               </div>
+              <div class="adm-guide-role-card">
+                <strong>İçerik Yöneticisi (staff)</strong>
+                <ul>
+                  <li>Moderatör ve editör yetkilerinin birleşimi</li>
+                  <li>Özet, Analitik, İçerik, Moderasyon, Şikayetler</li>
+                  <li>Gezilecek Yerler, Şehirler, Kategoriler, Medya</li>
+                  <li>Kullanıcılar, Ayarlar, Roller ve Audit Log <em>yok</em></li>
+                  <li>Yönetici hesapları üzerinde işlem yapamaz</li>
+                </ul>
+              </div>
             </div>
-            <p class="adm-guide-tip">Üst çubukta adınızın yanında rolünüz görünür (ör. <code>moderator</code>). Bir sekme görünmüyorsa yetkiniz yoktur; yöneticinizden izin isteyin.</p>
+            <p class="adm-guide-tip">Üst çubukta adınızın yanında rolünüz görünür (ör. <code>İçerik Yöneticisi</code>). Bir sekme görünmüyorsa yetkiniz yoktur; yöneticinizden izin isteyin.</p>
           </div>
 
           <div id="guide-ozet" class="admin-card adm-guide-block">
@@ -965,6 +975,10 @@ const ROLE_DEFAULT_PERMS = {
     'admin.categories', 'admin.content',
   ],
   editor: ['admin.dashboard', 'admin.content'],
+  staff: [
+    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.categories', 'admin.content',
+  ],
 };
 
 const PERM_LABELS = {
@@ -980,7 +994,8 @@ const PERM_LABELS = {
   'admin.analytics': 'Analitik',
 };
 
-const ROLE_LABELS = { admin: 'Yönetici', moderator: 'Moderatör', editor: 'Editör', member: 'Üye' };
+const ROLE_LABELS = { admin: 'Yönetici', moderator: 'Moderatör', editor: 'Editör', staff: 'İçerik Yöneticisi', member: 'Üye' };
+const PANEL_ROLES = ['admin', 'moderator', 'editor', 'staff'];
 
 const SETTING_FIELDS = [
   { key: 'site_name', label: 'Site adı', type: 'text' },
@@ -2052,7 +2067,7 @@ function renderUserDetailTab() {
 
   const isSelf = u.id === currentUser?.id;
   const isAdminRole = u.role === 'admin';
-  const roleOpts = ['member', 'editor', 'moderator'].map((r) =>
+  const roleOpts = ['member', 'editor', 'moderator', 'staff'].map((r) =>
     `<option value="${r}" ${u.role === r ? 'selected' : ''}>${escapeHtml(ROLE_LABELS[r] || r)}</option>`
   ).join('');
   const pendingCount = u.pendingProfileChanges?.length || 0;
@@ -2711,8 +2726,8 @@ async function adminLogin() {
         password: document.getElementById('admPass').value,
       },
     });
-    if (!['admin', 'moderator', 'editor'].includes(data.user.role)) {
-      showErr('Admin, moderatör veya editör yetkisi gerekli', 'loginErr');
+    if (!PANEL_ROLES.includes(data.user.role)) {
+      showErr('Admin paneline giriş yetkisi gerekli', 'loginErr');
       return;
     }
     currentUser = data.user;
@@ -2737,7 +2752,7 @@ function adminLogout() {
 async function restoreAdminSession() {
   try {
     const me = await api('/auth/me');
-    if (me?.user && ['admin', 'moderator', 'editor'].includes(me.user.role)) {
+    if (me?.user && PANEL_ROLES.includes(me.user.role)) {
       currentUser = me.user;
       localStorage.setItem('tl_user', JSON.stringify(me.user));
       await showPanel(me.user);
@@ -2753,7 +2768,7 @@ async function showPanel(user) {
   currentUser = user;
   document.body.classList.add('admin-session');
   closeUserDetailPanel();
-  document.getElementById('admUser').textContent = user.name + ' (' + user.role + ')';
+  document.getElementById('admUser').textContent = user.name + ' (' + (ROLE_LABELS[user.role] || user.role) + ')';
   applyAdminRbac(user);
   bindPlacePhotoInput('plPhotos', 'plPhotoPreview', 'plPhotoCount');
   bindCityImageInput('ctImageFile', 'ctImage', 'ctImagePreview', 'ctImageHint');
@@ -3135,6 +3150,7 @@ async function addPlace() {
     updatePhotoBtnLabel('plPhotos', 'plPhotosBtnLabel');
     await loadPlacesList();
     await refresh();
+    showToast('Yer eklendi');
   } catch (e) { showFormErr('placeFormErr', e.message); }
   finally { setBtnLoading(btn, false); }
 }
@@ -3858,6 +3874,7 @@ async function saveBlogEdit(id, approveAfter) {
       await api('/admin/blogs/' + id + '/approve', { method: 'POST' }).catch(() => {});
     }
     closeModal();
+    showToast(approveAfter ? 'Blog kaydedildi ve onaylandı' : 'Blog kaydedildi');
     await refresh();
     if (isContentPanelVisible('blog-posts')) await loadBlogPostsList();
   } catch (e) { showErr(e.message); }
@@ -4176,7 +4193,7 @@ async function submitRemoveBlog(id) {
   finally { setBtnLoading(btn, false); }
 }
 
-async function approveTiola(id) { try { await api('/admin/tiolas/' + id + '/approve', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
+async function approveTiola(id) { try { await api('/admin/tiolas/' + id + '/approve', { method: 'POST' }); showToast('Tiola onaylandı'); refresh(); } catch (e) { showErr(e.message); } }
 
 function rejectTiola(id) {
   openModal('Tiola reddet', `
@@ -4206,6 +4223,7 @@ async function submitRejectTiola(id) {
 async function approveBlog(id) {
   try {
     await api('/admin/blogs/' + id + '/approve', { method: 'POST' });
+    showToast('Blog onaylandı');
     await refresh();
     if (isContentPanelVisible('blog-posts')) await loadBlogPostsList();
   } catch (e) { showErr(e.message); }
@@ -4236,6 +4254,15 @@ async function submitRejectBlog(id) {
   } catch (e) { showErr(e.message); }
   finally { setBtnLoading(btn, false); }
 }
+
+document.getElementById('loginScreen')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') adminLogin();
+});
+
+document.getElementById('adminPanel')?.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+  if (e.target.matches('input, select')) e.preventDefault();
+});
 
 restoreAdminSession();
 </script>

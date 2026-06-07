@@ -479,7 +479,7 @@ router.delete('/:id', authRequired, (req, res) => {
 
 router.get('/pending/count', authRequired, (req, res) => {
 
-  if (!['admin', 'moderator'].includes(req.user.role)) {
+  if (!['admin', 'moderator', 'staff'].includes(req.user.role)) {
 
     return res.status(403).json({ error: 'Yetki yok' });
 

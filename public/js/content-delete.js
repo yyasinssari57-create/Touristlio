@@ -13,7 +13,7 @@
   function canDelete(ownerId) {
     if (!window.user || ownerId == null) return false;
     if (Number(window.user.id) === Number(ownerId)) return true;
-    return ['admin', 'moderator'].includes(window.user.role);
+    return ['admin', 'moderator', 'staff'].includes(window.user.role);
   }
 
   function ensureOverlay() {

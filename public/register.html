@@ -25,6 +25,7 @@
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/toast.js?v=__APP_VERSION__"></script>
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
@@ -46,7 +47,11 @@ async function doReg(){
     if(!res.ok) throw new Error(authErrorMessage(data));
     const payload = data.data || data;
     localStorage.setItem('tl_user', JSON.stringify(payload.user));
-    location.href = '/profile';
+    const verifyMsg = payload.emailVerificationSent !== false
+      ? t('registerSuccessVerify')
+      : t('registerSuccess');
+    window.TL_TOAST?.success(verifyMsg);
+    setTimeout(() => { location.href = '/profile'; }, 2000);
   } catch(e){ alert(e.message || t('requestFailed')); }
 }
 </script>

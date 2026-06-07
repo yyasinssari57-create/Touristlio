@@ -3,7 +3,7 @@ const { db } = require('../../db');
 const DEFAULTS = {
   site_name: 'Touristlio',
   site_tagline: 'Sadece Ziyaret Etme. Hisset.',
-  logo_url: '/images/logo-round.png',
+  logo_url: '/images/logo.svg',
   theme_primary: '#0ea5e9',
   map_default_lat: '39.0',
   map_default_lng: '35.0',

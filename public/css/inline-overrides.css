@@ -102,6 +102,21 @@
   }
 }
 
+.blog-verify-notice {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  font-size: .82rem;
+  line-height: 1.45;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: var(--r);
+}
+
+.admin-nav-stay {
+  text-decoration: none;
+}
+
 /* ── Admin panel ── */
 body.admin-body {
   font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;

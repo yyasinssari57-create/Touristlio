@@ -6,7 +6,7 @@ const { db } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
 const { createUser, findUserByEmail, sanitizeUser } = require('../auth');
 const { clear: clearCache } = require('../lib/cache');
-const { computeUserRiskScore, computeUserRiskReasons, checkPermission } = require('../middleware/rbac');
+const { computeUserRiskScore, computeUserRiskReasons, checkPermission, PANEL_ROLES, ASSIGNABLE_ROLES, assertCanManageUser } = require('../middleware/rbac');
 const auditLog = require('../lib/auditLog');
 const contentFilter = require('../lib/contentFilter');
 const { parsePagination, buildTiolaListFilters, buildBlogListFilters } = require('../lib/moderation-query');
@@ -33,7 +33,7 @@ const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
-router.use(authRequired, requireRole('admin', 'moderator', 'editor'));
+router.use(authRequired, requireRole(...PANEL_ROLES));
 
 function logAdmin(req, action, targetType, targetId, detail) {
   auditLog.log({
@@ -1195,6 +1195,7 @@ router.post('/users/:id/block', requireRole('admin'), (req, res) => {
 
   const target = db.prepare('SELECT id, is_blocked, role FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
+  if (!assertCanManageUser(req.user, target.role, res, fail)) return;
 
   const blocked = req.body?.blocked === true || req.body?.blocked === 1;
   if (blocked && target.role === 'admin') {
@@ -1214,6 +1215,7 @@ router.post('/users/:id/send-message', requireRole('admin'), async (req, res) =>
 
   const target = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
+  if (!assertCanManageUser(req.user, target.role, res, fail)) return;
 
   const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
   let emailSent = false;
@@ -1246,12 +1248,13 @@ router.patch('/users/:id/role', requireRole('admin'), (req, res) => {
   if (id === req.user.id) return fail(res, 'Kendi rolünüzü değiştiremezsiniz', 400);
 
   const role = String(req.body?.role || '').trim();
-  if (!['member', 'editor', 'moderator'].includes(role)) {
-    return fail(res, 'Geçersiz rol (member, editor, moderator)', 400);
+  if (!ASSIGNABLE_ROLES.includes(role)) {
+    return fail(res, 'Geçersiz rol (member, editor, moderator, staff)', 400);
   }
 
   const target = db.prepare('SELECT id, role, name FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
+  if (!assertCanManageUser(req.user, target.role, res, fail)) return;
   if (target.role === 'admin') return fail(res, 'Yönetici rolü değiştirilemez', 403);
 
   const prevRole = target.role;

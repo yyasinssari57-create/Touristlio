@@ -58,7 +58,7 @@ const passwordOk = bcrypt.compareSync(password, user.password_hash);
 const admins = db.prepare(`
   SELECT id, email, role, name, email_verified, failed_login_count, locked_until
   FROM users
-  WHERE role IN ('admin', 'moderator', 'editor')
+  WHERE role IN ('admin', 'moderator', 'editor', 'staff')
   ORDER BY id
 `).all();
 

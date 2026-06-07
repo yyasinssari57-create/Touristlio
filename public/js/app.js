@@ -1600,6 +1600,7 @@ async function updateProfilePage() {
   window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), user);
   renderProfileMeta(user);
   initAvatarSettings(user);
+  updateBlogWriteNotice(user);
 
   try {
     const me = await api('/auth/me');
@@ -1607,6 +1608,7 @@ async function updateProfilePage() {
       setAuth(me.user);
       renderProfileSettings(me.user);
       renderProfileMeta(me.user);
+      updateBlogWriteNotice(me.user);
     }
   } catch {
     renderProfileSettings(user);
@@ -1718,6 +1720,14 @@ function renderProfileMeta(u) {
   if (!meta || !u) return;
   const verified = u.emailVerified ? t('settingsEmailVerified') : t('settingsEmailPending');
   meta.textContent = u.email ? `${u.email} · ${verified}` : '';
+}
+
+function updateBlogWriteNotice(u) {
+  const notice = document.getElementById('blogVerifyNotice');
+  if (!notice) return;
+  const needsVerify = u && !u.emailVerified;
+  notice.textContent = needsVerify ? t('blogRequiresVerification') : '';
+  notice.hidden = !needsVerify;
 }
 
 function renderProfileActivitySummary({ tiolas = 0, saved = 0, visited = 0, pending = 0, countries = 0 }) {
@@ -1924,9 +1934,13 @@ async function submitArc() {
 
 async function submitBlog() {
   if (!user) { openAuth(); return; }
+  if (!user.emailVerified) {
+    window.TL_TOAST?.warning(t('blogRequiresVerification'));
+    return;
+  }
   const title = document.getElementById('blogTitle').value.trim();
   const body = document.getElementById('blogBody').value.trim();
-  if (!title || !body) { alert(t('titleRequired')); return; }
+  if (!title || !body) { window.TL_TOAST?.warning(t('titleRequired')); return; }
   try {
     const data = await api('/blogs', {
       method: 'POST',
@@ -1934,11 +1948,11 @@ async function submitBlog() {
         title, body, category: document.getElementById('blogCat').value,
       },
     });
-    alert(data.message || t('tiolaPending'));
+    window.TL_TOAST?.success(data.message || t('tiolaPending'));
     document.getElementById('blogTitle').value = '';
     document.getElementById('blogBody').value = '';
     updateProfilePage();
-  } catch (e) { alert(e.message); }
+  } catch { /* toast from api */ }
 }
 
 function openAuth(mode) {
@@ -2019,8 +2033,11 @@ async function doRegSubmit() {
       },
     });
     setAuth(data.user);
+    const verifyMsg = data.emailVerificationSent !== false
+      ? t('registerSuccessVerify')
+      : t('registerSuccess');
+    window.TL_TOAST?.success(verifyMsg);
     closeAuth();
-    window.TL_TOAST?.success(t('registerSuccess'));
   } catch { /* toast from api */ }
 }
 

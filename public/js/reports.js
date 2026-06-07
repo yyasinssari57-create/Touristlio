@@ -124,8 +124,21 @@
     </div>`;
   }
 
+  function clearMenuPosition(drop) {
+    drop.style.position = '';
+    drop.style.zIndex = '';
+    drop.style.top = '';
+    drop.style.left = '';
+    drop.style.right = '';
+    drop.style.bottom = '';
+    drop.style.visibility = '';
+  }
+
   function closeMenus() {
-    document.querySelectorAll('.report-menu-drop').forEach((el) => { el.hidden = true; });
+    document.querySelectorAll('.report-menu-drop').forEach((el) => {
+      el.hidden = true;
+      clearMenuPosition(el);
+    });
     document.querySelectorAll('.report-menu-wrap.is-open').forEach((el) => {
       el.classList.remove('is-open');
       el.classList.remove('drop-up');
@@ -135,22 +148,31 @@
 
   function positionMenuDrop(wrap, drop) {
     if (!wrap || !drop) return;
+    const btn = wrap.querySelector('.report-menu-btn');
+    if (!btn) return;
+    // Render the open menu as a fixed-position layer anchored to the button so
+    // it can never be clipped by a scrollable/overflow container (e.g. the
+    // blog detail overlay's scroll box) or painted behind nested stacking
+    // contexts. Coordinates come from the button's viewport rect.
     wrap.classList.remove('drop-up');
-    const scrollBox = drop.closest('.blog-detail-box');
-    if (scrollBox) {
-      wrap.classList.add('drop-up');
-      return;
+    drop.style.position = 'fixed';
+    drop.style.zIndex = '1200';
+    drop.style.right = 'auto';
+    drop.style.bottom = 'auto';
+    drop.style.visibility = 'hidden';
+    const btnRect = btn.getBoundingClientRect();
+    const dropRect = drop.getBoundingClientRect();
+    const gap = 4;
+    let top = btnRect.bottom + gap;
+    if (top + dropRect.height > window.innerHeight - 8) {
+      top = btnRect.top - gap - dropRect.height; // flip upward when no room below
     }
-    requestAnimationFrame(() => {
-      if (drop.hidden) return;
-      const dropRect = drop.getBoundingClientRect();
-      const overflowParent = drop.closest('.bcard, .tiola-card, .ri, .blog-detail-box');
-      if (!overflowParent) return;
-      const parentRect = overflowParent.getBoundingClientRect();
-      if (dropRect.bottom > parentRect.bottom - 4 || dropRect.height === 0) {
-        wrap.classList.add('drop-up');
-      }
-    });
+    if (top < 8) top = 8;
+    let left = btnRect.right - dropRect.width; // right-align with the button
+    if (left < 8) left = 8;
+    drop.style.top = `${top}px`;
+    drop.style.left = `${left}px`;
+    drop.style.visibility = '';
   }
 
   function resolveMenuDrop(btnOrDrop, menuId) {
@@ -201,6 +223,11 @@
     if (e.target.closest('.report-menu-wrap')) return;
     closeMenus();
   });
+
+  // A fixed-position menu's coordinates go stale when the page or an inner
+  // scroll container (e.g. the blog detail overlay) scrolls, so close it.
+  window.addEventListener('scroll', () => closeMenus(), true);
+  window.addEventListener('resize', () => closeMenus());
 
   window.TL_REPORTS = { REASONS, open, close, menuButton, toggleMenu, closeMenus };
 })();
