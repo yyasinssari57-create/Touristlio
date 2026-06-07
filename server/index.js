@@ -52,10 +52,8 @@ if (process.env.TRUST_PROXY === 'true') {
 
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 const { apiPreflightMiddleware } = require('./middleware/api-preflight');
-const { canonicalHostMiddleware } = require('./middleware/canonical-host');
 
 app.use(apiPreflightMiddleware(corsOrigins));
-app.use(canonicalHostMiddleware());
 
 app.use(helmet({
   contentSecurityPolicy: isProd ? {
