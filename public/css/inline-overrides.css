@@ -125,13 +125,56 @@ body.admin-body {
 body.admin-body .brand-mark {
   background: transparent;
 }
+body.admin-body:not(.admin-session) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
 .admin-login {
   max-width: 360px;
-  margin: 120px auto;
-  padding: 24px;
+  width: 100%;
+  margin: 0;
+  padding: 32px 28px;
   background: #fff;
   border-radius: 16px;
   box-shadow: var(--sh2);
+}
+.admin-login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.admin-login-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  display: block;
+  margin: 0 0 12px;
+  flex-shrink: 0;
+}
+.admin-login-brand {
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin: 0 0 6px;
+}
+.admin-login-subtitle,
+#loginTitle {
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--t2);
+  margin: 0;
+  text-align: center;
 }
 .admin-item {
   display: flex;
@@ -432,12 +475,6 @@ body.admin-body .brand-mark {
 .adm-photo-count {
   font-size: .75rem;
   color: var(--t2);
-}
-#loginTitle {
-  text-align: center;
-  font-weight: 700;
-  color: var(--navy);
-  margin-bottom: 12px;
 }
 .admin-login .btn.bp {
   width: 100%;

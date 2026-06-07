@@ -11,8 +11,11 @@
 </head>
 <body class="admin-body">
 <div id="loginScreen" class="admin-login" role="main" aria-labelledby="loginTitle">
-  <img src="/images/logo.svg" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
-  <p id="loginTitle">Admin</p>
+  <header class="admin-login-header">
+    <img src="/images/logo-round.png?v=5" alt="" class="admin-login-logo" width="56" height="56" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
+    <p class="admin-login-brand" aria-hidden="true">Tourist<span class="brand-accent">lio</span></p>
+    <h1 id="loginTitle" class="admin-login-subtitle">Admin</h1>
+  </header>
   <label class="sr-only" for="admEmail">E-posta</label>
   <input class="ain" id="admEmail" type="email" placeholder="E-posta" autocomplete="username" aria-required="true"/>
   <label class="sr-only" for="admPass">Şifre</label>
