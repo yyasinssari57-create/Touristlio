@@ -11,7 +11,7 @@
 </head>
 <body class="admin-body">
 <div id="loginScreen" class="admin-login" role="main" aria-labelledby="loginTitle">
-  <img src="/images/logo.png" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
+  <img src="/images/logo.svg" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
   <p id="loginTitle">Admin</p>
   <label class="sr-only" for="admEmail">E-posta</label>
   <input class="ain" id="admEmail" type="email" placeholder="E-posta" autocomplete="username" aria-required="true"/>
@@ -22,10 +22,10 @@
   <div id="loginErr" class="admin-status err" style="display:none" role="alert"></div>
 </div>
 
-<div id="adminPanel" style="display:none">
+<div id="adminPanel">
   <nav class="tl-nav" aria-label="Üst menü"><div class="nav-inner">
     <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span> Admin</span></a>
-    <a href="/" class="nav-brand-center" aria-label="Touristlio ana sayfa"><img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46"/></a>
+    <a href="/" class="nav-brand-center" aria-label="Touristlio ana sayfa"><img src="/images/icon-white.svg" alt="" class="brand-mark brand-mark-white" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon.svg'"/></a>
     <div class="nav-r"><span id="admUser"></span>
     <a href="/" class="btn nav-btn-ghost nav-link-plain">Site</a>
     <button class="btn nav-btn-ghost" onclick="adminLogout()" aria-label="Çıkış yap">Çıkış</button></div>
@@ -46,6 +46,7 @@
       <button type="button" role="tab" aria-selected="false" data-section="settings" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('settings',this)">Ayarlar</button>
       <button type="button" role="tab" aria-selected="false" data-section="roles" data-role="admin" data-permission="admin.roles" onclick="showAdminSection('roles',this)">Roller</button>
       <button type="button" role="tab" aria-selected="false" data-section="audit-log" data-role="admin" onclick="showAdminSection('audit-log',this)">Audit Log</button>
+      <button type="button" role="tab" aria-selected="false" data-section="guide" onclick="showAdminSection('guide',this)">Kılavuz</button>
     </nav>
 
     <div class="admin-content" role="main">
@@ -281,7 +282,7 @@
             </aside>
 
             <div class="content-main" id="usersMain">
-              <aside id="userDetailPanel" class="adm-user-slide-panel" style="display:none" aria-label="Kullanıcı detayı">
+              <aside id="userDetailPanel" class="adm-user-slide-panel" hidden aria-label="Kullanıcı detayı">
                 <header class="adm-user-slide-head">
                   <h3 id="userDetailTitle">Kullanıcı</h3>
                   <button type="button" class="adm-user-slide-close" onclick="closeUserDetailPanel()" aria-label="Kapat">×</button>
@@ -596,11 +597,309 @@
         <div class="admin-card" id="auditLogTable" aria-live="polite"></div>
         <div id="auditPagination" class="adm-pagination"></div>
       </section>
+
+      <section id="adm-guide" class="adm-section" role="tabpanel" aria-label="Kılavuz">
+        <div class="adm-guide-wrap">
+          <h2 class="adm-h2">Moderatör Kılavuzu</h2>
+          <p class="adm-guide-intro">Bu kılavuz, Touristlio admin panelindeki tüm bölümleri ve günlük moderasyon iş akışlarını açıklar. Yeni moderatörler için başlangıç noktası olarak tasarlanmıştır; deneyimli ekip üyeleri de hızlı referans olarak kullanabilir.</p>
+
+          <div class="admin-card adm-guide-toc">
+            <p class="adm-guide-toc-title">İçindekiler</p>
+            <ul class="adm-guide-toc-list">
+              <li><a href="#guide-roller">Roller ve yetkiler</a></li>
+              <li><a href="#guide-ozet">Özet (Dashboard)</a></li>
+              <li><a href="#guide-yerler">Gezilecek Yerler</a></li>
+              <li><a href="#guide-sehirler">Şehirler</a></li>
+              <li><a href="#guide-kategoriler">Kategoriler</a></li>
+              <li><a href="#guide-moderasyon">Moderasyon</a></li>
+              <li><a href="#guide-sikayetler">Şikayetler</a></li>
+              <li><a href="#guide-kullanicilar">Kullanıcılar</a></li>
+              <li><a href="#guide-icerik">İçerik (Blog)</a></li>
+              <li><a href="#guide-analitik">Analitik</a></li>
+              <li><a href="#guide-medya">Medya</a></li>
+              <li><a href="#guide-ayarlar">Ayarlar</a></li>
+              <li><a href="#guide-roller-panel">Roller</a></li>
+              <li><a href="#guide-audit">Audit Log</a></li>
+              <li><a href="#guide-is-akislari">Yaygın iş akışları</a></li>
+              <li><a href="#guide-ipuclari">İpuçları ve en iyi uygulamalar</a></li>
+            </ul>
+          </div>
+
+          <div id="guide-roller" class="admin-card adm-guide-block">
+            <h3>Roller ve yetkiler</h3>
+            <p>Admin panele yalnızca <strong>yönetici (admin)</strong>, <strong>moderatör</strong> ve <strong>editör</strong> rolleri giriş yapabilir. Gördüğünüz sekmeler rolünüze ve atanmış yetkilere göre değişir.</p>
+            <div class="adm-guide-role-grid">
+              <div class="adm-guide-role-card">
+                <strong>Yönetici (admin)</strong>
+                <ul>
+                  <li>Tüm sekmelere tam erişim</li>
+                  <li>Kullanıcı yönetimi, engelleme, rol atama</li>
+                  <li>Site ayarları, bakım modu, yasaklı kelimeler</li>
+                  <li>Rol tanımları ve Audit Log</li>
+                </ul>
+              </div>
+              <div class="adm-guide-role-card">
+                <strong>Moderatör</strong>
+                <ul>
+                  <li>Özet, Analitik, Medya</li>
+                  <li>Gezilecek Yerler, Şehirler, Kategoriler</li>
+                  <li>Moderasyon, Şikayetler, İçerik (blog)</li>
+                  <li>Kullanıcılar, Ayarlar, Roller ve Audit Log <em>yok</em></li>
+                </ul>
+              </div>
+              <div class="adm-guide-role-card">
+                <strong>Editör</strong>
+                <ul>
+                  <li>Özet ve İçerik (blog) sekmeleri</li>
+                  <li>Blog yazıları, kategoriler, sayfa metinleri</li>
+                  <li>Moderasyon ve kullanıcı işlemleri <em>yok</em></li>
+                </ul>
+              </div>
+            </div>
+            <p class="adm-guide-tip">Üst çubukta adınızın yanında rolünüz görünür (ör. <code>moderator</code>). Bir sekme görünmüyorsa yetkiniz yoktur; yöneticinizden izin isteyin.</p>
+          </div>
+
+          <div id="guide-ozet" class="admin-card adm-guide-block">
+            <h3>Özet (Dashboard)</h3>
+            <p>Giriş yaptığınızda açılan ana ekrandır. Sitenin anlık durumunu tek bakışta görmenizi sağlar.</p>
+            <ul class="adm-guide-list">
+              <li><strong>Yer</strong> — veritabanındaki toplam gezilecek yer sayısı</li>
+              <li><strong>Bekleyen Tiola</strong> — onay bekleyen topluluk yorumları</li>
+              <li><strong>Spam Tiola</strong> — yasaklı kelime veya otomatik filtreyle işaretlenenler</li>
+              <li><strong>Bekleyen Blog</strong> — kullanıcıların gönderdiği onay bekleyen yazılar</li>
+              <li><strong>Kullanıcı</strong> — kayıtlı üye sayısı</li>
+            </ul>
+            <p>Günlük rutininizde önce bu kartlara bakarak öncelik sıranızı belirleyin: bekleyen Tiola ve blog sayıları yüksekse Moderasyon ve İçerik sekmelerine geçin.</p>
+          </div>
+
+          <div id="guide-yerler" class="admin-card adm-guide-block">
+            <h3>Gezilecek Yerler</h3>
+            <p>Sitedeki destinasyon kartlarını (müzeler, parklar, simge yapılar vb.) buradan ekler ve düzenlersiniz.</p>
+            <ul class="adm-guide-list">
+              <li><strong>Yeni yer ekle</strong> — ad, ülke, şehir, kategori kodu (slug), yayın durumu, koordinatlar, açıklama (TR/EN) ve fotoğraflar</li>
+              <li><strong>Kategori kodu</strong> — Türkçe ad değil; <code>museum</code>, <code>historical</code> gibi teknik kodlar. Keşfet filtreleriyle eşleşir</li>
+              <li><strong>Yayın durumu</strong> — Yayında, Taslak veya Arşiv</li>
+              <li><strong>Fotoğraflar</strong> — 16:9 kırpma; yüklenen görseller tercih edilir. Unsplash/harici URL'ler turuncu etiketle işaretlenir</li>
+              <li><strong>Yer listesi</strong> — arama, JSON/CSV dışa aktarma ve içe aktarma</li>
+              <li><strong>Kalite çubuğu</strong> — koordinat, fotoğraf, FAQ veya açıklama eksik yerleri filtrelemenizi sağlar</li>
+            </ul>
+            <p>Listedeki bir yere <strong>Düzenle</strong> ile mevcut kaydı güncelleyebilir veya silebilirsiniz.</p>
+          </div>
+
+          <div id="guide-sehirler" class="admin-card adm-guide-block">
+            <h3>Şehirler</h3>
+            <p>Şehir sayfalarını ve keşif kartlarını yönetir. Her şehir için ad, ülke, İngilizce ad, slug ve kapak görseli tanımlanır.</p>
+            <ul class="adm-guide-list">
+              <li>Slug boş bırakılırsa sistem otomatik üretir</li>
+              <li>Kapak görseli URL ile veya dosya yükleyerek (16:9 kırpma) eklenebilir</li>
+              <li>Şehir listesinden düzenleme ve silme yapılabilir</li>
+            </ul>
+          </div>
+
+          <div id="guide-kategoriler" class="admin-card adm-guide-block">
+            <h3>Kategoriler</h3>
+            <p>Keşfet ve Harita sayfalarındaki filtre çipleri buradan yönetilir. Yeni kategori ekledikten sonra ana sitede sayfa yenilenince görünür.</p>
+            <ul class="adm-guide-list">
+              <li><strong>Slug (kod)</strong> — küçük İngilizce, boşluksuz teknik kod (ör. <code>museum</code>)</li>
+              <li><strong>Türkçe ad (nameTr)</strong> — kullanıcının gördüğü etiket (ör. Müze)</li>
+              <li><strong>İngilizce ad, ikon (emoji), kapak görseli</strong> — isteğe bağlı</li>
+              <li><strong>Pasif</strong> işaretli kategoriler sitede gizlenir; mevcut yerler etkilenmez</li>
+            </ul>
+            <p class="adm-cat-hint">Grup çipleri (Tarihi, Doğa vb.) yalnızca tanımlı grup slug'larıyla eşleşen kategoriler varsa görünür.</p>
+          </div>
+
+          <div id="guide-moderasyon" class="admin-card adm-guide-block">
+            <h3>Moderasyon</h3>
+            <p>Kullanıcıların mekânlara bıraktığı <strong>Tiola</strong> deneyim paylaşımlarını inceler ve yayına alırsınız.</p>
+            <ul class="adm-guide-list">
+              <li><strong>Bekleyen Tiola'lar</strong> — onay bekleyen içerikler; önizleme, onayla, reddet</li>
+              <li><strong>Yayında Tiola'lar</strong> — yayındaki içerikleri arama/filtreleme ve gerekirse kaldırma</li>
+              <li><strong>Filtreler</strong> — metin, durum (bekliyor/spam/yayında/reddedildi), yer ID, tarih aralığı</li>
+              <li><strong>Toplu işlem</strong> — birden fazla Tiola seçip toplu onayla veya reddet</li>
+              <li><strong>Spam</strong> — yasaklı kelime listesindeki kelimeleri içeren gönderiler otomatik spam olarak işaretlenir</li>
+            </ul>
+            <p>Her Tiola kartında kullanıcı adı, mekân, yıldız puanı ve varsa fotoğraf görünür. Önizleme penceresinde moderasyon geçmişi de yüklenebilir.</p>
+          </div>
+
+          <div id="guide-sikayetler" class="admin-card adm-guide-block">
+            <h3>Şikayetler</h3>
+            <p>Kullanıcıların bildirdiği uygunsuz içerik veya profil şikayetlerini buradan işlersiniz.</p>
+            <ul class="adm-guide-list">
+              <li><strong>Bekleyen</strong> — henüz karar verilmemiş şikayetler</li>
+              <li><strong>İşlenen</strong> — göz ardı edilmiş veya içerik kaldırılmış şikayetler</li>
+              <li><strong>Türler</strong> — Tiola, Blog veya Profil şikayeti</li>
+              <li><strong>İncele</strong> — detaylı önizleme ve ilgili kullanıcıya gitme</li>
+              <li><strong>İçeriği kaldır</strong> — hedef içeriği siteden kaldırır (profil şikayetlerinde kullanılmaz)</li>
+              <li><strong>Göz ardı et</strong> — şikayeti geçersiz sayar; içerik yerinde kalır</li>
+            </ul>
+            <p class="adm-guide-tip">Profil şikayetleri için kullanıcı engelleme işlemi <strong>Kullanıcılar</strong> sekmesinden yapılır (yalnızca yöneticiler).</p>
+          </div>
+
+          <div id="guide-kullanicilar" class="admin-card adm-guide-block">
+            <h3>Kullanıcılar</h3>
+            <p><em>Yalnızca yönetici (admin) rolü.</em> Üye hesaplarını görüntüleme, engelleme ve moderatör oluşturma.</p>
+            <ul class="adm-guide-list">
+              <li><strong>Tüm kullanıcılar</strong> — kayıtlı üyelerin listesi; profil detayına gitme</li>
+              <li><strong>Engellenenler</strong> — giriş yapamayan hesaplar</li>
+              <li><strong>Moderatörler</strong> — mevcut moderatör listesi ve yeni moderatör hesabı oluşturma formu</li>
+              <li><strong>Profil bekleyenleri</strong> — avatar, emoji veya profil fotoğrafı değişiklik talepleri</li>
+            </ul>
+            <p><strong>Profil detay paneli</strong> (Profili gör):</p>
+            <ul class="adm-guide-list">
+              <li>Genel, Tiolalar, Bloglar, Şikayetler, Moderasyon ve Risk sekmeleri</li>
+              <li>Rol değiştirme (üye → editör → moderatör)</li>
+              <li>Kullanıcıya e-posta/bildirim gönderme</li>
+              <li>Engelle / engeli kaldır (yönetici hesapları engellenemez)</li>
+            </ul>
+          </div>
+
+          <div id="guide-icerik" class="admin-card adm-guide-block">
+            <h3>İçerik (Blog)</h3>
+            <p>Ana sayfadaki Blog bölümünü ve kullanıcıların gönderdiği uzun rehber yazılarını yönetir.</p>
+            <p><strong>Alt bölümler:</strong></p>
+            <ul class="adm-guide-list">
+              <li><strong>Sayfa ayarları</strong> — blog hero başlığı, alt metin, arama kutusu ve boş liste mesajları (TR/EN)</li>
+              <li><strong>Kategoriler</strong> — blog filtre çipleri (ör. Rehberler, Yemek); slug + Türkçe/İngilizce ad</li>
+              <li><strong>Tüm yazılar</strong> — yeni yazı ekleme, arama, durum/kategori filtresi, düzenleme</li>
+              <li><strong>Bekleyenler</strong> — kullanıcı gönderileri; onayla, reddet, toplu işlem</li>
+              <li><strong>Yayında</strong> — yayındaki yazılar; arama, toplu kaldırma</li>
+              <li><strong>Zamanlanmış</strong> — gelecek tarihli yayınlar; süre gelince otomatik yayına alınır</li>
+            </ul>
+            <p>Yazı durumları: Yayında, Taslak, Onay bekliyor, Reddedildi, Spam. Öne çıkan yazılar ana sayfada vurgulanır.</p>
+          </div>
+
+          <div id="guide-analitik" class="admin-card adm-guide-block">
+            <h3>Analitik</h3>
+            <p>Site aktivitesini ve içerik kalitesini izlemenizi sağlar (Özet yetkisi gerekir).</p>
+            <ul class="adm-guide-list">
+              <li><strong>Özet kartları</strong> — kullanıcı, Tiola, blog ve ziyaret metrikleri</li>
+              <li><strong>Zaman serisi grafiği</strong> — son 30 günde kullanıcı, Tiola ve blog aktivitesi</li>
+              <li><strong>En çok ziyaret edilen yerler</strong> ve <strong>en aktif kullanıcılar</strong> tabloları</li>
+              <li><strong>İçerik kalitesi</strong> — eksik koordinat, fotoğraf veya kısa açıklamalı yer oranları</li>
+            </ul>
+          </div>
+
+          <div id="guide-medya" class="admin-card adm-guide-block">
+            <h3>Medya</h3>
+            <p>Yüklenen tüm görsellerin kütüphanesi. Yer, şehir ve kategori formlarından yüklenen dosyalar burada listelenir.</p>
+            <ul class="adm-guide-list">
+              <li>Dosya adı ve yer ID ile arama/filtreleme</li>
+              <li>Her görselin URL'sini kopyalayıp formlarda kullanabilirsiniz</li>
+              <li>Gereksiz görselleri silerek depolama alanı yönetimi</li>
+            </ul>
+          </div>
+
+          <div id="guide-ayarlar" class="admin-card adm-guide-block">
+            <h3>Ayarlar</h3>
+            <p><em>Yalnızca yönetici (admin) rolü.</em> Site genelindeki yapılandırmalar.</p>
+            <ul class="adm-guide-list">
+              <li><strong>Site durumu</strong> — bakım modu açıkken site (giriş ve admin hariç) 503 döner; bakım mesajı düzenlenebilir</li>
+              <li><strong>Yasaklı kelimeler</strong> — bu kelimeleri içeren Tiola ve blog gönderileri otomatik spam işaretlenir</li>
+              <li><strong>Site ayarları</strong> — site adı, slogan, logo, tema rengi, harita varsayılanları, blog/keşfet özellik açma-kapama, SEO alanları</li>
+            </ul>
+          </div>
+
+          <div id="guide-roller-panel" class="admin-card adm-guide-block">
+            <h3>Roller</h3>
+            <p><em>Yalnızca yönetici (admin) rolü.</em> Sistemdeki rollerin (yönetici, moderatör, editör, üye) ve her role atanmış yetki listesinin salt okunur görünümü.</p>
+            <p>Özel yetki atamaları kullanıcı profilinden yapılır; bu panel yalnızca referans amaçlıdır.</p>
+          </div>
+
+          <div id="guide-audit" class="admin-card adm-guide-block">
+            <h3>Audit Log</h3>
+            <p><em>Yalnızca yönetici (admin) rolü.</em> Admin panelinde yapılan işlemlerin denetim kaydı.</p>
+            <ul class="adm-guide-list">
+              <li>Tiola/blog onay, red ve kaldırma işlemleri</li>
+              <li>Kullanıcı engelleme, rol değişikliği, mesaj gönderme</li>
+              <li>Yer ekleme/güncelleme/silme, yer içe aktarma</li>
+              <li>Şikayet çözümleme (göz ardı / içerik kaldır)</li>
+            </ul>
+            <p>İşlem türü, admin ID ve hedef türü (Tiola, blog, kullanıcı, yer, şikayet) ile filtreleyebilirsiniz.</p>
+          </div>
+
+          <div id="guide-is-akislari" class="admin-card adm-guide-block">
+            <h3>Yaygın iş akışları</h3>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Tiola onaylama</p>
+              <ol class="adm-guide-steps">
+                <li><strong>Moderasyon</strong> sekmesine gidin → <strong>Bekleyen Tiola'lar</strong></li>
+                <li>İçeriği okuyun; fotoğraf varsa önizleyin</li>
+                <li>Uygunsa <strong>Onayla</strong>; uygunsuzsa <strong>Reddet</strong> (isteğe bağlı red nedeni)</li>
+                <li>Spam şüphesi varsa reddetmek yerine spam durumunu not edin — yasaklı kelime listesi otomatik işaretler</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Blog onaylama</p>
+              <ol class="adm-guide-steps">
+                <li><strong>İçerik</strong> → <strong>Bekleyenler</strong> alt bölümüne gidin</li>
+                <li>Başlık, özet ve gövde metnini inceleyin; kapak görselini kontrol edin</li>
+                <li><strong>Onayla</strong> ile yayına alın veya <strong>Reddet</strong> ile kullanıcıya geri bildirim verin</li>
+                <li>Toplu onay için kutucukları işaretleyip <strong>Toplu onayla</strong> kullanın</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Şikayet işleme</p>
+              <ol class="adm-guide-steps">
+                <li><strong>Şikayetler</strong> → <strong>Bekleyen</strong> listesini açın</li>
+                <li><strong>İncele</strong> ile şikayet detayını ve içerik önizlemesini görün</li>
+                <li>İçerik kurallara aykırıysa <strong>İçeriği kaldır</strong>; haksız şikayetse <strong>Göz ardı et</strong></li>
+                <li>Profil şikayetlerinde kullanıcıyı <strong>Kullanıcılar</strong> sekmesinden engelleyin (yönetici)</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Kullanıcı engelleme (yönetici)</p>
+              <ol class="adm-guide-steps">
+                <li><strong>Kullanıcılar</strong> → ilgili kullanıcıda <strong>Profili gör</strong></li>
+                <li>Risk sekmesinde şikayet ve spam geçmişini kontrol edin</li>
+                <li><strong>Engelle</strong> butonuna tıklayın ve onaylayın — kullanıcı giriş yapamaz, oturumu sonlanır</li>
+                <li>Gerekirse <strong>Kullanıcıya e-posta gönder</strong> ile bilgilendirme yapın</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Yeni yer ekleme</p>
+              <ol class="adm-guide-steps">
+                <li><strong>Gezilecek Yerler</strong> → formu doldurun (ad, ülke, şehir, kategori kodu zorunlu)</li>
+                <li>Koordinat ve en az bir fotoğraf ekleyin (kalite için önerilir)</li>
+                <li>Yayın durumunu seçin → <strong>Yeri kaydet</strong></li>
+                <li>Listede görünüp görünmediğini ve Keşfet filtrelerinde çıktığını doğrulayın</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Profil değişikliği onaylama (yönetici)</p>
+              <ol class="adm-guide-steps">
+                <li><strong>Kullanıcılar</strong> → <strong>Profil bekleyenleri</strong></li>
+                <li>Avatar veya profil fotoğrafı önizlemesini inceleyin</li>
+                <li>Uygunsa <strong>Onayla</strong>; uygunsuzsa <strong>Reddet</strong> ve kısa bir red nedeni yazın</li>
+              </ol>
+            </div>
+          </div>
+
+          <div id="guide-ipuclari" class="admin-card adm-guide-block">
+            <h3>İpuçları ve en iyi uygulamalar</h3>
+            <ul class="adm-guide-list">
+              <li>Her gün <strong>Özet</strong> kartlarına bakarak iş yükünüzü planlayın</li>
+              <li>Red kararlarında kısa ve net bir neden yazın; kullanıcılar bunu görebilir</li>
+              <li>Yer ve kategori eklerken <strong>slug</strong> ile <strong>Türkçe ad</strong> ayrımına dikkat edin — karışıklık filtre hatalarına yol açar</li>
+              <li>Görselleri mümkünse yükleyin; harici/Unsplash URL'leri bakım riski taşır</li>
+              <li>Toplu işlemlerde seçimi kontrol edin; geri alma her zaman mümkün olmayabilir</li>
+              <li>Şüpheli durumlarda önce şikayet geçmişine ve kullanıcı risk skoruna bakın</li>
+              <li>Teknik sorun veya yetki talebi için yöneticinize başvurun</li>
+            </ul>
+            <p class="adm-guide-tip">Bu kılavuz panel özellikleriyle birlikte güncellenir. Eksik veya hatalı bir bölüm fark ederseniz yöneticiye bildirin.</p>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </div>
 
-<div id="modalOverlay" class="admin-modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+<div id="modalOverlay" class="admin-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="admin-modal">
     <h3 id="modalTitle"></h3>
     <div id="modalBody"></div>
@@ -608,7 +907,7 @@
   </div>
 </div>
 
-<div id="adminLightbox" class="admin-lightbox" style="display:none" role="dialog" aria-modal="true" aria-label="Görsel önizleme">
+<div id="adminLightbox" class="admin-lightbox" role="dialog" aria-modal="true" aria-label="Görsel önizleme">
   <button type="button" class="admin-lightbox-close" onclick="closeAdminLightbox()" aria-label="Kapat">×</button>
   <p class="admin-lightbox-hint">Tekerlek veya çift tık ile yakınlaştırın</p>
   <img id="adminLightboxImg" src="" alt="Tiola fotoğrafı"/>
@@ -856,7 +1155,7 @@ function renderImagePreview(previewId, url) {
     el.innerHTML = '';
     return;
   }
-  el.innerHTML = `<div class="photo-thumb place-photo-thumb">${imageSourceBadge(url)}<img src="${escapeHtml(url)}" alt="Kapak önizleme"/></div>`;
+  el.innerHTML = `<div class="photo-thumb place-photo-thumb">${imageSourceBadge(url)}<img src="${escapeHtml(url)}" alt="Kapak önizleme" onerror="this.onerror=null;this.src='/images/icon.svg'"/></div>`;
 }
 
 function bindCityImageInput(fileInputId, urlInputId, previewId, hintId) {
@@ -1048,7 +1347,7 @@ function showErr(msg, elId) {
 
 function closeModal() {
   const ov = document.getElementById('modalOverlay');
-  ov.style.display = 'none';
+  ov.classList.remove('is-open');
   document.body.style.overflow = '';
 }
 
@@ -1068,7 +1367,7 @@ function openModal(title, bodyHtml, actions, wide) {
     btn.onclick = () => { if (a.onClick) a.onClick(); };
     actEl.appendChild(btn);
   });
-  document.getElementById('modalOverlay').style.display = 'flex';
+  document.getElementById('modalOverlay').classList.add('is-open');
   document.body.style.overflow = 'hidden';
   actEl.querySelector('button')?.focus();
 }
@@ -1090,17 +1389,17 @@ function openAdminLightbox(url) {
   adminLbZoom = 1;
   img.style.transform = 'scale(1)';
   img.src = url;
-  document.getElementById('adminLightbox').style.display = 'flex';
+  document.getElementById('adminLightbox').classList.add('is-open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeAdminLightbox() {
-  document.getElementById('adminLightbox').style.display = 'none';
+  document.getElementById('adminLightbox').classList.remove('is-open');
   const img = document.getElementById('adminLightboxImg');
   img.src = '';
   adminLbZoom = 1;
   img.style.transform = 'scale(1)';
-  if (document.getElementById('modalOverlay').style.display !== 'flex') {
+  if (!document.getElementById('modalOverlay').classList.contains('is-open')) {
     document.body.style.overflow = '';
   }
 }
@@ -1117,13 +1416,13 @@ document.getElementById('adminLightboxImg').addEventListener('dblclick', (e) => 
 });
 
 document.getElementById('adminLightbox').addEventListener('wheel', (e) => {
-  if (document.getElementById('adminLightbox').style.display !== 'flex') return;
+  if (!document.getElementById('adminLightbox').classList.contains('is-open')) return;
   e.preventDefault();
   setAdminLightboxZoom(adminLbZoom + (e.deltaY < 0 ? 0.2 : -0.2));
 }, { passive: false });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('adminLightbox').style.display === 'flex') {
+  if (e.key === 'Escape' && document.getElementById('adminLightbox').classList.contains('is-open')) {
     closeAdminLightbox();
   }
 });
@@ -1173,9 +1472,10 @@ function openTiolaPreview(id) {
 }
 
 function showAdminSection(id, btn) {
-  document.querySelectorAll('.adm-section').forEach((s) => { s.style.display = 'none'; s.classList.remove('active'); });
+  if (id !== 'users') closeUserDetailPanel();
+  document.querySelectorAll('.adm-section').forEach((s) => s.classList.remove('active'));
   const el = document.getElementById('adm-' + id);
-  if (el) { el.style.display = 'block'; el.classList.add('active'); }
+  if (el) el.classList.add('active');
   document.querySelectorAll('#adminTabs button').forEach((b) => {
     b.classList.remove('on');
     b.setAttribute('aria-selected', 'false');
@@ -1589,7 +1889,10 @@ const PROFILE_CHANGE_LABELS = {
 
 function closeUserDetailPanel() {
   const panel = document.getElementById('userDetailPanel');
-  if (panel) panel.style.display = 'none';
+  if (panel) {
+    panel.classList.remove('is-open');
+    panel.hidden = true;
+  }
   userDetailData = null;
   document.body.style.overflow = '';
 }
@@ -1857,7 +2160,8 @@ async function openUserProfile(userId) {
     const title = document.getElementById('userDetailTitle');
     if (title) title.textContent = userDetailData.name || 'Kullanıcı';
     if (panel) {
-      panel.style.display = 'flex';
+      panel.classList.add('is-open');
+      panel.hidden = false;
       document.body.style.overflow = 'hidden';
     }
     renderUserDetailTab();
@@ -2420,8 +2724,7 @@ async function adminLogin() {
 
 function showLoginScreen() {
   currentUser = null;
-  document.getElementById('loginScreen').style.display = 'block';
-  document.getElementById('adminPanel').style.display = 'none';
+  document.body.classList.remove('admin-session');
 }
 
 function adminLogout() {
@@ -2448,8 +2751,8 @@ async function restoreAdminSession() {
 
 async function showPanel(user) {
   currentUser = user;
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('adminPanel').style.display = 'block';
+  document.body.classList.add('admin-session');
+  closeUserDetailPanel();
   document.getElementById('admUser').textContent = user.name + ' (' + user.role + ')';
   applyAdminRbac(user);
   bindPlacePhotoInput('plPhotos', 'plPhotoPreview', 'plPhotoCount');

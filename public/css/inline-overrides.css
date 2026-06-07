@@ -107,6 +107,9 @@ body.admin-body {
   font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
   background: var(--l);
 }
+body.admin-body .brand-mark {
+  background: transparent;
+}
 .admin-login {
   max-width: 360px;
   margin: 120px auto;
@@ -179,10 +182,13 @@ body.admin-body {
   inset: 0;
   z-index: 300;
   background: rgba(0, 0, 0, .88);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 24px;
+}
+.admin-lightbox.is-open {
+  display: flex;
 }
 .admin-lightbox img {
   max-width: min(96vw, 1200px);
@@ -2297,37 +2303,59 @@ body.admin-body {
   right: 0;
   width: min(420px, 92vw);
   height: 100vh;
-  background: #fff;
-  border-left: 1px solid var(--l2);
-  box-shadow: -4px 0 24px rgba(0,0,0,.08);
+  background: var(--navy2);
+  border-left: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, .35);
   z-index: 900;
-  display: flex;
+  display: none;
   flex-direction: column;
+  color: rgba(255, 255, 255, .92);
+}
+.adm-user-slide-panel.is-open {
+  display: flex;
 }
 .adm-user-slide-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--l2);
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
 }
 .adm-user-slide-head h3 {
   margin: 0;
   font-size: 1rem;
-  color: var(--navy);
+  color: #fff;
 }
 .adm-user-slide-close {
   background: none;
   border: none;
   font-size: 1.4rem;
   cursor: pointer;
-  color: var(--t2);
+  color: rgba(255, 255, 255, .7);
   line-height: 1;
+}
+.adm-user-slide-close:hover,
+.adm-user-slide-close:focus-visible {
+  color: #fff;
 }
 .adm-user-slide-body {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+.adm-user-slide-panel .adm-user-detail-name,
+.adm-user-slide-panel .adm-user-section h4,
+.adm-user-slide-panel .adm-user-subhead {
+  color: #fff;
+}
+.adm-user-slide-panel .adm-user-detail-email,
+.adm-user-slide-panel .adm-user-detail-meta,
+.adm-user-slide-panel .adm-user-empty {
+  color: rgba(255, 255, 255, .65);
+}
+.adm-user-slide-panel .admin-card {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .12);
 }
 .adm-user-tabs {
   display: flex;
@@ -2370,4 +2398,133 @@ body.admin-body {
 @media (max-width: 768px) {
   .adm-analytics-cards { grid-template-columns: repeat(2, 1fr); }
   .adm-analytics-tables { grid-template-columns: 1fr; }
+}
+
+/* ── Moderator guide (Kılavuz) ── */
+.adm-guide-wrap {
+  max-width: 920px;
+  padding-bottom: 32px;
+}
+.adm-guide-intro {
+  font-size: .9rem;
+  color: var(--t2);
+  line-height: 1.6;
+  margin: 0 0 20px;
+  max-width: 720px;
+}
+.adm-guide-toc {
+  margin-bottom: 20px;
+}
+.adm-guide-toc-title {
+  font-size: .95rem;
+  color: var(--navy);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.adm-guide-toc-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px 16px;
+}
+.adm-guide-toc-list a {
+  font-size: .82rem;
+  color: var(--brand-accent, #e85d04);
+  text-decoration: none;
+}
+.adm-guide-toc-list a:hover,
+.adm-guide-toc-list a:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+.adm-guide-block {
+  margin-bottom: 16px;
+  scroll-margin-top: calc(var(--nav-h) + 56px);
+}
+.adm-guide-block h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--navy);
+  font-family: var(--fd);
+}
+.adm-guide-block p {
+  font-size: .85rem;
+  color: var(--t2);
+  line-height: 1.55;
+  margin: 0 0 10px;
+}
+.adm-guide-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: .84rem;
+  color: var(--t2);
+  line-height: 1.55;
+}
+.adm-guide-list li {
+  margin-bottom: 6px;
+}
+.adm-guide-steps {
+  margin: 0;
+  padding-left: 22px;
+  font-size: .84rem;
+  color: var(--t2);
+  line-height: 1.55;
+}
+.adm-guide-steps li {
+  margin-bottom: 8px;
+}
+.adm-guide-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.adm-guide-role-card {
+  background: var(--l);
+  border-radius: 8px;
+  padding: 12px;
+}
+.adm-guide-role-card strong {
+  display: block;
+  color: var(--navy);
+  margin-bottom: 6px;
+  font-size: .88rem;
+}
+.adm-guide-role-card ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: .78rem;
+  color: var(--t2);
+  line-height: 1.45;
+}
+.adm-guide-role-card li {
+  margin-bottom: 4px;
+}
+.adm-guide-workflow {
+  border-left: 3px solid var(--brand-accent, #e85d04);
+  padding: 4px 0 4px 14px;
+  margin: 14px 0;
+}
+.adm-guide-workflow-title {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin: 0 0 8px;
+}
+.adm-guide-tip {
+  font-size: .78rem;
+  color: var(--t3);
+  background: var(--l);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+.adm-guide-tip code {
+  font-size: .72rem;
+  background: rgba(0,0,0,.06);
+  padding: 1px 4px;
+  border-radius: 3px;
 }
