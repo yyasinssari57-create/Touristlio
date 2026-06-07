@@ -618,15 +618,18 @@
             <p class="adm-guide-toc-title">İçindekiler</p>
             <ul class="adm-guide-toc-list">
               <li><a href="#guide-roller">Roller ve yetkiler</a></li>
+              <li><a href="#guide-panel-nav">Panel navigasyonu</a></li>
               <li><a href="#guide-ozet">Özet (Dashboard)</a></li>
+              <li><a href="#guide-depolama">Kalıcı depolama uyarısı</a></li>
               <li><a href="#guide-yerler">Gezilecek Yerler</a></li>
               <li><a href="#guide-sehirler">Şehirler</a></li>
               <li><a href="#guide-kategoriler">Kategoriler</a></li>
               <li><a href="#guide-moderasyon">Moderasyon</a></li>
               <li><a href="#guide-sikayetler">Şikayetler</a></li>
               <li><a href="#guide-kullanicilar">Kullanıcılar</a></li>
+              <li><a href="#guide-kayit-dogrulama">Kayıt ve e-posta doğrulama</a></li>
               <li><a href="#guide-icerik">İçerik (Blog)</a></li>
-              <li><a href="#guide-analitik">Analitik</a></li>
+              <li><a href="#guide-analitik">Canlı ziyaretçi analitiği</a></li>
               <li><a href="#guide-medya">Medya</a></li>
               <li><a href="#guide-ayarlar">Ayarlar</a></li>
               <li><a href="#guide-roller-panel">Roller</a></li>
@@ -669,15 +672,27 @@
               <div class="adm-guide-role-card">
                 <strong>İçerik Yöneticisi (staff)</strong>
                 <ul>
-                  <li>Moderatör ve editör yetkilerinin birleşimi</li>
+                  <li>Moderatör + editör yetkilerinin tek rolde birleşimi</li>
                   <li>Özet, Analitik, İçerik, Moderasyon, Şikayetler</li>
                   <li>Gezilecek Yerler, Şehirler, Kategoriler, Medya</li>
+                  <li>Tiola onayı, blog düzenleme ve yer yönetimini aynı kişi yapabilir</li>
                   <li>Kullanıcılar, Ayarlar, Roller ve Audit Log <em>yok</em></li>
                   <li>Yönetici hesapları üzerinde işlem yapamaz</li>
                 </ul>
               </div>
             </div>
+            <p>İçerik yöneticisi atamak için yönetici <strong>Kullanıcılar → Profili gör → Rol</strong> menüsünden <code>İçerik Yöneticisi</code> seçer. Yeni panel hesabı oluşturmak için moderatör formu kullanılır; ardından rol staff olarak güncellenir.</p>
             <p class="adm-guide-tip">Üst çubukta adınızın yanında rolünüz görünür (ör. <code>İçerik Yöneticisi</code>). Bir sekme görünmüyorsa yetkiniz yoktur; yöneticinizden izin isteyin.</p>
+          </div>
+
+          <div id="guide-panel-nav" class="admin-card adm-guide-block">
+            <h3>Panel navigasyonu</h3>
+            <p>Admin paneldeyken üst çubuktaki <strong>Touristlio Admin</strong> yazısı ve ortadaki logo <code>/admin</code> adresine gider — ana siteye (<code>/</code>) değil. Böylece moderasyon sırasında yanlışlıkla public siteye çıkmazsınız.</p>
+            <ul class="adm-guide-list">
+              <li>Logo ve marka bağlantıları <code>admin-nav-stay</code> sınıfıyla panelde kalır</li>
+              <li>Çıkış yaptıktan sonra veya yeni sekmede <code>/</code> ana siteyi açabilirsiniz</li>
+              <li>Kılavuz sekmesi tüm panel rolleri için görünür; günlük referans olarak kullanın</li>
+            </ul>
           </div>
 
           <div id="guide-ozet" class="admin-card adm-guide-block">
@@ -691,6 +706,20 @@
               <li><strong>Kullanıcı</strong> — kayıtlı üye sayısı</li>
             </ul>
             <p>Günlük rutininizde önce bu kartlara bakarak öncelik sıranızı belirleyin: bekleyen Tiola ve blog sayıları yüksekse Moderasyon ve İçerik sekmelerine geçin.</p>
+            <p>Özet ekranının üstünde kırmızı bir uyarı görürseniz kalıcı depolama yoktur — ayrıntılar için <a href="#guide-depolama">Kalıcı depolama uyarısı</a> bölümüne bakın.</p>
+          </div>
+
+          <div id="guide-depolama" class="admin-card adm-guide-block">
+            <h3>Kalıcı depolama uyarısı</h3>
+            <p>Render <strong>ücretsiz planda</strong> SQLite veritabanı her redeploy veya yeniden başlatmada sıfırlanır. Özet sekmesinde şu banner görünürse veriler kalıcı değildir:</p>
+            <p class="adm-guide-tip"><strong>Kalıcı depolama yok.</strong> Kayıtlı kullanıcılar, Tiola'lar, bloglar ve yüklenen medya redeploy sonrası kaybolabilir.</p>
+            <ul class="adm-guide-list">
+              <li>Banner yalnızca geçici (ephemeral) depolama algılandığında gösterilir</li>
+              <li>Kalıcılık için Render Starter plan + disk mount veya harici veritabanı gerekir</li>
+              <li>Üretimde <code>STORAGE_PERSISTENT=true</code> ve disk mount ayarlanmalıdır (bkz. DEPLOY.md)</li>
+              <li>Yerel geliştirmede (<code>localhost</code>) veriler proje klasöründeki <code>data/</code> dizininde kalır; bu uyarı genelde görünmez</li>
+            </ul>
+            <p>Moderatör olarak kullanıcılara «hesabınız silindi» şikayetleri gelirse önce sunucunun yeniden başlatılıp başlatılmadığını yöneticiye sorun — ücretsiz planda bu beklenen bir durumdur.</p>
           </div>
 
           <div id="guide-yerler" class="admin-card adm-guide-block">
@@ -768,10 +797,28 @@
             <p><strong>Profil detay paneli</strong> (Profili gör):</p>
             <ul class="adm-guide-list">
               <li>Genel, Tiolalar, Bloglar, Şikayetler, Moderasyon ve Risk sekmeleri</li>
-              <li>Rol değiştirme (üye → editör → moderatör)</li>
+              <li>Rol değiştirme (üye → editör → moderatör → içerik yöneticisi)</li>
               <li>Kullanıcıya e-posta/bildirim gönderme</li>
               <li>Engelle / engeli kaldır (yönetici hesapları engellenemez)</li>
+              <li>E-posta doğrulama durumu rozeti (doğrulandı / doğrulanmadı)</li>
             </ul>
+          </div>
+
+          <div id="guide-kayit-dogrulama" class="admin-card adm-guide-block">
+            <h3>Kayıt ve e-posta doğrulama</h3>
+            <p>Yeni üye kaydında site şu mesajlardan birini gösterir:</p>
+            <ul class="adm-guide-list">
+              <li><strong>Kayıt başarılı!</strong> — e-posta doğrulama kapalıysa veya SMTP yapılandırılmamışsa</li>
+              <li><strong>Kayıt başarılı! E-postanızı doğrulayın.</strong> — doğrulama açıkken; kullanıcıya gelen kutusunu (spam dahil) kontrol etmesini söyleyin</li>
+            </ul>
+            <p>E-posta doğrulanmadan bazı işlemler (Tiola yazma, blog gönderme) kısıtlanabilir. Kullanıcı «doğrulama maili gelmedi» derse:</p>
+            <ul class="adm-guide-list">
+              <li>Profil → <strong>Ayarlar</strong> → <strong>Doğrulama e-postası gönder</strong> butonunu denemesini önerin</li>
+              <li>E-posta adresinin doğru yazıldığını kontrol edin</li>
+              <li>Sorun sürerse yöneticiden SMTP / <code>REQUIRE_EMAIL_VERIFICATION</code> ayarını kontrol etmesini isteyin</li>
+              <li>Yönetici, kullanıcı profilinde <strong>E-posta doğrulandı</strong> rozetini görebilir</li>
+            </ul>
+            <p class="adm-guide-tip">Blog gönderisi onay beklerken yazarın e-postası doğrulanmamışsa, onay öncesi doğrulama tamamlamasını isteyebilirsiniz.</p>
           </div>
 
           <div id="guide-icerik" class="admin-card adm-guide-block">
@@ -790,15 +837,25 @@
           </div>
 
           <div id="guide-analitik" class="admin-card adm-guide-block">
-            <h3>Analitik</h3>
-            <p>Canlı ziyaretçi verileri ve içerik kalitesi metrikleri (<code>admin.analytics</code> yetkisi gerekir).</p>
+            <h3>Canlı ziyaretçi analitiği</h3>
+            <p><strong>Analitik</strong> sekmesi canlı ziyaretçi ve içerik metriklerini gösterir (<code>admin.analytics</code> yetkisi gerekir). Ana sitede <code>analytics.js</code> sayfa görüntüleme, sekme tıklaması ve oturum süresini izler; localhost dahil tüm ortamlarda çalışır.</p>
+            <p><strong>Canlı rozet</strong> — sekme açıkken üstte «Şu an çevrimiçi» sayısı ve son güncelleme saati görünür. Veriler <strong>30 saniyede bir</strong> otomatik yenilenir; sekmeden çıkınca yenileme durur.</p>
             <ul class="adm-guide-list">
-              <li><strong>Canlı ziyaretçi</strong> — son 5 dakikada aktif oturumlar, bugünkü tıklama ve benzersiz ziyaretçi</li>
-              <li><strong>Oturum süresi</strong> — ortalama sitede kalma süresi (heartbeat ile ölçülür)</li>
-              <li><strong>Üye / misafir</strong> — giriş yapmış ve anonim oturum dağılımı</li>
-              <li><strong>En çok tıklanan sekmeler</strong> — Keşfet, Gezilecek Yerler, Blog vb.</li>
-              <li><strong>İçerik analitiği</strong> — kullanıcı/Tiola/blog sayıları, kalite skoru</li>
+              <li><strong>Şu an çevrimiçi</strong> — son 5 dakikada aktif oturum sayısı</li>
+              <li><strong>Bugün tıklama</strong> — sayfa görüntüleme ve sekme tıklamaları</li>
+              <li><strong>Benzersiz ziyaretçi</strong> — bugünkü tekil oturumlar</li>
+              <li><strong>Ort. süre (bugün)</strong> — heartbeat (30 sn) ile ölçülen ortalama sitede kalma süresi</li>
+              <li><strong>Son 7 gün ziyaret</strong> — günlük ziyaret grafiği</li>
+              <li><strong>En çok tıklanan sekmeler</strong> — Keşfet, Gezilecek Yerler, Blog, Harita vb. (7 gün)</li>
+              <li><strong>Üye / misafir</strong> — giriş yapmış ve anonim oturum dağılımı (bugün)</li>
             </ul>
+            <p><strong>İçerik analitiği</strong> (aynı sekmenin alt bölümü):</p>
+            <ul class="adm-guide-list">
+              <li>Kullanıcı, yer, onaylı Tiola ve bekleyen blog sayıları</li>
+              <li>Son 30 gün içerik grafiği, en çok Tiola alan yerler, en aktif kullanıcılar</li>
+              <li>İçerik kalitesi skoru — koordinat/fotoğraf/FAQ eksik yerler için hızlı filtre</li>
+            </ul>
+            <p class="adm-guide-tip">Yerel geliştirmede (<code>localhost:3000</code>) kendi oturumunuz da çevrimiçi sayısına dahil olur; test ederken bunu göz önünde bulundurun.</p>
           </div>
 
           <div id="guide-medya" class="admin-card adm-guide-block">
@@ -900,12 +957,24 @@
                 <li>Uygunsa <strong>Onayla</strong>; uygunsuzsa <strong>Reddet</strong> ve kısa bir red nedeni yazın</li>
               </ol>
             </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">E-posta doğrulama desteği (moderatör)</p>
+              <ol class="adm-guide-steps">
+                <li>Kullanıcı «kayıt oldum ama mail gelmedi» derse önce spam/gereksiz klasörünü kontrol etmesini söyleyin</li>
+                <li>Profil → Ayarlar → <strong>Doğrulama e-postası gönder</strong> ile yeniden göndermesini önerin</li>
+                <li>Yönetici ise kullanıcı profilinde <strong>E-posta doğrulanmadı</strong> rozetini kontrol edebilir</li>
+                <li>Sorun devam ederse SMTP ayarlarını yöneticiye bildirin</li>
+              </ol>
+            </div>
           </div>
 
           <div id="guide-ipuclari" class="admin-card adm-guide-block">
             <h3>İpuçları ve en iyi uygulamalar</h3>
             <ul class="adm-guide-list">
-              <li>Her gün <strong>Özet</strong> kartlarına bakarak iş yükünüzü planlayın</li>
+              <li>Her gün <strong>Özet</strong> kartlarına ve <strong>Analitik</strong> canlı ziyaretçi sayısına bakarak iş yükünüzü planlayın</li>
+              <li>Özet'teki kırmızı depolama uyarısını görmezden gelmeyin — ücretsiz Render'da veri kaybı normaldir</li>
+              <li>Panelde kalırken logoya tıklamak sizi ana siteye götürmez; bilerek <code>/admin</code>'de tutar</li>
               <li>Red kararlarında kısa ve net bir neden yazın; kullanıcılar bunu görebilir</li>
               <li>Yer ve kategori eklerken <strong>slug</strong> ile <strong>Türkçe ad</strong> ayrımına dikkat edin — karışıklık filtre hatalarına yol açar</li>
               <li>Görselleri mümkünse yükleyin; harici/Unsplash URL'leri bakım riski taşır</li>
