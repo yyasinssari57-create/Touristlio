@@ -8,6 +8,7 @@ Uygulama geliştirmesi büyük ölçüde tamamlandı; `render.yaml`, production 
 
 ## Ön koşullar
 
+- **`package-lock.json` repoda olmalı** — Render build komutu `npm ci` kullanır; lock dosyası yoksa veya `package.json` ile uyumsuzsa build düşer (`Run npm help ci for more info`). Lock dosyasını `.gitignore`’a eklemeyin; her `package.json` bağımlılık değişikliğinden sonra yerelde `npm install` çalıştırıp lock’u commit + push edin.
 - GitHub repo: https://github.com/yyasinssari57-create/Touristlio
 - [Render](https://render.com) hesabı (kalıcı SQLite için **Starter** plan + disk gerekir; ücretsiz web servisinde disk **kalıcı değildir**)
 - SMTP (Brevo önerilir) — `REQUIRE_EMAIL_VERIFICATION=true` iken zorunlu
@@ -72,7 +73,7 @@ Tam liste ve isteğe bağlı değişkenler: `.env.production.example`
 - Build: `npm ci` — `better-sqlite3` için **Node 22.16.0** kullanılır (prebuilt binary; kaynak derleme gerekmez)
 - Start: `npm run start:prod` → `JWT_SECRET` yoksa veya zayıfsa **sunucu başlamaz** (kasıtlı güvenlik)
 
-**Render build notu (`better-sqlite3`):** Eski servislerde Node **20.3.x** gibi sürümler `gyp ERR!` ile build’i düşürebilir. Repoda `.node-version`, `package.json` `engines` ve `render.yaml` içindeki `NODE_VERSION=22.16.0` bunu önler. Blueprint güncellemesinden sonra **Manual Deploy** yapın. Dashboard’da eski `NODE_VERSION` tanımlıysa silin veya `22.16.0` yapın (`.node-version` önceliklidir).
+**Render build notu (`better-sqlite3`):** Eski servislerde Node **20.3.x** gibi sürümler `gyp ERR!` ile build’i düşürebilir — prebuilt binary yok, kaynak derleme başarısız olur. Repoda `.node-version`, `package.json` `engines` ve `render.yaml` içindeki `NODE_VERSION=22.16.0` + `npm_config_build_from_source=false` bunu önler (`better-sqlite3@11.10.0` lock’ta). `file-type@16` ve diğer bağımlılıklar native modül içermez; tek native paket `better-sqlite3`. Blueprint güncellemesinden sonra **Manual Deploy** yapın. Dashboard’da eski `NODE_VERSION` tanımlıysa silin veya `22.16.0` yapın.
 
 Sağlık kontrolü: `https://<servis-adı>.onrender.com/api/health` → `{"ok":true,...}`
 
@@ -135,6 +136,7 @@ npm run verify:smtp
 
 | Belirti | Olası neden | Çözüm |
 |---------|-------------|--------|
+| Build `npm ci` → `Run npm help ci` / usage hatası | `package-lock.json` repoda yok veya `package.json` ile uyumsuz | Lock dosyasını commit + push edin; yerelde `npm install` ile senkronlayın; `npm ci` build komutunu koruyun |
 | Build `npm ci` → `gyp ERR!` / `better-sqlite3` | Eski Node (ör. 20.3.0), prebuild yok | Repoyu çekin; `NODE_VERSION` / `.node-version` = `22.16.0`; Manual Deploy |
 | Sunucu hemen kapanıyor | `JWT_SECRET` eksik/zayıf | Environment’ta 32+ karakter secret; Blueprint `generateValue` kullanıyorsa redeploy |
 | Giriş/kayıt 403 CSRF | `SITE_URL` yanlış | Tarayıcıdaki URL ile `SITE_URL` origin’i eşleştir |
