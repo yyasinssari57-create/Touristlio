@@ -295,9 +295,15 @@ function seedRbac() {
   ];
   const rolePerms = {
     admin: perms.map((p) => p[0]),
-    moderator: ['admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities', 'admin.categories', 'admin.content'],
-    editor: ['admin.dashboard', 'admin.content'],
-    staff: ['admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities', 'admin.categories', 'admin.content'],
+    moderator: [
+      'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
+      'admin.categories', 'admin.content',
+    ],
+    editor: ['admin.dashboard', 'admin.analytics', 'admin.content'],
+    staff: [
+      'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
+      'admin.categories', 'admin.content',
+    ],
     member: [],
   };
   for (const [slug, name] of roles) {

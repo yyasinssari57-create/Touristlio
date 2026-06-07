@@ -44,7 +44,7 @@
       <button type="button" role="tab" aria-selected="false" data-section="reports" data-permission="admin.moderate" onclick="showAdminSection('reports',this)">Şikayetler</button>
       <button type="button" role="tab" aria-selected="false" data-section="users" data-role="admin" data-permission="admin.users" onclick="showAdminSection('users',this)">Kullanıcılar</button>
       <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" onclick="showAdminSection('content',this)">İçerik</button>
-      <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.dashboard" onclick="showAdminSection('analytics',this)">Analitik</button>
+      <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.analytics" onclick="showAdminSection('analytics',this)">Analitik</button>
       <button type="button" role="tab" aria-selected="false" data-section="media" data-permission="admin.places" onclick="showAdminSection('media',this)">Medya</button>
       <button type="button" role="tab" aria-selected="false" data-section="settings" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('settings',this)">Ayarlar</button>
       <button type="button" role="tab" aria-selected="false" data-section="roles" data-role="admin" data-permission="admin.roles" onclick="showAdminSection('roles',this)">Roller</button>
@@ -59,7 +59,7 @@
         <div id="statsRow"></div>
       </section>
 
-      <section id="adm-places" class="adm-section" role="tabpanel" aria-label="Yerler">
+      <section id="adm-places" class="adm-section" hidden role="tabpanel" aria-label="Yerler">
         <h2 class="adm-h2">Yeni yer ekle</h2>
         <div class="admin-card">
           <div id="placeFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
@@ -122,7 +122,7 @@
         </div>
       </section>
 
-      <section id="adm-cities" class="adm-section" role="tabpanel" aria-label="Şehirler">
+      <section id="adm-cities" class="adm-section" hidden role="tabpanel" aria-label="Şehirler">
         <h2 class="adm-h2">Yeni şehir ekle</h2>
         <div class="admin-card">
           <div id="cityFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
@@ -153,7 +153,7 @@
         <div class="admin-card" id="citiesTableWrap" aria-live="polite"></div>
       </section>
 
-      <section id="adm-categories" class="adm-section" role="tabpanel" aria-label="Kategoriler">
+      <section id="adm-categories" class="adm-section" hidden role="tabpanel" aria-label="Kategoriler">
         <p class="adm-cat-hint">
           <strong>Buraya eklediğiniz kategoriler ana sitede Keşfet/Harita filtre çubuğunda otomatik görünür.</strong>
           Sayfayı yeniledikten sonra yeni çip listede belirir. Pasif işaretli kategoriler filtrelerde gizlenir.
@@ -196,7 +196,7 @@
         <div class="admin-card" id="categoriesTableWrap" aria-live="polite"></div>
       </section>
 
-      <section id="adm-moderation" class="adm-section" role="tabpanel" aria-label="Moderasyon">
+      <section id="adm-moderation" class="adm-section" hidden role="tabpanel" aria-label="Moderasyon">
         <div class="adm-report-tabs" id="modSubTabs" role="tablist" aria-label="Moderasyon filtreleri">
           <button type="button" class="on" data-mfilter="pending" onclick="setModFilter('pending',this)">Bekleyen Tiola'lar</button>
           <button type="button" data-mfilter="approved" onclick="setModFilter('approved',this)">Yayında Tiola'lar</button>
@@ -237,7 +237,7 @@
         </div>
       </section>
 
-      <section id="adm-reports" class="adm-section" role="tabpanel" aria-label="Şikayetler">
+      <section id="adm-reports" class="adm-section" hidden role="tabpanel" aria-label="Şikayetler">
         <h2 class="adm-h2-tight">Şikayetler</h2>
         <div class="adm-report-tabs" id="reportSubTabs" role="tablist" aria-label="Şikayet filtreleri">
           <button type="button" class="on" data-rfilter="pending" onclick="setReportFilter('pending',this)">Bekleyen</button>
@@ -247,7 +247,7 @@
         <div id="reportsList" aria-live="polite"></div>
       </section>
 
-      <section id="adm-users" class="adm-section content-layout content-sidebar-open" role="tabpanel" aria-label="Kullanıcılar">
+      <section id="adm-users" class="adm-section content-layout content-sidebar-open" hidden role="tabpanel" aria-label="Kullanıcılar">
         <div class="content-layout-frame">
           <header class="content-frame-toolbar">
             <button type="button" class="content-sidebar-toggle" id="usersSidebarToggle" onclick="toggleUsersSidebar()" aria-expanded="true" aria-controls="usersSubTabs" aria-label="Kullanıcı menüsünü daralt">
@@ -328,7 +328,7 @@
         </div>
       </section>
 
-      <section id="adm-content" class="adm-section content-layout content-sidebar-open" role="tabpanel" aria-label="İçerik">
+      <section id="adm-content" class="adm-section content-layout content-sidebar-open" hidden role="tabpanel" aria-label="İçerik">
         <div class="content-layout-frame">
           <header class="content-frame-toolbar">
             <button type="button" class="content-sidebar-toggle" id="contentSidebarToggle" onclick="toggleContentSidebar()" aria-expanded="true" aria-controls="contentSubTabs" aria-label="Blog menüsünü daralt">
@@ -509,7 +509,15 @@
         </div>
       </section>
 
-      <section id="adm-analytics" class="adm-section" role="tabpanel" aria-label="Analitik">
+      <section id="adm-analytics" class="adm-section" hidden role="tabpanel" aria-label="Analitik">
+        <div id="visitorLiveBadge" class="adm-visitor-live" aria-live="polite"></div>
+        <div id="visitorCards" class="adm-analytics-cards"></div>
+        <div class="admin-card" id="visitorChart"></div>
+        <div class="adm-analytics-tables">
+          <div class="admin-card" id="visitorTopTabs"></div>
+          <div class="admin-card" id="visitorMemberGuest"></div>
+        </div>
+        <h2 class="adm-analytics-subtitle">İçerik analitiği</h2>
         <div id="analyticsCards" class="adm-analytics-cards"></div>
         <div class="admin-card" id="analyticsChart"></div>
         <div class="adm-analytics-tables">
@@ -519,7 +527,7 @@
         <div class="admin-card" id="analyticsQuality"></div>
       </section>
 
-      <section id="adm-media" class="adm-section" role="tabpanel" aria-label="Medya">
+      <section id="adm-media" class="adm-section" hidden role="tabpanel" aria-label="Medya">
         <h2 class="adm-h2-tight">Medya kütüphanesi</h2>
         <div class="admin-card adm-mod-filters">
           <div class="admin-form adm-mod-filter-row">
@@ -533,7 +541,7 @@
         <div id="mediaPagination" class="adm-pagination"></div>
       </section>
 
-      <section id="adm-settings" class="adm-section" role="tabpanel" aria-label="Ayarlar">
+      <section id="adm-settings" class="adm-section" hidden role="tabpanel" aria-label="Ayarlar">
         <div class="admin-card adm-settings">
           <h3>Site Durumu</h3>
           <p class="adm-field-hint">Bakım modu açıkken site API'leri (giriş ve admin hariç) 503 döner.</p>
@@ -558,11 +566,11 @@
         </div>
       </section>
 
-      <section id="adm-roles" class="adm-section" role="tabpanel" aria-label="Roller">
+      <section id="adm-roles" class="adm-section" hidden role="tabpanel" aria-label="Roller">
         <div class="admin-card" id="rolesPanel" aria-live="polite"></div>
       </section>
 
-      <section id="adm-audit-log" class="adm-section" role="tabpanel" aria-label="Audit Log">
+      <section id="adm-audit-log" class="adm-section" hidden role="tabpanel" aria-label="Audit Log">
         <h2 class="adm-h2-tight">Audit Log</h2>
         <div class="admin-card adm-mod-filters">
           <div class="admin-form adm-mod-filter-row">
@@ -601,7 +609,7 @@
         <div id="auditPagination" class="adm-pagination"></div>
       </section>
 
-      <section id="adm-guide" class="adm-section" role="tabpanel" aria-label="Kılavuz">
+      <section id="adm-guide" class="adm-section" hidden role="tabpanel" aria-label="Kılavuz">
         <div class="adm-guide-wrap">
           <h2 class="adm-h2">Moderatör Kılavuzu</h2>
           <p class="adm-guide-intro">Bu kılavuz, Touristlio admin panelindeki tüm bölümleri ve günlük moderasyon iş akışlarını açıklar. Yeni moderatörler için başlangıç noktası olarak tasarlanmıştır; deneyimli ekip üyeleri de hızlı referans olarak kullanabilir.</p>
@@ -783,12 +791,13 @@
 
           <div id="guide-analitik" class="admin-card adm-guide-block">
             <h3>Analitik</h3>
-            <p>Site aktivitesini ve içerik kalitesini izlemenizi sağlar (Özet yetkisi gerekir).</p>
+            <p>Canlı ziyaretçi verileri ve içerik kalitesi metrikleri (<code>admin.analytics</code> yetkisi gerekir).</p>
             <ul class="adm-guide-list">
-              <li><strong>Özet kartları</strong> — kullanıcı, Tiola, blog ve ziyaret metrikleri</li>
-              <li><strong>Zaman serisi grafiği</strong> — son 30 günde kullanıcı, Tiola ve blog aktivitesi</li>
-              <li><strong>En çok ziyaret edilen yerler</strong> ve <strong>en aktif kullanıcılar</strong> tabloları</li>
-              <li><strong>İçerik kalitesi</strong> — eksik koordinat, fotoğraf veya kısa açıklamalı yer oranları</li>
+              <li><strong>Canlı ziyaretçi</strong> — son 5 dakikada aktif oturumlar, bugünkü tıklama ve benzersiz ziyaretçi</li>
+              <li><strong>Oturum süresi</strong> — ortalama sitede kalma süresi (heartbeat ile ölçülür)</li>
+              <li><strong>Üye / misafir</strong> — giriş yapmış ve anonim oturum dağılımı</li>
+              <li><strong>En çok tıklanan sekmeler</strong> — Keşfet, Gezilecek Yerler, Blog vb.</li>
+              <li><strong>İçerik analitiği</strong> — kullanıcı/Tiola/blog sayıları, kalite skoru</li>
             </ul>
           </div>
 
@@ -974,12 +983,12 @@ const PLACE_ISSUE_LABELS = {
 
 const ROLE_DEFAULT_PERMS = {
   moderator: [
-    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
-  editor: ['admin.dashboard', 'admin.content'],
+  editor: ['admin.dashboard', 'admin.analytics', 'admin.content'],
   staff: [
-    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
 };
@@ -1489,14 +1498,28 @@ function openTiolaPreview(id) {
   hydrateModHistories(document.querySelector('#modalBody'));
 }
 
+function syncAdminSectionVisibility() {
+  document.querySelectorAll('.adm-section').forEach((s) => {
+    const on = s.classList.contains('active');
+    s.hidden = !on;
+    if (on) s.style.removeProperty('display');
+  });
+}
+
 function showAdminSection(id, btn) {
+  if (id !== 'analytics') stopAnalyticsRefresh();
   if (id !== 'users') closeUserDetailPanel();
   document.querySelectorAll('.adm-section').forEach((s) => {
     s.classList.remove('active');
+    s.hidden = true;
     s.style.removeProperty('display');
   });
   const el = document.getElementById('adm-' + id);
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+    el.hidden = false;
+    el.style.removeProperty('display');
+  }
   document.querySelectorAll('#adminTabs button').forEach((b) => {
     b.classList.remove('on');
     b.setAttribute('aria-selected', 'false');
@@ -1508,11 +1531,16 @@ function showAdminSection(id, btn) {
   if (id === 'content') loadContentSection();
   if (id === 'users' && currentUser?.role === 'admin') loadUsersSection();
   if (id === 'roles' && currentUser?.role === 'admin') loadRoles();
-  if (id === 'analytics' && hasAdminPerm('admin.dashboard')) loadAnalytics();
+  if (id === 'analytics' && hasAdminPerm('admin.analytics')) loadAnalytics();
   if (id === 'reports' && hasAdminPerm('admin.moderate')) loadReportsList();
   if (id === 'audit-log' && currentUser?.role === 'admin') loadAuditLog(1);
   if (id === 'media' && hasAdminPerm('admin.places')) loadMediaLibrary(1);
   if (id === 'moderation' && hasAdminPerm('admin.moderate')) loadModTiolas();
+  if (id === 'settings' && hasAdminPerm('admin.settings')) {
+    loadSettingsForm();
+    loadMaintenanceForm();
+    loadBannedWords();
+  }
 }
 
 let reportFilter = 'pending';
@@ -2775,6 +2803,7 @@ async function showPanel(user) {
   document.body.classList.add('admin-session');
   closeUserDetailPanel();
   document.getElementById('admUser').textContent = user.name + ' (' + (ROLE_LABELS[user.role] || user.role) + ')';
+  syncAdminSectionVisibility();
   applyAdminRbac(user);
   bindPlacePhotoInput('plPhotos', 'plPhotoPreview', 'plPhotoCount');
   bindCityImageInput('ctImageFile', 'ctImage', 'ctImagePreview', 'ctImageHint');
@@ -3549,47 +3578,142 @@ function renderTimeseriesChart(data) {
     const pts = s.vals.map((v, i) => `${pad + i * xStep},${toY(v)}`).join(' ');
     return `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${pts}"/>`;
   }).join('');
-  const legend = series.map((s) => `<span><i style="background:${s.color}"></i>${s.label}</span>`).join('');
+  const legend = series.map((s) => `<span><i class="adm-chart-swatch adm-chart-swatch-${s.key}"></i>${s.label}</span>`).join('');
   return `<svg class="adm-chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="Son 30 gün grafiği">${lines}</svg><div class="adm-chart-legend">${legend}</div>`;
 }
 
+function renderVisitorChart(data) {
+  const w = 600; const h = 180; const pad = 28;
+  const days = data.days || [];
+  const series = [
+    { key: 'visits', label: 'Tıklama', color: '#6366f1', vals: data.visits || [] },
+    { key: 'visitors', label: 'Ziyaretçi', color: '#14b8a6', vals: data.visitors || [] },
+  ];
+  const max = Math.max(1, ...series.flatMap((s) => s.vals));
+  const xStep = days.length > 1 ? (w - pad * 2) / (days.length - 1) : 0;
+  const toY = (v) => h - pad - (v / max) * (h - pad * 2);
+  const lines = series.map((s) => {
+    const pts = s.vals.map((v, i) => `${pad + i * xStep},${toY(v)}`).join(' ');
+    return `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${pts}"/>`;
+  }).join('');
+  const legend = series.map((s) => `<span><i class="adm-chart-swatch adm-chart-swatch-${s.key}"></i>${s.label}</span>`).join('');
+  return `<svg class="adm-chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="Son 7 gün ziyaretçi grafiği">${lines}</svg><div class="adm-chart-legend">${legend}</div>`;
+}
+
+function renderTopTabsTable(tabs) {
+  const items = tabs || [];
+  if (!items.length) {
+    return '<p class="adm-analytics-empty">Henüz sekme tıklaması yok.</p>';
+  }
+  const max = Math.max(1, ...items.map((t) => t.count));
+  const rows = items.map((t) => {
+    const pct = Math.round((t.count / max) * 100);
+    return `<tr>
+      <td>${escapeHtml(t.label || t.tab)}</td>
+      <td>${t.count}</td>
+      <td><div class="adm-tab-bar-row"><span class="adm-tab-bar-fill" style="--bar-pct:${pct}%"></span></div></td>
+    </tr>`;
+  }).join('');
+  return `<table class="admin-table"><thead><tr><th>Sekme</th><th>Tıklama</th><th>Oran</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderMemberGuestPanel(v) {
+  const total = (v.members || 0) + (v.guests || 0);
+  if (!total) {
+    return '<p class="adm-analytics-empty">Bugün henüz oturum yok.</p>';
+  }
+  return `
+    <div class="adm-member-guest-stats">
+      <div><strong>${v.members || 0}</strong><span>Üye oturumu</span><em>%${v.memberPercent || 0}</em></div>
+      <div><strong>${v.guests || 0}</strong><span>Misafir oturumu</span><em>%${v.guestPercent || 0}</em></div>
+    </div>
+    <div class="adm-visitor-ratio-bar" aria-hidden="true">
+      <span class="adm-visitor-ratio-member" style="flex:${v.members || 0} 1 0"></span>
+      <span class="adm-visitor-ratio-guest" style="flex:${v.guests || 0} 1 0"></span>
+    </div>`;
+}
+
+let analyticsRefreshTimer = null;
+
+function stopAnalyticsRefresh() {
+  if (analyticsRefreshTimer) {
+    clearInterval(analyticsRefreshTimer);
+    analyticsRefreshTimer = null;
+  }
+}
+
 async function loadAnalytics() {
-  if (!hasAdminPerm('admin.dashboard')) return;
+  if (!hasAdminPerm('admin.analytics')) return;
+  stopAnalyticsRefresh();
+
+  const liveEl = document.getElementById('visitorLiveBadge');
+  const visitorCardsEl = document.getElementById('visitorCards');
+  const visitorChartEl = document.getElementById('visitorChart');
+  const topTabsEl = document.getElementById('visitorTopTabs');
+  const memberGuestEl = document.getElementById('visitorMemberGuest');
   const cardsEl = document.getElementById('analyticsCards');
   const chartEl = document.getElementById('analyticsChart');
   const placesEl = document.getElementById('analyticsTopPlaces');
   const usersEl = document.getElementById('analyticsTopUsers');
   const qEl = document.getElementById('analyticsQuality');
-  if (!cardsEl) return;
-  cardsEl.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  if (!visitorCardsEl || !cardsEl) return;
+
+  visitorCardsEl.innerHTML = '<p class="adm-analytics-loading">Yükleniyor…</p>';
+  cardsEl.innerHTML = '<p class="adm-analytics-loading">Yükleniyor…</p>';
+
   try {
-    const [stats, quality, ts, topPlaces, topUsers] = await Promise.all([
+    const [visitors, stats, quality, ts, topPlaces, topUsers] = await Promise.all([
+      api('/analytics/visitors'),
       api('/analytics/summary'),
       api('/analytics/quality'),
       api('/analytics/timeseries'),
       api('/analytics/top-places'),
       api('/analytics/top-users'),
     ]);
+
+    if (liveEl) {
+      liveEl.innerHTML = `<span class="adm-live-dot" aria-hidden="true"></span>
+        <strong>Şu an çevrimiçi:</strong> ${visitors.onlineNow || 0}
+        <span class="adm-live-updated">· ${new Date(visitors.updatedAt || Date.now()).toLocaleTimeString('tr-TR')}</span>`;
+    }
+
+    visitorCardsEl.innerHTML = `
+      <div class="adm-analytics-card adm-analytics-card-live"><strong>${visitors.onlineNow || 0}</strong><span>Şu an çevrimiçi</span></div>
+      <div class="adm-analytics-card"><strong>${visitors.todayPageViews || 0}</strong><span>Bugün tıklama</span></div>
+      <div class="adm-analytics-card"><strong>${visitors.todayUniqueVisitors || 0}</strong><span>Benzersiz ziyaretçi</span></div>
+      <div class="adm-analytics-card"><strong>${escapeHtml(visitors.todayAvgDurationLabel || '0 sn')}</strong><span>Ort. süre (bugün)</span></div>`;
+
+    if (visitorChartEl) {
+      visitorChartEl.innerHTML = `<h3 class="adm-card-title">Son 7 gün ziyaret</h3>${renderVisitorChart(visitors.timeseries || {})}`;
+    }
+    if (topTabsEl) {
+      topTabsEl.innerHTML = `<h3 class="adm-card-title">En çok tıklanan sekmeler (7 gün)</h3>${renderTopTabsTable(visitors.topTabs)}`;
+    }
+    if (memberGuestEl) {
+      memberGuestEl.innerHTML = `<h3 class="adm-card-title">Üye / misafir (bugün)</h3>${renderMemberGuestPanel(visitors)}`;
+    }
+
     cardsEl.innerHTML = `
       <div class="adm-analytics-card"><strong>${stats.users}</strong><span>Kullanıcı</span></div>
       <div class="adm-analytics-card"><strong>${stats.places}</strong><span>Yer</span></div>
       <div class="adm-analytics-card"><strong>${stats.tiolasApproved}</strong><span>Onaylı Tiola</span></div>
       <div class="adm-analytics-card"><strong>${stats.blogsPending}</strong><span>Bekleyen Blog</span></div>`;
+
     if (chartEl) {
-      chartEl.innerHTML = `<h3 style="margin:0 0 10px">Son 30 gün</h3>${renderTimeseriesChart(ts)}`;
+      chartEl.innerHTML = `<h3 class="adm-card-title">Son 30 gün (içerik)</h3>${renderTimeseriesChart(ts)}`;
     }
     if (placesEl) {
       const rows = (topPlaces.places || []).map((p) =>
         `<tr><td>${escapeHtml(p.name)}</td><td>${p.tiolaCount}</td><td>${p.saveCount}</td></tr>`
       ).join('');
-      placesEl.innerHTML = `<h3 style="margin:0 0 10px">En çok Tiola</h3>
+      placesEl.innerHTML = `<h3 class="adm-card-title">En çok Tiola</h3>
         <table class="admin-table"><thead><tr><th>Yer</th><th>Tiola</th><th>Kayıt</th></tr></thead><tbody>${rows || '<tr><td colspan="3">Veri yok</td></tr>'}</tbody></table>`;
     }
     if (usersEl) {
       const rows = (topUsers.users || []).map((u) =>
         `<tr><td>${escapeHtml(u.name)}</td><td>${u.tiolaCount}</td><td>${u.blogCount}</td></tr>`
       ).join('');
-      usersEl.innerHTML = `<h3 style="margin:0 0 10px">En aktif kullanıcılar</h3>
+      usersEl.innerHTML = `<h3 class="adm-card-title">En aktif kullanıcılar</h3>
         <table class="admin-table"><thead><tr><th>Kullanıcı</th><th>Tiola</th><th>Blog</th></tr></thead><tbody>${rows || '<tr><td colspan="3">Veri yok</td></tr>'}</tbody></table>`;
     }
     if (qEl) {
@@ -3598,14 +3722,26 @@ async function loadAnalytics() {
         const count = typeof val === 'object' ? val.count : val;
         const label = (typeof val === 'object' ? val.label : null) || PLACE_ISSUE_LABELS[key] || key;
         if (!count) return '';
-        return `<button type="button" class="btn bo bsm" style="margin:2px" onclick="openPlacesWithQualityFilter('${key}')">${count} ${escapeHtml(label)}</button>`;
+        return `<button type="button" class="btn bo bsm adm-quality-btn" onclick="openPlacesWithQualityFilter('${key}')">${count} ${escapeHtml(label)}</button>`;
       };
-      qEl.innerHTML = `<h3 style="margin:0 0 10px">İçerik kalitesi</h3>
+      qEl.innerHTML = `<h3 class="adm-card-title">İçerik kalitesi</h3>
         <p>Skor: <strong>${quality.score}%</strong> (${quality.total} yer)</p>
-        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${issueLine('noPhoto')}${issueLine('noFaq')}${issueLine('noCoords')}${issueLine('shortDesc')}</div>`;
+        <div class="adm-quality-actions">${issueLine('noPhoto')}${issueLine('noFaq')}${issueLine('noCoords')}${issueLine('shortDesc')}</div>`;
+    }
+
+    const analyticsSection = document.getElementById('adm-analytics');
+    if (analyticsSection && !analyticsSection.hidden) {
+      analyticsRefreshTimer = setInterval(() => {
+        if (document.getElementById('adm-analytics')?.hidden) {
+          stopAnalyticsRefresh();
+          return;
+        }
+        loadAnalytics();
+      }, 30000);
     }
   } catch (e) {
-    cardsEl.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+    visitorCardsEl.innerHTML = `<p class="adm-analytics-error">${escapeHtml(e.message)}</p>`;
+    cardsEl.innerHTML = '';
   }
 }
 
@@ -3808,7 +3944,7 @@ async function refresh() {
     if (blEl) blEl.innerHTML = '<p style="color:var(--t3)">İçerik yetkisi gerekli.</p>';
   }
 
-  if (hasAdminPerm('admin.dashboard')) await loadAnalytics();
+  if (hasAdminPerm('admin.analytics')) await loadAnalytics();
   if (hasAdminPerm('admin.settings')) {
     await loadSettingsForm();
     await loadMaintenanceForm();
@@ -4277,6 +4413,7 @@ document.getElementById('adminPanel')?.addEventListener('keydown', (e) => {
   if (e.target.matches('input, select')) e.preventDefault();
 });
 
+syncAdminSectionVisibility();
 restoreAdminSession();
 </script>
 </body>

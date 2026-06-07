@@ -1,8 +1,19 @@
-const { ok } = require('../../lib/apiResponse');
+const { ok, fail } = require('../../lib/apiResponse');
 
 const analyticsService = require('./analytics.service');
+const visitorService = require('./visitor.service');
 
+function track(req, res) {
+  try {
+    return ok(res, visitorService.trackEvent(req, res, req.body || {}));
+  } catch (err) {
+    return fail(res, err.message || 'Kayıt başarısız', err.status || 500);
+  }
+}
 
+function visitors(_req, res) {
+  return ok(res, visitorService.visitorDashboard());
+}
 
 function summary(_req, res) {
 
@@ -38,5 +49,7 @@ function topUsers(_req, res) {
   return ok(res, { users: analyticsService.topUsers() });
 }
 
-module.exports = { summary, quality, categories, timeseries, topPlaces, topUsers };
+module.exports = {
+  track, visitors, summary, quality, categories, timeseries, topPlaces, topUsers,
+};
 

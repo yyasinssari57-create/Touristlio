@@ -602,7 +602,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .admin-content{padding:24px 28px 60px;max-width:1200px;}
 .admin-content:has(#adm-content.active){max-width:1280px;}
 .adm-section{display:none;}
-.adm-section.active{display:block;}
+.adm-section.active{display:block!important;}
 #adminPanel{display:none;}
 body.admin-session #adminPanel{display:block;}
 body.admin-session #loginScreen{display:none;}

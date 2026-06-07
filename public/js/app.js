@@ -997,6 +997,7 @@ async function showMainTab(tab, skipRoute) {
   const navTab = tab === 'detail' ? prevTab : tab;
   document.getElementById('nt-' + navTab)?.classList.add('on');
   if (tab !== 'detail') prevTab = tab;
+  if (tab !== 'detail') window.TL_ANALYTICS?.trackTab(tab);
   if (tab === 'places') setCanonical(`${location.origin}/gezilecek-yerler`);
   else if (tab !== 'detail') setCanonical(`${location.origin}/`);
   const tasks = [];

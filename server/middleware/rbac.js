@@ -7,12 +7,12 @@ const PROTECTED_USER_ROLES = ['admin'];
 
 const ROLE_DEFAULT_PERMS = {
   moderator: [
-    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
-  editor: ['admin.dashboard', 'admin.content'],
+  editor: ['admin.dashboard', 'admin.analytics', 'admin.content'],
   staff: [
-    'admin.dashboard', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
 };
