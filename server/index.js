@@ -52,23 +52,6 @@ if (process.env.TRUST_PROXY === 'true') {
 
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 
-if (isProd) {
-  app.use((req, res, next) => {
-    const siteUrl = process.env.SITE_URL;
-    if (!siteUrl) return next();
-    try {
-      const canonical = new URL(siteUrl.replace(/\/$/, ''));
-      if (canonical.hostname.startsWith('www.')) return next();
-      const host = (req.get('host') || '').split(':')[0];
-      if (host.startsWith('www.') && host.slice(4) === canonical.hostname) {
-        const port = canonical.port ? `:${canonical.port}` : '';
-        return res.redirect(301, `${canonical.protocol}//${canonical.hostname}${port}${req.originalUrl}`);
-      }
-    } catch { /* ignore invalid SITE_URL */ }
-    next();
-  });
-}
-
 app.use(helmet({
   contentSecurityPolicy: isProd ? {
     directives: {
