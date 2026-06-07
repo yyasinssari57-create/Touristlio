@@ -115,6 +115,7 @@ function listCities({ includeInactive = false } = {}) {
     nameEn: r.name_en || r.name,
     slug: r.slug,
     country: r.country,
+    imageUrl: r.image_url || '',
     sortOrder: r.sort_order,
     isActive: !!r.is_active,
     placeCount: countMap.get(`${r.country}|${r.name}`) || 0,
@@ -130,11 +131,12 @@ function createCity(body) {
   const slug = sanitizeText(body.slug || slugify(name), 80) || slugify(name);
   const nameEn = sanitizeName(body.nameEn || body.name_en || name, 120);
   const sortOrder = Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0;
+  const imageUrl = sanitizeText(body.imageUrl || body.image_url || '', 500) || null;
   try {
     const result = db.prepare(`
-      INSERT INTO cities (name, name_en, slug, country, sort_order, is_active)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `).run(name, nameEn, slug, country, sortOrder);
+      INSERT INTO cities (name, name_en, slug, country, sort_order, is_active, image_url)
+      VALUES (?, ?, ?, ?, ?, 1, ?)
+    `).run(name, nameEn, slug, country, sortOrder, imageUrl);
     return getCityById(result.lastInsertRowid);
   } catch (err) {
     throw new Error(mapDbError(err, 'Şehir eklenemedi'));
@@ -155,6 +157,7 @@ function getCityById(id) {
     nameEn: row.name_en || row.name,
     slug: row.slug,
     country: row.country,
+    imageUrl: row.image_url || '',
     sortOrder: row.sort_order,
     isActive: !!row.is_active,
     placeCount,
@@ -174,14 +177,17 @@ function updateCity(id, body) {
   const slug = body.slug != null ? sanitizeText(body.slug, 80) : existing.slug;
   const sortOrder = body.sortOrder != null ? Number(body.sortOrder) : existing.sort_order;
   const isActive = body.isActive != null ? (body.isActive ? 1 : 0) : existing.is_active;
+  const imageUrl = body.imageUrl != null || body.image_url != null
+    ? (sanitizeText(body.imageUrl || body.image_url || '', 500) || null)
+    : existing.image_url;
 
   if (!name || !country) throw new Error('Şehir adı ve ülke zorunlu');
 
   const renameCity = name !== existing.name || country !== existing.country;
   db.prepare(`
-    UPDATE cities SET name = ?, name_en = ?, slug = ?, country = ?, sort_order = ?, is_active = ?
+    UPDATE cities SET name = ?, name_en = ?, slug = ?, country = ?, sort_order = ?, is_active = ?, image_url = ?
     WHERE id = ?
-  `).run(name, nameEn, slug || slugify(name), country, sortOrder, isActive, id);
+  `).run(name, nameEn, slug || slugify(name), country, sortOrder, isActive, imageUrl, id);
 
   if (renameCity) {
     db.prepare(`
@@ -242,6 +248,7 @@ function listCategories({ includeInactive = false } = {}) {
     nameTr: r.name_tr,
     nameEn: r.name_en || r.slug,
     icon: r.icon || '',
+    imageUrl: r.image_url || null,
     sortOrder: r.sort_order,
     isActive: !!r.is_active,
     placeCount: countCategoryUsage(r.slug),
@@ -258,13 +265,14 @@ function createCategory(body) {
   if (exists) throw new Error('Bu kategori kodu zaten var');
   const nameEn = sanitizeName(body.nameEn || body.name_en || nameTr, 120);
   const icon = sanitizeText(body.icon || '', 8);
+  const imageUrl = sanitizeText(body.imageUrl || body.image_url || '', 500) || null;
   const maxSort = db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM place_categories').get().m;
   const sortOrder = Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : maxSort + 1;
   try {
     const result = db.prepare(`
-      INSERT INTO place_categories (slug, name_tr, name_en, icon, sort_order, is_active)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `).run(slug, nameTr, nameEn, icon, sortOrder);
+      INSERT INTO place_categories (slug, name_tr, name_en, icon, image_url, sort_order, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, 1)
+    `).run(slug, nameTr, nameEn, icon, imageUrl, sortOrder);
     return listCategories({ includeInactive: true }).find((c) => c.id === result.lastInsertRowid);
   } catch (err) {
     throw new Error(mapDbError(err, 'Kategori eklenemedi'));
@@ -280,6 +288,9 @@ function updateCategory(id, body) {
     ? sanitizeName(body.nameEn || body.name_en, 120)
     : existing.name_en;
   const icon = body.icon != null ? sanitizeText(body.icon, 8) : existing.icon;
+  const imageUrl = body.imageUrl != null || body.image_url != null
+    ? (sanitizeText(body.imageUrl || body.image_url || '', 500) || null)
+    : existing.image_url;
   const sortOrder = body.sortOrder != null ? Number(body.sortOrder) : existing.sort_order;
   const isActive = body.isActive != null ? (body.isActive ? 1 : 0) : existing.is_active;
   let slug = existing.slug;
@@ -291,9 +302,9 @@ function updateCategory(id, body) {
     slug = newSlug;
   }
   db.prepare(`
-    UPDATE place_categories SET slug = ?, name_tr = ?, name_en = ?, icon = ?, sort_order = ?, is_active = ?
+    UPDATE place_categories SET slug = ?, name_tr = ?, name_en = ?, icon = ?, image_url = ?, sort_order = ?, is_active = ?
     WHERE id = ?
-  `).run(slug, nameTr, nameEn, icon, sortOrder, isActive, id);
+  `).run(slug, nameTr, nameEn, icon, imageUrl, sortOrder, isActive, id);
   return listCategories({ includeInactive: true }).find((c) => c.id === id);
 }
 

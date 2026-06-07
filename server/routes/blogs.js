@@ -5,6 +5,8 @@ const { authOptional, authRequired } = require('../middleware/auth');
 const { sanitizeText } = require('../lib/sanitize');
 const blogDb = require('../lib/blog-db');
 const settingsService = require('../modules/settings/settings.service');
+const { enrichBlogLikes, toggleBlogLike } = require('../lib/likes');
+const { canModifyOwnContent } = require('../lib/content-ownership');
 
 const router = express.Router();
 
@@ -19,9 +21,10 @@ function categoryLabel(slug, lang) {
   return row.icon ? `${row.icon} ${name}` : name;
 }
 
-function mapBlog(row, lang = 'tr') {
+function mapBlog(row, lang = 'tr', userId = null) {
   const tags = blogDb.parseTagsStored(row.tags);
   const displayAuthor = row.author_name || row.author_name_user || 'Anonim';
+  const likes = enrichBlogLikes(row, userId);
   return {
     id: row.id,
     userId: row.user_id,
@@ -40,6 +43,9 @@ function mapBlog(row, lang = 'tr') {
     tags,
     featured: !!row.featured,
     status: row.status,
+    rejectionReason: row.rejection_reason || null,
+    likeCount: likes.likeCount,
+    likedByMe: likes.likedByMe,
     publishedAt: row.published_at || row.created_at,
     createdAt: row.created_at,
   };
@@ -89,7 +95,7 @@ router.get('/', authOptional, (req, res) => {
 
   if (mine === '1') {
     if (!req.user) return res.status(401).json({ error: 'Giriş gerekli' });
-    where += ' AND b.user_id = ?';
+    where += " AND b.user_id = ? AND b.status != 'deleted'";
     params.push(req.user.id);
   } else {
     where += " AND b.status = 'approved'";
@@ -113,7 +119,7 @@ router.get('/', authOptional, (req, res) => {
     ORDER BY b.featured DESC, datetime(COALESCE(b.published_at, b.created_at)) DESC
   `).all(...params);
 
-  res.json({ blogs: rows.map((r) => mapBlog(r, lang)) });
+  res.json({ blogs: rows.map((r) => mapBlog(r, lang, req.user?.id)) });
 });
 
 router.get('/:slug', authOptional, (req, res) => {
@@ -133,14 +139,24 @@ router.get('/:slug', authOptional, (req, res) => {
     `).get(Number(slug));
   }
 
-  if (!row) return res.status(404).json({ error: 'Blog bulunamadı' });
+  if (!row || row.status === 'deleted') return res.status(404).json({ error: 'Blog bulunamadı' });
   if (row.status !== 'approved') {
     if (!req.user || (req.user.id !== row.user_id && !['admin', 'moderator', 'editor'].includes(req.user.role))) {
       return res.status(404).json({ error: 'Blog bulunamadı' });
     }
   }
 
-  res.json({ blog: mapBlog(row, lang) });
+  res.json({ blog: mapBlog(row, lang, req.user?.id) });
+});
+
+router.post('/:id/like', authRequired, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
+  const row = db.prepare("SELECT id, user_id, status FROM blogs WHERE id = ? AND status = 'approved'").get(id);
+  if (!row) return res.status(404).json({ error: 'Blog bulunamadı' });
+  if (row.user_id === req.user.id) return res.status(400).json({ error: 'Kendi blogunuzu beğenemezsiniz' });
+  const result = toggleBlogLike(req.user.id, id);
+  res.json(result);
 });
 
 router.post('/', authRequired, [
@@ -178,9 +194,29 @@ router.post('/', authRequired, [
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(info.lastInsertRowid);
   res.status(201).json({
-    blog: mapBlog(row),
+    blog: mapBlog(row, 'tr', req.user.id),
     message: 'Blog yazın alındı. Onay sonrası yayınlanacak.',
   });
+});
+
+router.delete('/:id', authRequired, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
+
+  const row = db.prepare('SELECT id, user_id, status FROM blogs WHERE id = ?').get(id);
+  if (!row || row.status === 'deleted') {
+    return res.status(404).json({ error: 'Blog bulunamadı' });
+  }
+  if (!canModifyOwnContent(req.user, row.user_id)) {
+    return res.status(403).json({ error: 'Bu içeriği silme yetkiniz yok' });
+  }
+
+  db.prepare(`
+    UPDATE blogs SET status = 'deleted', moderated_at = datetime('now')
+    WHERE id = ?
+  `).run(id);
+
+  res.json({ deleted: true, message: 'Blog yazınız silindi' });
 });
 
 module.exports = router;

@@ -11,7 +11,10 @@ const { spawnSync } = require('child_process');
 const { adminToolLimiter } = require('../middleware/rateLimit');
 const { parsePositiveInt, sanitizeText } = require('../lib/sanitize');
 const notifications = require('../lib/notifications');
-const { sendTiolaRejectionEmail } = require('../lib/mailer');
+const { sendTiolaRejectionEmail, sendBlogRejectionEmail } = require('../lib/mailer');
+const profileChanges = require('../lib/profile-changes');
+const { getUserTiolaLikeCount } = require('../lib/likes');
+const { upsertLiveData, applyInfoBoxUpdates, buildInfoBoxesResponse } = require('../services/liveDataService');
 const catalogDb = require('../lib/catalog-db');
 const blogDb = require('../lib/blog-db');
 const settingsService = require('../modules/settings/settings.service');
@@ -19,6 +22,7 @@ const adminPlace = require('../lib/admin-place');
 const placesService = require('../modules/places/places.service');
 const { ok, fail } = require('../lib/apiResponse');
 const { mapReport } = require('./reports');
+const reportMod = require('../lib/report-moderation');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
@@ -116,6 +120,72 @@ router.post('/tiolas/:id/approve', checkPermission('admin.moderate'), (req, res)
   return ok(res, { approved: true });
 });
 
+router.get('/approved/tiolas', checkPermission('admin.moderate'), (req, res) => {
+  const q = sanitizeText(req.query.q, 80);
+  const params = [];
+  let where = "WHERE t.status = 'approved' AND t.parent_id IS NULL";
+  if (q) {
+    where += ' AND (t.text LIKE ? OR u.name LIKE ? OR p.name LIKE ?)';
+    const like = `%${q}%`;
+    params.push(like, like, like);
+  }
+  const rows = db.prepare(`
+    SELECT t.*, u.name AS user_name, p.name AS place_name
+    FROM tiolas t
+    JOIN users u ON u.id = t.user_id
+    LEFT JOIN places p ON p.id = t.place_id
+    ${where}
+    ORDER BY t.created_at DESC
+    LIMIT 100
+  `).all(...params);
+  return ok(res, { items: rows.map(mapPendingTiola) });
+});
+
+router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const reason = sanitizeText(req.body?.reason, 1000);
+  if (!reason) return fail(res, 'Kaldırma nedeni gerekli');
+
+  const row = db.prepare(`
+    SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
+    FROM tiolas t
+    JOIN users u ON u.id = t.user_id
+    LEFT JOIN places p ON p.id = t.place_id
+    WHERE t.id = ?
+  `).get(id);
+  if (!row) return fail(res, 'Tiola bulunamadı', 404);
+  if (row.status !== 'approved') return fail(res, 'Yalnızca yayında olan Tiola kaldırılabilir', 409);
+
+  db.prepare(`
+    UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+    WHERE id = ? AND status = 'approved'
+  `).run(req.user.id, reason, id);
+
+  const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
+  notifications.createNotification({
+    userId: row.user_id,
+    type: 'tiola_removed',
+    title: 'Tiola kaldırıldı',
+    body: `${placeLabel}: ${reason}`,
+    link: '/profile',
+  });
+
+  try {
+    const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    await sendTiolaRejectionEmail(row.user_email, {
+      userName: row.user_name,
+      placeName: placeLabel,
+      reason,
+      profileUrl: `${siteUrl}/profile`,
+    });
+  } catch {
+    /* e-posta isteğe bağlı */
+  }
+
+  return ok(res, { removed: true, rejectionReason: reason });
+});
+
 router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
@@ -174,14 +244,120 @@ router.post('/blogs/:id/approve', checkPermission('admin.content'), (req, res) =
   return ok(res, { approved: true });
 });
 
-router.post('/blogs/:id/reject', checkPermission('admin.content'), (req, res) => {
+router.get('/approved/blogs', checkPermission('admin.content'), (req, res) => {
+  const q = sanitizeText(req.query.q, 80);
+  const params = [];
+  let where = "WHERE b.status = 'approved'";
+  if (q) {
+    where += ' AND (b.title LIKE ? OR b.excerpt LIKE ? OR u.name LIKE ?)';
+    const like = `%${q}%`;
+    params.push(like, like, like);
+  }
+  const rows = db.prepare(`
+    SELECT b.*, u.name AS user_name FROM blogs b
+    JOIN users u ON u.id = b.user_id
+    ${where}
+    ORDER BY datetime(COALESCE(b.published_at, b.created_at)) DESC
+    LIMIT 100
+  `).all(...params);
+  return ok(res, {
+    items: rows.map((r) => ({
+      id: r.id,
+      userName: r.user_name,
+      title: r.title,
+      excerpt: r.excerpt,
+      slug: r.slug,
+      publishedAt: r.published_at,
+      createdAt: r.created_at,
+    })),
+  });
+});
+
+router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
+  const reason = sanitizeText(req.body?.reason, 1000);
+  if (!reason) return fail(res, 'Kaldırma nedeni gerekli');
+
+  const row = db.prepare(`
+    SELECT b.*, u.email AS user_email, u.name AS user_name
+    FROM blogs b
+    JOIN users u ON u.id = b.user_id
+    WHERE b.id = ?
+  `).get(id);
+  if (!row) return fail(res, 'Blog bulunamadı', 404);
+  if (row.status !== 'approved') return fail(res, 'Yalnızca yayında olan blog kaldırılabilir', 409);
+
   db.prepare(`
-    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
+    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
+      rejection_reason = ?, published_at = NULL
+    WHERE id = ? AND status = 'approved'
+  `).run(req.user.id, reason, id);
+
+  notifications.createNotification({
+    userId: row.user_id,
+    type: 'blog_removed',
+    title: 'Blog kaldırıldı',
+    body: `${row.title}: ${reason}`,
+    link: '/profile',
+  });
+
+  try {
+    const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    await sendBlogRejectionEmail(row.user_email, {
+      userName: row.user_name,
+      title: row.title,
+      reason,
+      profileUrl: `${siteUrl}/profile`,
+    });
+  } catch {
+    /* e-posta isteğe bağlı */
+  }
+
+  return ok(res, { removed: true, rejectionReason: reason });
+});
+
+router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const reason = sanitizeText(req.body?.reason, 1000);
+  if (!reason) return fail(res, 'Red nedeni gerekli');
+
+  const row = db.prepare(`
+    SELECT b.*, u.email AS user_email, u.name AS user_name
+    FROM blogs b
+    JOIN users u ON u.id = b.user_id
+    WHERE b.id = ?
+  `).get(id);
+  if (!row) return fail(res, 'Blog bulunamadı', 404);
+  if (row.status !== 'pending') return fail(res, 'Bu blog zaten işlendi', 409);
+
+  db.prepare(`
+    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
     WHERE id = ? AND status = 'pending'
-  `).run(req.user.id, id);
-  return ok(res, { rejected: true });
+  `).run(req.user.id, reason, id);
+
+  notifications.createNotification({
+    userId: row.user_id,
+    type: 'blog_rejected',
+    title: 'Blog reddedildi',
+    body: `${row.title}: ${reason}`,
+    link: '/profile',
+  });
+
+  try {
+    const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    await sendBlogRejectionEmail(row.user_email, {
+      userName: row.user_name,
+      title: row.title,
+      reason,
+      profileUrl: `${siteUrl}/profile`,
+    });
+  } catch {
+    /* e-posta isteğe bağlı */
+  }
+
+  return ok(res, { rejected: true, rejectionReason: reason });
 });
 
 router.post('/moderators', requireRole('admin'), (req, res) => {
@@ -253,19 +429,67 @@ router.delete('/places/:id', checkPermission('admin.places'), (req, res) => {
   return ok(res, result);
 });
 
+function isExternalPhotoUrl(url) {
+  const u = String(url || '').trim();
+  return /^https?:\/\//i.test(u) && !/\/uploads\//i.test(u);
+}
+
 router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), (req, res) => {
   const placeId = parsePositiveInt(req.params.id, res);
   if (!placeId) return;
   const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
   if (!row) return fail(res, 'Yer bulunamadı', 404);
+  if (!req.files?.length) return fail(res, 'Görsel gerekli', 400);
 
-  const newPaths = (req.files || []).map((f) => `${placeId}/${f.filename}`);
-  const existing = JSON.parse(row.photos || '[]');
-  const merged = [...existing, ...newPaths.map((p) => `/uploads/${p}`)];
-  db.prepare('UPDATE places SET photos = ? WHERE id = ?').run(JSON.stringify(merged), placeId);
+  const newUrls = (req.files || []).map((f) => `/uploads/${placeId}/${f.filename}`);
+  let existing = [];
+  try { existing = JSON.parse(row.photos || '[]'); } catch { existing = []; }
+
+  if (req.query.stripExternal === '1') {
+    existing = existing.filter((u) => !isExternalPhotoUrl(u));
+  }
+
+  const merged = [...newUrls, ...existing];
+  const seen = new Set();
+  const photos = merged.filter((u) => {
+    if (!u || seen.has(u)) return false;
+    seen.add(u);
+    return true;
+  });
+
+  const imageUrl = newUrls[0];
+  db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
+    JSON.stringify(photos),
+    imageUrl,
+    placeId,
+  );
   clearCache('places-list');
   clearCache('search');
-  return ok(res, { photos: merged, uploaded: newPaths.length });
+  return ok(res, { photos, imageUrl, uploaded: newUrls.length });
+});
+
+const mediaRoot = path.join(uploadRoot, 'media');
+if (!fs.existsSync(mediaRoot)) fs.mkdirSync(mediaRoot, { recursive: true });
+
+const mediaUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, mediaRoot),
+    filename: (_req, file, cb) => {
+      const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}-${safe}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (/^image\//.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Yalnızca görsel yüklenebilir'));
+  },
+});
+
+router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), (req, res) => {
+  if (!req.file) return fail(res, 'Görsel gerekli', 400);
+  const url = `/uploads/media/${req.file.filename}`;
+  return ok(res, { url });
 });
 
 /* ── Cities CRUD ── */
@@ -394,6 +618,290 @@ router.get('/users', requireRole('admin'), (_req, res) => {
       createdAt: r.created_at,
     })),
   });
+});
+
+router.get('/users/:id', requireRole('admin'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const row = db.prepare(`
+    SELECT id, name, email, role, email_verified, is_blocked, avatar_color, avatar_url, avatar_preset,
+           risk_score, created_at, failed_login_count, locked_until
+    FROM users WHERE id = ?
+  `).get(id);
+  if (!row) return fail(res, 'Kullanıcı bulunamadı', 404);
+
+  const tiolaCount = db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ?').get(id).c;
+  const tiolaApproved = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'approved'").get(id).c;
+  const tiolaPending = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'pending'").get(id).c;
+  const tiolaRejected = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'rejected'").get(id).c;
+  const tiolaSpam = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'spam'").get(id).c;
+  const blogCount = db.prepare('SELECT COUNT(*) AS c FROM blogs WHERE user_id = ?').get(id).c;
+  const blogApproved = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'approved'").get(id).c;
+  const blogPending = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'pending'").get(id).c;
+  const blogRejected = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'rejected'").get(id).c;
+  const reportCount = db.prepare('SELECT COUNT(*) AS c FROM reports WHERE reporter_id = ?').get(id).c;
+  const reportedCount = db.prepare(`
+    SELECT COUNT(*) AS c FROM reports
+    WHERE (target_type = 'profile' AND target_id = ?)
+       OR (target_type = 'tiola' AND target_id IN (SELECT id FROM tiolas WHERE user_id = ?))
+       OR (target_type = 'blog' AND target_id IN (SELECT id FROM blogs WHERE user_id = ?))
+  `).get(id, id, id).c;
+  const recentTiolas = db.prepare(`
+    SELECT t.id, t.text, t.status, t.stars, t.place_id, t.created_at, t.moderated_at, t.rejection_reason,
+           p.name AS place_name, m.name AS moderated_by_name
+    FROM tiolas t
+    LEFT JOIN places p ON p.id = t.place_id
+    LEFT JOIN users m ON m.id = t.moderated_by
+    WHERE t.user_id = ? AND t.parent_id IS NULL
+    ORDER BY t.created_at DESC LIMIT 15
+  `).all(id);
+  const recentBlogs = db.prepare(`
+    SELECT b.id, b.title, b.status, b.created_at, b.published_at, b.moderated_at, b.rejection_reason,
+           m.name AS moderated_by_name
+    FROM blogs b
+    LEFT JOIN users m ON m.id = b.moderated_by
+    WHERE b.user_id = ?
+    ORDER BY b.created_at DESC LIMIT 10
+  `).all(id);
+  const reportsMade = db.prepare(`
+    SELECT r.id, r.target_type, r.target_id, r.reason, r.note, r.status, r.created_at,
+           r.action_taken, r.resolution_reason, r.resolved_at, res.name AS resolved_by_name
+    FROM reports r
+    LEFT JOIN users res ON res.id = r.resolved_by
+    WHERE r.reporter_id = ?
+    ORDER BY r.created_at DESC LIMIT 50
+  `).all(id);
+  const reportsReceived = db.prepare(`
+    SELECT r.id, r.target_type, r.target_id, r.reason, r.note, r.status, r.created_at,
+           r.action_taken, r.resolution_reason, r.resolved_at,
+           rep.name AS reporter_name, res.name AS resolved_by_name
+    FROM reports r
+    JOIN users rep ON rep.id = r.reporter_id
+    LEFT JOIN users res ON res.id = r.resolved_by
+    WHERE (r.target_type = 'profile' AND r.target_id = ?)
+       OR (r.target_type = 'tiola' AND r.target_id IN (SELECT id FROM tiolas WHERE user_id = ?))
+       OR (r.target_type = 'blog' AND r.target_id IN (SELECT id FROM blogs WHERE user_id = ?))
+    ORDER BY r.created_at DESC LIMIT 50
+  `).all(id, id, id);
+  const pendingProfileChanges = db.prepare(`
+    SELECT id, change_type, payload, status, created_at, rejection_reason
+    FROM profile_change_requests
+    WHERE user_id = ? AND status = 'pending'
+    ORDER BY created_at DESC
+  `).all(id).map((pcr) => {
+    let payload = {};
+    try { payload = JSON.parse(pcr.payload || '{}'); } catch { /* ignore */ }
+    return {
+      id: pcr.id,
+      changeType: pcr.change_type,
+      payload,
+      status: pcr.status,
+      createdAt: pcr.created_at,
+      rejectionReason: pcr.rejection_reason,
+    };
+  });
+  const profileChangeHistory = db.prepare(`
+    SELECT id, change_type, payload, status, created_at, reviewed_at, rejection_reason
+    FROM profile_change_requests
+    WHERE user_id = ?
+    ORDER BY created_at DESC LIMIT 10
+  `).all(id).map((pcr) => {
+    let payload = {};
+    try { payload = JSON.parse(pcr.payload || '{}'); } catch { /* ignore */ }
+    return {
+      id: pcr.id,
+      changeType: pcr.change_type,
+      payload,
+      status: pcr.status,
+      createdAt: pcr.created_at,
+      reviewedAt: pcr.reviewed_at,
+      rejectionReason: pcr.rejection_reason,
+    };
+  });
+  const moderationHistory = db.prepare(`
+    SELECT 'tiola' AS kind, t.id AS content_id, t.status, t.rejection_reason, t.moderated_at,
+           m.name AS moderator_name, COALESCE(p.name, t.city_tag, 'Genel Tiola') AS label
+    FROM tiolas t
+    LEFT JOIN users m ON m.id = t.moderated_by
+    LEFT JOIN places p ON p.id = t.place_id
+    WHERE t.user_id = ? AND t.moderated_at IS NOT NULL
+    UNION ALL
+    SELECT 'blog' AS kind, b.id AS content_id, b.status, b.rejection_reason, b.moderated_at,
+           m.name AS moderator_name, b.title AS label
+    FROM blogs b
+    LEFT JOIN users m ON m.id = b.moderated_by
+    WHERE b.user_id = ? AND b.moderated_at IS NOT NULL
+    ORDER BY moderated_at DESC
+    LIMIT 20
+  `).all(id, id);
+  const savedPlacesCount = db.prepare('SELECT COUNT(*) AS c FROM saved_places WHERE user_id = ?').get(id).c;
+  const visitedCount = db.prepare('SELECT COUNT(*) AS c FROM visited_places WHERE user_id = ?').get(id).c;
+
+  const REASON_LABELS = {
+    spam: 'Spam', uygunsuz: 'Uygunsuz içerik', taciz: 'Taciz',
+    sahte: 'Sahte hesap', telif: 'Telif', diger: 'Diğer',
+  };
+
+  return ok(res, {
+    user: {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      emailVerified: !!row.email_verified,
+      isBlocked: !!row.is_blocked,
+      avatarColor: row.avatar_color,
+      avatarUrl: row.avatar_url || null,
+      avatarPreset: row.avatar_preset || null,
+      riskScore: row.risk_score || 0,
+      createdAt: row.created_at,
+      failedLoginCount: row.failed_login_count || 0,
+      lockedUntil: row.locked_until || null,
+      likeCount: getUserTiolaLikeCount(id),
+      stats: {
+        tiolaCount,
+        tiolaApproved,
+        tiolaPending,
+        tiolaRejected,
+        tiolaSpam,
+        blogCount,
+        blogApproved,
+        blogPending,
+        blogRejected,
+        reportsMade: reportCount,
+        reportsAgainst: reportedCount,
+        savedPlaces: savedPlacesCount,
+        visitedPlaces: visitedCount,
+      },
+      recentTiolas: recentTiolas.map((t) => ({
+        id: t.id,
+        text: t.text?.slice(0, 120),
+        status: t.status,
+        stars: t.stars,
+        placeId: t.place_id,
+        placeName: t.place_name,
+        createdAt: t.created_at,
+        moderatedAt: t.moderated_at,
+        moderatedByName: t.moderated_by_name,
+        rejectionReason: t.rejection_reason,
+      })),
+      recentBlogs: recentBlogs.map((b) => ({
+        id: b.id,
+        title: b.title,
+        status: b.status,
+        createdAt: b.created_at,
+        publishedAt: b.published_at,
+        moderatedAt: b.moderated_at,
+        moderatedByName: b.moderated_by_name,
+        rejectionReason: b.rejection_reason,
+      })),
+      reportsMade: reportsMade.map((r) => ({
+        id: r.id,
+        targetType: r.target_type,
+        targetId: r.target_id,
+        reason: r.reason,
+        reasonLabel: REASON_LABELS[r.reason] || r.reason,
+        note: r.note,
+        status: r.status,
+        actionTaken: r.action_taken,
+        resolutionReason: r.resolution_reason,
+        resolvedAt: r.resolved_at,
+        resolvedByName: r.resolved_by_name,
+        createdAt: r.created_at,
+      })),
+      reportsReceived: reportsReceived.map((r) => ({
+        id: r.id,
+        targetType: r.target_type,
+        targetId: r.target_id,
+        reason: r.reason,
+        reasonLabel: REASON_LABELS[r.reason] || r.reason,
+        note: r.note,
+        status: r.status,
+        actionTaken: r.action_taken,
+        resolutionReason: r.resolution_reason,
+        resolvedAt: r.resolved_at,
+        resolvedByName: r.resolved_by_name,
+        reporterName: r.reporter_name,
+        createdAt: r.created_at,
+      })),
+      pendingProfileChanges,
+      profileChangeHistory,
+      moderationHistory: moderationHistory.map((m) => ({
+        kind: m.kind,
+        contentId: m.content_id,
+        status: m.status,
+        label: m.label,
+        rejectionReason: m.rejection_reason,
+        moderatedAt: m.moderated_at,
+        moderatorName: m.moderator_name,
+      })),
+    },
+  });
+});
+
+router.get('/profile-changes', requireRole('admin'), (_req, res) => {
+  return ok(res, { requests: profileChanges.listPending() });
+});
+
+router.post('/profile-changes/:id/approve', requireRole('admin'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const result = profileChanges.approve(id, req.user.id);
+  if (!result.ok) return fail(res, result.error, result.error?.includes('bulunamadı') ? 404 : 409);
+  const row = db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
+  if (row) {
+    notifications.createNotification({
+      userId: row.user_id,
+      type: 'profile_approved',
+      title: 'Profil güncellemesi onaylandı',
+      body: 'Profil değişikliğiniz yayına alındı.',
+      link: '/profile',
+    });
+  }
+  return ok(res, { approved: true });
+});
+
+router.post('/profile-changes/:id/reject', requireRole('admin'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const reason = sanitizeText(req.body?.reason, 500) || 'Reddedildi';
+  const result = profileChanges.reject(id, req.user.id, reason);
+  if (!result.ok) return fail(res, result.error, result.error?.includes('bulunamadı') ? 404 : 409);
+  const row = db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
+  if (row) {
+    notifications.createNotification({
+      userId: row.user_id,
+      type: 'profile_rejected',
+      title: 'Profil güncellemesi reddedildi',
+      body: reason,
+      link: '/profile',
+    });
+  }
+  return ok(res, { rejected: true, rejectionReason: reason });
+});
+
+router.put('/places/:id/info-boxes', checkPermission('admin.places'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const place = db.prepare('SELECT id FROM places WHERE id = ?').get(id);
+  if (!place) return fail(res, 'Yer bulunamadı', 404);
+
+  const existing = db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(id);
+  let payload = {};
+  try { payload = JSON.parse(existing?.payload || '{}'); } catch { /* ignore */ }
+
+  payload = applyInfoBoxUpdates(payload, req.body || {});
+  upsertLiveData(id, payload);
+  return ok(res, { saved: true, infoBoxes: buildInfoBoxesResponse(payload) });
+});
+
+router.get('/places/:id/info-boxes', checkPermission('admin.places'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const row = db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(id);
+  let payload = {};
+  try { payload = JSON.parse(row?.payload || '{}'); } catch { /* ignore */ }
+  return ok(res, { infoBoxes: buildInfoBoxesResponse(payload) });
 });
 
 router.post('/users/:id/block', requireRole('admin'), (req, res) => {
@@ -692,43 +1200,25 @@ router.delete('/blogs/:id', checkPermission('admin.content'), (req, res) => {
 });
 
 function enrichReportRow(row) {
-  let targetLabel = `#${row.target_id}`;
-  let targetUserId = null;
-  let targetUserName = null;
-  if (row.target_type === 'profile') {
-    const u = db.prepare('SELECT id, name FROM users WHERE id = ?').get(row.target_id);
-    if (u) {
-      targetLabel = u.name;
-      targetUserId = u.id;
-      targetUserName = u.name;
-    }
-  } else if (row.target_type === 'tiola') {
-    const t = db.prepare(`
-      SELECT t.id, t.text, u.id AS uid, u.name AS uname
-      FROM tiolas t JOIN users u ON u.id = t.user_id WHERE t.id = ?
-    `).get(row.target_id);
-    if (t) {
-      targetLabel = (t.text || '').slice(0, 60) + ((t.text || '').length > 60 ? '…' : '');
-      targetUserId = t.uid;
-      targetUserName = t.uname;
-    }
-  } else if (row.target_type === 'blog') {
-    const b = db.prepare(`
-      SELECT b.id, b.title, u.id AS uid, u.name AS uname
-      FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ?
-    `).get(row.target_id);
-    if (b) {
-      targetLabel = b.title || `#${b.id}`;
-      targetUserId = b.uid;
-      targetUserName = b.uname;
-    }
-  }
+  const content = reportMod.getTargetContent(row.target_type, row.target_id);
   return mapReport({
     ...row,
-    target_label: targetLabel,
-    target_user_id: targetUserId,
-    target_user_name: targetUserName,
+    target_label: content?.label || `#${row.target_id}`,
+    target_user_id: content?.userId || null,
+    target_user_name: content?.userName || null,
+    target_content_status: content?.status || null,
+    target_content_preview: content?.preview || null,
   });
+}
+
+function fetchReportRow(id) {
+  return db.prepare(`
+    SELECT r.*, rep.name AS reporter_name, res.name AS resolved_by_name
+    FROM reports r
+    JOIN users rep ON rep.id = r.reporter_id
+    LEFT JOIN users res ON res.id = r.resolved_by
+    WHERE r.id = ?
+  `).get(id);
 }
 
 router.get('/reports', checkPermission('admin.moderate'), (req, res) => {
@@ -736,9 +1226,9 @@ router.get('/reports', checkPermission('admin.moderate'), (req, res) => {
   const params = [];
   let where = 'WHERE 1=1';
   if (status === 'pending') {
-    where += " AND r.status = 'pending'";
+    where += " AND r.status IN ('pending', 'reviewed')";
   } else if (status === 'resolved') {
-    where += " AND r.status IN ('reviewed', 'dismissed', 'actioned')";
+    where += " AND r.status IN ('reviewed', 'resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned')";
   }
   const rows = db.prepare(`
     SELECT r.*,
@@ -754,6 +1244,129 @@ router.get('/reports', checkPermission('admin.moderate'), (req, res) => {
   return ok(res, { reports: rows.map(enrichReportRow) });
 });
 
+router.get('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const row = fetchReportRow(id);
+  if (!row) return fail(res, 'Şikayet bulunamadı', 404);
+  return ok(res, { report: enrichReportRow(row) });
+});
+
+router.post('/reports/:id/resolve-remove', checkPermission('admin.moderate'), async (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const reason = sanitizeText(req.body?.reason, 1000);
+  if (!reason) return fail(res, 'Kaldırma nedeni gerekli', 400);
+
+  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  if (!row) return fail(res, 'Şikayet bulunamadı', 404);
+
+  const content = reportMod.getTargetContent(row.target_type, row.target_id);
+  if (!content) return fail(res, 'Şikayet edilen içerik bulunamadı', 404);
+
+  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'content_removed') {
+    return fail(res, 'Bu şikayet zaten içerik kaldırılarak çözüldü', 409);
+  }
+
+  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'dismissed') {
+    reportMod.restoreReportedContent(row);
+  }
+
+  const removal = reportMod.removeReportedContent(content, req.user.id, reason);
+  if (!removal.ok) return fail(res, removal.error, 400);
+
+  if (!removal.alreadyRemoved) {
+    await reportMod.notifyContentOwnerRemoved(content, reason);
+  }
+
+  reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
+  const updated = fetchReportRow(id);
+  return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
+});
+
+router.post('/reports/:id/dismiss', checkPermission('admin.moderate'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const note = sanitizeText(req.body?.note, 1000) || null;
+
+  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  if (!row) return fail(res, 'Şikayet bulunamadı', 404);
+
+  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'dismissed') {
+    return fail(res, 'Bu şikayet zaten göz ardı edildi', 409);
+  }
+
+  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'content_removed') {
+    reportMod.restoreReportedContent(row);
+  }
+
+  reportMod.setReportDismissed(id, req.user.id, note);
+  const updated = fetchReportRow(id);
+  return ok(res, { report: enrichReportRow(updated) });
+});
+
+router.post('/reports/:id/reopen', checkPermission('admin.moderate'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+
+  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  if (!row) return fail(res, 'Şikayet bulunamadı', 404);
+  if (!reportMod.isResolvedStatus(row.status) && row.status !== reportMod.REPORT_STATUSES.REVIEWED) {
+    return fail(res, 'Yalnızca çözülmüş şikayetler yeniden açılabilir', 409);
+  }
+
+  if (row.action_taken === 'content_removed') {
+    reportMod.restoreReportedContent(row);
+  }
+
+  reportMod.clearReportResolution(id);
+  const updated = fetchReportRow(id);
+  return ok(res, { report: enrichReportRow(updated) });
+});
+
+router.post('/reports/:id/change-decision', checkPermission('admin.moderate'), async (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const decision = String(req.body?.decision || '').trim();
+  const reason = sanitizeText(req.body?.reason, 1000);
+  const note = sanitizeText(req.body?.note, 1000) || null;
+
+  if (!['dismiss', 'remove'].includes(decision)) {
+    return fail(res, 'Geçersiz karar (dismiss veya remove)', 400);
+  }
+
+  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  if (!row) return fail(res, 'Şikayet bulunamadı', 404);
+  if (!reportMod.isResolvedStatus(row.status)) {
+    return fail(res, 'Karar değişikliği yalnızca çözülmüş şikayetlerde yapılabilir', 409);
+  }
+
+  if (decision === 'dismiss') {
+    if (row.action_taken === 'content_removed') {
+      reportMod.restoreReportedContent(row);
+    }
+    reportMod.setReportDismissed(id, req.user.id, note || row.resolution_reason);
+    const updated = fetchReportRow(id);
+    return ok(res, { report: enrichReportRow(updated) });
+  }
+
+  if (!reason) return fail(res, 'İçerik kaldırma nedeni gerekli', 400);
+
+  const content = reportMod.getTargetContent(row.target_type, row.target_id);
+  if (!content) return fail(res, 'Şikayet edilen içerik bulunamadı', 404);
+
+  const removal = reportMod.removeReportedContent(content, req.user.id, reason);
+  if (!removal.ok) return fail(res, removal.error, 400);
+
+  if (!removal.alreadyRemoved) {
+    await reportMod.notifyContentOwnerRemoved(content, reason);
+  }
+
+  reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
+  const updated = fetchReportRow(id);
+  return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
+});
+
 router.patch('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
@@ -761,21 +1374,16 @@ router.patch('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
   if (!row) return fail(res, 'Şikayet bulunamadı', 404);
 
   const status = String(req.body?.status || '').trim();
-  const allowed = ['reviewed', 'dismissed', 'actioned'];
+  const allowed = ['reviewed', 'resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned'];
   if (!allowed.includes(status)) return fail(res, 'Geçersiz durum', 400);
 
+  const normalized = reportMod.normalizeReportStatus(status);
   db.prepare(`
     UPDATE reports SET status = ?, resolved_by = ?, resolved_at = datetime('now')
     WHERE id = ?
-  `).run(status, req.user.id, id);
+  `).run(normalized === 'reviewed' ? 'reviewed' : normalized, req.user.id, id);
 
-  const updated = db.prepare(`
-    SELECT r.*, rep.name AS reporter_name, res.name AS resolved_by_name
-    FROM reports r
-    JOIN users rep ON rep.id = r.reporter_id
-    LEFT JOIN users res ON res.id = r.resolved_by
-    WHERE r.id = ?
-  `).get(id);
+  const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
 });
 

@@ -21,7 +21,8 @@ window.TL_MAP_DISCOVER = (function () {
       setTimeout(() => map.invalidateSize(), 120);
       return;
     }
-    map = L.map(el, { scrollWheelZoom: true }).setView([39.0, 35.0], 6);
+    map = L.map(el, { scrollWheelZoom: true, zoomControl: false }).setView([39.0, 35.0], 6);
+    L.control.zoom({ position: 'topleft' }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
       maxZoom: 18,

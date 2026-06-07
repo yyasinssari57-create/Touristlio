@@ -400,11 +400,18 @@ function citiesWithCounts(country) {
 
     });
 
+    const catalogImages = new Map(
+      catalogDb.listCities({ includeInactive: true })
+        .filter((row) => row.imageUrl && /turkey|türkiye/i.test(row.country || ''))
+        .map((row) => [row.slug, row.imageUrl]),
+    );
+
     return TURKEY_CITIES.map((c) => {
 
       const matchKey = Object.keys(counts).find((k) => k.toLowerCase().replace(/ı/g, 'i') === c.slug || k.toLowerCase().includes(c.slug));
+      const image = catalogImages.get(c.slug) || c.image;
 
-      return { ...c, placeCount: matchKey ? counts[matchKey] : counts[c.nameEn] || counts[c.name] || 0 };
+      return { ...c, image, placeCount: matchKey ? counts[matchKey] : counts[c.nameEn] || counts[c.name] || 0 };
 
     });
 
@@ -439,6 +446,7 @@ function getMetaCategories() {
         nameTr: c.nameTr,
         nameEn: c.nameEn,
         icon: c.icon || '',
+        imageUrl: c.imageUrl || null,
         placeCount: c.placeCount,
         sortOrder: c.sortOrder,
       }));
@@ -453,6 +461,7 @@ function getMetaCategories() {
       id: c.slug,
       slug: c.slug,
       icon: c.icon,
+      imageUrl: c.imageUrl || null,
       nameTr: c.nameTr,
       nameEn: c.nameEn,
       placeCount: c.placeCount,

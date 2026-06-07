@@ -72,13 +72,21 @@ function updateAvatarPreset(req, res) {
   if (err) return fail(res, err, 400);
   const result = authService.updateAvatarPreset(req.user.id, req.body || {});
   if (result.error) return fail(res, result.error, result.status);
-  return ok(res, { user: result.user });
+  return res.status(result.status || 200).json({
+    user: result.user,
+    message: result.message,
+    pending: result.pending || false,
+  });
 }
 
 function updateAvatarPhoto(req, res) {
   const result = authService.updateAvatarPhoto(req.user.id, req.file);
   if (result.error) return fail(res, result.error, result.status);
-  return ok(res, { user: result.user });
+  return res.status(result.status || 200).json({
+    user: result.user,
+    message: result.message,
+    pending: result.pending || false,
+  });
 }
 
 module.exports = {

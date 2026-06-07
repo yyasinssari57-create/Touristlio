@@ -38,9 +38,21 @@ window.TL_DISCOVER = (function () {
   }
 
   function placeImg(p) {
+    const safe = typeof safeUrl === 'function' ? safeUrl : (url) => {
+      const s = String(url || '').trim();
+      if (!s) return '';
+      if (/^https?:\/\//i.test(s) && !/^javascript:/i.test(s)) return s;
+      if (s.startsWith('/') && !s.startsWith('//')) return s;
+      return '';
+    };
+    const candidates = [p?.imageUrl, ...(Array.isArray(p?.photos) ? p.photos : [])];
+    for (const raw of candidates) {
+      const url = safe(raw);
+      if (url.startsWith('http') && !/undefined|null|placeholder/i.test(url)) return url;
+      if (url.startsWith('/')) return url;
+    }
     if (typeof fallbackImgUrl === 'function') return fallbackImgUrl(p?.category, p?.id);
-    const url = String(p?.imageUrl || p?.images?.[0] || '').trim();
-    return url.startsWith('http') ? url : '/images/icon.svg';
+    return '/images/icon.svg';
   }
 
   function escapeHtml(s) {
@@ -197,7 +209,7 @@ window.TL_DISCOVER = (function () {
             const name = p.name || p.title;
             return `
             <article class="discover-place-card" data-id="${p.id}" tabindex="0" role="button">
-              <img src="${placeImg(p)}" alt="" loading="lazy"/>
+              <img src="${placeImg(p)}" alt="" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>
               <div>
                 <h4>${escapeHtml(name)}</h4>
                 <p>${escapeHtml(window.TL_I18N?.catLabel(lang, p.category) || catLabel(p.category))} · ${escapeHtml(p.district || p.city || '')}</p>

@@ -185,10 +185,42 @@ async function sendTiolaRejectionEmail(email, { userName, placeName, reason, pro
   });
 }
 
+async function sendBlogRejectionEmail(email, { userName, title, reason, profileUrl }) {
+  const safeName = userName || 'Gezgin';
+  const text = [
+    'Touristlio — Blog reddedildi',
+    '',
+    `Merhaba ${safeName},`,
+    '',
+    `"${title}" başlıklı blog yazınız moderasyon ekibimiz tarafından reddedildi.`,
+    '',
+    'Red nedeni:',
+    reason,
+    '',
+    'Profilinizden blog durumunuzu kontrol edebilirsiniz:',
+    profileUrl,
+    '',
+    'Touristlio ekibi',
+  ].join('\n');
+  const html = buildHtmlEmail({
+    title: 'Blog reddedildi',
+    intro: `Merhaba ${safeName}, "${title}" başlıklı blog yazınız yayınlanmadı. Red nedeni: ${reason}`,
+    actionLabel: 'Profilime git',
+    actionUrl: profileUrl,
+  });
+  return sendMail({
+    to: email,
+    subject: 'Touristlio — Blog reddedildi',
+    text,
+    html,
+  });
+}
+
 module.exports = {
   isConfigured,
   sendMail,
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendTiolaRejectionEmail,
+  sendBlogRejectionEmail,
 };

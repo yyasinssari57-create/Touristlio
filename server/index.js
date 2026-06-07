@@ -32,6 +32,7 @@ const moderationRoutes = require('./modules/moderation/moderation.routes');
 const analyticsRoutes = require('./modules/analytics/analytics.routes');
 const notificationsRoutes = require('./routes/notifications');
 const { router: reportsRoutes } = require('./routes/reports');
+const profilesRoutes = require('./routes/profiles');
 
 const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
@@ -101,6 +102,7 @@ app.use('/api/moderation', moderationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/profiles', profilesRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'Touristlio', version: '2.0.0', ts: new Date().toISOString() });

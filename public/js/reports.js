@@ -99,11 +99,57 @@
 
   function menuButton(targetType, targetId, label, ownerId) {
     if (!targetId) return '';
-    if (window.user && ownerId && window.user.id === ownerId) return '';
+    const resolvedOwner = ownerId != null ? ownerId : window.user?.id;
+    const canDel = window.TL_CONTENT?.canDelete?.(resolvedOwner);
+    const canReport = window.user && resolvedOwner != null
+      && Number(window.user.id) !== Number(resolvedOwner);
+    if (!canDel && !canReport) return '';
+
     const safeLabel = String(label || '').replace(/'/g, "\\'");
-    return `<button type="button" class="report-menu-btn" title="Şikayet et" aria-label="Şikayet et"
-      onclick="event.stopPropagation();TL_REPORTS.open('${targetType}',${targetId},'${safeLabel.replace(/"/g, '&quot;')}')">⋯</button>`;
+    const menuId = `rpt-menu-${targetType}-${targetId}`;
+    const items = [];
+    if (canDel) {
+      items.push(`<button type="button" class="report-menu-danger" role="menuitem" onclick="event.stopPropagation();TL_CONTENT.open('${targetType}',${targetId},'${safeLabel.replace(/"/g, '&quot;')}');TL_REPORTS.closeMenus()">${t('deleteBtn') || 'Sil'}</button>`);
+    }
+    if (canReport) {
+      items.push(`<button type="button" role="menuitem" onclick="event.stopPropagation();TL_REPORTS.open('${targetType}',${targetId},'${safeLabel.replace(/"/g, '&quot;')}');TL_REPORTS.closeMenus()">${t('reportBtn') || 'Şikayet et'}</button>`);
+    }
+
+    return `<div class="report-menu-wrap" onclick="event.stopPropagation()">
+      <button type="button" class="report-menu-btn" title="Menü" aria-label="Menü" aria-haspopup="true"
+        onclick="event.stopPropagation();event.preventDefault();TL_REPORTS.toggleMenu('${menuId}',event)">⋯</button>
+      <div class="report-menu-drop" id="${menuId}" role="menu" hidden onclick="event.stopPropagation()">
+        ${items.join('')}
+      </div>
+    </div>`;
   }
 
-  window.TL_REPORTS = { REASONS, open, close, menuButton };
+  function closeMenus() {
+    document.querySelectorAll('.report-menu-drop').forEach((el) => { el.hidden = true; });
+    document.querySelectorAll('.report-menu-wrap.is-open').forEach((el) => el.classList.remove('is-open'));
+    document.querySelectorAll('.bcard.menu-open').forEach((el) => el.classList.remove('menu-open'));
+  }
+
+  function toggleMenu(menuId, ev) {
+    ev?.stopPropagation?.();
+    ev?.preventDefault?.();
+    const el = document.getElementById(menuId);
+    if (!el) return;
+    const wrap = el.closest('.report-menu-wrap');
+    const card = el.closest('.bcard');
+    const open = el.hidden;
+    closeMenus();
+    el.hidden = !open;
+    if (!el.hidden) {
+      wrap?.classList.add('is-open');
+      card?.classList.add('menu-open');
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.report-menu-wrap')) return;
+    closeMenus();
+  });
+
+  window.TL_REPORTS = { REASONS, open, close, menuButton, toggleMenu, closeMenus };
 })();

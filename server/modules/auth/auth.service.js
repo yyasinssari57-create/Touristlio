@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById } = require('../../auth');
 const { AVATAR_PRESETS, AVATAR_COLORS, isValidPreset, isValidColor } = require('../../lib/avatars');
+const profileChanges = require('../../lib/profile-changes');
 const authModel = require('./auth.model');
 const logger = require('../../lib/logger');
 const mailer = require('../../lib/mailer');
@@ -192,8 +193,20 @@ function updateAvatarPreset(userId, { avatarPreset, avatarColor }) {
   const color = avatarColor && isValidColor(avatarColor) ? avatarColor : null;
   const row = authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
-  authModel.updateAvatarPreset(userId, avatarPreset, color || row.avatar_color || '#0ea5e9');
-  return { status: 200, user: sanitizeUser(findUserById(userId)) };
+  try {
+    profileChanges.createRequest(userId, 'avatar_preset', {
+      avatarPreset,
+      avatarColor: color || row.avatar_color || '#0ea5e9',
+    });
+  } catch (err) {
+    return { error: err.message, status: 409 };
+  }
+  return {
+    status: 202,
+    message: 'Avatar değişikliğiniz onay için gönderildi.',
+    pending: true,
+    user: sanitizeUser(findUserById(userId)),
+  };
 }
 
 function updateAvatarPhoto(userId, file) {
@@ -201,14 +214,20 @@ function updateAvatarPhoto(userId, file) {
   const row = authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
 
-  if (row.avatar_url) {
-    const oldPath = path.join(__dirname, '..', '..', '..', row.avatar_url.replace(/^\//, ''));
-    try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch { /* ignore */ }
-  }
-
   const url = `/uploads/${path.basename(file.filename || file.path)}`;
-  authModel.updateAvatarUrl(userId, url);
-  return { status: 200, user: sanitizeUser(findUserById(userId)) };
+  try {
+    profileChanges.createRequest(userId, 'avatar_photo', { avatarUrl: url });
+  } catch (err) {
+    const pendingPath = path.join(__dirname, '..', '..', '..', url.replace(/^\//, ''));
+    try { if (fs.existsSync(pendingPath)) fs.unlinkSync(pendingPath); } catch { /* ignore */ }
+    return { error: err.message, status: 409 };
+  }
+  return {
+    status: 202,
+    message: 'Profil fotoğrafınız onay için gönderildi.',
+    pending: true,
+    user: sanitizeUser(findUserById(userId)),
+  };
 }
 
 async function resendVerification(userId) {

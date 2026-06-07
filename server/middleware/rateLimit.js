@@ -1,11 +1,28 @@
 const rateLimit = require('express-rate-limit');
 
+const isDev = process.env.NODE_ENV !== 'production';
+
+function isReportRequest(req) {
+  const path = req.originalUrl?.split('?')[0] || req.path || '';
+  return req.method === 'POST' && (path === '/api/reports' || path.endsWith('/reports'));
+}
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: Number(process.env.RATE_LIMIT_MAX) || 300,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isReportRequest,
   message: { error: 'Çok fazla istek. Lütfen bir süre sonra tekrar deneyin.' },
+});
+
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: Number(process.env.REPORT_RATE_LIMIT_MAX) || (isDev ? 30 : 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user?.id ? `report:user:${req.user.id}` : `report:ip:${req.ip}`),
+  message: { error: 'Çok fazla şikayet gönderdiniz. Lütfen bir süre sonra tekrar deneyin.' },
 });
 
 const authLimiter = rateLimit({
@@ -40,4 +57,4 @@ const liveDataLimiter = rateLimit({
   message: { error: 'Çok fazla istek. Bir dakika bekleyin.' },
 });
 
-module.exports = { apiLimiter, authLimiter, searchLimiter, adminToolLimiter, liveDataLimiter };
+module.exports = { apiLimiter, authLimiter, searchLimiter, adminToolLimiter, liveDataLimiter, reportLimiter };

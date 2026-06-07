@@ -422,7 +422,8 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .explore-map-wrap{background:var(--w);border:1.5px solid var(--l2);border-radius:var(--r2);overflow:hidden;margin-bottom:18px;box-shadow:var(--sh);}
 .explore-map-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--l2);}
 .explore-map-hd h4{font-family:var(--fd);font-size:1rem;color:var(--navy);font-weight:700;}
-#pdMap{height:200px;width:100%;border-radius:var(--r);margin-bottom:14px;display:none;}
+.pd-map-wrap{position:relative;overflow:hidden;border-radius:var(--r);margin-bottom:14px;display:none;z-index:1;}
+#pdMap{height:200px;width:100%;border-radius:var(--r);}
 .tl-map-pin{background:transparent;border:none;}
 .map-popup{min-width:160px;}
 .pd-list{margin:0 0 0 1.1rem;color:var(--t2);line-height:1.65;}
@@ -442,8 +443,25 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 
 .browse-hint{text-align:center;color:var(--t2);font-size:.85rem;padding:24px 16px;margin:0;}
 .load-more-wrap{text-align:center;padding:20px 0 32px;}
+.map-wrap{position:relative;overflow:hidden;isolation:isolate;z-index:1;border-radius:var(--r2);}
+.map-wrap-sticky{width:100%;height:100%;}
 .map-full{height:min(70vh,640px);width:100%;border-radius:var(--r2);border:1.5px solid var(--l2);}
 .map-tab-wrap{padding-top:20px;}
+.map-wrap .leaflet-container,
+.discover-map-panel .leaflet-container,
+#pdMap.leaflet-container{z-index:1;}
+.map-wrap .leaflet-control-container,
+.discover-map-panel .leaflet-control-container{z-index:2;position:absolute;inset:0;pointer-events:none;}
+.map-wrap .leaflet-control,
+.discover-map-panel .leaflet-control{pointer-events:auto;}
+.map-wrap .leaflet-top.leaflet-left,
+.discover-map-panel .leaflet-top.leaflet-left{margin-top:12px;margin-left:12px;}
+.map-wrap .leaflet-control-zoom,
+.discover-map-panel .leaflet-control-zoom,
+#pdMap .leaflet-control-zoom{border:none;box-shadow:0 2px 8px rgba(0,0,0,.18);}
+.map-wrap .leaflet-control-zoom a,
+.discover-map-panel .leaflet-control-zoom a,
+#pdMap .leaflet-control-zoom a{color:var(--navy);background:var(--w);border-color:var(--l2);}
 .detail-tabs{display:flex;gap:4px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
 .dtab{padding:8px 14px;border-radius:100px;font-size:.72rem;font-weight:600;background:var(--l);color:var(--t2);cursor:pointer;white-space:nowrap;border:1.5px solid transparent;flex-shrink:0;}
 .dtab.on{background:var(--navy);color:#fff;}
@@ -548,8 +566,8 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .discover-page{padding-top:var(--nav-h);min-height:100vh;background:var(--l);}
 .discover-layout{display:grid;grid-template-columns:1fr min(42vw,480px);gap:0;min-height:calc(100vh - var(--nav-h));}
 .discover-main{padding:24px clamp(16px,3vw,32px) 80px;overflow-y:auto;}
-.discover-map-panel{position:sticky;top:var(--nav-h);height:calc(100vh - var(--nav-h));border-left:1px solid var(--l2);background:var(--w);}
-.discover-map{width:100%;height:100%;min-height:280px;}
+.discover-map-panel{position:sticky;top:var(--nav-h);height:calc(100vh - var(--nav-h));border-left:1px solid var(--l2);background:var(--w);overflow:hidden;z-index:1;}
+.discover-map{width:100%;height:100%;min-height:280px;position:relative;overflow:hidden;}
 .discover-hd-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
 .discover-count-line{font-size:.82rem;color:var(--t2);margin-top:4px;}
 .discover-hd{margin-bottom:20px;}
@@ -599,7 +617,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
 @media(max-width:900px){
   .discover-layout{grid-template-columns:1fr;}
-  .discover-map-panel{position:fixed;bottom:0;left:0;right:0;height:38vh;z-index:150;border-left:none;border-top:1px solid var(--l2);box-shadow:0 -8px 24px rgba(0,0,0,.08);}
+  .discover-map-panel{position:fixed;bottom:0;left:0;right:0;height:38vh;z-index:150;border-left:none;border-top:1px solid var(--l2);box-shadow:0 -8px 24px rgba(0,0,0,.08);overflow:hidden;}
   .discover-main{padding-bottom:calc(38vh + 24px);}
   .admin-topnav{overflow-x:auto;flex-wrap:nowrap;}
 }

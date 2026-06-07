@@ -136,7 +136,9 @@ window.TL_MAP = (function () {
 
     if (!store.map) {
 
-      store.map = L.map(el, { scrollWheelZoom: false }).setView([41.01, 28.98], 5);
+      store.map = L.map(el, { scrollWheelZoom: false, zoomControl: false }).setView([41.01, 28.98], 5);
+
+      L.control.zoom({ position: 'topleft' }).addTo(store.map);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
@@ -353,16 +355,17 @@ window.TL_MAP = (function () {
   function renderDetailMap(place, lang) {
 
     const el = document.getElementById('pdMap');
+    const wrap = document.getElementById('pdMapWrap');
 
     if (!el || typeof L === 'undefined' || place.lat == null) {
 
-      if (el) el.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
 
       return;
 
     }
 
-    el.style.display = 'block';
+    if (wrap) wrap.style.display = 'block';
 
     if (detailMap) {
 
@@ -372,7 +375,9 @@ window.TL_MAP = (function () {
 
     }
 
-    detailMap = L.map(el, { scrollWheelZoom: false, zoomControl: true }).setView([place.lat, place.lng], 14);
+    detailMap = L.map(el, { scrollWheelZoom: false, zoomControl: false }).setView([place.lat, place.lng], 14);
+
+    L.control.zoom({ position: 'topleft' }).addTo(detailMap);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 

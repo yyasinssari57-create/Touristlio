@@ -29,6 +29,17 @@ function safeUrl(url) {
   return '';
 }
 
+function tiolaPhotoUrl(ti) {
+  return safeUrl(ti?.photoUrl);
+}
+
+function renderTiolaPhotoHtml(ti, extraClass = '') {
+  const url = tiolaPhotoUrl(ti);
+  if (!url) return '';
+  const cls = extraClass ? ` class="${extraClass}"` : '';
+  return `<img src="${url}" alt="" loading="lazy"${cls}/>`;
+}
+
 function placeImg(p) {
   const candidates = [p?.imageUrl, ...(Array.isArray(p?.photos) ? p.photos : [])];
   for (const raw of candidates) {
@@ -73,6 +84,7 @@ let placesOffset = 0;
 let cardsLoaded = false;
 let currentFilterParams = {};
 let categoryMeta = null;
+let viewingProfileUserId = null;
 
 const GROUP_I18N = {
   historical: 'grpHistorical',
@@ -144,9 +156,225 @@ function catLabel(cat) {
   return window.TL_I18N.catLabel(lang, cat);
 }
 
-function categoryImage(slug) {
+function categoryImage(slug, imageUrl) {
+  if (imageUrl) return imageUrl;
+  const fromMeta = categoryMeta?.categories?.find((c) => c.slug === slug)?.imageUrl;
+  if (fromMeta) return fromMeta;
   return CATEGORY_IMAGES[slug] || CATEGORY_IMAGES.landmark;
 }
+
+function renderLikeBar(targetType, targetId, count, likedByMe, opts = {}) {
+  if (opts.countOnly) {
+    return `<div class="tiola-like-bar tiola-like-bar--count-only">
+      <span class="tiola-like-count-only">${count || 0}</span>
+    </div>`;
+  }
+  const liked = likedByMe ? ' liked' : '';
+  const fn = targetType === 'blog' ? 'toggleBlogLike' : 'toggleTiolaLike';
+  return `<div class="tiola-like-bar">
+    <button type="button" class="tiola-like-btn${liked}" onclick="event.stopPropagation();${fn}(${targetId},this)" aria-label="Beğen">
+      <span class="tiola-like-emoji">${likedByMe ? '❤️' : '🤍'}</span>
+      <span class="tiola-like-count">${count || 0}</span>
+    </button>
+  </div>`;
+}
+
+async function toggleTiolaLike(id, btn) {
+  if (!user) { openAuth(); return; }
+  try {
+    const data = await api('/tiolas/' + id + '/like', { method: 'POST' });
+    const bar = btn?.closest('.tiola-like-bar');
+    if (bar) {
+      bar.querySelector('.tiola-like-emoji').textContent = data.liked ? '❤️' : '🤍';
+      bar.querySelector('.tiola-like-count').textContent = data.count;
+      btn.classList.toggle('liked', data.liked);
+    }
+  } catch { /* toast */ }
+}
+
+async function toggleBlogLike(id, btn) {
+  if (!user) { openAuth(); return; }
+  try {
+    const data = await api('/blogs/' + id + '/like', { method: 'POST' });
+    const bar = btn?.closest('.tiola-like-bar');
+    if (bar) {
+      bar.querySelector('.tiola-like-emoji').textContent = data.liked ? '❤️' : '🤍';
+      bar.querySelector('.tiola-like-count').textContent = data.count;
+      btn.classList.toggle('liked', data.liked);
+    }
+  } catch { /* toast */ }
+}
+
+function toggleReplyForm(tiolaId) {
+  const el = document.getElementById('reply-form-' + tiolaId);
+  if (!el) return;
+  const open = el.style.display !== 'block';
+  el.style.display = open ? 'block' : 'none';
+  if (open) el.querySelector('textarea')?.focus();
+}
+
+async function submitTiolaReply(parentId, placeId) {
+  const ta = document.getElementById('reply-txt-' + parentId);
+  const txt = ta?.value?.trim();
+  if (!txt) { window.TL_TOAST?.warning(t('writeSomething')); return; }
+  if (!user) { openAuth(); return; }
+  const fd = new FormData();
+  fd.append('text', txt);
+  fd.append('parentId', parentId);
+  if (placeId) fd.append('placeId', placeId);
+  try {
+    const data = await api('/tiolas', { method: 'POST', body: fd });
+    window.TL_TOAST?.success(data.message || t('tiolaPending'));
+    if (ta) ta.value = '';
+    toggleReplyForm(parentId);
+    if (activePlace) await renderRevList();
+    else await loadTiolaFeed();
+  } catch { /* toast */ }
+}
+
+async function loadTiolaReplies(parentId, containerId) {
+  const box = document.getElementById(containerId);
+  if (!box || box.dataset.loaded === '1') {
+    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
+  try {
+    const data = await api('/tiolas?parentId=' + parentId);
+    box.dataset.loaded = '1';
+    box.style.display = 'block';
+    box.innerHTML = data.tiolas.length
+      ? data.tiolas.map((r) => {
+        const reportBtn = window.TL_REPORTS?.menuButton('tiola', r.id, r.text?.slice(0, 40), r.userId) || '';
+        const profileChip = renderProfileChip(r.userId, r.userName, {
+          name: r.userName,
+          avatarColor: r.avatarColor,
+          avatarUrl: r.avatarUrl,
+          avatarPreset: r.avatarPreset,
+        }, 'tiola-mini');
+        return `
+        <div class="tiola-reply-item" data-content-type="tiola" data-content-id="${r.id}">
+          <div class="tiola-reply-hd">
+            ${profileChip}
+            <span class="tiola-reply-dt">${formatDate(r.createdAt)}</span>
+            ${reportBtn}
+          </div>
+          <div class="tiola-reply-txt">${escapeHtml(r.text)}</div>
+        </div>`;
+      }).join('')
+      : `<p class="tiola-reply-empty">${t('noReplies')}</p>`;
+  } catch (e) {
+    box.innerHTML = `<p class="tiola-reply-empty">${escapeHtml(e.message)}</p>`;
+    box.style.display = 'block';
+  }
+}
+
+async function navigateToProfile(userId, ev) {
+  ev?.stopPropagation?.();
+  if (!userId) return;
+  closeBlogDetail?.();
+  closePublicProfile?.();
+  if (user && user.id === userId) {
+    viewingProfileUserId = null;
+  } else {
+    viewingProfileUserId = userId;
+  }
+  await showMainTab('profile');
+}
+
+function goToMyProfile() {
+  viewingProfileUserId = null;
+  showMainTab('profile');
+}
+
+function renderProfileChip(userId, userName, avUser, sizeClass = 'tiola-mini') {
+  const name = escapeHtml(userName || '');
+  if (!userId) return `<strong>${name}</strong>`;
+  const avHtml = window.TL_AVATARS?.renderHtml(avUser || { name: userName }, sizeClass) || '';
+  return `<button type="button" class="profile-chip-btn" onclick="event.stopPropagation();navigateToProfile(${userId}, event)" aria-label="${name} profili">
+    ${avHtml ? `<span class="tl-avatar-wrap">${avHtml}</span>` : ''}
+    <span class="profile-chip-name">${name}</span>
+  </button>`;
+}
+
+function buildPublicProfileCard(p) {
+  const avHtml = window.TL_AVATARS?.renderHtml({
+    name: p.name,
+    avatarColor: p.avatarColor,
+    avatarUrl: p.avatarUrl,
+    avatarPreset: p.avatarPreset,
+  }, 'public-prof-av') || `<div class="public-prof-av">${escapeHtml((p.name || '?')[0])}</div>`;
+  const reportBtn = window.TL_REPORTS?.menuButton('profile', p.id, p.name, p.id) || '';
+  const tiolaList = (p.recentTiolas || []).length
+    ? `<ul class="public-prof-list">${p.recentTiolas.map((ti) =>
+      `<li>${ti.stars ? '★'.repeat(ti.stars) + ' ' : ''}${escapeHtml((ti.text || '').slice(0, 80))}${ti.placeName ? ` · <em>${escapeHtml(ti.placeName)}</em>` : ''}</li>`
+    ).join('')}</ul>`
+    : `<p class="public-prof-empty">${t('noApprovedTiola')}</p>`;
+  return `
+    <div class="public-prof-page">
+      <div class="public-prof-card">
+        <div class="public-prof-head">
+          ${avHtml}
+          <div class="public-prof-info">
+            <h3 class="public-prof-name">${escapeHtml(p.name)}</h3>
+            <p class="public-prof-meta">${t('memberSince') || 'Üyelik'}: ${formatDate(p.memberSince)}</p>
+          </div>
+          ${reportBtn}
+        </div>
+        <div class="public-prof-stats">
+          <div><strong>${p.tiolaCount || 0}</strong><span>Tiola</span></div>
+          <div><strong>${p.blogCount || 0}</strong><span>Blog</span></div>
+          <div><strong>${p.likeCount || 0}</strong><span>${t('profileStatLikes')}</span></div>
+        </div>
+        <h4 class="public-prof-section">${t('profileTabTiolas')}</h4>
+        ${tiolaList}
+      </div>
+    </div>`;
+}
+
+async function renderPublicProfilePage(userId) {
+  const el = document.getElementById('pPublicView');
+  if (!el) return;
+  el.innerHTML = `<p class="public-prof-empty">${t('loading') || 'Yükleniyor…'}</p>`;
+  try {
+    const data = await api('/profiles/' + userId);
+    const p = data.profile;
+    if (!p) throw new Error('Profil bulunamadı');
+    el.innerHTML = buildPublicProfileCard(p);
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state"><p>${escapeHtml(e.message)}</p></div>`;
+  }
+}
+
+function openPublicProfile(userId) {
+  navigateToProfile(userId);
+}
+
+function closePublicProfile() {
+  document.getElementById('publicProfOv')?.classList.remove('on');
+  if (!document.querySelector('.auth-ov.on, .blog-detail-ov.on, #blogDetailOv.on')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function ensurePublicProfileOverlay() {
+  if (document.getElementById('publicProfOv')) return;
+  const ov = document.createElement('div');
+  ov.id = 'publicProfOv';
+  ov.className = 'auth-ov';
+  ov.innerHTML = `
+    <div class="auth-box public-prof-box" role="dialog" aria-labelledby="publicProfTitle">
+      <button type="button" class="aclose" onclick="closePublicProfile()" aria-label="Kapat">✕</button>
+      <h3 id="publicProfTitle" class="report-title">Profil</h3>
+      <div id="publicProfBody"></div>
+    </div>`;
+  ov.addEventListener('click', (e) => { if (e.target === ov) closePublicProfile(); });
+  document.body.appendChild(ov);
+}
+
+window.openPublicProfile = openPublicProfile;
+window.navigateToProfile = navigateToProfile;
+window.goToMyProfile = goToMyProfile;
+window.closePublicProfile = closePublicProfile;
 
 async function loadCategoryMeta() {
   try {
@@ -197,7 +425,7 @@ function renderCategoryCards() {
     const label = lang === 'en' ? c.nameEn : c.nameTr;
     return `
       <div class="ccard" data-cat="${c.slug}" onclick="setCatAndSwitch('${c.slug}')">
-        <img src="${categoryImage(c.slug)}" alt="" loading="lazy"/>
+        <img src="${categoryImage(c.slug, c.imageUrl)}" alt="" loading="lazy"/>
         <div class="cinfo">
           <div class="cname">${escapeHtml(label)}</div>
           <div class="ccnt" id="cat-cnt-${c.slug}">—</div>
@@ -362,6 +590,7 @@ function statusLabel(status) {
   if (status === 'approved') return t('statusApproved');
   if (status === 'draft') return t('statusDraft');
   if (status === 'rejected') return t('statusRejected');
+  if (status === 'deleted') return t('statusDeleted');
   return status;
 }
 
@@ -430,7 +659,7 @@ function updateAuthUI() {
   if (btn) {
     if (user) {
       btn.textContent = t('profile');
-      btn.onclick = () => showMainTab('profile');
+      btn.onclick = () => goToMyProfile();
       btn.style.display = '';
     } else {
       btn.textContent = t('login');
@@ -661,7 +890,10 @@ function getCurrentRoute() {
   const main = page?.id?.replace('page-', '') || 'explore';
   const route = { main };
   if (main === 'explore') route.explore = getActiveExploreTab();
-  if (main === 'profile') route.profileTab = getActiveProfileTab();
+  if (main === 'profile') {
+    if (viewingProfileUserId) route.profileUserId = viewingProfileUserId;
+    else route.profileTab = getActiveProfileTab();
+  }
   if (main === 'blog' && blogCat !== 'all') route.blogCat = blogCat;
   if (main === 'detail' && activePlace?.id) {
     route.placeId = activePlace.id;
@@ -693,6 +925,9 @@ function readRouteFromUrl() {
     return { main: 'explore', explore: segments[1] || 'discover' };
   }
   if (segments[0] === 'profile') {
+    if (segments[1] === 'u' && segments[2] && /^\d+$/.test(segments[2])) {
+      return { main: 'profile', profileUserId: Number(segments[2]) };
+    }
     return { main: 'profile', profileTab: segments[1] || 'tiolas' };
   }
   if (segments[0] === 'blog') {
@@ -736,7 +971,11 @@ function writeRouteToUrl(route, replace = true) {
   } else if (route.main === 'explore') {
     hash = route.explore && route.explore !== 'discover' ? `#explore/${route.explore}` : '#explore';
   } else if (route.main === 'profile') {
-    hash = route.profileTab && route.profileTab !== 'tiolas' ? `#profile/${route.profileTab}` : '#profile';
+    if (route.profileUserId) {
+      hash = `#profile/u/${route.profileUserId}`;
+    } else {
+      hash = route.profileTab && route.profileTab !== 'tiolas' ? `#profile/${route.profileTab}` : '#profile';
+    }
   } else if (route.main === 'blog') {
     hash = route.blogCat && route.blogCat !== 'all' ? `#blog/cat/${route.blogCat}` : '#blog';
   }
@@ -829,25 +1068,37 @@ function renderTiolaCard(ti) {
   const rejectionNote = ti.status === 'rejected' && ti.rejectionReason
     ? `<div class="tiola-reject-reason"><strong>${t('rejectionReason')}:</strong> ${escapeHtml(ti.rejectionReason)}</div>` : '';
   const avUser = { name: ti.userName, avatarColor: ti.avatarColor, avatarUrl: ti.avatarUrl, avatarPreset: ti.avatarPreset };
-  const reportBtn = window.TL_REPORTS?.menuButton('tiola', ti.id, ti.text?.slice(0, 40) || ti.userName, ti.userId) || '';
-  const canReportProfile = user && ti.userId && user.id !== ti.userId;
-  const nameHtml = canReportProfile
-    ? `<button type="button" class="report-name-btn" onclick="event.stopPropagation();TL_REPORTS.open('profile',${ti.userId},'${String(ti.userName || '').replace(/'/g, "\\'")}')">${escapeHtml(ti.userName)}</button>`
-    : escapeHtml(ti.userName);
+  const menuBtn = window.TL_REPORTS?.menuButton('tiola', ti.id, ti.text?.slice(0, 40) || ti.userName, ti.userId ?? user?.id) || '';
+  const profileChip = renderProfileChip(ti.userId, ti.userName, avUser, 'tiola-mini');
+  const photoHtml = renderTiolaPhotoHtml(ti);
+  const noPhotoClass = photoHtml ? '' : ' tiola-card--no-photo';
   return `
-    <div class="tiola-card" ${ti.placeId && ti.status === 'approved' ? `onclick="openDetail(${ti.placeId})"` : ''}>
-      ${reportBtn}
-      ${ti.photoUrl ? `<img src="${ti.photoUrl}" alt=""/>` : (ti.placeImage ? `<img src="${ti.placeImage}" alt=""/>` : '')}
+    <div class="tiola-card${noPhotoClass}" data-content-type="tiola" data-content-id="${ti.id}" ${ti.placeId && ti.status === 'approved' ? `onclick="openDetail(${ti.placeId})"` : ''}>
+      ${photoHtml}
       <div class="tiola-body">
-        <div class="tiola-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span style="width:22px;height:22px;display:inline-block;flex-shrink:0">${window.TL_AVATARS?.renderHtml(avUser, 'tiola-mini') || ''}</span>
-          <span>${nameHtml}</span>
-          <span>· ${formatDate(ti.createdAt)} ${statusBadge}</span>
+        <div class="tiola-hd">
+          <div class="tiola-meta">
+            ${profileChip}
+            <span class="tiola-date">· ${formatDate(ti.createdAt)} ${statusBadge}</span>
+          </div>
+          ${menuBtn ? `<div class="tiola-card-menu" onclick="event.stopPropagation()">${menuBtn}</div>` : ''}
         </div>
         <div>${place}</div>
         ${ti.stars ? `<div class="tiola-stars">${stars(ti.stars)}</div>` : ''}
         <div class="tiola-txt">${escapeHtml(ti.text)}</div>
         ${rejectionNote}
+        ${ti.status === 'approved' ? `
+          <div class="tiola-actions-row" onclick="event.stopPropagation()">
+            ${renderLikeBar('tiola', ti.id, ti.likeCount, ti.likedByMe)}
+            ${ti.replyCount ? `<button type="button" class="tiola-reply-toggle" onclick="loadTiolaReplies(${ti.id},'tiola-replies-${ti.id}')">${ti.replyCount} ${t('replies')}</button>` : ''}
+            <button type="button" class="tiola-reply-toggle" onclick="toggleReplyForm(${ti.id})">${t('replyBtn')}</button>
+          </div>
+          <div class="tiola-reply-form" id="reply-form-${ti.id}" style="display:none" onclick="event.stopPropagation()">
+            <textarea class="rft tiola-reply-inp" id="reply-txt-${ti.id}" rows="2" placeholder="${t('replyPlaceholder')}"></textarea>
+            <button type="button" class="btn bp bsm" onclick="submitTiolaReply(${ti.id},${ti.placeId || 'null'})">${t('sendReply')}</button>
+          </div>
+          <div class="tiola-replies-wrap" id="tiola-replies-${ti.id}" style="display:none" onclick="event.stopPropagation()"></div>
+        ` : ''}
       </div>
     </div>`;
 }
@@ -1059,7 +1310,7 @@ async function openDetail(id, skipRoute) {
     document.getElementById('pdTC').textContent = (p.tiolaCount || 0) + ' ' + t('tiolaCount');
     document.getElementById('icCountry').textContent = p.country;
     document.getElementById('icCity').textContent = p.city;
-    document.getElementById('icCat').textContent = catLabel(p.category);
+    document.getElementById('icCat').textContent = p.categoryDisplay || catLabel(p.category);
     document.getElementById('icEntry').textContent = placeField(p, 'entryFee') || '—';
     document.getElementById('icBest').textContent = placeField(p, 'bestTime') || '—';
     await renderRevList();
@@ -1082,21 +1333,38 @@ function goBack() {
 async function renderRevList() {
   if (!activePlace) return;
   const data = await api('/tiolas?placeId=' + activePlace.id);
-  document.getElementById('revList').innerHTML = data.tiolas.map((r) => `
-    <div class="ri">
+  document.getElementById('revList').innerHTML = data.tiolas.map((r) => {
+    const profileChip = renderProfileChip(r.userId, r.userName, {
+      name: r.userName,
+      avatarColor: r.avatarColor,
+      avatarUrl: r.avatarUrl,
+      avatarPreset: r.avatarPreset,
+    }, 'riav');
+    const menuBtn = window.TL_REPORTS?.menuButton('tiola', r.id, r.text?.slice(0, 40), r.userId) || '';
+    return `
+    <div class="ri" data-content-type="tiola" data-content-id="${r.id}">
       <div class="ri-hd">
         <div class="ri-user">
-          <div class="riav">${window.TL_AVATARS?.renderHtml({ name: r.userName, avatarColor: r.avatarColor, avatarUrl: r.avatarUrl, avatarPreset: r.avatarPreset }) || r.userName[0]}</div>
-          <div><div class="rinm">${user && r.userId && user.id !== r.userId
-            ? `<button type="button" class="report-name-btn" onclick="TL_REPORTS.open('profile',${r.userId},'${String(r.userName || '').replace(/'/g, "\\'")}')">${escapeHtml(r.userName)}</button>`
-            : escapeHtml(r.userName)}</div><div class="ridt">${formatDate(r.createdAt)}</div></div>
+          ${profileChip}
+          <span class="ridt">${formatDate(r.createdAt)}</span>
         </div>
-        ${window.TL_REPORTS?.menuButton('tiola', r.id, r.text?.slice(0, 40), r.userId) || ''}
-        ${r.stars ? `<div class="ristars">${stars(r.stars)}</div>` : `<span style="font-size:.62rem;color:var(--t3)">${t('noRating')}</span>`}
+        ${menuBtn ? `<div class="ri-menu" onclick="event.stopPropagation()">${menuBtn}</div>` : ''}
       </div>
-      ${r.photoUrl ? `<img src="${r.photoUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-bottom:8px"/>` : ''}
+      ${r.stars ? `<div class="ristars ri-stars">${stars(r.stars)}</div>` : ''}
+      ${renderTiolaPhotoHtml(r, 'ri-photo')}
       <div class="ritxt">${escapeHtml(r.text)}</div>
-    </div>`).join('') || `<div class="no-res">${t('noApprovedTiola')}</div>`;
+      <div class="tiola-actions-row" onclick="event.stopPropagation()">
+        ${renderLikeBar('tiola', r.id, r.likeCount, r.likedByMe)}
+        ${r.replyCount ? `<button type="button" class="tiola-reply-toggle" onclick="loadTiolaReplies(${r.id},'rev-replies-${r.id}')">${r.replyCount} ${t('replies')}</button>` : ''}
+        <button type="button" class="tiola-reply-toggle" onclick="toggleReplyForm(${r.id})">${t('replyBtn')}</button>
+      </div>
+      <div class="tiola-reply-form" id="reply-form-${r.id}" style="display:none" onclick="event.stopPropagation()">
+        <textarea class="rft tiola-reply-inp" id="reply-txt-${r.id}" rows="2" placeholder="${t('replyPlaceholder')}"></textarea>
+        <button type="button" class="btn bp bsm" onclick="submitTiolaReply(${r.id},${activePlace.id})">${t('sendReply')}</button>
+      </div>
+      <div class="tiola-replies-wrap" id="rev-replies-${r.id}" style="display:none"></div>
+    </div>`;
+  }).join('') || `<div class="no-res">${t('noApprovedTiola')}</div>`;
 }
 
 function updateRevForm() {
@@ -1215,23 +1483,27 @@ async function renderBlog() {
     const feat = blogs.find((b) => b.featured) || blogs[0];
     const rest = blogs.filter((b) => b.id !== feat.id);
     const card = (b, isFeat) => {
-      const bav = window.TL_AVATARS?.renderHtml({
-        name: b.authorName,
-        avatarColor: b.avatarColor || (isFeat ? 'var(--b)' : 'var(--b2)'),
-        avatarUrl: b.avatarUrl,
-        avatarPreset: b.avatarPreset,
-      }) || `<div class="bav" style="background:${isFeat ? 'var(--b)' : 'var(--b2)'}">${(b.authorName || '?')[0]}</div>`;
-      const reportBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
+    const avUser = {
+      name: b.authorName,
+      avatarColor: b.avatarColor || (isFeat ? 'var(--b)' : 'var(--b2)'),
+      avatarUrl: b.avatarUrl,
+      avatarPreset: b.avatarPreset,
+    };
+      const menuBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
+      const authorChip = renderProfileChip(b.userId, b.authorName, avUser, 'bav');
       return `
-      <div class="bcard${isFeat ? ' feat' : ''}" onclick="openBlogDetail('${escapeHtml(b.slug || b.id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBlogDetail('${escapeHtml(b.slug || b.id)}')">
-        ${reportBtn}
+      <div class="bcard${isFeat ? ' feat' : ''}" data-content-type="blog" data-content-id="${b.id}" onclick="openBlogDetail('${escapeHtml(b.slug || b.id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBlogDetail('${escapeHtml(b.slug || b.id)}')">
         <img class="bimg" src="${safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id })}" alt=""/>
         ${b.featured ? `<div class="bfeat-badge">${escapeHtml(labels.featuredLbl)}</div>` : ''}
         <div class="bbody">
           <div class="bcat-lbl">${escapeHtml(b.categoryLabel || b.category || '')}</div>
           <div class="btitle">${escapeHtml(b.title)}</div>
           ${isFeat ? `<div class="bexc">${escapeHtml(b.excerpt || '')}</div>` : ''}
-          <div class="bmeta"><div class="bauthor">${bav}<span>${escapeHtml(b.authorName || '')}</span></div></div>
+          <div class="bmeta"><div class="bauthor">${authorChip}</div></div>
+          <div class="tiola-actions-row bcard-actions-row" onclick="event.stopPropagation()">
+            ${renderLikeBar('blog', b.id, b.likeCount, b.likedByMe, { countOnly: true })}
+            ${menuBtn}
+          </div>
         </div>
       </div>`;
     };
@@ -1256,18 +1528,27 @@ async function openBlogDetail(slug) {
     const b = data.blog;
     const img = safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id });
     const tags = (b.tags || []).map((tag) => `<span class="bd-tag">${escapeHtml(tag)}</span>`).join('');
+    const menuBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
+    const authorChip = renderProfileChip(b.userId, b.authorName, {
+      name: b.authorName,
+      avatarColor: b.avatarColor,
+      avatarUrl: b.avatarUrl,
+      avatarPreset: b.avatarPreset,
+    }, 'tiola-mini');
     document.getElementById('blogDetailBody').innerHTML = `
+      <div data-content-type="blog" data-content-id="${b.id}">
       ${img ? `<img class="bd-cover" src="${img}" alt=""/>` : ''}
       <div class="bd-cat">${escapeHtml(b.categoryLabel || b.category || '')}</div>
       <h2 class="bd-title">${escapeHtml(b.title)}</h2>
-      <div class="bd-meta">${escapeHtml(b.authorName || '')}${b.publishedAt ? ' · ' + new Date(b.publishedAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'tr-TR') : ''}</div>
+      <div class="bd-meta">${authorChip}${b.publishedAt ? ' · ' + new Date(b.publishedAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'tr-TR') : ''}</div>
       ${b.excerpt ? `<p style="color:var(--t2);font-size:.85rem;margin-bottom:12px">${escapeHtml(b.excerpt)}</p>` : ''}
       <div class="bd-body">${escapeHtml(b.body || '')}</div>
       ${tags ? `<div class="bd-tags">${tags}</div>` : ''}
       ${b.placeId ? `<p style="margin-top:16px"><button class="btn bp bsm" type="button" onclick="closeBlogDetail();openDetail(${b.placeId})">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
-      <div class="bd-report-row">
-        ${window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) ? `<button type="button" class="btn bo bsm" onclick="TL_REPORTS.open('blog',${b.id},'${String(b.title || '').replace(/'/g, "\\'")}')">${t('reportBtn')}</button>` : ''}
-        ${window.TL_REPORTS?.menuButton('profile', b.userId, b.authorName, b.userId) ? `<button type="button" class="btn bo bsm" style="margin-left:6px" onclick="TL_REPORTS.open('profile',${b.userId},'${String(b.authorName || '').replace(/'/g, "\\'")}')">${t('reportProfileBtn')}</button>` : ''}
+      <div class="tiola-actions-row bd-like-row">
+        ${renderLikeBar('blog', b.id, b.likeCount, b.likedByMe)}
+        ${menuBtn}
+      </div>
       </div>`;
     document.getElementById('blogDetailOv').classList.add('on');
     document.body.style.overflow = 'hidden';
@@ -1291,13 +1572,30 @@ function showPTab(name, el, skipRoute) {
 }
 
 async function updateProfilePage() {
-  if (!user) {
-    document.getElementById('pLoginNotice').style.display = 'block';
-    document.getElementById('pContent').style.display = 'none';
+  const loginNotice = document.getElementById('pLoginNotice');
+  const pContent = document.getElementById('pContent');
+  const pPublicView = document.getElementById('pPublicView');
+
+  if (viewingProfileUserId && (!user || user.id !== viewingProfileUserId)) {
+    if (loginNotice) loginNotice.style.display = 'none';
+    if (pContent) pContent.style.display = 'none';
+    if (pPublicView) {
+      pPublicView.style.display = 'block';
+      await renderPublicProfilePage(viewingProfileUserId);
+    }
     return;
   }
-  document.getElementById('pLoginNotice').style.display = 'none';
-  document.getElementById('pContent').style.display = 'block';
+
+  viewingProfileUserId = null;
+  if (pPublicView) pPublicView.style.display = 'none';
+
+  if (!user) {
+    if (loginNotice) loginNotice.style.display = 'block';
+    if (pContent) pContent.style.display = 'none';
+    return;
+  }
+  if (loginNotice) loginNotice.style.display = 'none';
+  if (pContent) pContent.style.display = 'block';
   document.querySelector('.prof-name').textContent = user.name;
   window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), user);
   renderProfileMeta(user);
@@ -1323,17 +1621,25 @@ async function updateProfilePage() {
   ]);
 
   savedIds = new Set(saved.places.map((p) => p.id));
-  const approvedT = myTiolas.tiolas.filter((t) => t.status === 'approved');
+  const topLevelTiolas = myTiolas.tiolas.filter((t) => !t.parentId);
+  const approvedT = topLevelTiolas.filter((t) => t.status === 'approved');
   const pending = [...myTiolas.tiolas.filter((t) => t.status === 'pending'), ...myBlogs.blogs.filter((b) => b.status === 'pending')];
 
-  document.getElementById('pRevCnt').textContent = myTiolas.tiolas.length;
+  document.getElementById('pRevCnt').textContent = topLevelTiolas.length;
+  const pLike = document.getElementById('pLikeCnt');
+  if (pLike) {
+    try {
+      const prof = await api('/profiles/' + user.id);
+      pLike.textContent = prof.profile?.likeCount ?? 0;
+    } catch { pLike.textContent = '0'; }
+  }
   document.getElementById('pSavedCnt').textContent = savedIds.size;
   document.getElementById('pCntCnt').textContent = visitedStats.countriesVisited || new Set(approvedT.map((t) => t.countryTag || t.placeId)).size;
   const pVis = document.getElementById('pVisitedCnt');
   if (pVis) pVis.textContent = visitedStats.totalVisited || 0;
 
   renderProfileActivitySummary({
-    tiolas: myTiolas.tiolas.length,
+    tiolas: topLevelTiolas.length,
     saved: savedIds.size,
     visited: visitedStats.totalVisited || 0,
     pending: pending.length,
@@ -1361,19 +1667,32 @@ async function updateProfilePage() {
 
   const tiList = document.getElementById('myTiolaList');
   const tiEmpty = document.getElementById('tiolaListEmpty');
-  if (!myTiolas.tiolas.length) { tiList.innerHTML = ''; tiEmpty.style.display = 'block'; }
-  else { tiEmpty.style.display = 'none'; tiList.innerHTML = myTiolas.tiolas.map((t) => renderTiolaCard(t)).join(''); }
+  if (!topLevelTiolas.length) { tiList.innerHTML = ''; tiEmpty.style.display = 'block'; }
+  else { tiEmpty.style.display = 'none'; tiList.innerHTML = topLevelTiolas.map((t) => renderTiolaCard(t)).join(''); }
 
   const pl = document.getElementById('myPendingList');
   const pe = document.getElementById('pendingEmpty');
   if (!pending.length) { pl.innerHTML = ''; pe.style.display = 'block'; }
   else {
     pe.style.display = 'none';
-    pl.innerHTML = pending.map((item) => `
-      <div class="my-rev-item">
-        <div><div style="font-weight:600">${escapeHtml(item.title || item.text?.slice(0, 40) || 'Tiola')}</div>
-        <span class="status-pending">${t('statusPending')}</span></div>
-      </div>`).join('');
+    pl.innerHTML = pending.map((item) => {
+      const isBlog = !!item.title;
+      const contentType = isBlog ? 'blog' : 'tiola';
+      const label = item.title || item.text?.slice(0, 40) || 'Tiola';
+      const menuBtn = window.TL_REPORTS?.menuButton(contentType, item.id, label, user?.id) || '';
+      const rejectNote = item.status === 'rejected' && item.rejectionReason
+        ? `<div class="tiola-reject-reason"><strong>${t('rejectionReason')}:</strong> ${escapeHtml(item.rejectionReason)}</div>` : '';
+      return `
+      <div class="my-rev-item" data-content-type="${contentType}" data-content-id="${item.id}">
+        <div>
+          <div style="font-weight:600">${escapeHtml(label)}</div>
+          <span class="status-${item.status || 'pending'}">${statusLabel(item.status || 'pending')}</span>
+          ${rejectNote}
+          <div style="font-size:.72rem;color:var(--t3);margin-top:4px">${isBlog ? t('pendingBlog') : t('pendingTiola')}</div>
+        </div>
+        ${menuBtn}
+      </div>`;
+    }).join('');
   }
 
   const sg = document.getElementById('savedGrid');
@@ -1520,7 +1839,7 @@ async function saveAvatarPreset() {
       initAvatarSettings(data.user);
       window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), data.user);
       updateRevForm();
-      window.TL_TOAST?.success(t('avatarSaved'));
+      window.TL_TOAST?.success(data.message || t('avatarPending'));
     } else {
       window.TL_TOAST?.error(t('avatarSaveFailed'));
     }
@@ -1547,7 +1866,7 @@ async function uploadAvatarFile(file) {
       initAvatarSettings(data.user);
       window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), data.user);
       updateRevForm();
-      window.TL_TOAST?.success(t('avatarSaved'));
+      window.TL_TOAST?.success(data.message || t('avatarPending'));
     } else {
       window.TL_TOAST?.error(t('avatarUploadFailed'));
     }
@@ -1792,14 +2111,24 @@ async function applyRouteFromUrl() {
       return;
     }
     if (route.main === 'blog' && route.blogCat) blogCat = route.blogCat;
+    if (route.main === 'profile') {
+      if (route.profileUserId) {
+        viewingProfileUserId = (user && user.id === route.profileUserId) ? null : route.profileUserId;
+      } else {
+        viewingProfileUserId = null;
+      }
+    }
     showMainTab(route.main, true);
     if (route.main === 'explore' && route.explore && route.explore !== 'discover') {
       const el = document.getElementById('et-' + route.explore);
       if (el) showExploreTab(route.explore, el, true);
     }
-    if (route.main === 'profile' && route.profileTab) {
-      const el = document.querySelector(`.ptab[data-ptab="${route.profileTab}"]`);
-      if (el) showPTab(route.profileTab, el, true);
+    if (route.main === 'profile') {
+      await updateProfilePage();
+      if (!viewingProfileUserId && route.profileTab) {
+        const el = document.querySelector(`.ptab[data-ptab="${route.profileTab}"]`);
+        if (el) showPTab(route.profileTab, el, true);
+      }
     }
   } finally {
     restoringRoute = false;

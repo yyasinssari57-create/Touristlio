@@ -9,12 +9,17 @@
 </head>
 <body class="legal-page">
 <nav class="tl-nav"><div class="nav-inner"><a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span></span></a><a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46"/></a></div></nav>
-<article class="legal-wrap">
-  <h1 data-i18n="contactTitle">İletişim</h1>
-  <p data-i18n="contactP1">Sorularınız ve iş birliği teklifleri için:</p>
-  <p><strong><a href="mailto:touristlio.info@gmail.com">touristlio.info@gmail.com</a></strong></p>
-  <p data-i18n="contactP2">KVKK talepleri için: touristlio.info@gmail.com</p>
-  <p><a href="/">← Touristlio</a></p>
+<article class="legal-wrap contact-section" aria-labelledby="contactHeading">
+  <h1 id="contactHeading" data-i18n="contactTitle">İletişim</h1>
+  <div class="contact-card">
+    <p class="contact-badge" data-i18n="contactDevBadge">Geliştirme aşamasında</p>
+    <p class="contact-lead" data-i18n="contactP1">Sitemiz gelişim aşamasındadır. Bu süreçte platformumuzu ve içeriklerimizi sürekli iyileştiriyoruz.</p>
+    <p data-i18n="contactP2">İstek, öneri ve şikayetlerinizi aşağıdaki e-posta adresine yazabilirsiniz:</p>
+    <p class="contact-email-row">
+      <a href="mailto:touristlio.info@gmail.com" class="contact-email-link" data-i18n-aria="contactEmailAria">touristlio.info@gmail.com</a>
+    </p>
+  </div>
+  <p class="contact-back"><a href="/" data-i18n="contactBack">← Ana sayfaya dön</a></p>
 </article>
 <script src="/js/i18n.js"></script>
 <script>window.TL_I18N.apply(localStorage.getItem('tl_lang')||'tr');</script>

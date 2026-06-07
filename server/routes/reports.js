@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../db');
 const { authRequired } = require('../middleware/auth');
+const { reportLimiter } = require('../middleware/rateLimit');
 const { ok, fail } = require('../lib/apiResponse');
 const { sanitizeText } = require('../lib/sanitize');
 
@@ -46,10 +47,15 @@ function mapReport(row) {
     targetLabel: row.target_label,
     targetUserId: row.target_user_id || null,
     targetUserName: row.target_user_name || null,
+    targetContentStatus: row.target_content_status || null,
+    targetContentPreview: row.target_content_preview || null,
     reason: row.reason,
     reasonLabel: REASON_LABELS[row.reason] || row.reason,
     note: row.note,
     status: row.status,
+    actionTaken: row.action_taken || null,
+    resolutionReason: row.resolution_reason || null,
+    contentPrevStatus: row.content_prev_status || null,
     createdAt: row.created_at,
     resolvedBy: row.resolved_by,
     resolvedByName: row.resolved_by_name || null,
@@ -57,11 +63,14 @@ function mapReport(row) {
   };
 }
 
-router.post('/', authRequired, (req, res) => {
+router.post('/', authRequired, reportLimiter, (req, res) => {
   const targetType = String(req.body?.targetType || '').trim();
   const targetId = parsePositiveInt(req.body?.targetId);
   const reason = String(req.body?.reason || '').trim();
-  const note = sanitizeText(req.body?.note, 500) || null;
+  const note = sanitizeText(req.body?.note, 500);
+  if (!note || note.length < 10) {
+    return fail(res, 'Lütfen en az 10 karakterlik bir açıklama yazın', 400);
+  }
 
   if (!VALID_TARGET_TYPES.includes(targetType)) {
     return fail(res, 'Geçersiz hedef türü', 400);

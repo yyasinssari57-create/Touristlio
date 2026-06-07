@@ -8,7 +8,7 @@ const { cacheKey, wrap } = require('../lib/cache');
 const { findNearbyPlaces, findSimilarPlaces } = require('../lib/geo');
 const { getWeather } = require('../services/weatherService');
 const { currencyForCountry, timezoneForCountry, parseEntryFeeTry } = require('../lib/currency');
-const { getLiveData } = require('../services/liveDataService');
+const { getLiveData, getAdminPayload, mergeWeather, mergeLocalInfo, mergeInfoPanel } = require('../services/liveDataService');
 const placesService = require('../modules/places/places.service');
 
 const router = express.Router();
@@ -87,22 +87,26 @@ router.get('/:id', authOptional, async (req, res) => {
   const tz = place.timezone || timezoneForCountry(place.country);
   const entryTry = parseEntryFeeTry(place.entryFee);
   const affiliateEnabled = process.env.AFFILIATE_ENABLED === 'true';
+  const adminPayload = getAdminPayload(place.id);
   const liveData = getLiveData(place.id, row, mapPlace);
+  let mergedPlace = mergeInfoPanel(place, adminPayload, lang);
+  const mergedWeather = mergeWeather(weather, adminPayload);
+  const mergedLocalInfo = mergeLocalInfo({
+    timezone: tz,
+    currency: cur,
+    entryTryEstimate: entryTry,
+    localTime: new Date().toLocaleString(lang === 'en' ? 'en-GB' : 'tr-TR', { timeZone: tz }),
+  }, adminPayload);
   res.json({
     place: {
-      ...place,
-      affiliateHotelUrl: affiliateEnabled ? place.affiliateHotelUrl : null,
-      affiliateBookingUrl: affiliateEnabled ? place.affiliateBookingUrl : null,
+      ...mergedPlace,
+      affiliateHotelUrl: affiliateEnabled ? mergedPlace.affiliateHotelUrl : null,
+      affiliateBookingUrl: affiliateEnabled ? mergedPlace.affiliateBookingUrl : null,
     },
     nearby,
     similar,
-    weather,
-    localInfo: {
-      timezone: tz,
-      currency: cur,
-      entryTryEstimate: entryTry,
-      localTime: new Date().toLocaleString(lang === 'en' ? 'en-GB' : 'tr-TR', { timeZone: tz }),
-    },
+    weather: mergedWeather,
+    localInfo: mergedLocalInfo,
     liveData,
   });
 });

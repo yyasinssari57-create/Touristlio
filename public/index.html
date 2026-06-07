@@ -135,7 +135,9 @@
       <div class="map-filter-bar" id="mapFilterBar">
         <div class="explore-filter-strip" id="mapFilterStrip" role="toolbar" aria-label="Harita filtreleri"></div>
       </div>
-      <div id="exploreMapFull" class="map-full" role="region" aria-label="Destinasyon haritası"></div>
+      <div class="map-wrap">
+        <div id="exploreMapFull" class="map-full" role="region" aria-label="Destinasyon haritası"></div>
+      </div>
     </div>
   </div>
 
@@ -343,7 +345,9 @@
         </div>
       </div>
       <aside class="discover-map-panel" aria-label="Harita">
-        <div id="discoverMap" class="discover-map"></div>
+        <div class="map-wrap map-wrap-sticky">
+          <div id="discoverMap" class="discover-map"></div>
+        </div>
       </aside>
     </div>
   </div>
@@ -455,7 +459,9 @@
             <div class="dr-stars t" id="pdTS"></div>
             <div class="dr-cnt" id="pdTC"></div>
           </div>
-          <div id="pdMap" role="region" aria-label="Yer haritası"></div>
+          <div class="pd-map-wrap" id="pdMapWrap">
+            <div id="pdMap" role="region" aria-label="Yer haritası"></div>
+          </div>
           <div class="aside-card" id="pdWeather"></div>
           <div class="aside-card" id="pdLocalInfo"></div>
           <div class="aside-card" id="pdLiveData"></div>
@@ -491,6 +497,7 @@
       <div class="profile-login-sub" data-i18n="profileLoginSub">Seyahat günlüğünüz, yorumlarınız ve favorileriniz</div>
       <button class="btn bp" onclick="openAuth()" data-i18n="profileLoginBtn">Giriş Yap / Kayıt Ol</button>
     </div>
+    <div id="pPublicView" style="display:none" aria-live="polite"></div>
     <div id="pContent" style="display:none">
       <div class="prof-hd">
         <div class="prof-av" id="profAv">M</div>
@@ -501,6 +508,10 @@
             <div class="prof-stat-card">
               <span class="psi-n" id="pRevCnt">0</span>
               <span class="psi-l" data-i18n="profileStatReviews">Tiola</span>
+            </div>
+            <div class="prof-stat-card">
+              <span class="psi-n" id="pLikeCnt">0</span>
+              <span class="psi-l" data-i18n="profileStatLikes">Beğeni</span>
             </div>
             <div class="prof-stat-card">
               <span class="psi-n" id="pSavedCnt">0</span>
@@ -651,6 +662,7 @@
 <script src="/js/i18n.js"></script>
 <script src="/js/avatars.js"></script>
 <script src="/js/avatar-crop.js"></script>
+<script src="/js/content-delete.js"></script>
 <script src="/js/reports.js"></script>
 <script src="/js/toast.js"></script>
 <script src="/js/skeleton.js"></script>

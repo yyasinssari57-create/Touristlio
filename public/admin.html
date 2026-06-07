@@ -75,14 +75,17 @@
             <input class="ain" id="plAliases" placeholder="Arama alias (virgülle)" aria-label="Arama aliasları"/>
             <input class="ain" id="plLat" placeholder="Enlem" aria-label="Enlem" type="number" step="any"/>
             <input class="ain" id="plLng" placeholder="Boylam" aria-label="Boylam" type="number" step="any"/>
-            <input class="ain full" id="plImage" placeholder="Görsel URL (opsiyonel)" aria-label="Görsel URL"/>
+            <label class="adm-label-sm full" for="plImage">Kapak görseli URL</label>
+            <input class="ain full" id="plImage" placeholder="https://… veya /uploads/… (boş bırakılabilir)" aria-label="Kapak görseli URL"/>
+            <p class="adm-field-hint" id="plImageHint">Unsplash veya harici URL yerine yüklenen görsel kullanmanız önerilir.</p>
+            <div id="plImagePreview" class="photo-preview-row" aria-live="polite"></div>
             <div class="adm-photo-section full">
               <p class="adm-photo-title">Fotoğraflar</p>
-              <p class="adm-photo-sub">Yer için görsel yükleyin veya aşağıdaki URL alanını kullanın.</p>
+              <p class="adm-photo-sub">Görsel seçince 16:9 kırpma penceresi açılır; yer kartında nasıl görüneceğini önizleyebilirsiniz. Unsplash görselleri turuncu etiketle işaretlenir.</p>
               <div id="plPhotoExisting" class="photo-preview-row" aria-live="polite"></div>
               <div class="adm-photo-drop">
                 <label class="adm-photo-btn">
-                  Fotoğraf ekle
+                  <span id="plPhotosBtnLabel">Görseli ayarla</span>
                   <input type="file" id="plPhotos" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yer fotoğrafları yükle"/>
                 </label>
                 <span id="plPhotoCount" class="adm-photo-count" aria-live="polite"></span>
@@ -112,6 +115,21 @@
           <input class="ain" id="ctCountry" placeholder="Ülke *" aria-label="Ülke"/>
           <input class="ain" id="ctNameEn" placeholder="İngilizce ad" aria-label="İngilizce ad"/>
           <input class="ain" id="ctSlug" placeholder="Slug (opsiyonel)" aria-label="Slug"/>
+          <label class="adm-label-sm full" for="ctImage">Kapak görseli URL</label>
+          <input class="ain full" id="ctImage" placeholder="Görsel URL (opsiyonel)" aria-label="Şehir kapak görseli URL"/>
+          <p class="adm-field-hint" id="ctImageHint">Kapak görseli yok — URL girin veya aşağıdan görsel yükleyip kırpın.</p>
+          <div class="adm-photo-section full">
+            <p class="adm-photo-title">Kapak görseli</p>
+            <p class="adm-photo-sub">Görsel seçince 16:9 kırpma penceresi açılır; şehir kartında nasıl görüneceğini ayarlayabilirsiniz.</p>
+            <div id="ctImagePreview" class="photo-preview-row" aria-live="polite"></div>
+            <div class="adm-photo-drop">
+              <label class="adm-photo-btn">
+                <span id="ctImageBtnLabel">Görseli ayarla</span>
+                <input type="file" id="ctImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Şehir görseli yükle"/>
+              </label>
+            </div>
+            <p class="photo-upload-hint">JPEG, PNG, WebP, GIF · dosya başına max 5 MB</p>
+          </div>
           <button class="btn bp bsm full" type="button" id="btnAddCity" onclick="addCity()" aria-label="Şehir ekle">Şehir ekle</button>
           </div>
         </div>
@@ -141,6 +159,20 @@
           <input class="ain" id="catNameEn" placeholder="örn. Museum, Historical" aria-label="İngilizce ad"/>
           <label class="adm-label-sm" for="catIcon">İkon (emoji)</label>
           <input class="ain" id="catIcon" placeholder="🏛️" aria-label="İkon" maxlength="4"/>
+          <label class="adm-label-sm full" for="catImage">Kapak görseli URL</label>
+          <input class="ain full" id="catImage" placeholder="Görsel URL (opsiyonel)" aria-label="Kategori kapak görseli URL"/>
+          <p class="adm-field-hint" id="catImageHint">Kapak görseli yok — URL girin veya aşağıdan görsel yükleyip kırpın.</p>
+          <div class="adm-photo-section full">
+            <p class="adm-photo-title">Kategori görseli</p>
+            <p class="adm-photo-sub">16:9 kırpma; Keşfet kategori kartlarında görünür.</p>
+            <div id="catImagePreview" class="photo-preview-row" aria-live="polite"></div>
+            <div class="adm-photo-drop">
+              <label class="adm-photo-btn">
+                <span id="catImageBtnLabel">Görseli ayarla</span>
+                <input type="file" id="catImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Kategori görseli yükle"/>
+              </label>
+            </div>
+          </div>
           <button class="btn bp bsm full" type="button" id="btnAddCategory" onclick="addCategory()" aria-label="Kategori ekle">Kategori ekle</button>
           </div>
         </div>
@@ -149,8 +181,21 @@
       </section>
 
       <section id="adm-moderation" class="adm-section" style="display:none" role="tabpanel" aria-label="Moderasyon">
-        <h2 class="adm-h2-tight">Bekleyen Tiola'lar</h2>
-        <div id="pendingTiolas"></div>
+        <div class="adm-report-tabs" id="modSubTabs" role="tablist" aria-label="Moderasyon filtreleri">
+          <button type="button" class="on" data-mfilter="pending" onclick="setModFilter('pending',this)">Bekleyen Tiola'lar</button>
+          <button type="button" data-mfilter="approved" onclick="setModFilter('approved',this)">Yayında Tiola'lar</button>
+        </div>
+        <div id="modPendingPanel">
+          <h2 class="adm-h2-tight">Bekleyen Tiola'lar</h2>
+          <div id="pendingTiolas"></div>
+        </div>
+        <div id="modApprovedPanel" style="display:none">
+          <h2 class="adm-h2-tight">Yayında Tiola'lar</h2>
+          <div class="admin-form-row" style="margin-bottom:12px">
+            <input class="ain" id="approvedTiolaSearch" placeholder="Kullanıcı, yer veya metin ara…" oninput="debounceLoadApprovedTiolas()" aria-label="Yayında Tiola ara"/>
+          </div>
+          <div id="approvedTiolas"></div>
+        </div>
       </section>
 
       <section id="adm-reports" class="adm-section" style="display:none" role="tabpanel" aria-label="Şikayetler">
@@ -192,6 +237,10 @@
                     <span class="content-nav-icon" aria-hidden="true">🛡</span>
                     <span class="content-nav-label">Moderatörler</span>
                   </button>
+                  <button type="button" role="tab" aria-selected="false" data-sub="users-profile-pending" onclick="showUsersSub('users-profile-pending',this)">
+                    <span class="content-nav-icon" aria-hidden="true">⏳</span>
+                    <span class="content-nav-label">Profil bekleyenleri</span>
+                  </button>
                 </nav>
               </div>
             </aside>
@@ -205,6 +254,12 @@
               <div id="content-users-blocked" class="content-sub content-panel" data-panel="users-blocked">
                 <h2 class="adm-h2 content-panel-title">Engellenenler</h2>
                 <div id="userListBlocked" aria-live="polite"></div>
+              </div>
+
+              <div id="content-users-profile-pending" class="content-sub content-panel" data-panel="users-profile-pending">
+                <h2 class="adm-h2 content-panel-title">Profil bekleyenleri</h2>
+                <p class="adm-cat-hint">Kullanıcıların avatar, emoji ve profil görseli değişiklik talepleri. Onayladığınızda profilde yayına alınır.</p>
+                <div id="profilePendingList" aria-live="polite"></div>
               </div>
 
               <div id="content-users-moderators" class="content-sub content-panel" data-panel="users-moderators">
@@ -259,6 +314,10 @@
                   <button type="button" role="tab" aria-selected="false" data-sub="blog-pending" onclick="showContentSub('blog-pending',this)">
                     <span class="content-nav-icon" aria-hidden="true">⏳</span>
                     <span class="content-nav-label">Bekleyenler</span>
+                  </button>
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-approved" onclick="showContentSub('blog-approved',this)">
+                    <span class="content-nav-icon" aria-hidden="true">✅</span>
+                    <span class="content-nav-label">Yayında</span>
                   </button>
                 </nav>
               </div>
@@ -345,6 +404,14 @@
           <h2 class="adm-h2-tight content-panel-title">Bekleyen bloglar</h2>
           <div id="pendingBlogs"></div>
         </div>
+
+        <div id="content-blog-approved" class="content-sub content-panel" data-panel="blog-approved">
+          <h2 class="adm-h2-tight content-panel-title">Yayında bloglar</h2>
+          <div class="admin-form-row" style="margin-bottom:12px">
+            <input class="ain" id="approvedBlogSearch" placeholder="Başlık veya yazar ara…" oninput="debounceLoadApprovedBlogs()" aria-label="Yayında blog ara"/>
+          </div>
+          <div id="approvedBlogs"></div>
+        </div>
             </div>
           </div>
         </div>
@@ -385,6 +452,7 @@
   <img id="adminLightboxImg" src="" alt="Tiola fotoğrafı"/>
 </div>
 
+<script src="/js/place-crop.js"></script>
 <script>
 function escapeHtml(s) {
   if (s == null) return '';
@@ -401,6 +469,12 @@ let categoryOptions = [];
 let placesDebounce = null;
 let editExistingPhotos = [];
 let pendingTiolaCache = {};
+let modFilter = 'pending';
+let approvedTiolaSearchTimer;
+let approvedBlogSearchTimer;
+
+const TIOLA_STATUS_LABELS = { approved: 'Yayında', pending: 'Bekliyor', rejected: 'Kaldırıldı', spam: 'Spam' };
+const MOD_STATUS_LABELS = { approved: 'Onaylandı', rejected: 'Reddedildi', pending: 'Bekliyor' };
 
 const ROLE_DEFAULT_PERMS = {
   moderator: [
@@ -508,28 +582,203 @@ function hasAdminPerm(slug) {
   return effectivePermissions(currentUser).includes(slug);
 }
 
-function bindPhotoInput(inputId, previewId, countId) {
+const croppedPhotoStore = {};
+
+function isUnsplashUrl(url) {
+  return /images\.unsplash\.com/i.test(String(url || '').trim());
+}
+
+function isExternalPhotoUrl(url) {
+  const u = String(url || '').trim();
+  return /^https?:\/\//i.test(u) && !/\/uploads\//i.test(u);
+}
+
+function stripExternalFromEditPhotos() {
+  const hadExternal = editExistingPhotos.some(isExternalPhotoUrl);
+  editExistingPhotos = editExistingPhotos.filter((u) => !isExternalPhotoUrl(u));
+  if (!hadExternal) return;
+  renderExistingPhotos('edPhotoExisting', editExistingPhotos);
+  const edImage = document.getElementById('edImage');
+  if (edImage && isExternalPhotoUrl(edImage.value.trim())) {
+    edImage.value = '';
+    updateImageUrlHint('edImage', 'edImageHint');
+  }
+}
+
+function placePhotoBtnLabel(hasExisting) {
+  return hasExisting ? 'Fotoğraf ekle' : 'Görseli ayarla';
+}
+
+function photoUrlInputForFileInput(fileInputId) {
+  const map = {
+    plPhotos: 'plImage',
+    edPhotos: 'edImage',
+    ctImageFile: 'ctImage',
+    edCtImageFile: 'edCtImage',
+    catImageFile: 'catImage',
+    edCatImageFile: 'edCatImage',
+  };
+  const urlId = map[fileInputId];
+  return urlId ? document.getElementById(urlId) : null;
+}
+
+function updatePhotoBtnLabel(fileInputId, labelId) {
+  const labelEl = document.getElementById(labelId);
+  if (!labelEl) return;
+  const urlInput = photoUrlInputForFileInput(fileInputId);
+  const hasUrl = !!(urlInput?.value?.trim());
+  const hasCropped = (croppedPhotoStore[fileInputId] || []).length > 0;
+  const hasExisting = fileInputId === 'edPhotos' ? editExistingPhotos.length > 0 : false;
+  labelEl.textContent = (hasUrl || hasCropped || hasExisting) ? 'Fotoğraf ekle' : 'Görseli ayarla';
+}
+
+function imageSourceBadge(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  if (isUnsplashUrl(u)) return '<span class="adm-img-badge adm-img-badge-ext">Unsplash</span>';
+  if (u.startsWith('/uploads/')) return '<span class="adm-img-badge adm-img-badge-up">Yüklenen</span>';
+  if (/^https?:\/\//i.test(u)) return '<span class="adm-img-badge adm-img-badge-ext">Harici</span>';
+  return '';
+}
+
+function updateImageUrlHint(inputId, hintId, previewId) {
+  const inp = document.getElementById(inputId);
+  const hint = document.getElementById(hintId);
+  if (!inp || !hint) return;
+  const url = inp.value.trim();
+  const badge = imageSourceBadge(url);
+  hint.innerHTML = url
+    ? `${badge} Görseli değiştirmek için URL düzenleyin veya aşağıdan yeni görsel yükleyin.`
+    : 'Kapak görseli yok — URL girin veya aşağıdan görsel yükleyip kırpın.';
+  if (previewId) renderImagePreview(previewId, url);
+  if (inputId === 'plImage') updatePhotoBtnLabel('plPhotos', 'plPhotosBtnLabel');
+  if (inputId === 'ctImage') updatePhotoBtnLabel('ctImageFile', 'ctImageBtnLabel');
+  if (inputId === 'edCtImage') updatePhotoBtnLabel('edCtImageFile', 'edCtImageBtnLabel');
+  if (inputId === 'catImage') updatePhotoBtnLabel('catImageFile', 'catImageBtnLabel');
+  if (inputId === 'edCatImage') updatePhotoBtnLabel('edCatImageFile', 'edCatImageBtnLabel');
+}
+
+async function uploadCroppedMedia(file) {
+  const fd = new FormData();
+  fd.append('image', file);
+  const data = await api('/admin/media', { method: 'POST', body: fd });
+  return data.url;
+}
+
+function renderImagePreview(previewId, url) {
+  const el = document.getElementById(previewId);
+  if (!el) return;
+  if (!url) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = `<div class="photo-thumb place-photo-thumb">${imageSourceBadge(url)}<img src="${escapeHtml(url)}" alt="Kapak önizleme"/></div>`;
+}
+
+function bindCityImageInput(fileInputId, urlInputId, previewId, hintId) {
+  const input = document.getElementById(fileInputId);
+  const urlInput = document.getElementById(urlInputId);
+  if (!input || !urlInput) return;
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    const apply = async (cropped) => {
+      try {
+        const url = await uploadCroppedMedia(cropped);
+        urlInput.value = url;
+        renderImagePreview(previewId, url);
+        if (hintId) updateImageUrlHint(urlInputId, hintId, previewId);
+        const btnMap = { ctImage: 'ctImageBtnLabel', edCtImage: 'edCtImageBtnLabel', catImage: 'catImageBtnLabel', edCatImage: 'edCatImageBtnLabel' };
+        const fileMap = { ctImage: 'ctImageFile', edCtImage: 'edCtImageFile', catImage: 'catImageFile', edCatImage: 'edCatImageFile' };
+        if (btnMap[urlInputId]) updatePhotoBtnLabel(fileMap[urlInputId], btnMap[urlInputId]);
+      } catch (e) {
+        showErr(e.message);
+      }
+    };
+    if (!window.TL_PLACE_CROP) {
+      await apply(file);
+      return;
+    }
+    window.TL_PLACE_CROP.open(file, (cropped) => { apply(cropped); }, () => {});
+  };
+  urlInput.addEventListener('input', () => {
+    if (hintId) updateImageUrlHint(urlInputId, hintId, previewId);
+    else if (previewId) renderImagePreview(previewId, urlInput.value.trim());
+  });
+}
+
+function syncCroppedFiles(inputId) {
+  const input = document.getElementById(inputId);
+  const files = croppedPhotoStore[inputId] || [];
+  if (!input) return;
+  const dt = new DataTransfer();
+  files.forEach((f) => dt.items.add(f));
+  input.files = dt.files;
+}
+
+function renderCroppedPreviews(inputId, previewId, countId) {
+  const preview = document.getElementById(previewId);
+  const files = croppedPhotoStore[inputId] || [];
+  if (!preview) return;
+  preview.innerHTML = '';
+  files.forEach((file, idx) => {
+    const url = URL.createObjectURL(file);
+    const wrap = document.createElement('div');
+    wrap.className = 'photo-thumb place-photo-thumb';
+    wrap.innerHTML = `<img src="${url}" alt="Kırpılmış önizleme ${idx + 1}"/>`;
+    preview.appendChild(wrap);
+  });
+  if (countId) {
+    const countEl = document.getElementById(countId);
+    if (countEl) {
+      countEl.textContent = files.length
+        ? `${files.length} görsel hazır`
+        : '';
+    }
+  }
+  if (inputId === 'plPhotos') updatePhotoBtnLabel('plPhotos', 'plPhotosBtnLabel');
+  if (inputId === 'edPhotos') updatePhotoBtnLabel('edPhotos', 'edPhotosBtnLabel');
+}
+
+function bindPlacePhotoInput(inputId, previewId, countId, append) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
   if (!input || !preview) return;
+  if (!append) croppedPhotoStore[inputId] = [];
+
   input.onchange = () => {
-    preview.innerHTML = '';
-    const files = [...(input.files || [])];
-    files.forEach((file) => {
-      const url = URL.createObjectURL(file);
-      const wrap = document.createElement('div');
-      wrap.className = 'photo-thumb';
-      wrap.innerHTML = `<img src="${url}" alt="Önizleme: ${escapeHtml(file.name)}"/>`;
-      preview.appendChild(wrap);
-    });
-    if (countId) {
-      const countEl = document.getElementById(countId);
-      if (countEl) {
-        countEl.textContent = files.length
-          ? `${files.length} dosya seçildi`
-          : '';
-      }
+    const queue = [...(input.files || [])];
+    input.value = '';
+    if (!queue.length) return;
+    if (!append) {
+      croppedPhotoStore[inputId] = [];
+      preview.innerHTML = '';
     }
+
+    const processNext = () => {
+      if (!queue.length) {
+        syncCroppedFiles(inputId);
+        renderCroppedPreviews(inputId, previewId, countId);
+        return;
+      }
+      const file = queue.shift();
+      if (!window.TL_PLACE_CROP) {
+        croppedPhotoStore[inputId].push(file);
+        processNext();
+        return;
+      }
+      window.TL_PLACE_CROP.open(
+        file,
+        (cropped) => {
+          croppedPhotoStore[inputId].push(cropped);
+          if (inputId === 'edPhotos') stripExternalFromEditPhotos();
+          processNext();
+        },
+        () => processNext()
+      );
+    };
+    processNext();
   };
 }
 
@@ -537,24 +786,39 @@ function renderExistingPhotos(containerId, photos) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = (photos || []).map((url, idx) => `
-    <div class="photo-thumb" data-idx="${idx}">
+    <div class="photo-thumb place-photo-thumb" data-idx="${idx}">
+      ${idx === 0 ? '<span class="adm-img-badge adm-img-badge-cover">Kapak</span>' : ''}
+      ${imageSourceBadge(url)}
       <img src="${escapeHtml(url)}" alt="Mevcut görsel ${idx + 1}"/>
       <button type="button" aria-label="Görseli kaldır" onclick="removeEditPhoto(${idx})">×</button>
     </div>`).join('') || '<p style="font-size:.75rem;color:var(--t3);margin:0">Henüz görsel yok.</p>';
 }
 
 function removeEditPhoto(idx) {
+  const removed = editExistingPhotos[idx];
   editExistingPhotos = editExistingPhotos.filter((_, i) => i !== idx);
   renderExistingPhotos('edPhotoExisting', editExistingPhotos);
+  const edImage = document.getElementById('edImage');
+  if (!edImage) return;
+  const current = edImage.value.trim();
+  if (current && removed && current === removed) {
+    edImage.value = editExistingPhotos[0] || '';
+    updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview');
+  }
+  updatePhotoBtnLabel('edPhotos', 'edPhotosBtnLabel');
 }
 
-async function uploadPlacePhotos(placeId, inputId) {
+async function uploadPlacePhotos(placeId, inputId, opts = {}) {
+  syncCroppedFiles(inputId);
   const input = document.getElementById(inputId);
-  if (!input?.files?.length) return;
+  if (!input?.files?.length) return null;
   const fd = new FormData();
   [...input.files].forEach((f) => fd.append('photos', f));
-  await api('/admin/places/' + placeId + '/photos', { method: 'POST', body: fd });
+  const qs = opts.stripExternal === false ? '' : '?stripExternal=1';
+  const data = await api('/admin/places/' + placeId + '/photos' + qs, { method: 'POST', body: fd });
   input.value = '';
+  croppedPhotoStore[inputId] = [];
+  return data;
 }
 
 async function api(path, opts = {}) {
@@ -706,7 +970,18 @@ function showAdminSection(id, btn) {
 let reportFilter = 'pending';
 
 const REPORT_TYPE_LABELS = { profile: 'Profil', tiola: 'Tiola', blog: 'Blog' };
-const REPORT_STATUS_LABELS = { pending: 'Bekliyor', reviewed: 'İncelendi', dismissed: 'Reddedildi', actioned: 'İşlem yapıldı' };
+const REPORT_STATUS_LABELS = {
+  pending: 'Bekliyor',
+  reviewed: 'İnceleniyor',
+  resolved_dismissed: 'Göz ardı edildi',
+  resolved_removed: 'İçerik kaldırıldı',
+  dismissed: 'Göz ardı edildi',
+  actioned: 'İçerik kaldırıldı',
+};
+const REPORT_ACTION_LABELS = {
+  dismissed: 'Göz ardı',
+  content_removed: 'İçerik kaldırıldı',
+};
 
 function setReportFilter(filter, btn) {
   reportFilter = filter;
@@ -726,7 +1001,10 @@ async function loadReportsList() {
       el.innerHTML = '<p style="color:var(--t3)">Şikayet bulunamadı.</p>';
       return;
     }
-    el.innerHTML = items.map((r) => `
+    el.innerHTML = items.map((r) => {
+      const isPending = r.status === 'pending' || r.status === 'reviewed';
+      const isResolved = ['resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned'].includes(r.status);
+      return `
       <div class="admin-card admin-item">
         <div>
           <span class="adm-report-badge ${escapeHtml(r.status)}">${escapeHtml(REPORT_STATUS_LABELS[r.status] || r.status)}</span>
@@ -735,40 +1013,79 @@ async function loadReportsList() {
           <div style="font-size:.8rem;margin-top:6px;color:var(--t2)">
             <strong>Hedef:</strong> ${escapeHtml(r.targetLabel || '#' + r.targetId)}
             ${r.targetUserName ? ` · <strong>Kullanıcı:</strong> ${escapeHtml(r.targetUserName)}` : ''}
+            ${r.targetContentStatus ? ` · <span class="status-${escapeHtml(r.targetContentStatus)}">${escapeHtml(r.targetContentStatus)}</span>` : ''}
           </div>
           <div style="font-size:.75rem;color:var(--t3);margin-top:4px">
             <strong>Şikayetçi:</strong> ${escapeHtml(r.reporterName)} · ${escapeHtml(r.createdAt || '')}
             ${r.note ? `<br><em>${escapeHtml(r.note)}</em>` : ''}
+            ${r.resolutionReason ? `<br><strong>Karar:</strong> ${escapeHtml(r.resolutionReason)}${r.resolvedByName ? ` (${escapeHtml(r.resolvedByName)})` : ''}` : ''}
           </div>
         </div>
         <div class="admin-actions">
           <button class="btn bo bsm" type="button" onclick="openReportDetail(${r.id})">İncele</button>
-          ${r.status === 'pending' ? `<button class="btn bo bsm" type="button" onclick="resolveReport(${r.id},'dismissed')">Reddet</button>` : ''}
-          ${r.status === 'pending' ? `<button class="btn bp bsm" type="button" onclick="gotoReportModeration('${r.targetType}',${r.targetId},${r.targetUserId || 'null'},${r.id})">İşlem yap</button>` : ''}
-          ${r.targetUserId ? `<button class="btn-no bsm" type="button" onclick="blockReportUser(${r.targetUserId},${r.id})">Engelle kullanıcı</button>` : ''}
+          ${isPending && r.targetType !== 'profile' ? `<button class="btn bp bsm" type="button" onclick="openReportRemoveModal(${r.id})">İçeriği kaldır</button>` : ''}
+          ${isPending ? `<button class="btn bo bsm" type="button" onclick="dismissReport(${r.id})">Göz ardı et</button>` : ''}
+          ${isResolved ? `<button class="btn bo bsm" type="button" onclick="openReportChangeDecision(${r.id})">Kararı değiştir</button>` : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch (e) {
     el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
   }
 }
 
+function reportStatusBadge(status) {
+  return escapeHtml(REPORT_STATUS_LABELS[status] || status);
+}
+
+function reportDetailBody(r) {
+  const preview = r.targetContentPreview
+    ? `<div class="adm-report-preview"><strong>İçerik önizleme:</strong><p>${escapeHtml(r.targetContentPreview)}</p></div>`
+    : '';
+  const profileNote = r.targetType === 'profile'
+    ? '<p style="font-size:.82rem;color:var(--t2)">Profil şikayetleri için kullanıcı engelleme işlemi <strong>Kullanıcılar</strong> sekmesinden yapılır.</p>'
+    : '';
+  const userLink = r.targetUserId
+    ? `<p><strong>İlgili kullanıcı:</strong> <button type="button" class="btn-link" onclick="closeModal();openUserProfile(${r.targetUserId})">${escapeHtml(r.targetUserName || 'Kullanıcı')}</button></p>`
+    : '';
+  return `
+    <p><strong>Tür:</strong> ${escapeHtml(REPORT_TYPE_LABELS[r.targetType] || r.targetType)}</p>
+    <p><strong>Hedef:</strong> ${escapeHtml(r.targetLabel || '#' + r.targetId)}</p>
+    ${userLink}
+    ${r.targetContentStatus ? `<p><strong>İçerik durumu:</strong> <span class="status-${escapeHtml(r.targetContentStatus)}">${escapeHtml(r.targetContentStatus)}</span></p>` : ''}
+    ${preview}
+    <p><strong>Şikayet kategorisi:</strong> ${escapeHtml(r.reasonLabel || r.reason)}</p>
+    ${r.note ? `<p><strong>Şikayetçi notu:</strong> ${escapeHtml(r.note)}</p>` : ''}
+    <p><strong>Şikayetçi:</strong> ${escapeHtml(r.reporterName)}</p>
+    <p><strong>Durum:</strong> ${reportStatusBadge(r.status)}${r.actionTaken ? ` · ${escapeHtml(REPORT_ACTION_LABELS[r.actionTaken] || r.actionTaken)}` : ''}</p>
+    ${r.resolutionReason ? `<p><strong>Çözüm notu:</strong> ${escapeHtml(r.resolutionReason)}</p>` : ''}
+    <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(r.createdAt || '')}${r.resolvedAt ? ' · Çözüldü: ' + escapeHtml(r.resolvedAt) : ''}${r.resolvedByName ? ' · ' + escapeHtml(r.resolvedByName) : ''}</p>
+    ${profileNote}`;
+}
+
+function reportDetailActions(r) {
+  const isPending = r.status === 'pending' || r.status === 'reviewed';
+  const isResolved = ['resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned'].includes(r.status);
+  const actions = [{ label: 'Kapat', onClick: closeModal }];
+  if (isPending && r.targetType !== 'profile') {
+    actions.unshift({ label: 'İçeriği kaldır', primary: true, onClick: () => { closeModal(); openReportRemoveModal(r.id); } });
+    actions.unshift({ label: 'Göz ardı et', onClick: () => dismissReport(r.id, true) });
+  } else if (isPending) {
+    actions.unshift({ label: 'Göz ardı et', primary: true, onClick: () => dismissReport(r.id, true) });
+  }
+  if (isResolved) {
+    actions.unshift({ label: 'Kararı değiştir', onClick: () => { closeModal(); openReportChangeDecision(r.id); } });
+    actions.unshift({ label: 'Yeniden aç', onClick: () => reopenReport(r.id, true) });
+  }
+  return actions;
+}
+
 async function openReportDetail(id) {
   try {
-    const data = await api('/admin/reports?status=all');
-    const r = (data.reports || []).find((x) => x.id === id);
+    const data = await api('/admin/reports/' + id);
+    const r = data.report;
     if (!r) return showErr('Şikayet bulunamadı');
-    openModal('Şikayet detayı', `
-      <p><strong>Tür:</strong> ${escapeHtml(REPORT_TYPE_LABELS[r.targetType] || r.targetType)}</p>
-      <p><strong>Hedef:</strong> ${escapeHtml(r.targetLabel || '#' + r.targetId)}</p>
-      ${r.targetUserName ? `<p><strong>İlgili kullanıcı:</strong> ${escapeHtml(r.targetUserName)}</p>` : ''}
-      <p><strong>Neden:</strong> ${escapeHtml(r.reasonLabel || r.reason)}</p>
-      ${r.note ? `<p><strong>Not:</strong> ${escapeHtml(r.note)}</p>` : ''}
-      <p><strong>Şikayetçi:</strong> ${escapeHtml(r.reporterName)}</p>
-      <p><strong>Durum:</strong> ${escapeHtml(REPORT_STATUS_LABELS[r.status] || r.status)}</p>
-      <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(r.createdAt || '')}${r.resolvedAt ? ' · Çözüldü: ' + escapeHtml(r.resolvedAt) : ''}</p>`,
-      [{ label: 'Kapat', primary: true, onClick: closeModal }]
-    );
+    openModal('Şikayet detayı', reportDetailBody(r), reportDetailActions(r), true);
     if (r.status === 'pending') {
       await api('/admin/reports/' + id, { method: 'PATCH', body: { status: 'reviewed' } });
       loadReportsList();
@@ -776,42 +1093,116 @@ async function openReportDetail(id) {
   } catch (e) { showErr(e.message); }
 }
 
-async function resolveReport(id, status) {
+function openReportRemoveModal(id) {
+  openModal('İçeriği kaldır', `
+    <p style="font-size:.85rem;color:var(--t2);margin:0 0 12px">Şikayet sonucu içerik yayından kaldırılacak. Kullanıcıya bu neden gösterilecek ve bildirim gönderilecek.</p>
+    <label class="adm-label-sm full" for="reportRemoveReason">Kaldırma nedeni *</label>
+    <textarea class="ain full adm-textarea-sm" id="reportRemoveReason" rows="4" placeholder="Örn: Kurallara aykırı içerik, spam, telif ihlali…" aria-required="true"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'İçeriği kaldır', primary: true, onClick: () => submitReportRemove(id) },
+    ]
+  );
+  setTimeout(() => document.getElementById('reportRemoveReason')?.focus(), 50);
+}
+
+async function submitReportRemove(id) {
+  const reason = document.getElementById('reportRemoveReason')?.value?.trim();
+  if (!reason) { showErr('Kaldırma nedeni gerekli'); return; }
+  const btn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(btn, true, 'Kaldırılıyor…');
   try {
-    await api('/admin/reports/' + id, { method: 'PATCH', body: { status } });
+    await api('/admin/reports/' + id + '/resolve-remove', { method: 'POST', body: { reason } });
+    closeModal();
+    await loadReportsList();
+  } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
+async function dismissReport(id, fromModal) {
+  if (!fromModal && !confirm('Bu şikayeti göz ardı etmek istediğinize emin misiniz? İçerikte işlem yapılmayacak.')) return;
+  try {
+    await api('/admin/reports/' + id + '/dismiss', { method: 'POST', body: {} });
+    if (fromModal) closeModal();
     await loadReportsList();
   } catch (e) { showErr(e.message); }
 }
 
-function gotoReportModeration(type, targetId, userId, reportId) {
-  if (type === 'tiola') {
-    const btn = document.querySelector('#adminTabs button[data-section="moderation"]');
-    showAdminSection('moderation', btn);
-    if (pendingTiolaCache[targetId]) openTiolaPreview(targetId);
-    else showErr('Tiola moderasyon kuyruğunda değil; listeden arayın.');
-  } else if (type === 'blog') {
-    const btn = document.querySelector('#adminTabs button[data-section="content"]');
-    showAdminSection('content', btn);
-    const subBtn = document.querySelector('#contentSubTabs button[data-sub="blog-posts"]');
-    showContentSub('blog-posts', subBtn);
-    openBlogEdit(targetId).catch(() => showErr('Blog bulunamadı'));
-  } else if (type === 'profile' && userId) {
-    const btn = document.querySelector('#adminTabs button[data-section="users"]');
-    showAdminSection('users', btn);
-    const subBtn = document.querySelector('#usersSubTabs button[data-sub="users-all"]');
-    showUsersSub('users-all', subBtn);
+async function reopenReport(id, fromModal) {
+  if (!fromModal && !confirm('Şikayet yeniden açılacak. Önceki karar geri alınabilir (içerik kaldırıldıysa geri yüklenir).')) return;
+  try {
+    await api('/admin/reports/' + id + '/reopen', { method: 'POST', body: {} });
+    if (fromModal) closeModal();
+    await loadReportsList();
+  } catch (e) { showErr(e.message); }
+}
+
+async function openReportChangeDecision(id) {
+  try {
+    const data = await api('/admin/reports/' + id);
+    const r = data.report;
+    if (!r) return showErr('Şikayet bulunamadı');
+    const current = r.actionTaken || (['resolved_removed', 'actioned'].includes(r.status) ? 'content_removed' : 'dismissed');
+    openModal('Kararı değiştir', `
+      <p style="font-size:.85rem;color:var(--t2)">Mevcut karar: <strong>${escapeHtml(REPORT_ACTION_LABELS[current] || REPORT_STATUS_LABELS[r.status] || r.status)}</strong></p>
+      <label class="adm-label-sm full" for="reportNewDecision">Yeni karar</label>
+      <select class="ain full" id="reportNewDecision" onchange="toggleReportChangeReason()">
+        <option value="dismiss" ${current === 'dismissed' ? 'selected' : ''}>Göz ardı et / İşlem yok</option>
+        <option value="remove" ${current === 'content_removed' ? 'selected' : ''}>İçeriği kaldır</option>
+      </select>
+      <div id="reportChangeReasonWrap" style="margin-top:12px;display:${current === 'content_removed' ? 'block' : 'none'}">
+        <label class="adm-label-sm full" for="reportChangeReason">Kaldırma nedeni *</label>
+        <textarea class="ain full adm-textarea-sm" id="reportChangeReason" rows="3">${escapeHtml(r.resolutionReason || '')}</textarea>
+      </div>
+      ${r.targetType === 'profile' ? '<p style="font-size:.8rem;color:#b45309;margin-top:10px">Profil şikayetlerinde yalnızca göz ardı seçilebilir.</p>' : ''}`,
+      [
+        { label: 'İptal', onClick: closeModal },
+        { label: 'Kararı güncelle', primary: true, onClick: () => submitReportChangeDecision(id, r.targetType) },
+        { label: 'Yeniden aç', onClick: () => reopenReport(id, true) },
+      ],
+      true
+    );
+    if (r.targetType === 'profile') {
+      const sel = document.getElementById('reportNewDecision');
+      if (sel) { sel.value = 'dismiss'; sel.disabled = true; }
+      document.getElementById('reportChangeReasonWrap').style.display = 'none';
+    }
+  } catch (e) { showErr(e.message); }
+}
+
+function toggleReportChangeReason() {
+  const sel = document.getElementById('reportNewDecision');
+  const wrap = document.getElementById('reportChangeReasonWrap');
+  if (wrap && sel) wrap.style.display = sel.value === 'remove' ? 'block' : 'none';
+}
+
+async function submitReportChangeDecision(id, targetType) {
+  const decision = document.getElementById('reportNewDecision')?.value;
+  const reason = document.getElementById('reportChangeReason')?.value?.trim();
+  if (decision === 'remove' && targetType !== 'profile' && !reason) {
+    showErr('Kaldırma nedeni gerekli');
+    return;
   }
-  if (reportId) resolveReport(reportId, 'actioned').catch(() => {});
-}
-
-async function blockReportUser(userId, reportId) {
-  if (!confirm('Bu kullanıcıyı engellemek istediğinize emin misiniz?')) return;
+  const btn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(btn, true, 'Güncelleniyor…');
   try {
-    await api('/admin/users/' + userId + '/block', { method: 'POST', body: { blocked: true } });
-    if (reportId) await api('/admin/reports/' + reportId, { method: 'PATCH', body: { status: 'actioned' } });
-    await loadDashboard();
+    await api('/admin/reports/' + id + '/change-decision', {
+      method: 'POST',
+      body: { decision, reason: reason || undefined },
+    });
+    closeModal();
     await loadReportsList();
   } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
+function formatReportHistoryItem(r, received) {
+  const status = escapeHtml(REPORT_STATUS_LABELS[r.status] || r.status);
+  const action = r.actionTaken ? ` · ${escapeHtml(REPORT_ACTION_LABELS[r.actionTaken] || r.actionTaken)}` : '';
+  const resolved = r.resolvedAt ? ` · ${escapeHtml(r.resolvedAt)}` : '';
+  const who = received && r.reporterName ? `${escapeHtml(r.reporterName)} · ` : '';
+  const resolution = r.resolutionReason ? ` <em>(${escapeHtml(r.resolutionReason)})</em>` : '';
+  return `<li>${who}${escapeHtml(REPORT_TYPE_LABELS[r.targetType] || r.targetType)} #${r.targetId} · ${escapeHtml(r.reasonLabel || r.reason)} · ${status}${action}${resolved}${r.note ? `: ${escapeHtml(r.note)}` : ''}${resolution}</li>`;
 }
 
 function isContentSidebarCollapsed() {
@@ -874,6 +1265,7 @@ function showContentSub(id, btn, skipScroll) {
     if (id === 'blog-cats') loadBlogCategoriesList();
     if (id === 'blog-posts') { loadBlogCategorySelects(); loadBlogPostsList(); }
     if (id === 'blog-pending') loadPendingBlogs();
+    if (id === 'blog-approved') loadApprovedBlogs();
     return;
   }
 
@@ -890,6 +1282,7 @@ function showContentSub(id, btn, skipScroll) {
   if (id === 'blog-cats') loadBlogCategoriesList();
   if (id === 'blog-posts') { loadBlogCategorySelects(); loadBlogPostsList(); }
   if (id === 'blog-pending') loadPendingBlogs();
+  if (id === 'blog-approved') loadApprovedBlogs();
 }
 
 async function loadContentSection() {
@@ -952,8 +1345,155 @@ function renderUserCard(u) {
         · <span class="adm-email-badge ${u.emailVerified ? 'ok' : 'pending'}">${u.emailVerified ? 'E-posta doğrulandı' : 'E-posta doğrulanmadı'}</span>
         ${u.isBlocked ? ' · <span class="adm-spam-badge">Engelli</span>' : ''}
       </div>
-      ${blockAction ? `<div class="admin-actions">${blockAction}</div>` : ''}
+      <div class="admin-actions">
+        <button class="btn-edit bsm" type="button" onclick="openUserProfile(${u.id})">Profili gör</button>
+        ${blockAction}
+      </div>
     </div>`;
+}
+
+const PROFILE_CHANGE_LABELS = {
+  avatar_preset: 'Avatar karakteri',
+  avatar_photo: 'Profil fotoğrafı',
+  display_name: 'Görünen ad',
+};
+
+async function openUserProfile(userId) {
+  try {
+    const data = await api('/admin/users/' + userId);
+    const u = data.user;
+    const stats = u.stats || {};
+    const avHtml = u.avatarUrl
+      ? `<img src="${escapeHtml(u.avatarUrl)}" alt="" class="adm-user-avatar-img"/>`
+      : u.avatarPreset
+        ? `<span class="adm-user-avatar-emoji">${escapeHtml(u.avatarPreset)}</span>`
+        : `<span class="adm-user-avatar-initial" style="background:${escapeHtml(u.avatarColor || '#0ea5e9')}">${escapeHtml((u.name || '?')[0])}</span>`;
+    const statGrid = (label, val) => `<div class="adm-user-stat"><strong>${val ?? 0}</strong><span>${label}</span></div>`;
+    const listOrEmpty = (items, renderFn, emptyMsg) => items?.length
+      ? `<ul class="adm-user-list">${items.map(renderFn).join('')}</ul>`
+      : `<p class="adm-user-empty">${emptyMsg}</p>`;
+    openModal('Kullanıcı profili: ' + u.name, `
+      <div class="admin-user-profile adm-user-detail">
+        <div class="adm-user-detail-head">
+          <div class="adm-user-avatar">${avHtml}</div>
+          <div class="adm-user-detail-info">
+            <h3 class="adm-user-detail-name">${escapeHtml(u.name)}</h3>
+            <p class="adm-user-detail-email">${escapeHtml(u.email)}</p>
+            <div class="adm-user-badges">
+              <span class="adm-user-badge">${escapeHtml(ROLE_LABELS[u.role] || u.role)}</span>
+              <span class="adm-email-badge ${u.emailVerified ? 'ok' : 'pending'}">${u.emailVerified ? 'E-posta doğrulandı' : 'E-posta doğrulanmadı'}</span>
+              ${u.isBlocked ? '<span class="adm-spam-badge">Engelli</span>' : ''}
+              ${u.riskScore ? `<span class="adm-user-badge risk">Risk: ${u.riskScore}</span>` : ''}
+            </div>
+            <p class="adm-user-detail-meta">Kayıt: ${escapeHtml(u.createdAt || '—')}${u.lockedUntil ? ` · Kilit: ${escapeHtml(u.lockedUntil)}` : ''}${u.failedLoginCount ? ` · Başarısız giriş: ${u.failedLoginCount}` : ''}</p>
+          </div>
+        </div>
+        <div class="adm-user-stat-grid">
+          ${statGrid('Onaylı Tiola', stats.tiolaApproved)}
+          ${statGrid('Blog', stats.blogCount)}
+          ${statGrid('Beğeni', u.likeCount)}
+          ${statGrid('Bekleyen Tiola', stats.tiolaPending)}
+          ${statGrid('Reddedilen Tiola', stats.tiolaRejected)}
+          ${statGrid('Yayında Blog', stats.blogApproved)}
+          ${statGrid('Şikayet (yaptı)', stats.reportsMade)}
+          ${statGrid('Şikayet (aldı)', stats.reportsAgainst)}
+          ${statGrid('Kaydedilen yer', stats.savedPlaces)}
+          ${statGrid('Ziyaret', stats.visitedPlaces)}
+        </div>
+        ${(u.pendingProfileChanges || []).length ? `
+          <section class="adm-user-section">
+            <h4>Bekleyen profil değişiklikleri</h4>
+            ${listOrEmpty(u.pendingProfileChanges, (r) => `<li><strong>${escapeHtml(PROFILE_CHANGE_LABELS[r.changeType] || r.changeType)}</strong> · ${escapeHtml(r.createdAt || '')}</li>`, '')}
+          </section>` : ''}
+        <section class="adm-user-section">
+          <h4>Son Tiola'lar</h4>
+          ${listOrEmpty(u.recentTiolas, (t) => `<li><span class="status-${escapeHtml(t.status)}">${escapeHtml(TIOLA_STATUS_LABELS[t.status] || t.status)}</span> ${escapeHtml(t.text || '')}${t.placeName ? ` · ${escapeHtml(t.placeName)}` : ''}${t.rejectionReason ? ` <em>(${escapeHtml(t.rejectionReason)})</em>` : ''}</li>`, 'Tiola yok.')}
+        </section>
+        <section class="adm-user-section">
+          <h4>Son bloglar</h4>
+          ${listOrEmpty(u.recentBlogs, (b) => `<li><span class="status-${escapeHtml(b.status)}">${escapeHtml(BLOG_STATUS_LABELS[b.status] || b.status)}</span> ${escapeHtml(b.title || '')}${b.rejectionReason ? ` <em>(${escapeHtml(b.rejectionReason)})</em>` : ''}</li>`, 'Blog yok.')}
+        </section>
+        <section class="adm-user-section">
+          <h4>Şikayet geçmişi — yaptığı</h4>
+          ${listOrEmpty(u.reportsMade, (r) => formatReportHistoryItem(r, false), 'Şikayet yok.')}
+        </section>
+        <section class="adm-user-section">
+          <h4>Şikayet geçmişi — aldığı</h4>
+          ${listOrEmpty(u.reportsReceived, (r) => formatReportHistoryItem(r, true), 'Şikayet yok.')}
+        </section>
+        <section class="adm-user-section">
+          <h4>Moderasyon geçmişi</h4>
+          ${listOrEmpty(u.moderationHistory, (m) => `<li>${escapeHtml(m.kind === 'blog' ? 'Blog' : 'Tiola')} · ${escapeHtml(m.label || '')} · ${escapeHtml(MOD_STATUS_LABELS[m.status] || m.status)}${m.moderatorName ? ` · ${escapeHtml(m.moderatorName)}` : ''}${m.rejectionReason ? `: ${escapeHtml(m.rejectionReason)}` : ''}</li>`, 'Kayıt yok.')}
+        </section>
+      </div>`,
+      [
+        { label: u.isBlocked ? 'Engeli kaldır' : 'Engelle', onClick: () => { closeModal(); toggleUserBlock(userId, !u.isBlocked); } },
+        { label: 'Kapat', primary: true, onClick: closeModal },
+      ],
+      true
+    );
+  } catch (e) { showErr(e.message); }
+}
+
+async function loadProfilePendingList() {
+  const el = document.getElementById('profilePendingList');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const data = await api('/admin/profile-changes');
+    const rows = data.requests || [];
+    if (!rows.length) {
+      el.innerHTML = '<p style="color:var(--t3)">Bekleyen profil talebi yok.</p>';
+      return;
+    }
+    el.innerHTML = rows.map((r) => {
+      const preview = r.changeType === 'avatar_photo' && r.payload?.avatarUrl
+        ? `<img src="${escapeHtml(r.payload.avatarUrl)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:50%"/>`
+        : r.changeType === 'avatar_preset'
+          ? `<span style="font-size:1.4rem">${escapeHtml(r.payload?.avatarPreset || '')}</span>`
+          : escapeHtml(JSON.stringify(r.payload || {}));
+      return `<div class="admin-card admin-item" style="margin-bottom:10px">
+        <div>
+          <strong>${escapeHtml(r.userName)}</strong> · ${escapeHtml(r.userEmail || '')}
+          <div style="font-size:.78rem;color:var(--t2);margin-top:4px">${PROFILE_CHANGE_LABELS[r.changeType] || r.changeType} · ${escapeHtml(r.createdAt || '')}</div>
+          <div style="margin-top:8px">${preview}</div>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-ok bsm" type="button" onclick="approveProfileChange(${r.id})">Onayla</button>
+          <button class="btn-no bsm" type="button" onclick="rejectProfileChange(${r.id})">Reddet</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function approveProfileChange(id) {
+  try {
+    await api('/admin/profile-changes/' + id + '/approve', { method: 'POST' });
+    await loadProfilePendingList();
+  } catch (e) { showErr(e.message); }
+}
+
+function rejectProfileChange(id) {
+  openModal('Profil talebini reddet', `
+    <label class="adm-label-sm full" for="profileRejectReason">Red nedeni</label>
+    <textarea class="ain full adm-textarea-sm" id="profileRejectReason" rows="3" placeholder="Kullanıcıya gösterilecek kısa açıklama"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Reddet', primary: true, onClick: () => submitRejectProfileChange(id) },
+    ]
+  );
+}
+
+async function submitRejectProfileChange(id) {
+  const reason = document.getElementById('profileRejectReason')?.value?.trim() || 'Reddedildi';
+  try {
+    await api('/admin/profile-changes/' + id + '/reject', { method: 'POST', body: { reason } });
+    closeModal();
+    await loadProfilePendingList();
+  } catch (e) { showErr(e.message); }
 }
 
 function renderUserPanel(users, elId, emptyMsg) {
@@ -996,6 +1536,7 @@ function showUsersSub(id, btn, skipScroll) {
   });
   if (btn) { btn.classList.add('on'); btn.setAttribute('aria-selected', 'true'); }
   renderAllUserPanels();
+  if (id === 'users-profile-pending') loadProfilePendingList();
 }
 
 async function loadUsersLists() {
@@ -1031,6 +1572,7 @@ async function loadUsersSection() {
     } catch (_) {}
   }
   await loadUsersLists();
+  await loadProfilePendingList();
   applyUsersLayoutMode();
 }
 
@@ -1217,6 +1759,7 @@ async function loadBlogPostsList() {
         </div>
         <div class="admin-actions">
           <button class="btn-edit" type="button" onclick="openBlogEdit(${b.id})">Düzenle</button>
+          ${b.status === 'approved' ? `<button class="btn-no" type="button" onclick="removeBlog(${b.id})">Kaldır</button>` : ''}
           <button class="btn-no" type="button" onclick="deleteBlogPost(${b.id})">Sil</button>
         </div>
       </div>`).join('') : '<p style="color:var(--t3)">Yazı bulunamadı.</p>';
@@ -1344,7 +1887,11 @@ async function showPanel(user) {
   document.getElementById('adminPanel').style.display = 'block';
   document.getElementById('admUser').textContent = user.name + ' (' + user.role + ')';
   applyAdminRbac(user);
-  bindPhotoInput('plPhotos', 'plPhotoPreview', 'plPhotoCount');
+  bindPlacePhotoInput('plPhotos', 'plPhotoPreview', 'plPhotoCount');
+  bindCityImageInput('ctImageFile', 'ctImage', 'ctImagePreview', 'ctImageHint');
+  bindCityImageInput('catImageFile', 'catImage', 'catImagePreview', 'catImageHint');
+  document.getElementById('plImage')?.addEventListener('input', () => updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview'));
+  updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview');
   await loadCategoryOptions();
   await refresh();
 }
@@ -1401,20 +1948,20 @@ async function loadPlacesList() {
 
 async function openPlaceEdit(id) {
   try {
-    const data = await api('/admin/places/' + id);
+    const [data, infoData] = await Promise.all([
+      api('/admin/places/' + id),
+      api('/admin/places/' + id + '/info-boxes').catch(() => ({ infoBoxes: {} })),
+    ]);
     const p = data.place;
+    const ib = infoData.infoBoxes || {};
     editExistingPhotos = [...(p.photos || [])];
+    const hasExistingPhoto = editExistingPhotos.length > 0 || !!p.imageUrl;
     const catOpts = categoryOptions.map((c) =>
       `<option value="${escapeHtml(c.slug)}" ${c.slug === p.category ? 'selected' : ''}>${escapeHtml(c.nameTr)} — kod: ${escapeHtml(c.slug)}</option>`
     ).join('');
     openModal('Yer düzenle: ' + p.name, `
       <div class="admin-form">
-        <input class="ain" id="edName" value="${escapeHtml(p.name)}" aria-label="Ad"/>
-        <input class="ain" id="edCountry" value="${escapeHtml(p.country)}" aria-label="Ülke"/>
-        <input class="ain" id="edCity" value="${escapeHtml(p.city)}" aria-label="Şehir"/>
-        <label class="adm-label-sm full" for="edCat">Kategori (kod / slug)</label>
-        <select class="ain full" id="edCat" aria-label="Kategori kodu">${catOpts}</select>
-        <p class="adm-field-hint">Türkçe ad değil; yerin kategori kodu seçilir (ör. <code>museum</code>).</p>
+        <input class="ain full" id="edName" value="${escapeHtml(p.name)}" aria-label="Ad"/>
         <label class="adm-label-sm" for="edStatus">Yayın durumu</label>
         <select class="ain" id="edStatus" aria-label="Yayın durumu">
           <option value="published" ${(p.status || 'published') === 'published' ? 'selected' : ''}>Yayında</option>
@@ -1423,15 +1970,18 @@ async function openPlaceEdit(id) {
         </select>
         <input class="ain" id="edLat" value="${p.lat ?? ''}" aria-label="Enlem" type="number" step="any"/>
         <input class="ain" id="edLng" value="${p.lng ?? ''}" aria-label="Boylam" type="number" step="any"/>
-        <input class="ain full" id="edImage" value="${escapeHtml(p.imageUrl || '')}" aria-label="Görsel URL (opsiyonel)"/>
+        <label class="adm-label-sm full" for="edImage">Kapak görseli URL</label>
+        <input class="ain full" id="edImage" value="${escapeHtml(p.imageUrl || '')}" aria-label="Kapak görseli URL"/>
+        <p class="adm-field-hint" id="edImageHint">${imageSourceBadge(p.imageUrl)} Görseli değiştirmek için URL düzenleyin veya yeni görsel yükleyin.</p>
+        <div id="edImagePreview" class="photo-preview-row" aria-live="polite"></div>
         <div class="adm-photo-section full">
           <p class="adm-photo-title">Fotoğraflar</p>
-          <p class="adm-photo-sub">Mevcut görselleri kaldırabilir veya yeni fotoğraf ekleyebilirsiniz.</p>
+          <p class="adm-photo-sub">Mevcut görselleri kaldırabilir veya yeni görsel ekleyebilirsiniz (16:9 kırpma). Unsplash görselleri turuncu etiketle işaretlenir.</p>
           <p class="adm-label-sm">Mevcut görseller</p>
           <div id="edPhotoExisting" class="photo-preview-row"></div>
           <div class="adm-photo-drop">
             <label class="adm-photo-btn">
-              Fotoğraf ekle
+              <span id="edPhotosBtnLabel">${placePhotoBtnLabel(hasExistingPhoto)}</span>
               <input type="file" id="edPhotos" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-label="Yeni fotoğraflar yükle"/>
             </label>
             <span id="edPhotoCount" class="adm-photo-count" aria-live="polite"></span>
@@ -1440,6 +1990,58 @@ async function openPlaceEdit(id) {
           <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP, GIF · dosya başına max 5 MB</p>
         </div>
         <textarea class="ain full" id="edDesc" aria-label="Açıklama" style="height:60px">${escapeHtml(p.description || '')}</textarea>
+
+        <p class="adm-photo-title full" style="margin-top:8px">Yan panel kartları (destinasyon sayfası)</p>
+        <p class="adm-field-hint full">Boş bırakılan alanlar otomatik veya API verisini kullanır. Doldurulan alanlar yönetici değerini gösterir.</p>
+
+        <div class="adm-side-card">
+          <p class="adm-side-card-title">🌤️ Hava Durumu</p>
+          <p class="adm-side-card-hint">Durum metni ve sıcaklık (°C)</p>
+          <label class="adm-label-sm" for="edWeatherLabel">Durum</label>
+          <input class="ain" id="edWeatherLabel" value="${escapeHtml(ib.weatherLabel || '')}" placeholder="Kapalı" aria-label="Hava durumu"/>
+          <label class="adm-label-sm" for="edWeatherTemp">Sıcaklık (°C)</label>
+          <input class="ain" id="edWeatherTemp" type="number" step="0.1" value="${ib.weatherTempC ?? ''}" placeholder="22.3" aria-label="Sıcaklık"/>
+        </div>
+
+        <div class="adm-side-card">
+          <p class="adm-side-card-title">🕐 Yerel Bilgi</p>
+          <p class="adm-side-card-hint">Yerel saat ve para birimi gösterimi</p>
+          <label class="adm-label-sm full" for="edLocalTime">Yerel saat</label>
+          <input class="ain full" id="edLocalTime" value="${escapeHtml(ib.localTime || '')}" placeholder="07.06.2026 14:30:00" aria-label="Yerel saat"/>
+          <label class="adm-label-sm" for="edCurrencyCode">Para birimi kodu</label>
+          <input class="ain" id="edCurrencyCode" value="${escapeHtml(ib.currencyCode || '')}" placeholder="TRY" aria-label="Para birimi kodu"/>
+          <label class="adm-label-sm" for="edCurrencySymbol">Sembol</label>
+          <input class="ain" id="edCurrencySymbol" value="${escapeHtml(ib.currencySymbol || '')}" placeholder="₺" aria-label="Para birimi sembolü"/>
+        </div>
+
+        <div class="adm-side-card">
+          <p class="adm-side-card-title">💰 Günlük Bütçe Tahmini</p>
+          <p class="adm-side-card-hint">Ekonomik, orta ve otel ortalaması (₺)</p>
+          <label class="adm-label-sm" for="edBudgetLow">Ekonomik (₺/gün)</label>
+          <input class="ain" id="edBudgetLow" type="number" min="0" value="${ib.budgetLow || ''}" placeholder="350" aria-label="Ekonomik bütçe"/>
+          <label class="adm-label-sm" for="edBudgetMid">Orta (₺/gün)</label>
+          <input class="ain" id="edBudgetMid" type="number" min="0" value="${ib.budgetMid || ''}" placeholder="900" aria-label="Orta bütçe"/>
+          <label class="adm-label-sm full" for="edHotelAvg">Otel ortalaması (₺/gece)</label>
+          <input class="ain full" id="edHotelAvg" type="number" min="0" value="${ib.hotelAvg || ''}" placeholder="1800" aria-label="Otel ortalaması"/>
+        </div>
+
+        <div class="adm-side-card">
+          <p class="adm-side-card-title">📋 Bilgiler</p>
+          <p class="adm-side-card-hint">Ülke, şehir, kategori, giriş ücreti ve en iyi dönem</p>
+          <label class="adm-label-sm" for="edCountry">Ülke</label>
+          <input class="ain" id="edCountry" value="${escapeHtml(ib.infoCountry || p.country || '')}" aria-label="Ülke"/>
+          <label class="adm-label-sm" for="edCity">Şehir</label>
+          <input class="ain" id="edCity" value="${escapeHtml(ib.infoCity || p.city || '')}" aria-label="Şehir"/>
+          <label class="adm-label-sm full" for="edCat">Kategori (kod / slug)</label>
+          <select class="ain full" id="edCat" aria-label="Kategori kodu">${catOpts}</select>
+          <p class="adm-field-hint">Türkçe ad değil; yerin kategori kodu seçilir (ör. <code>museum</code>).</p>
+          <label class="adm-label-sm full" for="edCategoryLabel">Kategori gösterim metni (isteğe bağlı)</label>
+          <input class="ain full" id="edCategoryLabel" value="${escapeHtml(ib.infoCategoryLabel || '')}" placeholder="Boş bırakılırsa kategori adı kullanılır" aria-label="Kategori gösterim metni"/>
+          <label class="adm-label-sm" for="edEntryFee">Giriş ücreti</label>
+          <input class="ain" id="edEntryFee" value="${escapeHtml(ib.infoEntryFee || p.entryFee || '')}" placeholder="Ücretsiz veya 350 ₺" aria-label="Giriş ücreti"/>
+          <label class="adm-label-sm" for="edBestTime">En iyi dönem</label>
+          <input class="ain" id="edBestTime" value="${escapeHtml(ib.infoBestTime || p.bestTime || '')}" placeholder="Sabah erken" aria-label="En iyi dönem"/>
+        </div>
       </div>
       ${p.tiolaCount ? `<p style="font-size:.8rem;color:#b45309">⚠ Bu yerde ${p.tiolaCount} Tiola kaydı var.</p>` : ''}`,
       [
@@ -1449,7 +2051,9 @@ async function openPlaceEdit(id) {
       true
     );
     renderExistingPhotos('edPhotoExisting', editExistingPhotos);
-    bindPhotoInput('edPhotos', 'edPhotoNewPreview', 'edPhotoCount');
+    bindPlacePhotoInput('edPhotos', 'edPhotoNewPreview', 'edPhotoCount');
+    document.getElementById('edImage')?.addEventListener('input', () => updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview'));
+    updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview');
   } catch (e) { showErr(e.message); }
 }
 
@@ -1457,8 +2061,14 @@ async function savePlaceEdit(id) {
   const saveBtn = document.querySelector('#modalActions .btn.bp');
   setBtnLoading(saveBtn, true, 'Kaydediliyor…');
   try {
-    const photos = editExistingPhotos;
-    const imageUrl = document.getElementById('edImage').value;
+    syncCroppedFiles('edPhotos');
+    const willUpload = (document.getElementById('edPhotos')?.files?.length || 0) > 0;
+    let photos = [...editExistingPhotos];
+    let imageUrl = document.getElementById('edImage').value.trim();
+    if (willUpload) {
+      photos = photos.filter((u) => !isExternalPhotoUrl(u));
+      if (isExternalPhotoUrl(imageUrl)) imageUrl = '';
+    }
     await api('/admin/places/' + id, {
       method: 'PUT',
       body: {
@@ -1472,11 +2082,32 @@ async function savePlaceEdit(id) {
         imageUrl: imageUrl || (photos?.[0] || undefined),
         photos,
         description: document.getElementById('edDesc').value,
+        entryFee: document.getElementById('edEntryFee').value,
+        bestTime: document.getElementById('edBestTime').value,
       },
     });
     await uploadPlacePhotos(id, 'edPhotos');
+    await api('/admin/places/' + id + '/info-boxes', {
+      method: 'PUT',
+      body: {
+        weatherLabel: document.getElementById('edWeatherLabel')?.value,
+        weatherTempC: document.getElementById('edWeatherTemp')?.value,
+        localTime: document.getElementById('edLocalTime')?.value,
+        currencyCode: document.getElementById('edCurrencyCode')?.value,
+        currencySymbol: document.getElementById('edCurrencySymbol')?.value,
+        budgetLow: document.getElementById('edBudgetLow')?.value,
+        budgetMid: document.getElementById('edBudgetMid')?.value,
+        hotelAvg: document.getElementById('edHotelAvg')?.value,
+        infoCountry: document.getElementById('edCountry')?.value,
+        infoCity: document.getElementById('edCity')?.value,
+        infoCategoryLabel: document.getElementById('edCategoryLabel')?.value,
+        infoEntryFee: document.getElementById('edEntryFee')?.value,
+        infoBestTime: document.getElementById('edBestTime')?.value,
+      },
+    });
     closeModal();
     editExistingPhotos = [];
+    croppedPhotoStore.edPhotos = [];
     await loadPlacesList();
     await refresh();
   } catch (e) { showErr(e.message); }
@@ -1541,12 +2172,15 @@ async function addPlace() {
       if (i.id === 'plStatus') { i.value = 'published'; return; }
       if (i.type !== 'file') i.value = '';
     });
+    croppedPhotoStore.plPhotos = [];
     const photoPreview = document.getElementById('plPhotoPreview');
     if (photoPreview) photoPreview.innerHTML = '';
     const photoInput = document.getElementById('plPhotos');
     if (photoInput) photoInput.value = '';
     const photoCount = document.getElementById('plPhotoCount');
     if (photoCount) photoCount.textContent = '';
+    updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview');
+    updatePhotoBtnLabel('plPhotos', 'plPhotosBtnLabel');
     await loadPlacesList();
     await refresh();
   } catch (e) { showFormErr('placeFormErr', e.message); }
@@ -1584,9 +2218,12 @@ async function addCity() {
         country: document.getElementById('ctCountry').value,
         nameEn: document.getElementById('ctNameEn').value,
         slug: document.getElementById('ctSlug').value,
+        imageUrl: document.getElementById('ctImage').value,
       },
     });
-    ['ctName','ctCountry','ctNameEn','ctSlug'].forEach((id) => { document.getElementById(id).value = ''; });
+    ['ctName','ctCountry','ctNameEn','ctSlug','ctImage'].forEach((id) => { document.getElementById(id).value = ''; });
+    updateImageUrlHint('ctImage', 'ctImageHint', 'ctImagePreview');
+    updatePhotoBtnLabel('ctImageFile', 'ctImageBtnLabel');
     await loadCitiesList();
   } catch (e) { showFormErr('cityFormErr', e.message); }
   finally { setBtnLoading(btn, false); }
@@ -1602,6 +2239,21 @@ async function openCityEdit(id) {
         <input class="ain" id="edCtCountry" value="${escapeHtml(c.country)}" aria-label="Ülke"/>
         <input class="ain" id="edCtNameEn" value="${escapeHtml(c.nameEn)}" aria-label="İngilizce ad"/>
         <input class="ain" id="edCtSlug" value="${escapeHtml(c.slug)}" aria-label="Slug"/>
+        <label class="adm-label-sm full" for="edCtImage">Kapak görseli URL</label>
+        <input class="ain full" id="edCtImage" value="${escapeHtml(c.imageUrl || '')}" aria-label="Şehir kapak görseli URL"/>
+        <p class="adm-field-hint" id="edCtImageHint">${imageSourceBadge(c.imageUrl)} Görseli değiştirmek için URL düzenleyin veya yeni görsel yükleyin.</p>
+        <div class="adm-photo-section full">
+          <p class="adm-photo-title">Kapak görseli</p>
+          <p class="adm-photo-sub">Görsel seçince 16:9 kırpma penceresi açılır.</p>
+          <div id="edCtImagePreview" class="photo-preview-row" aria-live="polite"></div>
+          <div class="adm-photo-drop">
+            <label class="adm-photo-btn">
+              <span id="edCtImageBtnLabel">${placePhotoBtnLabel(!!c.imageUrl)}</span>
+              <input type="file" id="edCtImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Şehir görseli yükle"/>
+            </label>
+          </div>
+          <p class="photo-upload-hint">JPEG, PNG, WebP, GIF · max 5 MB</p>
+        </div>
         <label style="font-size:.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="edCtActive" ${c.isActive ? 'checked' : ''} aria-label="Aktif"/> Aktif</label>
       </div>
       <p style="font-size:.78rem;color:var(--t2)">Bağlı yer: ${c.placeCount}</p>`,
@@ -1610,6 +2262,10 @@ async function openCityEdit(id) {
         { label: 'Kaydet', primary: true, onClick: () => saveCityEdit(id) },
       ]
     );
+    renderImagePreview('edCtImagePreview', c.imageUrl || '');
+    bindCityImageInput('edCtImageFile', 'edCtImage', 'edCtImagePreview', 'edCtImageHint');
+    document.getElementById('edCtImage')?.addEventListener('input', () => updateImageUrlHint('edCtImage', 'edCtImageHint', 'edCtImagePreview'));
+    updateImageUrlHint('edCtImage', 'edCtImageHint', 'edCtImagePreview');
   } catch (e) { showErr(e.message); }
 }
 
@@ -1622,6 +2278,7 @@ async function saveCityEdit(id) {
         country: document.getElementById('edCtCountry').value,
         nameEn: document.getElementById('edCtNameEn').value,
         slug: document.getElementById('edCtSlug').value,
+        imageUrl: document.getElementById('edCtImage').value,
         isActive: document.getElementById('edCtActive').checked,
       },
     });
@@ -1664,8 +2321,9 @@ async function loadCategoriesList() {
     categoryOptions = rows;
     if (!rows.length) { wrap.innerHTML = '<p style="color:var(--t3)">Kategori yok.</p>'; return; }
     wrap.innerHTML = `<table class="admin-table" aria-label="Kategori listesi">
-      <thead><tr><th>Kod</th><th>TR</th><th>EN</th><th>Durum</th><th>Yer</th><th>İşlem</th></tr></thead>
+      <thead><tr><th>Görsel</th><th>Kod</th><th>TR</th><th>EN</th><th>Durum</th><th>Yer</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((c) => `<tr${c.isActive ? '' : ' style="opacity:.65"'}>
+        <td>${c.imageUrl ? `<img src="${escapeHtml(c.imageUrl)}" alt="" style="width:56px;height:32px;object-fit:cover;border-radius:4px"/>` : '—'}</td>
         <td>${escapeHtml(c.icon)} ${escapeHtml(c.slug)}</td>
         <td>${escapeHtml(c.nameTr)}</td><td>${escapeHtml(c.nameEn)}</td>
         <td>${c.isActive ? '<span style="color:#15803d">Aktif</span>' : '<span style="color:#b45309">Pasif</span>'}</td>
@@ -1693,9 +2351,12 @@ async function addCategory() {
         nameTr: document.getElementById('catNameTr').value,
         nameEn: document.getElementById('catNameEn').value,
         icon: document.getElementById('catIcon').value,
+        imageUrl: document.getElementById('catImage').value,
       },
     });
-    ['catSlug','catNameTr','catNameEn','catIcon'].forEach((id) => { document.getElementById(id).value = ''; });
+    ['catSlug','catNameTr','catNameEn','catIcon','catImage'].forEach((id) => { document.getElementById(id).value = ''; });
+    updateImageUrlHint('catImage', 'catImageHint', 'catImagePreview');
+    updatePhotoBtnLabel('catImageFile', 'catImageBtnLabel');
     await loadCategoriesList();
     await loadCategoryOptions();
   } catch (e) { showFormErr('catFormErr', e.message); }
@@ -1718,6 +2379,16 @@ async function openCategoryEdit(id) {
         <input class="ain" id="edCatNameEn" value="${escapeHtml(c.nameEn)}" aria-label="İngilizce ad"/>
         <label class="adm-label-sm" for="edCatIcon">İkon (emoji)</label>
         <input class="ain" id="edCatIcon" value="${escapeHtml(c.icon)}" aria-label="İkon"/>
+        <label class="adm-label-sm full" for="edCatImage">Kapak görseli URL</label>
+        <input class="ain full" id="edCatImage" value="${escapeHtml(c.imageUrl || '')}" aria-label="Kategori görseli URL"/>
+        <p class="adm-field-hint" id="edCatImageHint">Görseli değiştirmek için URL düzenleyin veya yeni görsel yükleyin.</p>
+        <div id="edCatImagePreview" class="photo-preview-row" aria-live="polite"></div>
+        <div class="adm-photo-drop full">
+          <label class="adm-photo-btn">
+            <span id="edCatImageBtnLabel">Görseli ayarla</span>
+            <input type="file" id="edCatImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/gif"/>
+          </label>
+        </div>
         <label class="full" style="font-size:.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="edCatActive" ${c.isActive ? 'checked' : ''}/> Aktif (işaretsiz = Keşfet/Harita filtrelerinde gizli)</label>
       </div>`,
       [
@@ -1725,6 +2396,9 @@ async function openCategoryEdit(id) {
         { label: 'Kaydet', primary: true, onClick: () => saveCategoryEdit(id) },
       ]
     );
+    bindCityImageInput('edCatImageFile', 'edCatImage', 'edCatImagePreview', 'edCatImageHint');
+    updateImageUrlHint('edCatImage', 'edCatImageHint', 'edCatImagePreview');
+    updatePhotoBtnLabel('edCatImageFile', 'edCatImageBtnLabel');
   } catch (e) { showErr(e.message); }
 }
 
@@ -1737,6 +2411,7 @@ async function saveCategoryEdit(id) {
         nameTr: document.getElementById('edCatNameTr').value,
         nameEn: document.getElementById('edCatNameEn').value,
         icon: document.getElementById('edCatIcon').value,
+        imageUrl: document.getElementById('edCatImage').value,
         isActive: document.getElementById('edCatActive').checked,
       },
     });
@@ -1960,6 +2635,9 @@ async function refresh() {
   } else if (tiEl) {
     tiEl.innerHTML = '<p style="color:var(--t3)">Moderasyon yetkisi gerekli.</p>';
   }
+  if (hasAdminPerm('admin.moderate') && modFilter === 'approved') {
+    loadApprovedTiolas();
+  }
 
   if (hasAdminPerm('admin.content')) {
     try {
@@ -2052,6 +2730,128 @@ async function saveBlogEdit(id, approveAfter) {
   finally { setBtnLoading(saveBtn, false); }
 }
 
+function setModFilter(filter, btn) {
+  modFilter = filter;
+  document.querySelectorAll('#modSubTabs button').forEach((b) => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  document.getElementById('modPendingPanel').style.display = filter === 'pending' ? '' : 'none';
+  document.getElementById('modApprovedPanel').style.display = filter === 'approved' ? '' : 'none';
+  if (filter === 'approved') loadApprovedTiolas();
+}
+
+function debounceLoadApprovedTiolas() {
+  clearTimeout(approvedTiolaSearchTimer);
+  approvedTiolaSearchTimer = setTimeout(loadApprovedTiolas, 300);
+}
+
+async function loadApprovedTiolas() {
+  const el = document.getElementById('approvedTiolas');
+  if (!el || !hasAdminPerm('admin.moderate')) return;
+  el.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  const q = document.getElementById('approvedTiolaSearch')?.value?.trim() || '';
+  try {
+    const data = await api('/admin/approved/tiolas' + (q ? '?q=' + encodeURIComponent(q) : ''));
+    const items = data.items || [];
+    el.innerHTML = items.length ? items.map((item) => `
+      <div class="admin-card admin-item">
+        <div class="adm-tiola-main">
+          ${item.photoUrl ? `<img src="${escapeHtml(item.photoUrl)}" alt="" class="adm-tiola-thumb"/>` : ''}
+          <div class="adm-tiola-body">
+            <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}</div>
+            ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}
+            <p class="adm-tiola-snippet">${escapeHtml(item.text.length > 140 ? item.text.slice(0, 140) + '…' : item.text)}</p>
+            <p style="font-size:.72rem;color:var(--t3)">${escapeHtml(item.createdAt || '')}</p>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-no" type="button" aria-label="Tiola kaldır" onclick="removeTiola(${item.id})">Kaldır</button>
+        </div>
+      </div>`).join('') : '<p style="color:var(--t3)">Yayında Tiola bulunamadı.</p>';
+  } catch (e) { el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+}
+
+function debounceLoadApprovedBlogs() {
+  clearTimeout(approvedBlogSearchTimer);
+  approvedBlogSearchTimer = setTimeout(loadApprovedBlogs, 300);
+}
+
+async function loadApprovedBlogs() {
+  const el = document.getElementById('approvedBlogs');
+  if (!el || !hasAdminPerm('admin.content')) return;
+  el.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  const q = document.getElementById('approvedBlogSearch')?.value?.trim() || '';
+  try {
+    const data = await api('/admin/approved/blogs' + (q ? '?q=' + encodeURIComponent(q) : ''));
+    const items = data.items || [];
+    el.innerHTML = items.length ? items.map((item) => `
+      <div class="admin-card admin-item">
+        <div style="flex:1">
+          <strong>${escapeHtml(item.title)}</strong>
+          <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(item.userName || '')} · ${escapeHtml(item.publishedAt || item.createdAt || '')}</p>
+          <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(item.excerpt || '')}</p>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-no" type="button" aria-label="Blog kaldır" onclick="removeBlog(${item.id})">Kaldır</button>
+        </div>
+      </div>`).join('') : '<p style="color:var(--t3)">Yayında blog bulunamadı.</p>';
+  } catch (e) { el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+}
+
+function removeTiola(id) {
+  openModal('Tiola kaldır', `
+    <p style="font-size:.85rem;color:var(--t2);margin:0 0 12px">Yayından kaldırılacak Tiola için kullanıcıya gösterilecek nedeni yazın.</p>
+    <label class="adm-label-sm full" for="removeTiolaReason">Kaldırma nedeni *</label>
+    <textarea class="ain full adm-textarea-sm" id="removeTiolaReason" rows="4" placeholder="Örn: Kurallara aykırı içerik, yanlış bilgi…" aria-required="true"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Kaldır', primary: true, onClick: () => submitRemoveTiola(id) },
+    ]
+  );
+  setTimeout(() => document.getElementById('removeTiolaReason')?.focus(), 50);
+}
+
+async function submitRemoveTiola(id) {
+  const reason = document.getElementById('removeTiolaReason')?.value?.trim();
+  if (!reason) { showErr('Kaldırma nedeni gerekli'); return; }
+  const btn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(btn, true, 'Kaldırılıyor…');
+  try {
+    await api('/admin/tiolas/' + id + '/remove', { method: 'POST', body: { reason } });
+    closeModal();
+    refresh();
+    if (modFilter === 'approved') loadApprovedTiolas();
+  } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
+function removeBlog(id) {
+  openModal('Blog kaldır', `
+    <p style="font-size:.85rem;color:var(--t2);margin:0 0 12px">Yayından kaldırılacak blog için kullanıcıya gösterilecek nedeni yazın.</p>
+    <label class="adm-label-sm full" for="removeBlogReason">Kaldırma nedeni *</label>
+    <textarea class="ain full adm-textarea-sm" id="removeBlogReason" rows="4" placeholder="Örn: Kurallara aykırı içerik, telif ihlali…" aria-required="true"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Kaldır', primary: true, onClick: () => submitRemoveBlog(id) },
+    ]
+  );
+  setTimeout(() => document.getElementById('removeBlogReason')?.focus(), 50);
+}
+
+async function submitRemoveBlog(id) {
+  const reason = document.getElementById('removeBlogReason')?.value?.trim();
+  if (!reason) { showErr('Kaldırma nedeni gerekli'); return; }
+  const btn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(btn, true, 'Kaldırılıyor…');
+  try {
+    await api('/admin/blogs/' + id + '/remove', { method: 'POST', body: { reason } });
+    closeModal();
+    refresh();
+    if (isContentPanelVisible('blog-approved')) loadApprovedBlogs();
+    if (isContentPanelVisible('blog-posts')) loadBlogPostsList();
+  } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
 async function approveTiola(id) { try { await api('/admin/tiolas/' + id + '/approve', { method: 'POST' }); refresh(); } catch (e) { showErr(e.message); } }
 
 function rejectTiola(id) {
@@ -2086,12 +2886,31 @@ async function approveBlog(id) {
     if (isContentPanelVisible('blog-posts')) await loadBlogPostsList();
   } catch (e) { showErr(e.message); }
 }
-async function rejectBlog(id) {
+function rejectBlog(id) {
+  openModal('Blog reddet', `
+    <p style="font-size:.85rem;color:var(--t2);margin:0 0 12px">Kullanıcıya gösterilecek red nedenini yazın.</p>
+    <label class="adm-label-sm full" for="blogRejectReason">Red nedeni *</label>
+    <textarea class="ain full adm-textarea-sm" id="blogRejectReason" rows="4" placeholder="Örn: Eksik bilgi, telif, uygunsuz içerik…" aria-required="true"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Reddet', primary: true, onClick: () => submitRejectBlog(id) },
+    ]
+  );
+  setTimeout(() => document.getElementById('blogRejectReason')?.focus(), 50);
+}
+
+async function submitRejectBlog(id) {
+  const reason = document.getElementById('blogRejectReason')?.value?.trim();
+  if (!reason) { showErr('Red nedeni gerekli'); return; }
+  const btn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(btn, true, 'Reddediliyor…');
   try {
-    await api('/admin/blogs/' + id + '/reject', { method: 'POST' });
+    await api('/admin/blogs/' + id + '/reject', { method: 'POST', body: { reason } });
+    closeModal();
     await refresh();
     if (isContentPanelVisible('blog-posts')) await loadBlogPostsList();
   } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(btn, false); }
 }
 
 (async () => {

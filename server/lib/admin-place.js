@@ -23,6 +23,8 @@ function mapAdminPlace(row) {
     status: row.status || 'published',
     photos,
     isLocal: !!row.is_local,
+    entryFee: row.entry_fee || '',
+    bestTime: row.best_time || '',
   };
 }
 
@@ -87,7 +89,7 @@ function buildPlacePayload(body, existingId) {
     city: safeCity,
     district: district ? sanitizeName(district, 120) : safeCity,
     category: safeCategory,
-    imageUrl: imageUrl || 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&q=80',
+    imageUrl: imageUrl || '',
     isLocal: !!isLocal,
     entryFee: entryFee || 'Ücretli',
     entryFeeEn,

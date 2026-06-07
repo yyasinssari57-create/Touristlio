@@ -53,12 +53,26 @@ function runMigrations(db) {
   addColumnIfMissing(db, 'travel_lists', 'share_token', 'TEXT');
   addColumnIfMissing(db, 'places', 'status', "TEXT DEFAULT 'published'");
   addColumnIfMissing(db, 'tiolas', 'rejection_reason', 'TEXT');
+  addColumnIfMissing(db, 'tiolas', 'parent_id', 'INTEGER');
+  addColumnIfMissing(db, 'place_categories', 'image_url', 'TEXT');
+  addColumnIfMissing(db, 'blogs', 'rejection_reason', 'TEXT');
+  addColumnIfMissing(db, 'reports', 'resolution_reason', 'TEXT');
+  addColumnIfMissing(db, 'reports', 'action_taken', 'TEXT');
+  addColumnIfMissing(db, 'reports', 'content_prev_status', 'TEXT');
+
+  try {
+    db.prepare("UPDATE reports SET status = 'resolved_dismissed' WHERE status = 'dismissed'").run();
+    db.prepare("UPDATE reports SET status = 'resolved_removed' WHERE status = 'actioned'").run();
+  } catch {
+    /* reports tablosu henüz yok */
+  }
 
   addColumnIfMissing(db, 'blogs', 'slug', 'TEXT');
   addColumnIfMissing(db, 'blogs', 'tags', 'TEXT');
   addColumnIfMissing(db, 'blogs', 'featured', 'INTEGER DEFAULT 0');
   addColumnIfMissing(db, 'blogs', 'author_name', 'TEXT');
   addColumnIfMissing(db, 'blogs', 'published_at', 'TEXT');
+  addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS cities (
@@ -123,6 +137,9 @@ function runMigrations(db) {
       reason TEXT NOT NULL,
       note TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
+      resolution_reason TEXT,
+      action_taken TEXT,
+      content_prev_status TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       resolved_by INTEGER,
       resolved_at TEXT,
@@ -132,6 +149,48 @@ function runMigrations(db) {
 
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);
     CREATE INDEX IF NOT EXISTS idx_reports_target ON reports(target_type, target_id);
+
+    CREATE TABLE IF NOT EXISTS tiola_likes (
+      user_id INTEGER NOT NULL,
+      tiola_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, tiola_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (tiola_id) REFERENCES tiolas(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tiola_likes_tiola ON tiola_likes(tiola_id);
+
+    CREATE TABLE IF NOT EXISTS blog_likes (
+      user_id INTEGER NOT NULL,
+      blog_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, blog_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (blog_id) REFERENCES blogs(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_blog_likes_blog ON blog_likes(blog_id);
+
+    CREATE TABLE IF NOT EXISTS profile_change_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      change_type TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      rejection_reason TEXT,
+      reviewed_by INTEGER,
+      reviewed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewed_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_profile_changes_status ON profile_change_requests(status, created_at);
+    CREATE INDEX IF NOT EXISTS idx_profile_changes_user ON profile_change_requests(user_id, status);
+
+    CREATE INDEX IF NOT EXISTS idx_tiolas_parent ON tiolas(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_tiolas_user_place_month ON tiolas(user_id, place_id, created_at);
   `);
 
   const catalogPerms = [
