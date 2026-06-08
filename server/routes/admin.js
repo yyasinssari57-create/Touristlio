@@ -12,7 +12,7 @@ const contentFilter = require('../lib/contentFilter');
 const { parsePagination, buildTiolaListFilters, buildBlogListFilters } = require('../lib/moderation-query');
 const { spawnSync } = require('child_process');
 const { adminToolLimiter } = require('../middleware/rateLimit');
-const { parsePositiveInt, sanitizeText } = require('../lib/sanitize');
+const { parsePositiveInt, sanitizeText, sanitizeName } = require('../lib/sanitize');
 const notifications = require('../lib/notifications');
 const { sendTiolaRejectionEmail, sendBlogRejectionEmail, sendAdminMessageEmail } = require('../lib/mailer');
 const moderationHistory = require('../lib/moderation-history');
@@ -878,8 +878,8 @@ router.delete('/categories/:id', checkPermission('admin.categories'), (req, res)
   return ok(res, result);
 });
 
-/* ── Users & roles (admin only) ── */
-router.get('/users', requireRole('admin'), (req, res) => {
+/* ── Users & roles ── */
+router.get('/users', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
   const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
   const total = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
@@ -903,7 +903,7 @@ router.get('/users', requireRole('admin'), (req, res) => {
   });
 });
 
-router.get('/users/:id', requireRole('admin'), (req, res) => {
+router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const row = db.prepare(`
@@ -1188,7 +1188,7 @@ router.get('/places/:id/info-boxes', checkPermission('admin.places'), (req, res)
   return ok(res, { infoBoxes: buildInfoBoxesResponse(payload) });
 });
 
-router.post('/users/:id/block', requireRole('admin'), (req, res) => {
+router.post('/users/:id/block', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   if (id === req.user.id) return fail(res, 'Kendi hesabınızı engelleyemezsiniz', 400);
@@ -1206,7 +1206,7 @@ router.post('/users/:id/block', requireRole('admin'), (req, res) => {
   return ok(res, { id, blocked });
 });
 
-router.post('/users/:id/send-message', requireRole('admin'), async (req, res) => {
+router.post('/users/:id/send-message', checkPermission('admin.moderate', 'admin.users'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const subject = sanitizeText(req.body?.subject, 200);
@@ -1240,6 +1240,60 @@ router.post('/users/:id/send-message', requireRole('admin'), async (req, res) =>
 
   logAdmin(req, 'user.send_message', 'user', id, subject);
   return ok(res, { sent: true, emailSent });
+});
+
+router.post('/users/:id/remove-avatar', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  if (id === req.user.id) return fail(res, 'Kendi profil fotoğrafınızı bu yolla kaldıramazsınız', 400);
+
+  const target = db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
+  if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
+  if (!assertCanManageUser(req.user, target.role, res, fail)) return;
+
+  const reason = sanitizeText(req.body?.reason, 500) || 'Moderasyon kararı';
+  const removal = reportMod.removeProfilePhoto(id);
+  if (!removal.ok) return fail(res, removal.error, 400);
+
+  if (removal.hadPhoto) {
+    notifications.createNotification({
+      userId: id,
+      type: 'profile_avatar_removed',
+      title: 'Profil fotoğrafı kaldırıldı',
+      body: reason,
+      link: '/profile',
+    });
+  }
+
+  logAdmin(req, 'user.remove_avatar', 'user', id, reason);
+  logModeration(req, 'profile', id, 'remove_avatar', reason);
+  return ok(res, { id, removed: !!removal.hadPhoto, alreadyRemoved: !!removal.alreadyRemoved });
+});
+
+router.patch('/users/:id/name', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+
+  const target = db.prepare('SELECT id, role, name FROM users WHERE id = ?').get(id);
+  if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
+  if (!assertCanManageUser(req.user, target.role, res, fail)) return;
+
+  const name = sanitizeName(req.body?.name);
+  if (!name) return fail(res, 'Geçersiz görünen ad', 400);
+
+  db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, id);
+  const reason = sanitizeText(req.body?.reason, 500) || null;
+  logAdmin(req, 'user.rename', 'user', id, reason || `${target.name} → ${name}`);
+  if (reason) {
+    notifications.createNotification({
+      userId: id,
+      type: 'profile_name_changed',
+      title: 'Görünen adınız güncellendi',
+      body: reason,
+      link: '/profile',
+    });
+  }
+  return ok(res, { id, name });
 });
 
 router.patch('/users/:id/role', requireRole('admin'), (req, res) => {

@@ -1,5 +1,8 @@
+const path = require('path');
+const fs = require('fs');
 const { db } = require('../db');
 const notifications = require('./notifications');
+const authModel = require('../modules/auth/auth.model');
 const { sendTiolaRejectionEmail, sendBlogRejectionEmail } = require('./mailer');
 
 const REPORT_STATUSES = {
@@ -130,12 +133,51 @@ async function notifyContentOwnerRemoved(content, reason) {
     } catch {
       /* e-posta isteğe bağlı */
     }
+    return;
   }
+
+  if (content.type === 'profile') {
+    await notifyProfileAvatarRemoved(content.userId, reason);
+  }
+}
+
+function removeProfilePhoto(userId) {
+  const row = authModel.findById(userId);
+  if (!row) return { ok: false, error: 'Kullanıcı bulunamadı' };
+  if (!row.avatar_url) return { ok: true, alreadyRemoved: true, hadPhoto: false };
+
+  const filePath = path.join(__dirname, '..', '..', row.avatar_url.replace(/^\//, ''));
+  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch { /* ignore */ }
+  authModel.clearAvatarPhoto(userId);
+  if (!row.avatar_preset) {
+    authModel.updateAvatarPreset(userId, 'none', row.avatar_color || '#0ea5e9');
+  }
+  return { ok: true, hadPhoto: true, alreadyRemoved: false };
+}
+
+async function notifyProfileAvatarRemoved(userId, reason) {
+  const row = authModel.findById(userId);
+  if (!row) return;
+  const reportSuffix = ' Şikayet incelemesi sonucunda profil fotoğrafınız kaldırıldı.';
+  notifications.createNotification({
+    userId,
+    type: 'profile_avatar_removed',
+    title: 'Profil fotoğrafı kaldırıldı',
+    body: `${reason}${reportSuffix}`,
+    link: '/profile',
+  });
 }
 
 function removeReportedContent(content, adminId, reason) {
   if (content.type === 'profile') {
-    return { ok: false, error: 'Profil şikayetleri için içerik kaldırma uygulanamaz. Kullanıcılar sekmesinden işlem yapın.' };
+    const removal = removeProfilePhoto(content.userId);
+    if (!removal.ok) return removal;
+    return {
+      ok: true,
+      prevStatus: content.status,
+      alreadyRemoved: removal.alreadyRemoved,
+      profilePhotoRemoved: removal.hadPhoto,
+    };
   }
 
   const prevStatus = content.status;
@@ -269,6 +311,8 @@ module.exports = {
   getTargetContent,
   removeReportedContent,
   restoreReportedContent,
+  removeProfilePhoto,
+  notifyProfileAvatarRemoved,
   notifyContentOwnerRemoved,
   clearReportResolution,
   setReportDismissed,

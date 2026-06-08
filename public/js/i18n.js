@@ -90,7 +90,7 @@ window.TL_I18N = (function () {
       profileMyTiolasSub: "Yazdığın onaylı ve bekleyen Tiola'lar",
       profileStatReviews: 'Tiola', profileStatLikes: 'Beğeni', profileStatSaved: 'Kaydedilen', profileStatCountries: 'Ülke',
       replyBtn: 'Yanıtla', sendReply: 'Gönder', replies: 'yanıt', replyPlaceholder: 'Yanıtınızı yazın…',
-      noReplies: 'Henüz yanıt yok.', avatarPending: 'Değişiklik onay için gönderildi.',
+      noReplies: 'Henüz yanıt yok.', avatarPending: 'Değişiklik kaydedildi.',
       pendingBlog: 'Blog', pendingTiola: 'Tiola',
       monthlyCommentLimit: 'Bu mekâna bu ay en fazla 5 yorum yapabilirsiniz.',
       profileMember: 'Üye',

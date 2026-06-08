@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById } = require('../../auth');
 const { AVATAR_PRESETS, AVATAR_COLORS, isValidPreset, isValidColor } = require('../../lib/avatars');
-const profileChanges = require('../../lib/profile-changes');
 const authModel = require('./auth.model');
 const logger = require('../../lib/logger');
 const mailer = require('../../lib/mailer');
@@ -67,9 +66,14 @@ async function register(req) {
   const user = createUser({ name, email, password, role: 'member' });
   authModel.updateVerification(user.id, verifyToken);
   const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
+  let emailVerificationSent = false;
   try {
-    await mailer.sendVerificationEmail(user.email, verifyUrl);
-    logger.info({ msg: 'Verification email sent', email: user.email });
+    emailVerificationSent = await mailer.sendVerificationEmail(user.email, verifyUrl);
+    if (emailVerificationSent) {
+      logger.info({ msg: 'Verification email sent', email: user.email });
+    } else {
+      logger.warn({ msg: 'Verification email skipped (SMTP not configured)', email: user.email });
+    }
   } catch (e) {
     logger.warn({ msg: 'Verification email failed', email: user.email, err: e.message });
   }
@@ -79,7 +83,7 @@ async function register(req) {
     token,
     cookie: token,
     user: sanitizeUser(user),
-    emailVerificationSent: true,
+    emailVerificationSent,
   };
 }
 
@@ -205,18 +209,15 @@ function updateAvatarPreset(userId, { avatarPreset, avatarColor }) {
   const color = avatarColor && isValidColor(avatarColor) ? avatarColor : null;
   const row = authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
-  try {
-    profileChanges.createRequest(userId, 'avatar_preset', {
-      avatarPreset,
-      avatarColor: color || row.avatar_color || '#0ea5e9',
-    });
-  } catch (err) {
-    return { error: err.message, status: 409 };
-  }
+  authModel.updateAvatarPreset(
+    userId,
+    avatarPreset,
+    color || row.avatar_color || '#0ea5e9',
+  );
   return {
-    status: 202,
-    message: 'Avatar değişikliğiniz onay için gönderildi.',
-    pending: true,
+    status: 200,
+    message: 'Avatar güncellendi.',
+    pending: false,
     user: sanitizeUser(findUserById(userId)),
   };
 }
@@ -227,17 +228,15 @@ function updateAvatarPhoto(userId, file) {
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
 
   const url = `/uploads/${path.basename(file.filename || file.path)}`;
-  try {
-    profileChanges.createRequest(userId, 'avatar_photo', { avatarUrl: url });
-  } catch (err) {
-    const pendingPath = path.join(__dirname, '..', '..', '..', url.replace(/^\//, ''));
-    try { if (fs.existsSync(pendingPath)) fs.unlinkSync(pendingPath); } catch { /* ignore */ }
-    return { error: err.message, status: 409 };
+  if (row.avatar_url && row.avatar_url !== url) {
+    const oldPath = path.join(__dirname, '..', '..', '..', row.avatar_url.replace(/^\//, ''));
+    try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch { /* ignore */ }
   }
+  authModel.updateAvatarUrl(userId, url);
   return {
-    status: 202,
-    message: 'Profil fotoğrafınız onay için gönderildi.',
-    pending: true,
+    status: 200,
+    message: 'Profil fotoğrafı güncellendi.',
+    pending: false,
     user: sanitizeUser(findUserById(userId)),
   };
 }

@@ -1,13 +1,14 @@
 const express = require('express');
 const { authOptional, authRequired } = require('../../middleware/auth');
 const { checkPermission } = require('../../middleware/rbac');
+const { adminAnalyticsLimiter } = require('../../middleware/rateLimit');
 const controller = require('./analytics.controller');
 
 const router = express.Router();
 
 router.post('/track', authOptional, controller.track);
 
-router.use(authRequired, checkPermission('admin.analytics'));
+router.use(authRequired, checkPermission('admin.analytics'), adminAnalyticsLimiter);
 
 router.get('/visitors', controller.visitors);
 router.get('/summary', controller.summary);

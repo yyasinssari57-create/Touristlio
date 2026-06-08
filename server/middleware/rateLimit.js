@@ -2,9 +2,19 @@ const rateLimit = require('express-rate-limit');
 
 const isDev = process.env.NODE_ENV !== 'production';
 
+function requestPath(req) {
+  return req.originalUrl?.split('?')[0] || req.path || '';
+}
+
 function isReportRequest(req) {
-  const path = req.originalUrl?.split('?')[0] || req.path || '';
+  const path = requestPath(req);
   return req.method === 'POST' && (path === '/api/reports' || path.endsWith('/reports'));
+}
+
+/** Admin dashboard polls multiple analytics GETs every 30s; routes are auth+RBAC protected. */
+function isAdminAnalyticsRead(req) {
+  if (req.method !== 'GET') return false;
+  return requestPath(req).startsWith('/api/analytics/');
 }
 
 const apiLimiter = rateLimit({
@@ -12,8 +22,17 @@ const apiLimiter = rateLimit({
   max: Number(process.env.RATE_LIMIT_MAX) || 300,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: isReportRequest,
+  skip: (req) => isReportRequest(req) || isAdminAnalyticsRead(req),
   message: { error: 'Çok fazla istek. Lütfen bir süre sonra tekrar deneyin.' },
+});
+
+const adminAnalyticsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.ADMIN_ANALYTICS_RATE_LIMIT_MAX) || 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user?.id ? `analytics:user:${req.user.id}` : `analytics:ip:${req.ip}`),
+  message: { error: 'Analitik istek limiti aşıldı. Lütfen kısa süre sonra tekrar deneyin.' },
 });
 
 const reportLimiter = rateLimit({
@@ -57,4 +76,12 @@ const liveDataLimiter = rateLimit({
   message: { error: 'Çok fazla istek. Bir dakika bekleyin.' },
 });
 
-module.exports = { apiLimiter, authLimiter, searchLimiter, adminToolLimiter, liveDataLimiter, reportLimiter };
+module.exports = {
+  apiLimiter,
+  authLimiter,
+  searchLimiter,
+  adminToolLimiter,
+  liveDataLimiter,
+  reportLimiter,
+  adminAnalyticsLimiter,
+};

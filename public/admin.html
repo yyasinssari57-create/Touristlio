@@ -42,7 +42,7 @@
       <button type="button" role="tab" aria-selected="false" data-section="categories" data-permission="admin.categories" onclick="showAdminSection('categories',this)">Kategoriler</button>
       <button type="button" role="tab" aria-selected="false" data-section="moderation" data-permission="admin.moderate" onclick="showAdminSection('moderation',this)">Moderasyon</button>
       <button type="button" role="tab" aria-selected="false" data-section="reports" data-permission="admin.moderate" onclick="showAdminSection('reports',this)">Şikayetler</button>
-      <button type="button" role="tab" aria-selected="false" data-section="users" data-role="admin" data-permission="admin.users" onclick="showAdminSection('users',this)">Kullanıcılar</button>
+      <button type="button" role="tab" aria-selected="false" data-section="users" data-permission="admin.moderate" onclick="showAdminSection('users',this)">Kullanıcılar</button>
       <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" onclick="showAdminSection('content',this)">İçerik</button>
       <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.analytics" onclick="showAdminSection('analytics',this)">Analitik</button>
       <button type="button" role="tab" aria-selected="false" data-section="media" data-permission="admin.places" onclick="showAdminSection('media',this)">Medya</button>
@@ -277,8 +277,8 @@
                     <span class="content-nav-label">Moderatörler</span>
                   </button>
                   <button type="button" role="tab" aria-selected="false" data-sub="users-profile-pending" onclick="showUsersSub('users-profile-pending',this)">
-                    <span class="content-nav-icon" aria-hidden="true">⏳</span>
-                    <span class="content-nav-label">Profil bekleyenleri</span>
+                    <span class="content-nav-icon" aria-hidden="true">📋</span>
+                    <span class="content-nav-label">Eski profil talepleri</span>
                   </button>
                 </nav>
               </div>
@@ -303,8 +303,8 @@
               </div>
 
               <div id="content-users-profile-pending" class="content-sub content-panel" data-panel="users-profile-pending">
-                <h2 class="adm-h2 content-panel-title">Profil bekleyenleri</h2>
-                <p class="adm-cat-hint">Kullanıcıların avatar, emoji ve profil görseli değişiklik talepleri. Onayladığınızda profilde yayına alınır.</p>
+                <h2 class="adm-h2 content-panel-title">Eski profil talepleri</h2>
+                <p class="adm-cat-hint">Profil değişiklikleri artık anında uygulanır; burada yalnızca geçmiş onay kuyruğundan kalan kayıtlar görünür. Uygunsuz profil fotoğrafları için <strong>Şikayetler</strong> veya kullanıcı profilinden işlem yapın.</p>
                 <div id="profilePendingList" aria-live="polite"></div>
               </div>
 
@@ -950,11 +950,11 @@
             </div>
 
             <div class="adm-guide-workflow">
-              <p class="adm-guide-workflow-title">Profil değişikliği onaylama (yönetici)</p>
+              <p class="adm-guide-workflow-title">Uygunsuz profil fotoğrafı (şikayet)</p>
               <ol class="adm-guide-steps">
-                <li><strong>Kullanıcılar</strong> → <strong>Profil bekleyenleri</strong></li>
-                <li>Avatar veya profil fotoğrafı önizlemesini inceleyin</li>
-                <li>Uygunsa <strong>Onayla</strong>; uygunsuzsa <strong>Reddet</strong> ve kısa bir red nedeni yazın</li>
+                <li><strong>Şikayetler</strong> → profil şikayetini açın veya <strong>Kullanıcılar</strong> → ilgili kullanıcı profili</li>
+                <li><strong>Profil fotoğrafını kaldır</strong> ile uygunsuz görseli silin; gerekirse kullanıcıya uyarı e-postası gönderin</li>
+                <li>Tekrarlayan ihlallerde <strong>Engelle</strong>; görünen ad değiştirmek için <strong>Adı düzenle</strong></li>
               </ol>
             </div>
 
@@ -1053,12 +1053,12 @@ const PLACE_ISSUE_LABELS = {
 
 const ROLE_DEFAULT_PERMS = {
   moderator: [
-    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.users', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
   editor: ['admin.dashboard', 'admin.analytics', 'admin.content'],
   staff: [
-    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.users', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
 };
@@ -1620,7 +1620,7 @@ function showAdminSection(id, btn) {
   if (id === 'cities') loadCitiesList();
   if (id === 'categories') loadCategoriesList();
   if (id === 'content') loadContentSection();
-  if (id === 'users' && currentUser?.role === 'admin') loadUsersSection();
+  if (id === 'users' && hasAdminPerm('admin.moderate')) loadUsersSection();
   if (id === 'roles' && currentUser?.role === 'admin') loadRoles();
   if (id === 'analytics' && hasAdminPerm('admin.analytics')) loadAnalytics();
   if (id === 'reports' && hasAdminPerm('admin.moderate')) loadReportsList();
@@ -1690,6 +1690,7 @@ async function loadReportsList() {
         </div>
         <div class="admin-actions">
           <button class="btn bo bsm" type="button" onclick="openReportDetail(${r.id})">İncele</button>
+          ${isPending && r.targetType === 'profile' ? `<button class="btn bp bsm" type="button" onclick="openReportProfileRemoveModal(${r.id})">Fotoğrafı kaldır</button>` : ''}
           ${isPending && r.targetType !== 'profile' ? `<button class="btn bp bsm" type="button" onclick="openReportRemoveModal(${r.id})">İçeriği kaldır</button>` : ''}
           ${isPending ? `<button class="btn bo bsm" type="button" onclick="dismissReport(${r.id})">Göz ardı et</button>` : ''}
           ${isResolved ? `<button class="btn bo bsm" type="button" onclick="openReportChangeDecision(${r.id})">Kararı değiştir</button>` : ''}
@@ -1710,7 +1711,7 @@ function reportDetailBody(r) {
     ? `<div class="adm-report-preview"><strong>İçerik önizleme:</strong><p>${escapeHtml(r.targetContentPreview)}</p></div>`
     : '';
   const profileNote = r.targetType === 'profile'
-    ? '<p style="font-size:.82rem;color:var(--t2)">Profil şikayetleri için kullanıcı engelleme işlemi <strong>Kullanıcılar</strong> sekmesinden yapılır.</p>'
+    ? '<p style="font-size:.82rem;color:var(--t2)">Profil şikayetlerinde <strong>Profil fotoğrafını kaldır</strong>, <strong>Kullanıcı profili</strong> üzerinden engelleme veya uyarı e-postası gönderebilirsiniz.</p>'
     : '';
   const userLink = r.targetUserId
     ? `<p><strong>İlgili kullanıcı:</strong> <button type="button" class="btn-link" onclick="closeModal();openUserProfile(${r.targetUserId})">${escapeHtml(r.targetUserName || 'Kullanıcı')}</button></p>`
@@ -1734,7 +1735,11 @@ function reportDetailActions(r) {
   const isPending = r.status === 'pending' || r.status === 'reviewed';
   const isResolved = ['resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned'].includes(r.status);
   const actions = [{ label: 'Kapat', onClick: closeModal }];
-  if (isPending && r.targetType !== 'profile') {
+  if (isPending && r.targetType === 'profile') {
+    actions.unshift({ label: 'Profil fotoğrafını kaldır', primary: true, onClick: () => { closeModal(); openReportProfileRemoveModal(r.id); } });
+    actions.unshift({ label: 'Kullanıcı profili', onClick: () => { closeModal(); openUserProfile(r.targetUserId || r.targetId); } });
+    actions.unshift({ label: 'Göz ardı et', onClick: () => dismissReport(r.id, true) });
+  } else if (isPending && r.targetType !== 'profile') {
     actions.unshift({ label: 'İçeriği kaldır', primary: true, onClick: () => { closeModal(); openReportRemoveModal(r.id); } });
     actions.unshift({ label: 'Göz ardı et', onClick: () => dismissReport(r.id, true) });
   } else if (isPending) {
@@ -1786,6 +1791,33 @@ async function submitReportRemove(id) {
   finally { setBtnLoading(btn, false); }
 }
 
+function openReportProfileRemoveModal(id) {
+  openModal('Profil fotoğrafını kaldır', `
+    <p style="font-size:.85rem;color:var(--t2);margin:0 0 12px">Şikayet edilen kullanıcının profil fotoğrafı silinecek. Kullanıcıya bildirim gönderilir.</p>
+    <label class="adm-label-sm full" for="reportProfileRemoveReason">Kaldırma nedeni *</label>
+    <textarea class="ain full adm-textarea-sm" id="reportProfileRemoveReason" rows="4" placeholder="Örn: Uygunsuz profil fotoğrafı, kurallara aykırı görsel…" aria-required="true"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Fotoğrafı kaldır', primary: true, onClick: () => submitReportProfileRemove(id) },
+    ]
+  );
+  setTimeout(() => document.getElementById('reportProfileRemoveReason')?.focus(), 50);
+}
+
+async function submitReportProfileRemove(id) {
+  const reason = document.getElementById('reportProfileRemoveReason')?.value?.trim();
+  if (!reason) { showErr('Kaldırma nedeni gerekli'); return; }
+  const btn = document.querySelector('#modalActions .btn.bp');
+  setBtnLoading(btn, true, 'Kaldırılıyor…');
+  try {
+    await api('/admin/reports/' + id + '/resolve-remove', { method: 'POST', body: { reason } });
+    closeModal();
+    await loadReportsList();
+    showToast('Profil fotoğrafı kaldırıldı');
+  } catch (e) { showErr(e.message); }
+  finally { setBtnLoading(btn, false); }
+}
+
 async function dismissReport(id, fromModal) {
   if (!fromModal && !confirm('Bu şikayeti göz ardı etmek istediğinize emin misiniz? İçerikte işlem yapılmayacak.')) return;
   try {
@@ -1821,7 +1853,7 @@ async function openReportChangeDecision(id) {
         <label class="adm-label-sm full" for="reportChangeReason">Kaldırma nedeni *</label>
         <textarea class="ain full adm-textarea-sm" id="reportChangeReason" rows="3">${escapeHtml(r.resolutionReason || '')}</textarea>
       </div>
-      ${r.targetType === 'profile' ? '<p style="font-size:.8rem;color:#b45309;margin-top:10px">Profil şikayetlerinde yalnızca göz ardı seçilebilir.</p>' : ''}`,
+      ${r.targetType === 'profile' ? '<p style="font-size:.8rem;color:#b45309;margin-top:10px">Profil şikayetlerinde «İçeriği kaldır» profil fotoğrafını siler.</p>' : ''}`,
       [
         { label: 'İptal', onClick: closeModal },
         { label: 'Kararı güncelle', primary: true, onClick: () => submitReportChangeDecision(id, r.targetType) },
@@ -1831,8 +1863,8 @@ async function openReportChangeDecision(id) {
     );
     if (r.targetType === 'profile') {
       const sel = document.getElementById('reportNewDecision');
-      if (sel) { sel.value = 'dismiss'; sel.disabled = true; }
-      document.getElementById('reportChangeReasonWrap').style.display = 'none';
+      if (sel) sel.value = 'remove';
+      document.getElementById('reportChangeReasonWrap').style.display = 'block';
     }
   } catch (e) { showErr(e.message); }
 }
@@ -1846,7 +1878,7 @@ function toggleReportChangeReason() {
 async function submitReportChangeDecision(id, targetType) {
   const decision = document.getElementById('reportNewDecision')?.value;
   const reason = document.getElementById('reportChangeReason')?.value?.trim();
-  if (decision === 'remove' && targetType !== 'profile' && !reason) {
+  if (decision === 'remove' && !reason) {
     showErr('Kaldırma nedeni gerekli');
     return;
   }
@@ -2240,8 +2272,10 @@ function renderUserDetailTab() {
       ${tab('risk', 'Risk')}
     </div>
     <div class="adm-user-section">${tabContent}</div>
-    ${!isSelf ? `<button class="btn bo bsm full" type="button" style="margin-bottom:8px" onclick="openSendUserEmailModal(${u.id})">Kullanıcıya e-posta gönder</button>` : ''}
-    ${!isSelf && !isAdminRole ? `<button class="btn ${u.isBlocked ? 'btn-ok' : 'btn-no'} bsm full" type="button" onclick="toggleUserBlock(${u.id}, ${!u.isBlocked});closeUserDetailPanel();">${u.isBlocked ? 'Engeli kaldır' : 'Engelle'}</button>` : ''}`;
+    ${!isSelf ? `<button class="btn bo bsm full" type="button" style="margin-bottom:8px" onclick="openSendUserEmailModal(${u.id})">Kullanıcıya uyarı e-postası gönder</button>` : ''}
+    ${!isSelf && !isAdminRole && u.avatarUrl ? `<button class="btn bp bsm full" type="button" style="margin-bottom:8px" onclick="openRemoveUserAvatarModal(${u.id})">Profil fotoğrafını kaldır</button>` : ''}
+    ${!isSelf && !isAdminRole ? `<button class="btn bo bsm full" type="button" style="margin-bottom:8px" onclick="openEditUserNameModal(${u.id})">Görünen adı düzenle</button>` : ''}
+    ${!isSelf && !isAdminRole ? `<button class="btn ${u.isBlocked ? 'btn-ok' : 'btn-no'} bsm full" type="button" onclick="toggleUserBlock(${u.id}, ${!u.isBlocked});closeUserDetailPanel();">${u.isBlocked ? 'Engeli kaldır' : 'Kullanıcıyı engelle'}</button>` : ''}`;
 }
 
 function openSendUserEmailModal(userId) {
@@ -2271,7 +2305,60 @@ async function submitSendUserEmail(userId) {
       body: { subject, body },
     });
     closeModal();
-    showToast(data.emailSent ? 'E-posta gönderildi' : 'Bildirim oluşturuldu (SMTP yok)');
+    showToast(data.emailSent ? 'Uyarı e-postası gönderildi' : 'Bildirim oluşturuldu (SMTP yapılandırılmamış)');
+  } catch (e) { showErr(e.message); }
+}
+
+function openRemoveUserAvatarModal(userId) {
+  const u = userDetailData;
+  if (!u) return;
+  openModal('Profil fotoğrafını kaldır', `
+    <p style="font-size:.82rem;color:var(--t2);margin:0 0 12px"><strong>${escapeHtml(u.name)}</strong> kullanıcısının profil fotoğrafı silinecek.</p>
+    <label class="adm-label-sm full" for="removeAvatarReason">Neden (kullanıcıya bildirim olarak gider) *</label>
+    <textarea class="ain full adm-textarea-sm" id="removeAvatarReason" rows="4" placeholder="Örn: Uygunsuz profil fotoğrafı"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Fotoğrafı kaldır', primary: true, onClick: () => submitRemoveUserAvatar(userId) },
+    ]
+  );
+}
+
+async function submitRemoveUserAvatar(userId) {
+  const reason = document.getElementById('removeAvatarReason')?.value?.trim();
+  if (!reason) return showErr('Neden gerekli');
+  try {
+    await api('/admin/users/' + userId + '/remove-avatar', { method: 'POST', body: { reason } });
+    closeModal();
+    showToast('Profil fotoğrafı kaldırıldı');
+    await openUserProfile(userId);
+  } catch (e) { showErr(e.message); }
+}
+
+function openEditUserNameModal(userId) {
+  const u = userDetailData;
+  if (!u) return;
+  openModal('Görünen adı düzenle', `
+    <label class="adm-label-sm full" for="editUserName">Yeni görünen ad *</label>
+    <input class="ain full" id="editUserName" value="${escapeHtml(u.name)}" aria-label="Görünen ad"/>
+    <label class="adm-label-sm full" for="editUserNameReason">Kullanıcıya gösterilecek not (isteğe bağlı)</label>
+    <textarea class="ain full adm-textarea-sm" id="editUserNameReason" rows="3" placeholder="Örn: Kurallara uygun bir ad seçin"></textarea>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Kaydet', primary: true, onClick: () => submitEditUserName(userId) },
+    ]
+  );
+}
+
+async function submitEditUserName(userId) {
+  const name = document.getElementById('editUserName')?.value?.trim();
+  const reason = document.getElementById('editUserNameReason')?.value?.trim();
+  if (!name) return showErr('Görünen ad gerekli');
+  try {
+    await api('/admin/users/' + userId + '/name', { method: 'PATCH', body: { name, reason: reason || undefined } });
+    closeModal();
+    showToast('Görünen ad güncellendi');
+    await openUserProfile(userId);
+    await loadUsersLists();
   } catch (e) { showErr(e.message); }
 }
 

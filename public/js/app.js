@@ -1853,7 +1853,7 @@ async function saveAvatarPreset() {
       initAvatarSettings(data.user);
       window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), data.user);
       updateRevForm();
-      window.TL_TOAST?.success(data.message || t('avatarPending'));
+      window.TL_TOAST?.success(data.message || (data.pending ? t('avatarPending') : t('avatarSaved')));
     } else {
       window.TL_TOAST?.error(t('avatarSaveFailed'));
     }
@@ -1880,7 +1880,7 @@ async function uploadAvatarFile(file) {
       initAvatarSettings(data.user);
       window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), data.user);
       updateRevForm();
-      window.TL_TOAST?.success(data.message || t('avatarPending'));
+      window.TL_TOAST?.success(data.message || (data.pending ? t('avatarPending') : t('avatarSaved')));
     } else {
       window.TL_TOAST?.error(t('avatarUploadFailed'));
     }
