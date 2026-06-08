@@ -107,9 +107,10 @@ npm run verify:smtp
 
 1. Render → **Settings** → **Custom Domains** → `touristlio.com` ekle
 2. DNS’te Render’ın verdiği CNAME/A kaydını ayarla
-3. **Environment**’ta `SITE_URL` ve `CORS_ORIGIN` değerlerini `https://touristlio.com` yap (`www` olmadan apex tercih edilir; sunucu `www` isteklerini apex’e 301 yönlendirir)
-4. İsteğe bağlı: `CORS_ORIGIN=https://touristlio.com,https://www.touristlio.com` (otomatik genişletme varken zorunlu değil)
-5. **Manual Deploy** → redeploy
+3. **Environment**’ta `SITE_URL` ve `CORS_ORIGIN` değerlerini `https://touristlio.com` yap (`www` olmadan apex tercih edilir)
+4. **Cloudflare** → SSL/TLS → Edge Certificates → **Always Use HTTPS** açık; **Redirect www to root domain** (veya tam tersi) yalnızca **tek yönde** olsun. Apex↔www çift yönlendirme + istemci script’i boş sayfa ve `ERR_TOO_MANY_REDIRECTS` üretir. Sunucu artık www→apex JS yönlendirmesi yapmaz.
+5. İsteğe bağlı: `CORS_ORIGIN=https://touristlio.com,https://www.touristlio.com` (otomatik genişletme varken zorunlu değil)
+6. **Manual Deploy** → redeploy
 
 ### 7. Admin girişi
 
@@ -141,6 +142,7 @@ npm run verify:smtp
 | Build `npm ci` → `gyp ERR!` / `better-sqlite3` | Eski Node (ör. 20.3.0), prebuild yok | Repoyu çekin; `NODE_VERSION` / `.node-version` = `22.16.0`; Manual Deploy |
 | Sunucu hemen kapanıyor | `JWT_SECRET` eksik/zayıf | Environment’ta 32+ karakter secret; Blueprint `generateValue` kullanıyorsa redeploy |
 | Giriş/kayıt 403 CSRF | `SITE_URL` yanlış | Tarayıcıdaki URL ile `SITE_URL` origin’i eşleştir |
+| Boş sayfa / sadece loader | Cloudflare apex↔www çift yönlendirme | Cloudflare’da yönlendirmeyi tek yönde ayarlayın; redeploy sonrası önbelleği temizleyin |
 | Admin/API 500, `www` ile açılıyor | `CORS_ORIGIN` sadece apex | `https://touristlio.com/admin` kullanın veya Render’da `CORS_ORIGIN`’e `https://www.touristlio.com` ekleyin; güncel kod apex+www’yi otomatik kabul eder |
 | E-posta gitmiyor | SMTP eksik/yanlış | Brevo SMTP anahtarı + doğrulanmış `SMTP_FROM`; `verify:smtp` |
 | Boş site / yer yok | Seed çalışmadı | Shell: `npm run seed` |

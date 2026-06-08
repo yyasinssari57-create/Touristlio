@@ -103,7 +103,8 @@ nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filte
 
 /* SEARCH */
 .srch-wrap{position:relative;width:100%;max-width:540px;margin:0 auto 16px;z-index:10;animation:fu .7s .21s ease both;}
-.srch-bar{display:flex;align-items:center;background:rgba(255,255,255,.97);border-radius:100px;padding:5px 5px 5px 18px;box-shadow:0 12px 40px rgba(7,22,41,.25);}
+.srch-bar{display:flex;align-items:center;background:rgba(255,255,255,.97);border-radius:100px;padding:5px 5px 5px 18px;box-shadow:0 12px 40px rgba(7,22,41,.25);position:relative;}
+.srch-autofill-trap{position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;left:-9999px;top:0;}
 .srch-bar input{flex:1;background:none;border:none;outline:none;color:var(--navy);font-size:.88rem;}
 .srch-bar input::placeholder{color:var(--t3);}
 .srch-drop{position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--w);border-radius:var(--r2);box-shadow:var(--sh2);border:1.5px solid var(--l2);z-index:300;max-height:300px;overflow-y:auto;display:none;}

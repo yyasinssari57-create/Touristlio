@@ -8,9 +8,6 @@ const NO_CACHE_HEADERS = {
   Expires: '0',
 };
 
-/** Break www↔apex redirect loops when Cloudflare also redirects the other way. */
-const WWW_REDIRECT_SNIPPET = `<script>(function(){var h=location.hostname;if(h.indexOf('www.')!==0)return;var k='tl-www-redir',n=+(sessionStorage.getItem(k)||0);if(n>2){sessionStorage.removeItem(k);return;}sessionStorage.setItem(k,String(n+1));location.replace(location.protocol+'//'+h.slice(4)+location.pathname+location.search+location.hash);})();</script>`;
-
 /** Extensionless public HTML routes (must run before express.static). */
 const HTML_PAGE_ROUTES = {
   '/admin': 'admin.html',
@@ -23,14 +20,8 @@ const HTML_PAGE_ROUTES = {
   '/gezilecek-yerler': 'index.html',
 };
 
-function injectWwwRedirect(html) {
-  if (html.includes("host.indexOf('www.')")) return html;
-  if (!/<head[\s>]/i.test(html)) return html;
-  return html.replace(/<head([^>]*)>/i, `<head$1>\n${WWW_REDIRECT_SNIPPET}`);
-}
-
 function injectAppVersion(html) {
-  return injectWwwRedirect(html.replace(/__APP_VERSION__/g, getAppVersion()));
+  return html.replace(/__APP_VERSION__/g, getAppVersion());
 }
 
 function readPublicHtml(publicDir, relativePath) {
@@ -114,8 +105,6 @@ module.exports = {
   publicHtmlMiddleware,
   NO_CACHE_HEADERS,
   injectAppVersion,
-  injectWwwRedirect,
-  WWW_REDIRECT_SNIPPET,
   HTML_PAGE_ROUTES,
   readPublicHtml,
 };

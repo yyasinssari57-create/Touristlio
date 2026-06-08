@@ -106,7 +106,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <p class="hsub" data-i18n="heroSub">Gizli yerel köşelerden ikonik yapılara — gerçek gezginler tarafından derlendi.</p>
       <div class="srch-wrap">
         <form class="srch-bar" role="search" autocomplete="off" onsubmit="event.preventDefault();doSearch();return false;">
-          <input type="search" id="heroSearch" name="q" data-i18n-placeholder="searchPh" placeholder="İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu..." oninput="onSearch(this.value)" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" aria-label="Destinasyon ara"/>
+          <div class="srch-autofill-trap" aria-hidden="true">
+            <input type="text" name="email" autocomplete="username" tabindex="-1"/>
+            <input type="password" name="password" autocomplete="current-password" tabindex="-1"/>
+          </div>
+          <input type="search" id="heroSearch" name="place-query" data-i18n-placeholder="searchPh" placeholder="İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu..." oninput="onSearch(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly aria-label="Destinasyon ara"/>
           <button type="submit" class="btn bp bsm" data-i18n="searchBtn">🔍 Keşfet</button>
         </form>
         <div class="srch-drop" id="srchDrop"></div>

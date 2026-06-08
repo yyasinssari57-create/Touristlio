@@ -707,7 +707,7 @@ function renderGrid(list, append = false) {
   if (hintEl) {
     if (cardsLoaded && !list.length && lastOsmHint) {
       hintEl.style.display = 'block';
-      hintEl.innerHTML = `<p>${t('osmHint')}</p><button type="button" class="btn bo bsm" onclick="showOsmComingSoon()">${t('osmSearchSoon')}</button>`;
+      hintEl.innerHTML = `<p>${t('osmHint')}</p><button type="button" class="btn bo bsm" onclick="exploreOnMap()">${t('osmSearchSoon')}</button>`;
     } else {
       hintEl.style.display = 'none';
       hintEl.innerHTML = '';
@@ -810,7 +810,7 @@ function onSearch(val) {
       const data = await api('/places/search?q=' + encodeURIComponent(val.trim()) + '&limit=7');
       const res = data.places;
       if (!res.length) {
-        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="showOsmComingSoon()">${t('osmSearchSoon')}</button></div>`;
+        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="exploreOnMap()">${t('osmSearchSoon')}</button></div>`;
       } else {
         drop.innerHTML = res.map((p) => `
           <div class="sd-item" onmousedown="pickSearch(${p.id})">
@@ -827,15 +827,18 @@ function onSearch(val) {
   }, 220);
 }
 
-async function showOsmComingSoon() {
+async function exploreOnMap() {
   const q = document.getElementById('heroSearch')?.value?.trim() || '';
-  try {
-    const res = await fetch('/api/osm/search?q=' + encodeURIComponent(q));
-    const data = await res.json();
-    alert(data.message || t('osmHint'));
-  } catch {
-    alert(t('osmHint'));
+  document.getElementById('srchDrop')?.classList.remove('show');
+  await showMainTab('explore');
+  const mapTab = document.getElementById('et-map');
+  if (mapTab) await showExploreTab('map', mapTab);
+  const mapInp = document.getElementById('mapSearchInput');
+  if (mapInp && q) {
+    mapInp.value = q;
+    window.TL_MAP?.setMapSearch(q);
   }
+  document.getElementById('es-map')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function pickSearch(id) {
@@ -2154,7 +2157,17 @@ async function applyRouteFromUrl() {
   }
 }
 
+function initHeroSearchAutofill() {
+  const inp = document.getElementById('heroSearch');
+  if (!inp) return;
+  const unlock = () => inp.removeAttribute('readonly');
+  inp.addEventListener('focus', unlock, { once: true });
+  inp.addEventListener('mousedown', unlock, { once: true });
+  inp.addEventListener('touchstart', unlock, { once: true, passive: true });
+}
+
 async function init() {
+  initHeroSearchAutofill();
   window.TL_I18N.apply(lang);
   if (window.TL_COOKIE) window.TL_COOKIE.render(lang);
   document.querySelectorAll('.lb').forEach((b) => {
