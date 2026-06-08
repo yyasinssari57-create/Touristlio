@@ -1,6 +1,9 @@
 # Touristlio — Render Blueprint
 # Dashboard: New > Blueprint > connect repo with this file
 # JWT_SECRET otomatik üretilir (generateValue). İsteğe bağlı: ADMIN_PASSWORD, SMTP_*, SITE_URL, CORS_ORIGIN.
+#
+# Render kart/hesap sorunu veya VPS tercihi: DEPLOY_HETZNER.md + deploy/hetzner/ (Hetzner CX22 ~€5/ay).
+# Render rehberi: DEPLOY.md
 
 services:
   - type: web

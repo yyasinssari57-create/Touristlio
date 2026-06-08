@@ -1,0 +1,31 @@
+# Touristlio — systemd unit (PM2 yerine alternatif)
+#
+# PM2 önerilir (ecosystem.config.js + pm2 startup). Bu dosya systemd tercih edenler içindir.
+#
+# Kurulum:
+#   sudo cp deploy/hetzner/touristlio.service /etc/systemd/system/touristlio.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable touristlio
+#   sudo systemctl start touristlio
+#   sudo systemctl status touristlio
+#
+# Log: journalctl -u touristlio -f
+
+[Unit]
+Description=Touristlio web application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Touristlio
+EnvironmentFile=/root/Touristlio/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server/scripts/start-prod.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/touristlio/systemd.log
+StandardError=append:/var/log/touristlio/systemd-error.log
+
+[Install]
+WantedBy=multi-user.target

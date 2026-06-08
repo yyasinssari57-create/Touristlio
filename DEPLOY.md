@@ -1,6 +1,8 @@
 # Touristlio — Canlıya Alma (Render)
 
-Bu rehber, GitHub’daki repoyu Render’da yayına almak içindir. VPS kurulumu için `README.md` → **VPS (manuel)** bölümüne bakın.
+Bu rehber, GitHub’daki repoyu Render’da yayına almak içindir.
+
+> **Render kart kabul etmiyor veya VPS tercih ediyorsanız:** adım adım Hetzner kurulumu için **[DEPLOY_HETZNER.md](./DEPLOY_HETZNER.md)** dosyasına bakın (`deploy/hetzner/` yapılandırma dosyaları dahil). Render rehberi silinmedi — iki seçenek yan yana durur.
 
 ## Ne oldu?
 
@@ -151,20 +153,23 @@ npm run verify:smtp
 
 ---
 
-## VPS alternatifi (kısa)
+## VPS alternatifi (Hetzner)
+
+Tam rehber: **[DEPLOY_HETZNER.md](./DEPLOY_HETZNER.md)** — CX22/CPX11, Nginx, Certbot, Cloudflare DNS, PM2, SQLite yedekleme ve Render maliyet karşılaştırması.
+
+Kısa özet:
 
 ```bash
 git clone https://github.com/yyasinssari57-create/Touristlio.git
 cd Touristlio
-cp .env.production.example .env
-# .env düzenle
+cp deploy/hetzner/.env.hetzner.example .env
+# .env düzenle — DATABASE_PATH=/var/lib/touristlio/data/touristlio.db
 npm ci
 npm run seed
-NODE_ENV=production npm run start:prod
-# veya: pm2 start server/scripts/start-prod.js --name touristlio
+pm2 start deploy/hetzner/ecosystem.config.js
 ```
 
-`data/` ve `uploads/` klasörlerini kalıcı volume’e bağlayın.
+Kalıcı veritabanı: `/var/lib/touristlio/data/touristlio.db` (bkz. `deploy/hetzner/.env.hetzner.example`).
 
 ---
 
