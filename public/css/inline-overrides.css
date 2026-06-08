@@ -2713,3 +2713,60 @@ body.admin-body:not(.admin-session) {
   padding: 1px 4px;
   border-radius: 3px;
 }
+
+/* ── Mobile layout (homepage & search) ── */
+@media (max-width: 900px) {
+  .site-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .site-footer > div,
+  .footer-copy {
+    width: 100%;
+    text-align: center;
+  }
+  .osm-attrib {
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .no-res {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .load-more-wrap {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+@media (max-width: 768px) {
+  .explore-filter-strip,
+  .cat-strip,
+  .group-strip {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .explore-filter-strip::-webkit-scrollbar,
+  .cat-strip::-webkit-scrollbar,
+  .group-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .fpill,
+  .cpill,
+  .gpill {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 480px) {
+  .hpill {
+    letter-spacing: 0.8px;
+    padding: 6px 12px;
+  }
+  .sd-empty .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

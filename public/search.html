@@ -12,7 +12,8 @@
 <body>
 <nav class="tl-nav">
   <div class="nav-inner">
-    <a href="/" class="brand" aria-label="Touristlio ana sayfa">
+    <div class="nav-spacer" aria-hidden="true"></div>
+    <a href="/" class="brand nav-brand-text" aria-label="Touristlio ana sayfa">
       <h1 class="brand-name">Tourist<span class="brand-accent">lio</span></h1>
     </a>
     <a href="/" class="nav-brand-center" aria-label="Touristlio">
@@ -114,7 +115,7 @@ async function runSearch(append) {
         <div class="pc-img"><img src="${pl.imageUrl}" alt="${pl.name}" loading="lazy"/></div>
         <div class="pc-body"><div class="pc-loc">📍 ${pl.location}</div><div class="pc-name">${pl.name}</div></div>
       </a>`).join('');
-    grid.innerHTML = html || `<div class="no-res">${t('noResults')}</div>`;
+    grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/#explore/map" class="btn bo bsm" style="margin-top:12px;display:inline-flex">${t('mapExploreBtn')}</a></div>`;
     const page = Math.floor(offset / LIMIT) + 1;
     const pages = Math.max(1, Math.ceil(total / LIMIT));
     document.getElementById('searchPageInfo').textContent = `${page} / ${pages}`;

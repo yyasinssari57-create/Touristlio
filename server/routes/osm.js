@@ -36,7 +36,7 @@ router.get('/search', (req, res) => {
   }
   res.status(501).json({
     error: 'osm_not_available',
-    message: 'OSM araması yakında. Şimdilik Touristlio veritabanında arayın.',
+    message: 'Haritada keşfet sekmesini kullanın veya Touristlio veritabanında arayın.',
     query: q,
     attribution: OSM_ATTRIBUTION,
     hint: 'VPS sonrası: GET /api/osm/search?q=... (self-hosted Nominatim veya onaylı proxy)',

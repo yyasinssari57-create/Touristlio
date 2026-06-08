@@ -707,7 +707,7 @@ function renderGrid(list, append = false) {
   if (hintEl) {
     if (cardsLoaded && !list.length && lastOsmHint) {
       hintEl.style.display = 'block';
-      hintEl.innerHTML = `<p>${t('osmHint')}</p><button type="button" class="btn bo bsm" onclick="exploreOnMap()">${t('osmSearchSoon')}</button>`;
+      hintEl.innerHTML = `<p>${t('mapExploreHint')}</p><button type="button" class="btn bo bsm" onclick="exploreOnMap()">${t('mapExploreBtn')}</button>`;
     } else {
       hintEl.style.display = 'none';
       hintEl.innerHTML = '';
@@ -810,7 +810,7 @@ function onSearch(val) {
       const data = await api('/places/search?q=' + encodeURIComponent(val.trim()) + '&limit=7');
       const res = data.places;
       if (!res.length) {
-        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="exploreOnMap()">${t('osmSearchSoon')}</button></div>`;
+        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="exploreOnMap()">${t('mapExploreBtn')}</button></div>`;
       } else {
         drop.innerHTML = res.map((p) => `
           <div class="sd-item" onmousedown="pickSearch(${p.id})">
