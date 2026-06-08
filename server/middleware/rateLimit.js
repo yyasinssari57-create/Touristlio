@@ -68,6 +68,15 @@ const adminToolLimiter = rateLimit({
   message: { error: 'Admin araç limiti aşıldı. Lütfen bekleyin.' },
 });
 
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.ADMIN_RATE_LIMIT_MAX) || 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user?.id ? `admin:user:${req.user.id}` : `admin:ip:${req.ip}`),
+  message: { error: 'Admin istek limiti aşıldı. Lütfen kısa süre sonra tekrar deneyin.' },
+});
+
 const liveDataLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: Number(process.env.LIVE_DATA_RATE_LIMIT_MAX) || 30,
@@ -81,6 +90,7 @@ module.exports = {
   authLimiter,
   searchLimiter,
   adminToolLimiter,
+  adminLimiter,
   liveDataLimiter,
   reportLimiter,
   adminAnalyticsLimiter,

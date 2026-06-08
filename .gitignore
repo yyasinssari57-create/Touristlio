@@ -2,6 +2,11 @@ node_modules/
 backups/
 uploads/*
 !uploads/.gitkeep
+server/uploads/
+_admin-fix-report.json
+tmp_repro.js
+*.repro.js
+*-fix-report.json
 data/*.db
 data/*.db-*
 data/*.db-journal

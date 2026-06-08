@@ -235,10 +235,13 @@ body.admin-body:not(.admin-session) {
   max-height: 50vh;
   overflow-y: auto;
 }
+.admin-modal-overlay {
+  z-index: 620;
+}
 .admin-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  z-index: 640;
   background: rgba(0, 0, 0, .88);
   display: none;
   align-items: center;

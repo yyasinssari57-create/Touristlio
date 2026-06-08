@@ -12,7 +12,7 @@ function buildFtsQuery(q) {
 /**
  * FTS5-backed place row fetch with optional country/city SQL filters.
  */
-function searchPlacesRows({ q, country, city } = {}) {
+function searchPlacesRows({ q, country, city, category } = {}) {
   const ftsQuery = q ? buildFtsQuery(q) : null;
   const params = [];
   const where = [];
@@ -28,6 +28,10 @@ function searchPlacesRows({ q, country, city } = {}) {
   if (city) {
     where.push('p.city = ?');
     params.push(city);
+  }
+  if (category) {
+    where.push('(p.category = ? OR (p.categories IS NOT NULL AND p.categories LIKE ?))');
+    params.push(category, `%"${category}"%`);
   }
 
   const sql = `SELECT p.* FROM places p${where.length ? ` WHERE ${where.join(' AND ')}` : ''}`;

@@ -132,6 +132,10 @@ NODE_ENV=production npm run start:prod
 
 ## Güvenlik (v2.2)
 
+### Kullanıcı fotoğrafları ve git geçmişi
+
+`server/uploads/` ve yerel repro/audit dosyaları git’e eklenmemelidir (`.gitignore` ile hariç tutulur). Bu dosyalar **daha önce GitHub’a push edildiyse**, yalnızca `.gitignore` yeterli değildir — geçmişten silmek için [git-filter-repo](https://github.com/newren/git-filter-repo) veya [BFG Repo-Cleaner](https://rtyley.github.io/bfg-repo-cleaner/) kullanın, ardından force-push yapın ve etkilenen kullanıcıları bilgilendirin.
+
 - Production: `JWT_SECRET` zorunlu (32+ karakter), Helmet CSP, API hata maskeleme
 - Dev logo endpoint yalnızca `NODE_ENV !== production`
 - Admin moderasyon: `escapeHtml`, Tiola spam filtresi (`spam` / `pending` ayrı sayaç)
