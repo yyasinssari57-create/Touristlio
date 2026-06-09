@@ -1,8 +1,9 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const multer = require('multer');
-const { db } = require('../db');
+const { db, dbPath } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
 const { createUser, findUserByEmail, sanitizeUser } = require('../auth');
 const { clear: clearCache } = require('../lib/cache');
@@ -1375,6 +1376,106 @@ router.get('/moderation-history/:contentType/:contentId', checkPermission('admin
   }
   const items = moderationHistory.listForContent(contentType, contentId);
   return ok(res, { items });
+});
+
+const SQLITE_MAGIC = 'SQLite format 3';
+const DB_BACKUP_MAX_BYTES = 100 * 1024 * 1024;
+
+function backupFilename() {
+  const date = new Date().toISOString().slice(0, 10);
+  return `touristlio-backup-${date}.db`;
+}
+
+function backupsDir() {
+  const dir = path.join(path.dirname(dbPath), 'backups');
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function isSqliteBuffer(buf) {
+  return buf && buf.length >= 16 && buf.slice(0, 15).toString('utf8') === SQLITE_MAGIC;
+}
+
+function removeWalSidecars(filePath) {
+  for (const suffix of ['-wal', '-shm']) {
+    try {
+      fs.unlinkSync(`${filePath}${suffix}`);
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+  }
+}
+
+async function writeDbBackupToPath(destPath) {
+  await db.backup(destPath);
+}
+
+router.get('/backup/download', requireRole('admin'), adminToolLimiter, async (req, res) => {
+  const filename = backupFilename();
+  const tmpPath = path.join(os.tmpdir(), `touristlio-backup-${Date.now()}.db`);
+  try {
+    await writeDbBackupToPath(tmpPath);
+    logAdmin(req, 'db.backup_download', 'database', null, filename);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    const stream = fs.createReadStream(tmpPath);
+    stream.on('error', (err) => {
+      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+      if (!res.headersSent) fail(res, err.message || 'Yedek indirilemedi', 500);
+    });
+    stream.on('end', () => {
+      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    });
+    stream.pipe(res);
+  } catch (err) {
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    return fail(res, err.message || 'Yedek indirilemedi', 500);
+  }
+});
+
+const dbRestoreUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: DB_BACKUP_MAX_BYTES, files: 1 },
+  fileFilter(_req, file, cb) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (ext !== '.db') {
+      return cb(new Error('Yalnızca .db dosyası yüklenebilir'));
+    }
+    cb(null, true);
+  },
+});
+
+router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestoreUpload.single('file'), async (req, res) => {
+  if (!req.file?.buffer?.length) {
+    return fail(res, 'Dosya gerekli (.db)', 400);
+  }
+  if (!isSqliteBuffer(req.file.buffer)) {
+    return fail(res, 'Geçersiz SQLite dosyası', 400);
+  }
+
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const preBackupPath = path.join(backupsDir(), `pre-restore-${stamp}.db`);
+
+  try {
+    await writeDbBackupToPath(preBackupPath);
+    logAdmin(
+      req,
+      'db.restore',
+      'database',
+      null,
+      `${req.file.originalname || 'upload.db'} → önceki: ${path.basename(preBackupPath)}`,
+    );
+    db.close();
+    removeWalSidecars(dbPath);
+    fs.writeFileSync(dbPath, req.file.buffer);
+    return ok(res, {
+      message: 'Veritabanı geri yüklendi. Değişikliklerin tam uygulanması için sunucuyu yeniden başlatın.',
+      needsRestart: true,
+      preBackup: path.basename(preBackupPath),
+    });
+  } catch (err) {
+    return fail(res, err.message || 'Geri yükleme başarısız', 500);
+  }
 });
 
 router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, (_req, res) => {

@@ -57,6 +57,19 @@
 
       <section id="adm-dashboard" class="adm-section active" role="tabpanel" aria-label="Dashboard">
         <div id="statsRow"></div>
+        <div id="dbBackupSection" data-role="admin" class="admin-card" style="margin-top:12px;display:none">
+          <h2 class="adm-h2" style="margin-top:0">Veritabanı yedeği</h2>
+          <p class="adm-field-hint">Her indirme tarihli yeni bir <code>.db</code> dosyası oluşturur; yedekleri Google Drive veya benzeri güvenli bir yerde saklayın.</p>
+          <p class="adm-field-hint">Geri yükleme yalnızca deploy sonrası veri kaybı gibi acil durumlarda kullanılmalıdır. İçerik yöneticileri (moderatörler) normal iş akışında geri yükleme yapmadan çalışır; geri yükleme <strong>tüm site verisini</strong> seçtiğiniz yedekle değiştirir.</p>
+          <div class="admin-form" style="margin-top:12px">
+            <button class="btn bp bsm" type="button" onclick="downloadDbBackup()">Tam yedek indir (.db)</button>
+            <label class="btn bo bsm adm-photo-btn" style="margin:0">
+              Yedek dosyası seç
+              <input type="file" id="dbRestoreFile" class="adm-photo-input" accept=".db,application/octet-stream" aria-label="Veritabanı yedeği seç"/>
+            </label>
+            <button class="btn bo bsm" type="button" onclick="restoreDbBackup()">Yedekten geri yükle</button>
+          </div>
+        </div>
       </section>
 
       <section id="adm-places" class="adm-section" hidden role="tabpanel" aria-label="Yerler">
@@ -3056,6 +3069,62 @@ function clearPlaceQualityFilter() {
   const btn = document.getElementById('btnClearPlaceFilter');
   if (btn) btn.style.display = 'none';
   loadPlacesList();
+}
+
+async function downloadDbBackup() {
+  if (currentUser?.role !== 'admin') {
+    showErr('Tam veritabanı yedeği yalnızca yönetici hesabıyla indirilebilir.');
+    return;
+  }
+  try {
+    const res = await fetch(API + '/admin/backup/download', { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Yedek indirilemedi');
+    }
+    const cd = res.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename="?([^";]+)"?/i);
+    const filename = match ? match[1] : 'touristlio-backup.db';
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Veritabanı yedeği indirildi');
+  } catch (e) { showErr(e.message); }
+}
+
+async function restoreDbBackup() {
+  if (currentUser?.role !== 'admin') {
+    showErr('Geri yükleme yalnızca yönetici hesabıyla yapılabilir.');
+    return;
+  }
+  const input = document.getElementById('dbRestoreFile');
+  const file = input?.files?.[0];
+  if (!file) {
+    showErr('Önce bir .db yedek dosyası seçin.');
+    return;
+  }
+  if (!/\.db$/i.test(file.name)) {
+    showErr('Yalnızca .db uzantılı SQLite yedek dosyası yüklenebilir.');
+    return;
+  }
+  const okRestore = confirm(
+    'Seçilen yedek tüm site verisini (kullanıcılar, yerler, içerik) değiştirir. Mevcut veritabanı otomatik yedeklenir; işlem sonrası sunucunun yeniden başlatılması gerekir. Devam edilsin mi?'
+  );
+  if (!okRestore) return;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const data = await api('/admin/backup/restore', { method: 'POST', body: fd });
+    input.value = '';
+    showToast(data.message || 'Geri yükleme tamamlandı — sunucuyu yeniden başlatın');
+  } catch (e) {
+    showErr(e.message);
+    input.value = '';
+  }
 }
 
 async function exportPlaces(format) {
