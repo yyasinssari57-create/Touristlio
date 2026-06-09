@@ -2778,26 +2778,29 @@ body.admin-body:not(.admin-session) {
 @media (max-width: 768px) {
   body.admin-session .admin-content {
     padding: 16px 14px 48px;
+    box-sizing: border-box;
   }
   body.admin-session .nav-inner {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto 1fr;
     grid-template-rows: var(--nav-h);
     align-items: center;
-    padding: 0 12px;
+    padding: 0 14px;
     gap: 8px;
   }
   body.admin-session .brand.admin-nav-stay {
     display: none;
   }
   body.admin-session .nav-brand-center {
-    grid-column: 1;
-    justify-self: start;
+    grid-column: 2;
+    justify-self: center;
+    position: static;
+    transform: none;
   }
   body.admin-session .nav-r {
-    grid-column: 2;
+    grid-column: 3;
     justify-self: end;
-    gap: 4px;
+    gap: 6px;
   }
   body.admin-session #admUser {
     display: none;
@@ -2806,11 +2809,15 @@ body.admin-body:not(.admin-session) {
   body.admin-session .nav-r .nav-btn-ghost {
     padding: 6px 10px;
     font-size: .72rem;
+    min-height: 34px;
   }
   .admin-topnav {
-    padding: 8px 12px;
+    padding: 8px 14px;
     gap: 6px;
-    margin: 0 -2px;
+    margin: 0;
+    min-height: 44px;
+    align-items: center;
+    box-sizing: border-box;
     scrollbar-width: none;
   }
   .admin-topnav::-webkit-scrollbar {
@@ -2820,18 +2827,31 @@ body.admin-body:not(.admin-session) {
     padding: 8px 12px;
     font-size: .74rem;
     flex-shrink: 0;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   #statsRow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
   }
   #statsRow .admin-card {
     text-align: center;
     padding: 12px 10px;
     margin-bottom: 0;
+    min-height: 76px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
   #dbBackupSection .admin-form {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
   #dbBackupSection .admin-form .btn,
   #dbBackupSection .admin-form label.btn {
@@ -2840,22 +2860,55 @@ body.admin-body:not(.admin-session) {
   }
   .admin-form {
     grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .admin-form .ain,
+  .admin-form .btn,
+  .admin-form label.btn {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .admin-form .btn,
+  .admin-form label.btn {
+    justify-content: center;
+  }
+  .admin-card > .btn {
+    width: 100%;
+    justify-content: center;
   }
   .adm-side-card {
     grid-template-columns: 1fr;
   }
   .adm-mod-filter-row {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .adm-mod-filter-row .btn {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
+  }
+  .adm-audit-filters {
+    gap: 10px;
+  }
+  .adm-audit-filters .ain {
+    width: 100%;
+    min-width: 0;
   }
   .adm-audit-filters .adm-audit-filter-btn {
     grid-column: 1 / -1;
     width: 100%;
+    justify-content: center;
   }
   .admin-card {
     padding: 14px 12px;
+    box-sizing: border-box;
   }
   .admin-card--table {
-    padding: 10px 8px;
+    padding: 12px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -2917,6 +2970,7 @@ body.admin-body:not(.admin-session) {
     max-height: 92vh;
     border-radius: 16px 16px 0 0;
     padding: 18px 16px;
+    box-sizing: border-box;
   }
   .admin-modal-actions {
     flex-direction: column-reverse;
@@ -2929,12 +2983,23 @@ body.admin-body:not(.admin-session) {
   .adm-user-slide-panel {
     width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
+  }
+  .adm-user-slide-head {
+    padding: 14px 12px;
+  }
+  .adm-user-slide-body {
+    padding: 12px;
   }
   .adm-user-tabs {
     overflow-x: auto;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    gap: 6px;
+    min-height: 40px;
+    align-items: center;
+    padding-bottom: 4px;
   }
   .adm-user-tabs::-webkit-scrollbar {
     display: none;
@@ -2942,6 +3007,10 @@ body.admin-body:not(.admin-session) {
   .adm-user-tabs button {
     flex-shrink: 0;
     white-space: nowrap;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .adm-user-stat-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -2951,6 +3020,10 @@ body.admin-body:not(.admin-session) {
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    gap: 6px;
+    min-height: 40px;
+    align-items: center;
+    padding-bottom: 4px;
   }
   .adm-report-tabs::-webkit-scrollbar {
     display: none;
@@ -2958,6 +3031,10 @@ body.admin-body:not(.admin-session) {
   .adm-report-tabs button {
     flex-shrink: 0;
     white-space: nowrap;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .adm-analytics-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2973,12 +3050,51 @@ body.admin-body:not(.admin-session) {
 }
 
 @media (max-width: 480px) {
+  body.admin-session .admin-content {
+    padding: 16px 12px 48px;
+  }
+  body.admin-session .nav-inner {
+    padding: 0 12px;
+  }
+  body.admin-session .nav-r .btn,
+  body.admin-session .nav-r .nav-btn-ghost {
+    padding: 6px 8px;
+    font-size: .68rem;
+  }
+  .admin-topnav {
+    padding: 8px 12px;
+    min-height: 42px;
+  }
   #statsRow {
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  #statsRow .admin-card {
+    min-height: 72px;
+    padding: 10px 8px;
   }
   .admin-topnav button {
     padding: 7px 10px;
     font-size: .7rem;
+    min-height: 34px;
+  }
+  .admin-card {
+    padding: 12px;
+  }
+  .admin-card--table {
+    padding: 10px 12px;
+  }
+  .admin-form,
+  .adm-mod-filter-row,
+  .adm-audit-filters,
+  #dbBackupSection .admin-form {
+    gap: 8px;
+  }
+  .admin-modal-overlay {
+    padding: 10px 12px;
+  }
+  .admin-modal {
+    padding: 16px 12px;
   }
   .adm-analytics-cards {
     grid-template-columns: 1fr;
