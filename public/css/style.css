@@ -661,7 +661,9 @@ body.admin-session #loginScreen{display:none;}
   .discover-layout{grid-template-columns:1fr;}
   .discover-map-panel{position:fixed;bottom:0;left:0;right:0;height:38vh;z-index:150;border-left:none;border-top:1px solid var(--l2);box-shadow:0 -8px 24px rgba(0,0,0,.08);overflow:hidden;}
   .discover-main{padding-bottom:calc(38vh + 24px);}
-  .admin-topnav{overflow-x:auto;flex-wrap:nowrap;}
+  .admin-topnav{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;}
+  .admin-topnav::-webkit-scrollbar{display:none;}
+  .admin-content{padding:20px 16px 48px;}
 }
 
 /* ── 4K / HiDPI: crisp type & imagery ── */

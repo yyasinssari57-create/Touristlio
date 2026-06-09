@@ -48,7 +48,7 @@
       <button type="button" role="tab" aria-selected="false" data-section="media" data-permission="admin.places" onclick="showAdminSection('media',this)">Medya</button>
       <button type="button" role="tab" aria-selected="false" data-section="settings" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('settings',this)">Ayarlar</button>
       <button type="button" role="tab" aria-selected="false" data-section="roles" data-role="admin" data-permission="admin.roles" onclick="showAdminSection('roles',this)">Roller</button>
-      <button type="button" role="tab" aria-selected="false" data-section="audit-log" data-role="admin" onclick="showAdminSection('audit-log',this)">Audit Log</button>
+      <button type="button" role="tab" aria-selected="false" data-section="audit-log" data-role="admin" onclick="showAdminSection('audit-log',this)">İşlem geçmişi</button>
       <button type="button" role="tab" aria-selected="false" data-section="guide" onclick="showAdminSection('guide',this)">Kılavuz</button>
     </nav>
 
@@ -583,10 +583,14 @@
         <div class="admin-card" id="rolesPanel" aria-live="polite"></div>
       </section>
 
-      <section id="adm-audit-log" class="adm-section" hidden role="tabpanel" aria-label="Audit Log">
-        <h2 class="adm-h2-tight">Audit Log</h2>
+      <section id="adm-audit-log" class="adm-section" hidden role="tabpanel" aria-label="İşlem geçmişi">
+        <h2 class="adm-h2-tight">Moderatör aktivitesi</h2>
+        <p class="adm-cat-hint">Panelde yapılan tüm işlemlerin denetim kaydı. Yönetici tüm moderatör ve içerik yöneticilerinin işlemlerini görebilir.</p>
         <div class="admin-card adm-mod-filters">
-          <div class="admin-form adm-mod-filter-row">
+          <div class="admin-form adm-mod-filter-row adm-audit-filters">
+            <select class="ain" id="auditFilterStaff" aria-label="Personel filtresi">
+              <option value="">Tüm personel</option>
+            </select>
             <select class="ain" id="auditFilterAction" aria-label="İşlem filtresi">
               <option value="">Tüm işlemler</option>
               <option value="tiola.approve">Tiola onay</option>
@@ -595,30 +599,63 @@
               <option value="blog.approve">Blog onay</option>
               <option value="blog.reject">Blog red</option>
               <option value="blog.remove">Blog kaldır</option>
-              <option value="user.send_message">Kullanıcıya mesaj</option>
-              <option value="places.import">Yer içe aktar</option>
-              <option value="user.block">Kullanıcı engel</option>
-              <option value="user.unblock">Engel kaldır</option>
-              <option value="user.role_change">Rol değişikliği</option>
+              <option value="blog.create">Blog oluştur</option>
+              <option value="blog.update">Blog güncelle</option>
+              <option value="blog.delete">Blog sil</option>
               <option value="place.create">Yer ekle</option>
               <option value="place.update">Yer güncelle</option>
               <option value="place.delete">Yer sil</option>
-              <option value="report.resolve_remove">Şikayet kaldır</option>
+              <option value="places.import">Yer içe aktar</option>
+              <option value="category.create">Kategori ekle</option>
+              <option value="category.update">Kategori güncelle</option>
+              <option value="category.delete">Kategori sil</option>
+              <option value="category.reorder">Kategori sırala</option>
+              <option value="blog_category.create">Blog kategorisi ekle</option>
+              <option value="blog_category.update">Blog kategorisi güncelle</option>
+              <option value="blog_category.delete">Blog kategorisi sil</option>
+              <option value="city.create">Şehir ekle</option>
+              <option value="city.update">Şehir güncelle</option>
+              <option value="city.delete">Şehir sil</option>
+              <option value="report.resolve_remove">Şikayet — içerik kaldır</option>
               <option value="report.dismiss">Şikayet göz ardı</option>
+              <option value="report.reopen">Şikayet yeniden aç</option>
+              <option value="report.change_decision">Şikayet kararı değiştir</option>
+              <option value="report.status_change">Şikayet durumu</option>
+              <option value="profile.approve">Profil onay</option>
+              <option value="profile.reject">Profil red</option>
+              <option value="user.block">Kullanıcı engel</option>
+              <option value="user.unblock">Engel kaldır</option>
+              <option value="user.send_message">Kullanıcıya mesaj</option>
+              <option value="user.remove_avatar">Profil fotoğrafı kaldır</option>
+              <option value="user.rename">Görünen ad değiştir</option>
+              <option value="user.role_change">Rol değişikliği</option>
+              <option value="moderator.create">Moderatör oluştur</option>
+              <option value="media.delete">Medya sil</option>
+              <option value="banned_word.add">Yasaklı kelime ekle</option>
+              <option value="banned_word.delete">Yasaklı kelime sil</option>
+              <option value="db.backup_download">Yedek indir</option>
+              <option value="db.restore">Yedekten geri yükle</option>
             </select>
-            <input class="ain" id="auditFilterAdminId" placeholder="Admin ID" inputmode="numeric" aria-label="Admin ID"/>
+            <input class="ain" id="auditFilterDateFrom" type="date" aria-label="Başlangıç tarihi"/>
+            <input class="ain" id="auditFilterDateTo" type="date" aria-label="Bitiş tarihi"/>
             <select class="ain" id="auditFilterTargetType" aria-label="Hedef türü">
               <option value="">Tüm hedefler</option>
               <option value="tiola">Tiola</option>
               <option value="blog">Blog</option>
               <option value="user">Kullanıcı</option>
               <option value="place">Yer</option>
+              <option value="category">Kategori</option>
+              <option value="blog_category">Blog kategorisi</option>
+              <option value="city">Şehir</option>
               <option value="report">Şikayet</option>
+              <option value="profile_change">Profil değişikliği</option>
+              <option value="media">Medya</option>
+              <option value="database">Veritabanı</option>
             </select>
-            <button class="btn bp bsm" type="button" onclick="loadAuditLog(1)">Filtrele</button>
+            <button class="btn bp bsm full adm-audit-filter-btn" type="button" onclick="loadAuditLog(1)">Filtrele</button>
           </div>
         </div>
-        <div class="admin-card" id="auditLogTable" aria-live="polite"></div>
+        <div class="admin-card admin-card--table" id="auditLogTable" aria-live="polite"></div>
         <div id="auditPagination" class="adm-pagination"></div>
       </section>
 
@@ -646,7 +683,7 @@
               <li><a href="#guide-medya">Medya</a></li>
               <li><a href="#guide-ayarlar">Ayarlar</a></li>
               <li><a href="#guide-roller-panel">Roller</a></li>
-              <li><a href="#guide-audit">Audit Log</a></li>
+              <li><a href="#guide-audit">İşlem geçmişi</a></li>
               <li><a href="#guide-is-akislari">Yaygın iş akışları</a></li>
               <li><a href="#guide-ipuclari">İpuçları ve en iyi uygulamalar</a></li>
             </ul>
@@ -898,15 +935,16 @@
           </div>
 
           <div id="guide-audit" class="admin-card adm-guide-block">
-            <h3>Audit Log</h3>
-            <p><em>Yalnızca yönetici (admin) rolü.</em> Admin panelinde yapılan işlemlerin denetim kaydı.</p>
+            <h3>İşlem geçmişi</h3>
+            <p><em>Yalnızca yönetici (admin) rolü.</em> Moderatör ve içerik yöneticilerinin panelde yaptığı işlemlerin denetim kaydı.</p>
             <ul class="adm-guide-list">
               <li>Tiola/blog onay, red ve kaldırma işlemleri</li>
-              <li>Kullanıcı engelleme, rol değişikliği, mesaj gönderme</li>
-              <li>Yer ekleme/güncelleme/silme, yer içe aktarma</li>
+              <li>Yer, şehir ve kategori ekleme/güncelleme/silme</li>
+              <li>Kullanıcı engelleme, rol değişikliği, profil moderasyonu</li>
               <li>Şikayet çözümleme (göz ardı / içerik kaldır)</li>
+              <li>Blog oluşturma/düzenleme, medya silme</li>
             </ul>
-            <p>İşlem türü, admin ID ve hedef türü (Tiola, blog, kullanıcı, yer, şikayet) ile filtreleyebilirsiniz.</p>
+            <p>Personel, işlem türü, tarih aralığı ve hedef türü ile filtreleyebilirsiniz. Kim, ne zaman, ne yaptı ve hedef (yer adı, şikayet no vb.) görünür.</p>
           </div>
 
           <div id="guide-is-akislari" class="admin-card adm-guide-block">
@@ -1090,6 +1128,64 @@ const PERM_LABELS = {
 };
 
 const ROLE_LABELS = { admin: 'Yönetici', moderator: 'Moderatör', editor: 'Editör', staff: 'İçerik Yöneticisi', member: 'Üye' };
+const AUDIT_ACTION_LABELS = {
+  'tiola.approve': 'Tiola onayladı',
+  'tiola.reject': 'Tiola reddetti',
+  'tiola.remove': 'Tiola kaldırdı',
+  'blog.approve': 'Blog onayladı',
+  'blog.reject': 'Blog reddetti',
+  'blog.remove': 'Blog kaldırdı',
+  'blog.create': 'Blog oluşturdu',
+  'blog.update': 'Blog güncelledi',
+  'blog.delete': 'Blog sildi',
+  'place.create': 'Yer ekledi',
+  'place.update': 'Yeri güncelledi',
+  'place.delete': 'Yeri sildi',
+  'places.import': 'Yer içe aktardı',
+  'category.create': 'Kategori ekledi',
+  'category.update': 'Kategori güncelledi',
+  'category.delete': 'Kategori sildi',
+  'category.reorder': 'Kategori sıraladı',
+  'blog_category.create': 'Blog kategorisi ekledi',
+  'blog_category.update': 'Blog kategorisi güncelledi',
+  'blog_category.delete': 'Blog kategorisi sildi',
+  'city.create': 'Şehir ekledi',
+  'city.update': 'Şehir güncelledi',
+  'city.delete': 'Şehir sildi',
+  'report.resolve_remove': 'Şikayet — içerik kaldırdı',
+  'report.dismiss': 'Şikayeti göz ardı etti',
+  'report.reopen': 'Şikayeti yeniden açtı',
+  'report.change_decision': 'Şikayet kararını değiştirdi',
+  'report.status_change': 'Şikayet durumunu güncelledi',
+  'profile.approve': 'Profil değişikliğini onayladı',
+  'profile.reject': 'Profil değişikliğini reddetti',
+  'user.block': 'Kullanıcıyı engelledi',
+  'user.unblock': 'Engeli kaldırdı',
+  'user.send_message': 'Kullanıcıya mesaj gönderdi',
+  'user.remove_avatar': 'Profil fotoğrafını kaldırdı',
+  'user.rename': 'Görünen adı değiştirdi',
+  'user.role_change': 'Rol değiştirdi',
+  'moderator.create': 'Moderatör oluşturdu',
+  'media.delete': 'Medya sildi',
+  'banned_word.add': 'Yasaklı kelime ekledi',
+  'banned_word.delete': 'Yasaklı kelime sildi',
+  'db.backup_download': 'Veritabanı yedeği indirdi',
+  'db.restore': 'Veritabanı geri yükledi',
+};
+const AUDIT_TARGET_LABELS = {
+  tiola: 'Tiola',
+  blog: 'Blog',
+  user: 'Kullanıcı',
+  place: 'Yer',
+  category: 'Kategori',
+  blog_category: 'Blog kategorisi',
+  city: 'Şehir',
+  report: 'Şikayet',
+  profile_change: 'Profil değişikliği',
+  media: 'Medya',
+  database: 'Veritabanı',
+  banned_word: 'Yasaklı kelime',
+};
 const PANEL_ROLES = ['admin', 'moderator', 'editor', 'staff'];
 
 const SETTING_FIELDS = [
@@ -1637,7 +1733,10 @@ function showAdminSection(id, btn) {
   if (id === 'roles' && currentUser?.role === 'admin') loadRoles();
   if (id === 'analytics' && hasAdminPerm('admin.analytics')) loadAnalytics();
   if (id === 'reports' && hasAdminPerm('admin.moderate')) loadReportsList();
-  if (id === 'audit-log' && currentUser?.role === 'admin') loadAuditLog(1);
+  if (id === 'audit-log' && currentUser?.role === 'admin') {
+    populateAuditStaffFilter();
+    loadAuditLog(1);
+  }
   if (id === 'media' && hasAdminPerm('admin.places')) loadMediaLibrary(1);
   if (id === 'moderation' && hasAdminPerm('admin.moderate')) loadModTiolas();
   if (id === 'settings' && hasAdminPerm('admin.settings')) {
@@ -4004,6 +4103,38 @@ async function loadAnalytics() {
   }
 }
 
+async function populateAuditStaffFilter() {
+  const sel = document.getElementById('auditFilterStaff');
+  if (!sel || currentUser?.role !== 'admin') return;
+  const prev = sel.value;
+  try {
+    const data = await api('/admin/users?limit=200');
+    const staff = (data.users || []).filter((u) => PANEL_ROLES.includes(u.role));
+    sel.innerHTML = '<option value="">Tüm personel</option>' + staff.map((u) => {
+      const role = ROLE_LABELS[u.role] || u.role;
+      return `<option value="${u.id}">${escapeHtml(u.name)} (${escapeHtml(role)})</option>`;
+    }).join('');
+    if (prev) sel.value = prev;
+  } catch (_) {
+    sel.innerHTML = '<option value="">Tüm personel</option>';
+  }
+}
+
+function formatAuditTarget(r) {
+  const typeLabel = AUDIT_TARGET_LABELS[r.targetType] || r.targetType || '—';
+  const idPart = r.targetId ? ` #${r.targetId}` : '';
+  const detail = r.detail ? ` — ${r.detail}` : '';
+  return `${typeLabel}${idPart}${detail}`;
+}
+
+function formatAuditActor(r) {
+  const name = r.adminName || `Kullanıcı #${r.adminId}`;
+  const role = r.adminRole ? ROLE_LABELS[r.adminRole] || r.adminRole : '';
+  const email = r.adminEmail ? `<br><span style="font-size:.7rem;color:var(--t3)">${escapeHtml(r.adminEmail)}</span>` : '';
+  const roleBadge = role ? `<br><span style="font-size:.68rem;color:var(--t3)">${escapeHtml(role)}</span>` : '';
+  return `<strong>${escapeHtml(name)}</strong>${email}${roleBadge}`;
+}
+
 async function loadAuditLog(page) {
   if (currentUser?.role !== 'admin') return;
   auditPage = page || 1;
@@ -4013,21 +4144,24 @@ async function loadAuditLog(page) {
   try {
     const qs = new URLSearchParams({ page: String(auditPage), limit: '50' });
     const action = document.getElementById('auditFilterAction')?.value;
-    const adminId = document.getElementById('auditFilterAdminId')?.value?.trim();
+    const adminId = document.getElementById('auditFilterStaff')?.value?.trim();
     const targetType = document.getElementById('auditFilterTargetType')?.value;
+    const dateFrom = document.getElementById('auditFilterDateFrom')?.value;
+    const dateTo = document.getElementById('auditFilterDateTo')?.value;
     if (action) qs.set('action', action);
     if (adminId) qs.set('adminId', adminId);
     if (targetType) qs.set('targetType', targetType);
+    if (dateFrom) qs.set('dateFrom', dateFrom);
+    if (dateTo) qs.set('dateTo', dateTo);
     const data = await api('/admin/audit-log?' + qs);
     const items = data.items || [];
-    el.innerHTML = items.length ? `<table class="admin-table" aria-label="Audit log">
-      <thead><tr><th>Tarih</th><th>Admin</th><th>İşlem</th><th>Hedef</th><th>Detay</th></tr></thead>
+    el.innerHTML = items.length ? `<table class="admin-table" aria-label="İşlem geçmişi">
+      <thead><tr><th>Tarih</th><th>Kim</th><th>İşlem</th><th>Hedef</th></tr></thead>
       <tbody>${items.map((r) => `<tr>
-        <td style="white-space:nowrap;font-size:.75rem">${escapeHtml(r.createdAt || '')}</td>
-        <td>${escapeHtml(r.adminName || '#' + r.adminId)}</td>
-        <td><code>${escapeHtml(r.action)}</code></td>
-        <td>${escapeHtml(r.targetType || '')}${r.targetId ? ' #' + r.targetId : ''}</td>
-        <td style="font-size:.75rem">${escapeHtml(r.detail || '')}</td>
+        <td class="adm-audit-date">${escapeHtml(r.createdAt || '')}</td>
+        <td class="adm-audit-actor">${formatAuditActor(r)}</td>
+        <td>${escapeHtml(AUDIT_ACTION_LABELS[r.action] || r.action)}</td>
+        <td class="adm-audit-target">${escapeHtml(formatAuditTarget(r))}</td>
       </tr>`).join('')}</tbody></table>` : '<p style="color:var(--t3)">Kayıt yok.</p>';
     renderPagination('auditPagination', auditPage, data.total || 0, data.limit || 50, 'loadAuditLog');
   } catch (e) { el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }

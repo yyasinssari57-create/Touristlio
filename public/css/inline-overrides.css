@@ -2773,3 +2773,224 @@ body.admin-body:not(.admin-session) {
     justify-content: center;
   }
 }
+
+/* ── Admin panel: mobile layout (360px–768px) ── */
+@media (max-width: 768px) {
+  body.admin-session .admin-content {
+    padding: 16px 14px 48px;
+  }
+  body.admin-session .nav-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: var(--nav-h);
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  body.admin-session .brand.admin-nav-stay {
+    display: none;
+  }
+  body.admin-session .nav-brand-center {
+    grid-column: 1;
+    justify-self: start;
+  }
+  body.admin-session .nav-r {
+    grid-column: 2;
+    justify-self: end;
+    gap: 4px;
+  }
+  body.admin-session #admUser {
+    display: none;
+  }
+  body.admin-session .nav-r .btn,
+  body.admin-session .nav-r .nav-btn-ghost {
+    padding: 6px 10px;
+    font-size: .72rem;
+  }
+  .admin-topnav {
+    padding: 8px 12px;
+    gap: 6px;
+    margin: 0 -2px;
+    scrollbar-width: none;
+  }
+  .admin-topnav::-webkit-scrollbar {
+    display: none;
+  }
+  .admin-topnav button {
+    padding: 8px 12px;
+    font-size: .74rem;
+    flex-shrink: 0;
+  }
+  #statsRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  #statsRow .admin-card {
+    text-align: center;
+    padding: 12px 10px;
+    margin-bottom: 0;
+  }
+  #dbBackupSection .admin-form {
+    grid-template-columns: 1fr;
+  }
+  #dbBackupSection .admin-form .btn,
+  #dbBackupSection .admin-form label.btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .admin-form {
+    grid-template-columns: 1fr;
+  }
+  .adm-side-card {
+    grid-template-columns: 1fr;
+  }
+  .adm-mod-filter-row {
+    grid-template-columns: 1fr;
+  }
+  .adm-audit-filters .adm-audit-filter-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .admin-card {
+    padding: 14px 12px;
+  }
+  .admin-card--table {
+    padding: 10px 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-card--table .admin-table {
+    min-width: 560px;
+    margin-top: 0;
+  }
+  .adm-audit-date {
+    white-space: nowrap;
+    font-size: .72rem;
+  }
+  .adm-audit-target {
+    font-size: .75rem;
+    word-break: break-word;
+  }
+  .admin-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-item .admin-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .admin-item .admin-actions .btn,
+  .admin-item .admin-actions .btn-ok,
+  .admin-item .admin-actions .btn-no,
+  .admin-item .admin-actions .btn-edit {
+    flex: 1 1 calc(50% - 4px);
+    min-width: calc(50% - 4px);
+    text-align: center;
+    justify-content: center;
+  }
+  .adm-tiola-main {
+    flex-direction: column;
+  }
+  .adm-tiola-thumb {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+  .adm-bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .adm-bulk-bar .btn {
+    width: 100%;
+  }
+  .adm-pagination {
+    justify-content: center;
+  }
+  .admin-modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .admin-modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+    padding: 18px 16px;
+  }
+  .admin-modal-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .admin-modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .adm-user-slide-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+  .adm-user-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .adm-user-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .adm-user-tabs button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .adm-user-stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .adm-report-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .adm-report-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .adm-report-tabs button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .adm-analytics-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .adm-media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .adm-toast {
+    left: 12px;
+    right: 12px;
+    bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  #statsRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-topnav button {
+    padding: 7px 10px;
+    font-size: .7rem;
+  }
+  .adm-analytics-cards {
+    grid-template-columns: 1fr;
+  }
+  .adm-media-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-item .admin-actions .btn,
+  .admin-item .admin-actions .btn-ok,
+  .admin-item .admin-actions .btn-no,
+  .admin-item .admin-actions .btn-edit {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+}

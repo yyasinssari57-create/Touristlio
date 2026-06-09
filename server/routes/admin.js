@@ -610,6 +610,7 @@ router.post('/moderators', requireRole('admin'), (req, res) => {
     return fail(res, 'E-posta zaten kayıtlı', 409);
   }
   const user = createUser({ name, email, password, role: 'moderator' });
+  logAdmin(req, 'moderator.create', 'user', user.id, `${name} (${email})`);
   return ok(res, { user: sanitizeUser(user) }, 201);
 });
 
@@ -792,6 +793,7 @@ router.post('/cities', checkPermission('admin.cities'), (req, res) => {
   try {
     const city = catalogDb.createCity(req.body || {});
     clearCache('places-list');
+    logAdmin(req, 'city.create', 'city', city.id, city.name || city.slug || null);
     return ok(res, { city }, 201);
   } catch (err) {
     return fail(res, err.message || 'Şehir eklenemedi');
@@ -806,6 +808,7 @@ router.put('/cities/:id', checkPermission('admin.cities'), (req, res) => {
     if (!city) return fail(res, 'Şehir bulunamadı', 404);
     clearCache('places-list');
     clearCache('search');
+    logAdmin(req, 'city.update', 'city', id, city.name || city.slug || null);
     return ok(res, { city });
   } catch (err) {
     return fail(res, err.message || 'Şehir güncellenemedi');
@@ -815,9 +818,11 @@ router.put('/cities/:id', checkPermission('admin.cities'), (req, res) => {
 router.delete('/cities/:id', checkPermission('admin.cities'), (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
+  const preview = catalogDb.getCityById(id);
   const result = catalogDb.deleteCity(id, { hard: true });
   if (!result.ok) return fail(res, result.error, result.error?.includes('kayıtlı') ? 409 : 404);
   clearCache('places-list');
+  logAdmin(req, 'city.delete', 'city', id, preview?.name || preview?.slug || null);
   return ok(res, result);
 });
 
@@ -841,6 +846,7 @@ router.post('/categories', checkPermission('admin.categories'), (req, res) => {
   try {
     const category = catalogDb.createCategory(req.body || {});
     invalidateCategoryCaches();
+    logAdmin(req, 'category.create', 'category', category.id, category.nameTr || category.slug || null);
     return ok(res, { category }, 201);
   } catch (err) {
     return fail(res, err.message || 'Kategori eklenemedi');
@@ -851,6 +857,7 @@ router.put('/categories/reorder', checkPermission('admin.categories'), (req, res
   try {
     const categories = catalogDb.reorderCategories(req.body?.orderedIds || req.body?.ids);
     invalidateCategoryCaches();
+    logAdmin(req, 'category.reorder', 'category', null, `${categories.length} kategori`);
     return ok(res, { categories });
   } catch (err) {
     return fail(res, err.message || 'Sıralama güncellenemedi');
@@ -864,6 +871,7 @@ router.put('/categories/:id', checkPermission('admin.categories'), (req, res) =>
     const category = catalogDb.updateCategory(id, req.body || {});
     if (!category) return fail(res, 'Kategori bulunamadı', 404);
     invalidateCategoryCaches();
+    logAdmin(req, 'category.update', 'category', id, category.nameTr || category.slug || null);
     return ok(res, { category });
   } catch (err) {
     return fail(res, err.message || 'Kategori güncellenemedi');
@@ -874,9 +882,11 @@ router.delete('/categories/:id', checkPermission('admin.categories'), (req, res)
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const reassignTo = req.body?.reassignTo || req.query.reassignTo;
+  const preview = catalogDb.listCategories({ includeInactive: true }).find((c) => c.id === id);
   const result = catalogDb.deleteCategory(id, { reassignTo });
   if (!result.ok) return fail(res, result.error, result.placeCount ? 409 : 404);
   invalidateCategoryCaches();
+  logAdmin(req, 'category.delete', 'category', id, preview?.nameTr || preview?.slug || null);
   return ok(res, result);
 });
 
@@ -1132,8 +1142,10 @@ router.get('/profile-changes', requireRole('admin'), (_req, res) => {
 router.post('/profile-changes/:id/approve', requireRole('admin'), (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
+  const pending = db.prepare('SELECT user_id, change_type FROM profile_change_requests WHERE id = ?').get(id);
   const result = profileChanges.approve(id, req.user.id);
   if (!result.ok) return fail(res, result.error, result.error?.includes('bulunamadı') ? 404 : 409);
+  logAdmin(req, 'profile.approve', 'profile_change', id, pending?.change_type || null);
   const row = db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
   if (row) {
     notifications.createNotification({
@@ -1151,8 +1163,10 @@ router.post('/profile-changes/:id/reject', requireRole('admin'), (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const reason = sanitizeText(req.body?.reason, 500) || 'Reddedildi';
+  const pending = db.prepare('SELECT user_id, change_type FROM profile_change_requests WHERE id = ?').get(id);
   const result = profileChanges.reject(id, req.user.id, reason);
   if (!result.ok) return fail(res, result.error, result.error?.includes('bulunamadı') ? 404 : 409);
+  logAdmin(req, 'profile.reject', 'profile_change', id, `${pending?.change_type || 'profil'}: ${reason}`);
   const row = db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
   if (row) {
     notifications.createNotification({
@@ -1551,6 +1565,7 @@ router.get('/blog-categories', checkPermission('admin.content'), (req, res) => {
 router.post('/blog-categories', checkPermission('admin.content'), (req, res) => {
   try {
     const category = blogDb.createBlogCategory(req.body || {});
+    logAdmin(req, 'blog_category.create', 'blog_category', category.id, category.nameTr || category.slug || null);
     return ok(res, { category }, 201);
   } catch (err) {
     return fail(res, err.message || 'Blog kategorisi eklenemedi');
@@ -1563,6 +1578,7 @@ router.put('/blog-categories/:id', checkPermission('admin.content'), (req, res) 
   try {
     const category = blogDb.updateBlogCategory(id, req.body || {});
     if (!category) return fail(res, 'Kategori bulunamadı', 404);
+    logAdmin(req, 'blog_category.update', 'blog_category', id, category.nameTr || category.slug || null);
     return ok(res, { category });
   } catch (err) {
     return fail(res, err.message || 'Kategori güncellenemedi');
@@ -1573,8 +1589,10 @@ router.delete('/blog-categories/:id', checkPermission('admin.content'), (req, re
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const reassignTo = req.body?.reassignTo || req.query.reassignTo;
+  const preview = blogDb.listBlogCategories({ includeInactive: true }).find((c) => c.id === id);
   const result = blogDb.deleteBlogCategory(id, { reassignTo });
   if (!result.ok) return fail(res, result.error, result.postCount ? 409 : 404);
+  logAdmin(req, 'blog_category.delete', 'blog_category', id, preview?.nameTr || preview?.slug || null);
   return ok(res, result);
 });
 
@@ -1658,6 +1676,7 @@ router.post('/blogs', checkPermission('admin.content'), (req, res) => {
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(info.lastInsertRowid);
+  logAdmin(req, 'blog.create', 'blog', info.lastInsertRowid, cleanTitle);
   return ok(res, { blog: mapAdminBlog(row) }, 201);
 });
 
@@ -1733,6 +1752,7 @@ router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(id);
+  logAdmin(req, 'blog.update', 'blog', id, cleanTitle);
   return ok(res, { blog: mapAdminBlog(row) });
 });
 
@@ -1942,15 +1962,26 @@ router.patch('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
   return ok(res, { report: enrichReportRow(updated) });
 });
 
-router.get('/audit-log', requireRole('admin'), (req, res) => {
+router.get('/audit-log', (req, res) => {
+  const isAdmin = req.user.role === 'admin';
+  const isStaffViewer = ['moderator', 'staff', 'editor'].includes(req.user.role);
+  if (!isAdmin && !isStaffViewer) {
+    return fail(res, 'Yetki yok', 403);
+  }
+  let adminId = req.query.adminId;
+  if (!isAdmin) {
+    adminId = String(req.user.id);
+  }
   const data = auditLog.list({
     page: req.query.page,
     limit: req.query.limit,
     action: req.query.action,
-    adminId: req.query.adminId,
+    adminId,
     targetType: req.query.targetType,
+    dateFrom: req.query.dateFrom,
+    dateTo: req.query.dateTo,
   });
-  return ok(res, data);
+  return ok(res, { ...data, scope: isAdmin ? 'all' : 'self' });
 });
 
 router.get('/banned-words', requireRole('admin'), (_req, res) => {
