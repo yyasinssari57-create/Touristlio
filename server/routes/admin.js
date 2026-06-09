@@ -31,6 +31,7 @@ const { ok, fail } = require('../lib/apiResponse');
 const { mapReport } = require('./reports');
 const reportMod = require('../lib/report-moderation');
 const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
+const logger = require('../lib/logger');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
@@ -1468,11 +1469,16 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestore
     db.close();
     removeWalSidecars(dbPath);
     fs.writeFileSync(dbPath, req.file.buffer);
-    return ok(res, {
-      message: 'Veritabanı geri yüklendi. Değişikliklerin tam uygulanması için sunucuyu yeniden başlatın.',
+    const payload = {
+      message: 'Veritabanı geri yüklendi. Sunucu otomatik yeniden başlatılıyor.',
       needsRestart: true,
       preBackup: path.basename(preBackupPath),
+    };
+    res.on('finish', () => {
+      logger.info({ msg: 'Database restore complete — restarting to reopen SQLite', preBackup: payload.preBackup });
+      setTimeout(() => process.exit(0), 300);
     });
+    return ok(res, payload);
   } catch (err) {
     return fail(res, err.message || 'Geri yükleme başarısız', 500);
   }
@@ -2101,6 +2107,19 @@ router.get('/moderation/risk', checkPermission('admin.moderate'), (_req, res) =>
     riskScore: computeUserRiskScore(u.id),
   })).sort((a, b) => b.riskScore - a.riskScore);
   return ok(res, { users: scored });
+});
+
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    const msg = err.code === 'LIMIT_FILE_SIZE'
+      ? 'Yedek dosyası en fazla 100 MB olabilir'
+      : (err.message || 'Yükleme hatası');
+    return fail(res, msg, 400);
+  }
+  if (err?.message === 'Yalnızca .db dosyası yüklenebilir') {
+    return fail(res, err.message, 400);
+  }
+  return next(err);
 });
 
 module.exports = router;

@@ -110,7 +110,7 @@ app.use('/api/auth', csrfProtection, authRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/tiolas', csrfProtection, tiolasRoutes);
 app.use('/api/blogs', csrfProtection, blogsRoutes);
-app.use('/api/admin', adminLimiter, adminRoutes);
+app.use('/api/admin', csrfProtection, adminLimiter, adminRoutes);
 app.use('/api/osm', osmRoutes);
 app.use('/api/travel-lists', travelListsRoutes);
 app.use('/api/trip-plans', tripPlansRoutes);

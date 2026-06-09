@@ -2917,7 +2917,7 @@ function applyAdminRbac(user) {
   const role = typeof user === 'string' ? user : user?.role;
   document.querySelectorAll('[data-role="admin"]').forEach((el) => {
     const hide = role !== 'admin';
-    el.style.display = hide ? 'none' : '';
+    el.style.display = hide ? 'none' : 'block';
     el.setAttribute('aria-hidden', hide ? 'true' : 'false');
   });
   document.querySelectorAll('#adminTabs button[data-permission]').forEach((btn) => {
@@ -3120,7 +3120,10 @@ async function restoreDbBackup() {
     fd.append('file', file);
     const data = await api('/admin/backup/restore', { method: 'POST', body: fd });
     input.value = '';
-    showToast(data.message || 'Geri yükleme tamamlandı — sunucuyu yeniden başlatın');
+    let msg = data.message || 'Geri yükleme tamamlandı';
+    if (data.needsRestart) msg += ' 30 saniye sonra sayfayı yenileyin.';
+    if (data.preBackup) msg += ` (Önceki DB: ${data.preBackup})`;
+    showToast(msg);
   } catch (e) {
     showErr(e.message);
     input.value = '';

@@ -25,13 +25,17 @@ npm start
 
 ## Veritabanı yedeği
 
-SQLite dosyası `data/touristlio.db` içindedir. Manuel veya günlük yedek için:
+SQLite dosyası `data/touristlio.db` içindedir (VPS’te `DATABASE_PATH` ile değiştirilebilir).
+
+**Admin paneli (yalnızca `admin` rolü):** `/admin` → **Özet** sekmesi → “Veritabanı yedeği” kartı — tam `.db` indir veya acil durumda geri yükle. Geri yükleme mevcut veritabanını otomatik yedekler; sunucu ardından yeniden başlar (Render/PM2 otomatik kaldırır).
+
+**Komut satırı** — manuel veya günlük yedek:
 
 ```powershell
 npm run backup:db
 ```
 
-Yedekler `backups/touristlio-YYYY-MM-DD_HH-mm-ss.db` olarak kaydedilir (git’e eklenmez). Windows Görev Zamanlayıcı veya cron ile günde bir kez çalıştırabilirsiniz.
+Yedekler `backups/touristlio-YYYY-MM-DD_HH-mm-ss.db` olarak kaydedilir (git’e eklenmez). Windows Görev Zamanlayıcı veya cron ile günde bir kez çalıştırabilirsiniz. Üretimde yedekleri harici depolamaya (Drive/S3) kopyalayın.
 
 ## Admin (.env)
 

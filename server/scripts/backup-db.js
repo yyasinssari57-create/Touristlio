@@ -7,8 +7,11 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..', '..');
-const src = path.join(root, 'data', 'touristlio.db');
-const backupsDir = path.join(root, 'backups');
+const { dbPath } = require('../db');
+const src = dbPath;
+const backupsDir = path.join(
+  process.env.BACKUP_DIR || path.join(path.dirname(dbPath), 'backups'),
+);
 
 function pad(n) {
   return String(n).padStart(2, '0');
