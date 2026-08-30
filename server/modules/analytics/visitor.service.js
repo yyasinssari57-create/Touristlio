@@ -80,7 +80,15 @@ function updateSessionDuration(sessionId, endSession) {
   `).run(durationSec, sessionId);
 }
 
+function hasAnalyticsConsent(req) {
+  return req.cookies?.tl_cookie_ok === '1';
+}
+
 function trackEvent(req, res, payload) {
+  if (!hasAnalyticsConsent(req)) {
+    return { ok: true, stored: false };
+  }
+
   const type = String(payload?.type || '').trim();
   if (!VALID_EVENTS.has(type)) {
     const err = new Error('Geçersiz olay türü');
@@ -118,7 +126,7 @@ function trackEvent(req, res, payload) {
     `).run(sessionId, userId, type, tab, path);
   }
 
-  return { ok: true };
+  return { ok: true, stored: true };
 }
 
 function analyticsTablesReady() {

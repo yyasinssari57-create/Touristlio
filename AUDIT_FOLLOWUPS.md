@@ -47,5 +47,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `public/index.html` statik canonical www; SSR enjeksiyonu KRİTİK-5 ile aynı host.
 - KRİTİK-8 **başlanmadı**.
 
+## KRİTİK-8 (KVKK analitik / çerez onayı)
+
+- Tamamlandı (kod): ziyaret analitiği `localStorage tl_cookie_ok=1` + çerez `tl_cookie_ok=1` olmadan **POST yazılmaz**.
+- Banner’da **Kabul / Reddet**; giriş, kayıt, arama, profil sayfalarında da banner.
+- **Dosya notu:** `touristlio_cursor_audit.md` bu ortamda 507 satır; okunan kopya satır 150’de KRİTİK-7’de kesiliyor. KRİTİK-8 başlığı dosyada doğrulanamadı; bu madde KVKK + sessiz `/api/analytics/track` (önceki leftover) ile ele alındı.
+- Canlıda: çerez reddi sonrası Network’te `track` olmamalı; kabul sonrası `stored: true`.
+- Eski `tl_cookie_ok` kabulü olan kullanıcılar analitiği sürdürür (cookie senkron).
+
+## Kalan başlıklar (satır 151–497 okunamadı)
+
+Tam listedeki sonraki `[YÜKSEK-N] / [ORTA-N] / [DÜŞÜK-N]` başlıkları Downloads’taki 507 satırlık dosyada. Transkript grep’inde yalnızca dipnot:
+
+- ~498: `@touristlio_cursor_audit.md — [KRİTİK-1] numaralı görevi uygula.`
+- ~499: `Her görevi tamamladıktan sonra dur ve onay bekle.`
+- ~504–505: derleyen / 30 Ağustos 2026
+
+Sıradaki ajan: tam dosyayı offset 150 ile oku; uydurma başlık kullanma.
+
 ## Genel
 - Görevler bitince bu listedeki her maddeyi sırayla açıp kapat.

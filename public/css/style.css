@@ -510,6 +510,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .cookie-banner p{font-size:.78rem;margin:0;flex:1;min-width:200px;}
 .cookie-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .cookie-actions a{color:var(--brand-accent);font-size:.75rem;}
+.cookie-banner #cookieReject{flex-shrink:0;}
 .error-page{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--l);}
 .error-box{text-align:center;padding:40px 24px;}
 .error-box h1{font-family:var(--fd);font-size:3rem;color:var(--navy);}

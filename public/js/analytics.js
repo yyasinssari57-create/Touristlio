@@ -1,8 +1,20 @@
-/** Minimal visitor analytics — page views, tab clicks, session duration. */
+/** Minimal visitor analytics — page views, tab clicks, session duration.
+ *  KRİTİK-8: do not send events until KVKK cookie consent (`tl_cookie_ok=1`).
+ */
 (function () {
   const HEARTBEAT_MS = 30000;
+  const CONSENT_KEY = 'tl_cookie_ok';
   let heartbeatTimer = null;
   let ended = false;
+  let started = false;
+
+  function hasConsent() {
+    try {
+      return localStorage.getItem(CONSENT_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
 
   function currentTab() {
     const page = document.querySelector('.page.active');
@@ -13,6 +25,7 @@
   }
 
   function track(type, extra) {
+    if (!hasConsent()) return;
     if (ended && type !== 'page_view') return;
     const body = {
       type,
@@ -40,7 +53,17 @@
     track('session_end');
   }
 
-  function init() {
+  function syncConsentCookie() {
+    if (!hasConsent()) return;
+    const secure = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${CONSENT_KEY}=1; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+  }
+
+  function startTracking() {
+    if (started || !hasConsent()) return;
+    syncConsentCookie();
+    started = true;
+    ended = false;
     track('page_view', { tab: currentTab() });
     startHeartbeat();
     window.addEventListener('pagehide', endSession);
@@ -51,15 +74,25 @@
   }
 
   window.TL_ANALYTICS = {
+    hasConsent,
+    startTracking,
     trackTab(tab) {
-      if (!tab || tab === 'detail') return;
+      if (!tab || tab === 'detail' || !hasConsent()) return;
       track('tab_click', { tab });
     },
   };
 
+  window.addEventListener('tl-cookie-consent', () => {
+    if (hasConsent()) startTracking();
+  });
+
+  function boot() {
+    if (hasConsent()) startTracking();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    init();
+    boot();
   }
 })();
