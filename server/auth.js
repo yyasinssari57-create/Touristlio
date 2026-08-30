@@ -49,12 +49,51 @@ function verifyToken(token) {
   return jwt.verify(token, getJwtSecret());
 }
 
-function hashPassword(password) {
-  return bcrypt.hashSync(password, 10);
+const BCRYPT_ROUNDS = 12;
+const MIN_PASSWORD_LENGTH = 12;
+
+/** Dummy bcrypt hash (cost 12) used when the stored hash is missing or not bcrypt. */
+const DUMMY_BCRYPT_HASH = '$2b$12$F9aU1.MRV04jYh.eJY1UTe3GPFJDiWpNSZZJCTGaO137a7DxOkBd6';
+
+function isBcryptHash(hash) {
+  return typeof hash === 'string' && /^\$2[aby]?\$\d{2}\$[./A-Za-z0-9]{53}$/.test(hash);
 }
 
+function bcryptCost(hash) {
+  if (!isBcryptHash(hash)) return 0;
+  const cost = parseInt(hash.split('$')[2], 10);
+  return Number.isFinite(cost) ? cost : 0;
+}
+
+function needsRehash(hash) {
+  return !isBcryptHash(hash) || bcryptCost(hash) < BCRYPT_ROUNDS;
+}
+
+function hashPassword(password) {
+  return bcrypt.hashSync(password, BCRYPT_ROUNDS);
+}
+
+/**
+ * Verify a password against a stored hash.
+ * bcrypt.compareSync compares the derived digest in constant time.
+ * Missing or unknown hash formats still run a full bcrypt compare so timing
+ * does not leak whether a user exists.
+ */
 function comparePassword(password, hash) {
-  return bcrypt.compareSync(password, hash);
+  const candidate = String(password ?? '');
+  const stored = isBcryptHash(hash) ? hash : DUMMY_BCRYPT_HASH;
+  const matches = bcrypt.compareSync(candidate, stored);
+  return isBcryptHash(hash) && matches;
+}
+
+function passwordPolicyError(password) {
+  const pw = String(password || '');
+  if (pw.length < MIN_PASSWORD_LENGTH) {
+    return `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı`;
+  }
+  if (!/[A-Z]/.test(pw)) return 'Şifre en az bir büyük harf içermeli';
+  if (!/[0-9]/.test(pw)) return 'Şifre en az bir rakam içermeli';
+  return null;
 }
 
 function sanitizeUser(row) {
@@ -97,8 +136,13 @@ module.exports = {
   validateJwtSecret,
   signToken,
   verifyToken,
+  BCRYPT_ROUNDS,
+  MIN_PASSWORD_LENGTH,
   hashPassword,
   comparePassword,
+  needsRehash,
+  isBcryptHash,
+  passwordPolicyError,
   sanitizeUser,
   findUserByEmail,
   findUserById,

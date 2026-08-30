@@ -6,9 +6,8 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const bcrypt = require('bcryptjs');
 const { db } = require('../db');
-const { createUser, findUserByEmail, hashPassword } = require('../auth');
+const { createUser, findUserByEmail, hashPassword, comparePassword } = require('../auth');
 
 const email = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase().trim();
 const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
@@ -53,7 +52,7 @@ if (email !== legacyEmail) {
 }
 
 const user = findUserByEmail(email);
-const passwordOk = bcrypt.compareSync(password, user.password_hash);
+const passwordOk = comparePassword(password, user.password_hash);
 
 const admins = db.prepare(`
   SELECT id, email, role, name, email_verified, failed_login_count, locked_until

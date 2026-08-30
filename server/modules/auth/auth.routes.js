@@ -8,6 +8,7 @@ const { authLimiter } = require('../../middleware/rateLimit');
 const { fail } = require('../../lib/apiResponse');
 const controller = require('./auth.controller');
 const { imageFileFilter, validateUploadedImage } = require('../../lib/image-mime');
+const { MIN_PASSWORD_LENGTH } = require('../../auth');
 
 const uploadRoot = path.join(__dirname, '..', '..', '..', 'uploads');
 if (!fs.existsSync(uploadRoot)) fs.mkdirSync(uploadRoot, { recursive: true });
@@ -29,7 +30,7 @@ const router = express.Router();
 
 const passwordRules = () =>
   body('password')
-    .isLength({ min: 8 }).withMessage('Şifre en az 8 karakter olmalı')
+    .isLength({ min: MIN_PASSWORD_LENGTH }).withMessage(`Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı`)
     .matches(/[A-Z]/).withMessage('Şifre en az bir büyük harf içermeli')
     .matches(/[0-9]/).withMessage('Şifre en az bir rakam içermeli');
 

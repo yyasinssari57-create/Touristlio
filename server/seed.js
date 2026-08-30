@@ -1,7 +1,6 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const bcrypt = require('bcryptjs');
 const { db } = require('./db');
 const { createUser, findUserByEmail, hashPassword } = require('./auth');
 const { enrichContentFields } = require('./lib/place-content');

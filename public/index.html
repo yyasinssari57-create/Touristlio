@@ -57,7 +57,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="atab" id="tabB" onclick="swTab('reg',this)" data-i18n="authTabReg">Kayıt Ol</div>
     </div>
     <div id="authForm"></div>
-    <div class="asec" data-i18n="authSecure">🔒 AES-256 şifreleme · KVKK & GDPR uyumlu</div>
+    <div class="asec" data-i18n="authSecure">🔒 Güvenli şifreleme · KVKK & GDPR uyumlu</div>
     <div class="aor" data-i18n="authOr">— veya —</div>
     
     <div class="anote" data-i18n="authNote">Misafirler okuyabilir · Tiola yazmak için üye olun</div>
@@ -663,10 +663,10 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <div class="settings-block">
               <h4 class="settings-subtitle" data-i18n="settingsChangePassword">Şifre değiştir</h4>
               <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
-              <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 8 karakter)"/>
+              <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 12 karakter)"/>
               <button type="button" class="btn bp bsm" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
             </div>
-            <p class="settings-note" data-i18n="settingsNote">Şifre en az 8 karakter, bir büyük harf ve bir rakam içermelidir.</p>
+            <p class="settings-note" data-i18n="settingsNote">Şifre en az 12 karakter, bir büyük harf ve bir rakam içermelidir.</p>
           </section>
           <div class="settings-block settings-logout-block">
             <button type="button" class="btn bo bsm bdanger" onclick="doLogout()" data-i18n="settingsLogout">Çıkış Yap</button>

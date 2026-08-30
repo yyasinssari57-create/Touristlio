@@ -114,6 +114,11 @@ function updatePasswordHash(userId, passwordHash) {
   touchPasswordChangedAt(userId);
 }
 
+/** Re-encode hash after login (cost upgrade) without invalidating the current session. */
+function upgradePasswordHash(userId, passwordHash) {
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
+}
+
 
 
 function updateEmailAddress(userId, email) {
@@ -160,6 +165,8 @@ module.exports = {
   markEmailVerified,
 
   updatePasswordHash,
+
+  upgradePasswordHash,
 
   updateEmailAddress,
 

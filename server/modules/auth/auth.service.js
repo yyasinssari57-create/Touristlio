@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { validationResult } = require('express-validator');
 const path = require('path');
 const fs = require('fs');
-const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById } = require('../../auth');
+const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById, needsRehash } = require('../../auth');
 const { AVATAR_PRESETS, AVATAR_COLORS, isValidPreset, isValidColor } = require('../../lib/avatars');
 const authModel = require('./auth.model');
 const logger = require('../../lib/logger');
@@ -10,9 +10,6 @@ const mailer = require('../../lib/mailer');
 
 const MAX_FAILED = 5;
 const LOCK_MINUTES = 15;
-
-/** Constant-time dummy hash when user is not found (timing-attack mitigation). */
-const DUMMY_PASSWORD_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -93,7 +90,7 @@ function login(req) {
   const { email, password } = req.body;
   const row = authModel.findByEmail(email);
   if (!row) {
-    comparePassword(password, DUMMY_PASSWORD_HASH);
+    comparePassword(password, null);
     return { error: 'E-posta veya şifre hatalı', status: 401 };
   }
   if (isLocked(row)) {
@@ -102,6 +99,9 @@ function login(req) {
   if (!comparePassword(password, row.password_hash)) {
     authModel.recordFailedLogin(row, MAX_FAILED, LOCK_MINUTES);
     return { error: 'E-posta veya şifre hatalı', status: 401 };
+  }
+  if (needsRehash(row.password_hash)) {
+    authModel.upgradePasswordHash(row.id, hashPassword(password));
   }
   if (row.is_blocked) {
     return { error: 'Hesabınız engellenmiştir', status: 403 };

@@ -1,7 +1,6 @@
 require('dotenv').config();
-const bcrypt = require('bcryptjs');
 const { db } = require('../db');
-const { findUserByEmail } = require('../auth');
+const { findUserByEmail, comparePassword } = require('../auth');
 
 const rows = db.prepare(`
   SELECT id, email, role, name, email_verified, failed_login_count, locked_until
@@ -19,7 +18,7 @@ const envEmail = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCa
 const envPass = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
 const user = findUserByEmail(envEmail);
 if (user) {
-  const ok = bcrypt.compareSync(envPass, user.password_hash);
+  const ok = comparePassword(envPass, user.password_hash);
   console.log('=== .env password check ===');
   console.log('email:', envEmail);
   console.log('role:', user.role);

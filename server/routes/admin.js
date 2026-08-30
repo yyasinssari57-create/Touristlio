@@ -5,7 +5,7 @@ const os = require('os');
 const multer = require('multer');
 const { db, dbPath } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
-const { createUser, findUserByEmail, sanitizeUser } = require('../auth');
+const { createUser, findUserByEmail, sanitizeUser, passwordPolicyError } = require('../auth');
 const { clear: clearCache } = require('../lib/cache');
 const { computeUserRiskScore, computeUserRiskReasons, checkPermission, PANEL_ROLES, ASSIGNABLE_ROLES, assertCanManageUser } = require('../middleware/rbac');
 const auditLog = require('../lib/auditLog');
@@ -605,6 +605,10 @@ router.post('/moderators', requireRole('admin'), (req, res) => {
   const { name, email, password } = req.body || {};
   if (!name || !email || !password) {
     return fail(res, 'Ad, e-posta ve şifre gerekli');
+  }
+  const pwErr = passwordPolicyError(password);
+  if (pwErr) {
+    return fail(res, pwErr);
   }
   if (findUserByEmail(email)) {
     return fail(res, 'E-posta zaten kayıtlı', 409);

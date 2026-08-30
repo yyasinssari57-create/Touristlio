@@ -25,5 +25,12 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - SMTP (`SMTP_HOST` / `SMTP_USER` / `SMTP_PASS`) yoksa form DB’ye yazar, e-posta gitmez.
 - Admin panelde iletişim kutusu listesi yok.
 
+## KRİTİK-6 (şifre)
+- Tamamlandı: bcrypt cost 12, mevcut `$2a$10$` hash’ler verify edilir, başarılı girişte cost < 12 ise sessiz rehash.
+- Argon2id henüz yok (bcryptjs cost 12 ile kaldık). İleride argon2 eklenirse eski bcrypt hash’leri `isBcryptHash` ile ayırt edilmeli.
+- 8–11 karakterlik eski şifreler login’de geçerli; 12 karakter kuralı sadece kayıt / reset / şifre değiştir / moderatör oluşturma.
+- Varsayılan `ADMIN_PASSWORD` (`ChangeMe123!`) 12 karakter; üretimde mutlaka `.env` ile değiştirilmeli.
+- bcryptjs saf JS; native `bcrypt` / argon2 native bağlama yok (CPU maliyeti Render free’de hissedilebilir).
+
 ## Genel
 - Görevler bitince bu listedeki her maddeyi sırayla açıp kapat.
