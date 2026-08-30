@@ -1,8 +1,15 @@
 const { db } = require('../db');
 const { enrichContentFields } = require('./place-content');
 const { sanitizeName, sanitizeText } = require('./sanitize');
+const { uniquePlaceSlug, slugFromPlace } = require('./place-lookup');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
+
+function persistPlaceSlug(id, placeLike) {
+  const slug = uniquePlaceSlug(db, slugFromPlace(placeLike), id);
+  db.prepare('UPDATE places SET slug = ? WHERE id = ?').run(slug, id);
+  return slug;
+}
 
 function mapAdminPlace(row) {
   let photos = [];
@@ -10,6 +17,7 @@ function mapAdminPlace(row) {
   return {
     id: row.id,
     name: row.name,
+    slug: row.slug || null,
     location: row.location,
     country: row.country,
     city: row.city,
@@ -185,6 +193,7 @@ function insertPlace(body) {
     0,
     status,
   );
+  persistPlaceSlug(id, enriched);
   return { id, name: enriched.name };
 }
 
@@ -246,6 +255,7 @@ function updatePlace(id, body) {
     status,
     id,
   );
+  persistPlaceSlug(id, enriched);
   return getAdminPlace(id);
 }
 

@@ -86,6 +86,23 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  const pathOnly = req.path || '';
+  if (pathOnly.startsWith('/api')) return next();
+  if (pathOnly === '/en' || pathOnly === '/en/') {
+    req.tlLang = 'en';
+    const q = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    req.url = `/${q}`;
+    return next();
+  }
+  if (pathOnly.startsWith('/en/')) {
+    req.tlLang = 'en';
+    req.url = req.url.replace(/^\/en/, '') || '/';
+    return next();
+  }
+  next();
+});
 const { maintenanceMiddleware } = require('./middleware/maintenance');
 app.use(maintenanceMiddleware);
 app.use('/api/', apiLimiter);
@@ -99,6 +116,15 @@ app.use((req, res, next) => {
 });
 
 app.use('/uploads', uploadsStaticHeaders, express.static(path.join(__dirname, '..', 'uploads')));
+
+const { buildSitemapXml, buildRobotsTxt } = require('./lib/sitemap');
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain; charset=utf-8').send(buildRobotsTxt());
+});
+app.get('/sitemap.xml', (_req, res) => {
+  res.type('application/xml; charset=utf-8').send(buildSitemapXml());
+});
+
 app.use(htmlPageRoutesMiddleware(PUBLIC_DIR));
 app.use(publicHtmlMiddleware(PUBLIC_DIR));
 app.use(express.static(PUBLIC_DIR, {
@@ -123,6 +149,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/profiles', csrfProtection, profilesRoutes);
+app.use('/api/contact', csrfProtection, require('./routes/contact'));
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'Touristlio', version: getAppVersion(), ts: new Date().toISOString() });
@@ -156,12 +183,6 @@ if (!isProd) {
   });
 }
 
-app.get('/sitemap.xml', (_req, res, next) => {
-  const sitemapPath = path.join(__dirname, '..', 'public', 'sitemap.xml');
-  if (fs.existsSync(sitemapPath)) return res.sendFile(sitemapPath);
-  next();
-});
-
 app.get('/admin', (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'admin.html');
 });
@@ -192,6 +213,47 @@ app.get('/search', (_req, res) => {
 
 app.get('/gezilecek-yerler', (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'index.html');
+});
+
+app.get('/places', (_req, res) => {
+  res.redirect(302, '/gezilecek-yerler');
+});
+
+app.get('/places/:slug', (req, res) => {
+  const { findPlaceRow } = require('./lib/place-lookup');
+  const { mapPlaceRow } = require('./lib/place-map');
+  const row = findPlaceRow(req.params.slug);
+  if (!row) {
+    res.status(404);
+    return sendPublicHtml(res, PUBLIC_DIR, '404.html');
+  }
+  const place = mapPlaceRow(row, { tiolaCount: 0, tiolaRating: null });
+  const lang = req.tlLang === 'en' ? 'en' : 'tr';
+  const desc = lang === 'en'
+    ? (place.descriptionEn || place.overviewEn || place.description || '')
+    : (place.description || place.overview || '');
+  return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
+    title: `${place.name} — Touristlio`,
+    description: String(desc).slice(0, 200),
+    image: place.imageUrl,
+  });
+});
+
+app.get('/blog/:slug', (req, res) => {
+  const slug = String(req.params.slug || '').trim();
+  if (!slug) {
+    res.status(404);
+    return sendPublicHtml(res, PUBLIC_DIR, '404.html');
+  }
+  const { db } = require('./db');
+  const row = db.prepare(`
+    SELECT id FROM blogs WHERE slug = ? AND status = 'approved'
+  `).get(slug);
+  if (!row) {
+    res.status(404);
+    return sendPublicHtml(res, PUBLIC_DIR, '404.html');
+  }
+  return sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });
 
 app.get('*', (req, res, next) => {

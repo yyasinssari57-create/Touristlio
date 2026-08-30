@@ -24,6 +24,7 @@ function mapPlaceRow(row, stats) {
   return {
     id: row.id,
     name: row.name,
+    slug: row.slug || null,
     location: row.location,
     country: row.country,
     city: row.city,

@@ -75,7 +75,9 @@ let blogSearchQ = '';
 let blogSearchTimer;
 let savedIds = new Set();
 let authMode = 'login';
-let lang = localStorage.getItem('tl_lang') || 'tr';
+const pathIsEn = location.pathname === '/en' || location.pathname.startsWith('/en/');
+let lang = pathIsEn ? 'en' : (localStorage.getItem('tl_lang') || 'tr');
+if (pathIsEn) localStorage.setItem('tl_lang', 'en');
 let lastOsmHint = false;
 let searchTimer;
 const PAGE_SIZE = 12;
@@ -465,7 +467,14 @@ function updateSeoForPlace(p) {
   const ogI = document.querySelector('meta[property="og:image"]');
   if (ogT) ogT.content = title;
   if (ogD) ogD.content = desc;
-  if (ogI && p.imageUrl) ogI.content = p.imageUrl.startsWith('http') ? p.imageUrl : (location.origin + placeImg(p));
+  if (ogI) {
+    const img = p.imageUrl && p.imageUrl.startsWith('http') ? p.imageUrl : (publicOrigin() + placeImg(p));
+    ogI.content = img;
+    setMetaContent('meta[name="twitter:image"]', img, { name: 'twitter:image' });
+  }
+  setMetaContent('meta[name="twitter:title"]', title, { name: 'twitter:title' });
+  setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
+  setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
   injectPlaceJsonLd(p);
 }
 
@@ -489,7 +498,7 @@ function injectPlaceJsonLd(p) {
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Touristlio', item: origin },
         { '@type': 'ListItem', position: 2, name: p.country, item: `${origin}/search?country=${encodeURIComponent(p.country)}` },
-        { '@type': 'ListItem', position: 3, name: p.name, item: `${origin}/?place=${p.id}` },
+        { '@type': 'ListItem', position: 3, name: p.name, item: `${origin}${placePublicPath(p)}` },
       ],
     },
   ];
@@ -634,8 +643,8 @@ window.api = async function api(path, opts = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg = apiErrorMessage(data);
-    if (window.TL_TOAST) window.TL_TOAST.error(msg);
-    throw new Error(msg);
+    if (res.status !== 404 && window.TL_TOAST) window.TL_TOAST.error(msg);
+    throw Object.assign(new Error(msg), { status: res.status });
   }
   if (data && data.success === true && data.data != null) return data.data;
   return data;
@@ -861,6 +870,30 @@ function quickSearch(q) {
   setTimeout(() => document.getElementById('es-discover').scrollIntoView({ behavior: 'smooth' }), 100);
 }
 
+function placePublicPath(p) {
+  const prefix = lang === 'en' ? '/en' : '';
+  if (p?.slug) return `${prefix}/places/${encodeURIComponent(p.slug)}`;
+  if (p?.id) return `${prefix}/places/${p.id}`;
+  return prefix || '/';
+}
+
+function publicOrigin() {
+  const host = location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return location.origin;
+  return 'https://www.touristlio.com';
+}
+
+function setMetaContent(selector, content, create) {
+  let el = document.querySelector(selector);
+  if (!el && create) {
+    el = document.createElement('meta');
+    if (create.property) el.setAttribute('property', create.property);
+    if (create.name) el.setAttribute('name', create.name);
+    document.head.appendChild(el);
+  }
+  if (el) el.setAttribute('content', content);
+}
+
 function setCanonical(href) {
   let link = document.querySelector('link[rel="canonical"]');
   if (!link) {
@@ -868,10 +901,15 @@ function setCanonical(href) {
     link.rel = 'canonical';
     document.head.appendChild(link);
   }
-  link.href = href || `${location.origin}/`;
+  let next = href || `${publicOrigin()}/`;
+  if (next.startsWith('/')) next = publicOrigin() + next;
+  next = next.replace('://touristlio.com', '://www.touristlio.com');
+  link.href = next;
+  setMetaContent('meta[property="og:url"]', next, { property: 'og:url' });
 }
 
 let restoringRoute = false;
+let skipRouteSync = false;
 
 function getActiveExploreTab() {
   const sec = document.querySelector('.explore-section.active');
@@ -900,16 +938,29 @@ function getCurrentRoute() {
   if (main === 'blog' && blogCat !== 'all') route.blogCat = blogCat;
   if (main === 'detail' && activePlace?.id) {
     route.placeId = activePlace.id;
+    route.placeSlug = activePlace.slug || null;
     route.detailTab = getActiveDetailTab();
   }
   return route;
 }
 
 function readRouteFromUrl() {
-  const onPlacesPath = location.pathname.replace(/\/+$/, '') === '/gezilecek-yerler';
+  const rawPath = location.pathname.replace(/\/+$/, '') || '/';
+  const pathNoEn = rawPath.replace(/^\/en(?=\/|$)/, '') || '/';
+  const pathParts = pathNoEn.split('/').filter(Boolean);
+  const onPlacesPath = pathNoEn === '/gezilecek-yerler';
   const params = new URLSearchParams(location.search);
   const hash = location.hash.replace(/^#/, '');
   const segments = hash ? hash.split('/').filter(Boolean) : [];
+
+  if (pathParts[0] === 'places' && pathParts[1]) {
+    const key = decodeURIComponent(pathParts[1]);
+    const detailTab = (hash && hash !== 'places') ? (segments[0] || 'overview') : 'overview';
+    if (/^\d+$/.test(key)) {
+      return { main: 'detail', placeId: Number(key), detailTab };
+    }
+    return { main: 'detail', placeSlug: key, detailTab };
+  }
 
   const placeParam = params.get('place');
   if (placeParam && /^\d+$/.test(placeParam)) {
@@ -917,6 +968,10 @@ function readRouteFromUrl() {
   }
   if (segments[0] === 'place' && segments[1] && /^\d+$/.test(segments[1])) {
     return { main: 'detail', placeId: Number(segments[1]), detailTab: segments[2] || 'overview' };
+  }
+
+  if (pathParts[0] === 'blog' && pathParts[1] && pathParts[1] !== 'cat') {
+    return { main: 'blog', blogSlug: decodeURIComponent(pathParts[1]) };
   }
 
   const tabParam = params.get('tab');
@@ -963,11 +1018,9 @@ function writeRouteToUrl(route, replace = true) {
   let search = '';
   let hash = '#explore';
 
-  if (route.main === 'detail' && route.placeId) {
-    search = `?place=${route.placeId}`;
-    hash = route.detailTab && route.detailTab !== 'overview'
-      ? `#place/${route.placeId}/${route.detailTab}`
-      : `#place/${route.placeId}`;
+  if (route.main === 'detail' && (route.placeSlug || route.placeId)) {
+    path = `/places/${encodeURIComponent(route.placeSlug || route.placeId)}`;
+    hash = route.detailTab && route.detailTab !== 'overview' ? `#${route.detailTab}` : '';
   } else if (route.main === 'places') {
     path = '/gezilecek-yerler';
     hash = '#places';
@@ -981,6 +1034,10 @@ function writeRouteToUrl(route, replace = true) {
     }
   } else if (route.main === 'blog') {
     hash = route.blogCat && route.blogCat !== 'all' ? `#blog/cat/${route.blogCat}` : '#blog';
+  }
+
+  if (lang === 'en') {
+    path = path === '/' ? '/en/' : `/en${path}`;
   }
 
   const url = `${path}${search}${hash}`;
@@ -1001,8 +1058,8 @@ async function showMainTab(tab, skipRoute) {
   document.getElementById('nt-' + navTab)?.classList.add('on');
   if (tab !== 'detail') prevTab = tab;
   if (tab !== 'detail') window.TL_ANALYTICS?.trackTab(tab);
-  if (tab === 'places') setCanonical(`${location.origin}/gezilecek-yerler`);
-  else if (tab !== 'detail') setCanonical(`${location.origin}/`);
+  if (tab === 'places') setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
+  else if (tab !== 'detail') setCanonical(lang === 'en' ? '/en/' : '/');
   const tasks = [];
   if (tab === 'blog') tasks.push(loadBlogPage().then(renderBlog));
   if (tab === 'profile') tasks.push(Promise.resolve(updateProfilePage()));
@@ -1270,7 +1327,7 @@ async function openDetail(id, skipRoute) {
     detailBody.dataset.prevHtml = prev;
   }
   try {
-    const data = await api('/places/' + id + '?lang=' + lang);
+    const data = await api('/places/' + encodeURIComponent(id) + '?lang=' + lang);
     const p = data.place;
     activePlace = p;
     updateSeoForPlace(p);
@@ -1281,7 +1338,8 @@ async function openDetail(id, skipRoute) {
     renderDetailGallery(p);
     document.getElementById('pdCat').textContent = catLabel(p.category);
     document.getElementById('pdTitle').textContent = p.name;
-    document.getElementById('pdLoc').textContent = '📍 ' + p.location + ' · ' + p.country;
+    document.getElementById('pdLoc').textContent = '📍 ' + p.location + ' · ' + p.country
+      + (p.lat != null && p.lng != null ? ` · ${Number(p.lat).toFixed(4)}, ${Number(p.lng).toFixed(4)}` : '');
     setCollapsibleText(document.getElementById('pdOverview'), document.getElementById('pdOverviewMore'), placeField(p, 'overview') || placeField(p, 'description'));
     setCollapsibleText(document.getElementById('pdHist'), document.getElementById('pdHistMore'), placeField(p, 'history'));
     const things = placeListField(p, 'thingsToDo');
@@ -1308,7 +1366,8 @@ async function openDetail(id, skipRoute) {
           ${p.affiliateHotelUrl ? `<a href="${p.affiliateHotelUrl}" rel="nofollow sponsored" target="_blank" class="btn bo bsm">${t('affiliateHotel')}</a>` : ''}`;
       } else affBox.style.display = 'none';
     }
-    setCanonical(`${location.origin}/?place=${p.id}`);
+    setCanonical(`${location.origin}${placePublicPath(p)}`);
+    syncDetailSaveBtn();
     if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
     document.getElementById('pdTS').textContent = stars(p.tiolaRating) || '—';
     document.getElementById('pdTC').textContent = (p.tiolaCount || 0) + ' ' + t('tiolaCount');
@@ -1321,7 +1380,13 @@ async function openDetail(id, skipRoute) {
     updateRevForm();
     showMainTab('detail', !!skipRoute);
     if (!skipRoute) syncRoute(true);
+    return true;
   } catch (e) {
+    if (e.status === 404 || /bulunamadı/i.test(e.message || '')) {
+      skipRouteSync = true;
+      location.replace('/404');
+      return false;
+    }
     if (window.TL_TOAST) window.TL_TOAST.error(e.message);
   } finally {
     if (!skipRoute) window.TL_LOADER?.hide();
@@ -1895,15 +1960,24 @@ async function toggleSave(id, btn) {
     if (savedIds.has(id)) {
       await api('/places/' + id + '/save', { method: 'DELETE' });
       savedIds.delete(id);
-      btn.textContent = '🤍';
+      if (btn) btn.textContent = '🤍';
       window.TL_TOAST?.info(t('removedFromSaved'));
     } else {
       await api('/places/' + id + '/save', { method: 'POST' });
       savedIds.add(id);
-      btn.textContent = '❤️';
+      if (btn) btn.textContent = '❤️';
       window.TL_TOAST?.success(t('addedToSaved'));
     }
   } catch { /* toast from api */ }
+  syncDetailSaveBtn();
+}
+
+function syncDetailSaveBtn() {
+  const btn = document.getElementById('pdSaveBtn');
+  if (!btn || !activePlace) return;
+  const on = savedIds.has(activePlace.id);
+  btn.textContent = on ? '❤️' : '🤍';
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 
 function arcRate(n) {
@@ -2090,7 +2164,7 @@ function refreshAfterLang() {
     if (isExploreMapTabActive()) loadMapMarkers();
   }
   if (document.getElementById('page-detail')?.classList.contains('active') && activePlace) {
-    openDetail(activePlace.id);
+    openDetail(activePlace.slug || activePlace.id);
   }
   if (document.getElementById('page-explore')?.classList.contains('active')) {
     loadTiolaFeed();
@@ -2113,6 +2187,7 @@ function setLang(l, btn) {
   btn.classList.add('on');
   window.TL_I18N.apply(l);
   refreshAfterLang();
+  syncRoute(true);
 }
 
 document.addEventListener('click', (e) => {
@@ -2123,12 +2198,19 @@ async function applyRouteFromUrl() {
   const route = readRouteFromUrl();
   restoringRoute = true;
   try {
-    if (route.main === 'detail' && route.placeId) {
-      await openDetail(route.placeId, true);
+    if (route.main === 'detail' && (route.placeSlug || route.placeId)) {
+      const opened = await openDetail(route.placeSlug || route.placeId, true);
+      if (opened === false) return;
       if (route.detailTab && route.detailTab !== 'overview') {
         const el = document.querySelector(`.dtab[onclick*="'${route.detailTab}'"]`);
         if (el) showDetailTab(route.detailTab, el, true);
       }
+      return;
+    }
+    if (route.blogSlug) {
+      skipRouteSync = true;
+      showMainTab('blog', true);
+      await openBlogDetail(route.blogSlug);
       return;
     }
     if (route.main === 'blog' && route.blogCat) blogCat = route.blogCat;
@@ -2153,7 +2235,8 @@ async function applyRouteFromUrl() {
     }
   } finally {
     restoringRoute = false;
-    syncRoute(true);
+    if (!skipRouteSync) syncRoute(true);
+    skipRouteSync = false;
   }
 }
 

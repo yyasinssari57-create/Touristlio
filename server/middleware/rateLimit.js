@@ -85,6 +85,15 @@ const liveDataLimiter = rateLimit({
   message: { error: 'Çok fazla istek. Bir dakika bekleyin.' },
 });
 
+const contactLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `contact:ip:${req.ip}`,
+  message: { error: 'Çok fazla mesaj gönderdiniz. 5 dakika sonra tekrar deneyin.' },
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
@@ -94,4 +103,5 @@ module.exports = {
   liveDataLimiter,
   reportLimiter,
   adminAnalyticsLimiter,
+  contactLimiter,
 };

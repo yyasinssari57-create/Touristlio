@@ -1,7 +1,7 @@
 const express = require('express');
 const { validationResult } = require('express-validator');
 const { db, allPlaceStats } = require('../db');
-const { parsePositiveInt } = require('../lib/sanitize');
+const { findPlaceRow, PLACE_PARAM_RESERVED } = require('../lib/place-lookup');
 const { authOptional, authRequired } = require('../middleware/auth');
 const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
 const { cacheKey, wrap } = require('../lib/cache');
@@ -64,14 +64,23 @@ router.get('/saved/all', authRequired, (req, res) => {
   res.json({ places: rows.map(mapPlace) });
 });
 
-router.get('/:id', authOptional, async (req, res) => {
-  if (['meta', 'map', 'search', 'saved', 'cities'].includes(req.params.id)) {
-    return res.status(404).json({ error: 'Not found' });
+function resolvePlaceRow(req, res) {
+  const key = req.params.id;
+  if (PLACE_PARAM_RESERVED.has(String(key || '').toLowerCase())) {
+    res.status(404).json({ error: 'Not found' });
+    return null;
   }
-  const placeId = parsePositiveInt(req.params.id, res);
-  if (!placeId) return;
-  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
-  if (!row) return res.status(404).json({ error: 'Yer bulunamadı' });
+  const row = findPlaceRow(key);
+  if (!row) {
+    res.status(404).json({ error: 'Yer bulunamadı' });
+    return null;
+  }
+  return row;
+}
+
+router.get('/:id', authOptional, async (req, res) => {
+  const row = resolvePlaceRow(req, res);
+  if (!row) return;
   const place = mapPlace(row);
   const allRows = db.prepare('SELECT * FROM places').all();
   const nearby = findNearbyPlaces(allRows, row, mapPlace, 6);
@@ -112,37 +121,35 @@ router.get('/:id', authOptional, async (req, res) => {
 });
 
 router.get('/:id/weather', authOptional, async (req, res) => {
-  const placeId = parsePositiveInt(req.params.id, res);
-  if (!placeId) return;
-  const row = db.prepare('SELECT lat, lng FROM places WHERE id = ?').get(placeId);
-  if (!row) return res.status(404).json({ error: 'Yer bulunamadı' });
+  const row = resolvePlaceRow(req, res);
+  if (!row) return;
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
   const weather = await getWeather(row.lat, row.lng, lang);
   res.json(weather);
 });
 
 router.get('/:id/saved', authRequired, (req, res) => {
-  const placeId = parsePositiveInt(req.params.id, res);
-  if (!placeId) return;
+  const row = resolvePlaceRow(req, res);
+  if (!row) return;
   const saved = db.prepare(`
     SELECT 1 FROM saved_places WHERE user_id = ? AND place_id = ?
-  `).get(req.user.id, placeId);
+  `).get(req.user.id, row.id);
   res.json({ saved: !!saved });
 });
 
 router.post('/:id/save', authRequired, (req, res) => {
-  const placeId = parsePositiveInt(req.params.id, res);
-  if (!placeId) return;
+  const row = resolvePlaceRow(req, res);
+  if (!row) return;
   db.prepare(`
     INSERT OR IGNORE INTO saved_places (user_id, place_id) VALUES (?, ?)
-  `).run(req.user.id, placeId);
+  `).run(req.user.id, row.id);
   res.json({ saved: true });
 });
 
 router.delete('/:id/save', authRequired, (req, res) => {
-  const placeId = parsePositiveInt(req.params.id, res);
-  if (!placeId) return;
-  db.prepare('DELETE FROM saved_places WHERE user_id = ? AND place_id = ?').run(req.user.id, placeId);
+  const row = resolvePlaceRow(req, res);
+  if (!row) return;
+  db.prepare('DELETE FROM saved_places WHERE user_id = ? AND place_id = ?').run(req.user.id, row.id);
   res.json({ saved: false });
 });
 

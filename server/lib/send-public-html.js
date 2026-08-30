@@ -18,6 +18,7 @@ const HTML_PAGE_ROUTES = {
   '/reset-password': 'reset-password.html',
   '/search': 'search.html',
   '/gezilecek-yerler': 'index.html',
+  '/404': '404.html',
 };
 
 function injectAppVersion(html) {
@@ -36,8 +37,18 @@ function readPublicHtml(publicDir, relativePath) {
   return injectAppVersion(raw);
 }
 
-function sendPublicHtml(res, publicDir, relativePath) {
-  const html = readPublicHtml(publicDir, relativePath);
+function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
+  let html = readPublicHtml(publicDir, relativePath);
+  const req = res.req;
+  const pathname = (req && (req.originalUrl || req.url) || '/').split('?')[0];
+  const { injectSeoHead, langFromPath } = require('./seo');
+  const noindex = /login|register|profile|verify-email|reset-password|admin|404\.html|500\.html/.test(relativePath);
+  html = injectSeoHead(html, {
+    pathname,
+    lang: req?.tlLang || langFromPath(pathname),
+    noindex,
+    ...seo,
+  });
   res.set({
     ...NO_CACHE_HEADERS,
     'Content-Type': 'text/html; charset=utf-8',

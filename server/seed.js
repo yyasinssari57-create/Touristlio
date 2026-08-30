@@ -6,6 +6,7 @@ const { db } = require('./db');
 const { createUser, findUserByEmail, hashPassword } = require('./auth');
 const { enrichContentFields } = require('./lib/place-content');
 const { slugify } = require('./lib/catalog-db');
+const { uniquePlaceSlug, slugFromPlace } = require('./lib/place-lookup');
 
 const placesPath = path.join(__dirname, 'data', 'places.json');
 const blogsSeed = [
@@ -32,7 +33,7 @@ function seedPlaces(options = {}) {
 
   const insert = db.prepare(`
     INSERT OR REPLACE INTO places
-    (id, name, location, country, city, district, category,
+    (id, name, slug, location, country, city, district, category,
      image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en,
      description, description_en, overview, overview_en,
      history, history_en, things_to_do, things_to_do_en,
@@ -40,7 +41,7 @@ function seedPlaces(options = {}) {
      how_to_get_there, how_to_get_there_en, photos,
      tips, tips_en, tags, search_aliases, categories, lat, lng, popularity,
      faq_tr, faq_en)
-    VALUES (@id, @name, @location, @country, @city, @district, @category,
+    VALUES (@id, @name, @slug, @location, @country, @city, @district, @category,
             @imageUrl, @isLocal, @entryFee, @entryFeeEn, @bestTime, @bestTimeEn,
             @description, @descriptionEn, @overview, @overviewEn,
             @history, @historyEn, @thingsToDo, @thingsToDoEn,
@@ -50,11 +51,21 @@ function seedPlaces(options = {}) {
             @faqTR, @faqEN)
   `);
 
+  const usedSlugs = new Set();
   const tx = db.transaction((rows) => {
     for (const p of rows) {
       const popularity = (p.tiolaCount || 0) * 2;
+      let slug = uniquePlaceSlug(db, p.slug || slugFromPlace(p), p.id);
+      let n = 2;
+      const root = slug;
+      while (usedSlugs.has(slug)) {
+        slug = `${root}-${n}`;
+        n += 1;
+      }
+      usedSlugs.add(slug);
       insert.run({
         ...p,
+        slug,
         isLocal: p.isLocal ? 1 : 0,
         entryFeeEn: p.entryFeeEn || null,
         bestTimeEn: p.bestTimeEn || null,

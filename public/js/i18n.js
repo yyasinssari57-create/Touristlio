@@ -120,9 +120,19 @@ window.TL_I18N = (function () {
       aboutP1: 'Touristlio, gerçek gezginlerin Tiola deneyimleriyle dünya destinasyonlarını keşfetmenizi sağlayan bağımsız bir seyahat rehberidir.',
       aboutP2: "Google puanı veya harici yorum agregasyonu kullanmıyoruz — yalnızca topluluk onaylı Tiola'lar.",
       contactTitle: 'İletişim',
-      contactDevBadge: 'Geliştirme aşamasında',
-      contactP1: 'Sitemiz gelişim aşamasındadır. Bu süreçte platformumuzu ve içeriklerimizi sürekli iyileştiriyoruz.',
-      contactP2: 'İstek, öneri ve şikayetlerinizi aşağıdaki e-posta adresine yazabilirsiniz:',
+      contactP1: 'İstek, öneri ve şikayetlerinizi aşağıdaki form ile bize iletebilirsiniz.',
+      contactP2: 'Dilerseniz doğrudan e-posta da gönderebilirsiniz:',
+      contactName: 'Ad Soyad',
+      contactEmail: 'E-posta',
+      contactSubject: 'Konu',
+      contactMessage: 'Mesaj',
+      contactSend: 'Gönder',
+      contactSending: 'Gönderiliyor…',
+      contactRequired: 'Lütfen tüm alanları doldurun.',
+      contactEmailInvalid: 'Geçerli bir e-posta girin.',
+      contactMessageShort: 'Mesaj en az 10 karakter olmalı.',
+      contactSuccess: 'Mesajınız gönderildi. En kısa sürede dönüş yapacağız.',
+      contactError: 'Mesaj gönderilemedi. Lütfen daha sonra deneyin.',
       contactEmailAria: 'touristlio.info@gmail.com adresine e-posta gönder',
       contactBack: '← Ana sayfaya dön',
       privacyTitle: 'Gizlilik Politikası',
@@ -340,9 +350,19 @@ window.TL_I18N = (function () {
       aboutP1: 'Touristlio is an independent travel guide powered by real traveler Tiolas — not aggregated external ratings.',
       aboutP2: 'We do not show Google scores or third-party review feeds — only community-approved Tiolas.',
       contactTitle: 'Contact',
-      contactDevBadge: 'Under development',
-      contactP1: 'Our site is currently under development. We are continually improving the platform and content.',
-      contactP2: 'You can send us your requests, suggestions, and complaints at the email address below:',
+      contactP1: 'Send requests, suggestions, or complaints with the form below.',
+      contactP2: 'You can also email us directly:',
+      contactName: 'Full name',
+      contactEmail: 'Email',
+      contactSubject: 'Subject',
+      contactMessage: 'Message',
+      contactSend: 'Send',
+      contactSending: 'Sending…',
+      contactRequired: 'Please fill in all fields.',
+      contactEmailInvalid: 'Enter a valid email address.',
+      contactMessageShort: 'Message must be at least 10 characters.',
+      contactSuccess: 'Your message was sent. We will get back to you soon.',
+      contactError: 'Could not send the message. Please try again later.',
       contactEmailAria: 'Send email to touristlio.info@gmail.com',
       contactBack: '← Back to home',
       privacyTitle: 'Privacy Policy',
@@ -512,11 +532,19 @@ window.TL_I18N = (function () {
         : 'Touristlio — dünya çapında destinasyonlar, Tiola topluluk puanları ve OpenStreetMap haritalarıyla kişisel seyahat rehberi.';
     }
     const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) {
-      ogTitle.content = lang === 'en'
-        ? "Touristlio — Don't Just Visit. Feel It."
-        : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
-    }
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    const twTitle = document.querySelector('meta[name="twitter:title"]');
+    const twDesc = document.querySelector('meta[name="twitter:description"]');
+    const homeTitle = lang === 'en'
+      ? "Touristlio — Don't Just Visit. Feel It."
+      : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
+    const homeDesc = lang === 'en'
+      ? 'Touristlio — global destinations, Tiola community ratings, and OpenStreetMap-powered travel discovery.'
+      : 'Touristlio — dünya çapında destinasyonlar, Tiola topluluk puanları ve OpenStreetMap haritalarıyla kişisel seyahat rehberi.';
+    if (ogTitle) ogTitle.content = homeTitle;
+    if (ogDesc) ogDesc.content = homeDesc;
+    if (twTitle) twTitle.content = homeTitle;
+    if (twDesc) twDesc.content = homeDesc;
     if (!window.TL_CATEGORY_META) {
       document.querySelectorAll('.cpill[data-cat]').forEach((el) => {
         el.textContent = catLabel(lang, el.getAttribute('data-cat'));

@@ -80,6 +80,27 @@
   text-decoration: underline;
   outline: none;
 }
+.contact-label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin: 8px 0 4px;
+}
+.contact-textarea {
+  min-height: 120px;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+.contact-form-msg {
+  font-size: .82rem;
+  margin: 8px 0 12px;
+}
+.contact-form-msg.ok { color: #0f766e; }
+.contact-form-msg.err { color: #b91c1c; }
+.contact-form .btn {
+  margin-top: 4px;
+}
 .contact-back {
   margin-top: 24px;
   margin-bottom: 0;

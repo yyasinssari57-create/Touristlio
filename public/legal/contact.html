@@ -12,9 +12,20 @@
 <article class="legal-wrap contact-section" aria-labelledby="contactHeading">
   <h1 id="contactHeading" data-i18n="contactTitle">İletişim</h1>
   <div class="contact-card">
-    <p class="contact-badge" data-i18n="contactDevBadge">Geliştirme aşamasında</p>
-    <p class="contact-lead" data-i18n="contactP1">Sitemiz gelişim aşamasındadır. Bu süreçte platformumuzu ve içeriklerimizi sürekli iyileştiriyoruz.</p>
-    <p data-i18n="contactP2">İstek, öneri ve şikayetlerinizi aşağıdaki e-posta adresine yazabilirsiniz:</p>
+    <p class="contact-lead" data-i18n="contactP1">İstek, öneri ve şikayetlerinizi aşağıdaki form ile bize iletebilirsiniz.</p>
+    <form id="contactForm" class="contact-form" novalidate>
+      <label class="contact-label" for="contactName" data-i18n="contactName">Ad Soyad</label>
+      <input class="ain" id="contactName" name="name" type="text" autocomplete="name" required maxlength="120" data-i18n-placeholder="contactName" placeholder="Ad Soyad"/>
+      <label class="contact-label" for="contactEmail" data-i18n="contactEmail">E-posta</label>
+      <input class="ain" id="contactEmail" name="email" type="email" autocomplete="email" required maxlength="200" data-i18n-placeholder="contactEmail" placeholder="E-posta"/>
+      <label class="contact-label" for="contactSubject" data-i18n="contactSubject">Konu</label>
+      <input class="ain" id="contactSubject" name="subject" type="text" required maxlength="200" data-i18n-placeholder="contactSubject" placeholder="Konu"/>
+      <label class="contact-label" for="contactMessage" data-i18n="contactMessage">Mesaj</label>
+      <textarea class="ain contact-textarea" id="contactMessage" name="message" required minlength="10" maxlength="4000" rows="6" data-i18n-placeholder="contactMessage" placeholder="Mesaj"></textarea>
+      <p id="contactFormMsg" class="contact-form-msg" role="status" hidden></p>
+      <button class="btn bp" type="submit" id="contactSubmit" data-i18n="contactSend">Gönder</button>
+    </form>
+    <p data-i18n="contactP2">Dilerseniz doğrudan e-posta da gönderebilirsiniz:</p>
     <p class="contact-email-row">
       <a href="mailto:touristlio.info@gmail.com" class="contact-email-link" data-i18n-aria="contactEmailAria">touristlio.info@gmail.com</a>
     </p>
@@ -22,6 +33,56 @@
   <p class="contact-back"><a href="/" data-i18n="contactBack">← Ana sayfaya dön</a></p>
 </article>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
-<script>window.TL_I18N.apply(localStorage.getItem('tl_lang')||'tr');</script>
+<script>
+const lang = localStorage.getItem('tl_lang') || 'tr';
+window.TL_I18N.apply(lang);
+function t(k){ return window.TL_I18N.t(lang, k); }
+const form = document.getElementById('contactForm');
+const msgEl = document.getElementById('contactFormMsg');
+const submitBtn = document.getElementById('contactSubmit');
+function showMsg(text, ok) {
+  msgEl.hidden = false;
+  msgEl.textContent = text;
+  msgEl.className = 'contact-form-msg ' + (ok ? 'ok' : 'err');
+}
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('contactName').value.trim();
+  const email = document.getElementById('contactEmail').value.trim();
+  const subject = document.getElementById('contactSubject').value.trim();
+  const message = document.getElementById('contactMessage').value.trim();
+  if (!name || !email || !subject || !message) {
+    showMsg(t('contactRequired'), false);
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showMsg(t('contactEmailInvalid'), false);
+    return;
+  }
+  if (message.length < 10) {
+    showMsg(t('contactMessageShort'), false);
+    return;
+  }
+  submitBtn.disabled = true;
+  submitBtn.textContent = t('contactSending');
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, subject, message }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || t('contactError'));
+    showMsg(data.message || t('contactSuccess'), true);
+    form.reset();
+  } catch (err) {
+    showMsg(err.message || t('contactError'), false);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = t('contactSend');
+  }
+});
+</script>
 </body>
 </html>

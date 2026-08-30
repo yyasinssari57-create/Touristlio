@@ -54,6 +54,8 @@ function toApiPlace(p) {
 
     id: p.id,
 
+    slug: p.slug || null,
+
     title: p.name,
 
     description: p.description || p.overview || '',

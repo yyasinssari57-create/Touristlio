@@ -88,6 +88,7 @@ function runOptional(label, fn) {
 function runMigrations(db) {
   try {
     addColumnIfMissing(db, 'places', 'search_aliases', 'TEXT');
+    addColumnIfMissing(db, 'places', 'slug', 'TEXT');
 
     for (const col of PLACE_COLUMNS) {
       const type = ['lat', 'lng', 'popularity'].includes(col) ? 'REAL' : 'TEXT';
@@ -279,6 +280,7 @@ function runMigrations(db) {
     addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
 
     ensureIndex(db, 'idx_places_status', 'places', 'status');
+    ensureIndex(db, 'idx_places_slug', 'places', 'slug');
     ensureIndex(db, 'idx_blogs_slug', 'blogs', 'slug');
     ensureIndex(db, 'idx_blogs_featured', 'blogs', ['featured', 'created_at']);
     ensureIndex(db, 'idx_tiolas_parent', 'tiolas', 'parent_id');
@@ -309,6 +311,11 @@ function runMigrations(db) {
     });
     runOptional('seedBlogCategoriesIfEmpty', () => seedBlogCategoriesIfEmpty(db));
     runOptional('backfillBlogSlugs', () => backfillBlogSlugs(db));
+    runOptional('backfillPlaceSlugs', () => {
+      const { backfillPlaceSlugs } = require('./place-lookup');
+      const filled = backfillPlaceSlugs(db);
+      if (filled > 0) logger.info({ msg: 'Backfilled place slugs', count: filled });
+    });
 
     runFileMigrations(db);
   } catch (err) {

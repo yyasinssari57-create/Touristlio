@@ -80,7 +80,7 @@ function buildHtmlEmail({ title, intro, actionLabel, actionUrl, footer }) {
 </html>`;
 }
 
-async function sendMail({ to, subject, text, html }) {
+async function sendMail({ to, subject, text, html, replyTo }) {
   const tx = getTransporter();
   if (!tx) {
     logger.info({ msg: 'Email skipped (SMTP not configured)', to, subject });
@@ -94,6 +94,7 @@ async function sendMail({ to, subject, text, html }) {
     html: html || undefined,
     encoding: 'utf-8',
   };
+  if (replyTo) message.replyTo = replyTo;
   if (!message.text && message.html) {
     message.text = message.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
@@ -245,6 +246,29 @@ async function sendAdminMessageEmail(email, { userName, subject, body, siteUrl }
   });
 }
 
+async function sendContactFormEmail({ name, email, subject, message }) {
+  const to = process.env.CONTACT_EMAIL || process.env.ADMIN_EMAIL || SMTP_FROM;
+  const safeName = String(name || '').slice(0, 120);
+  const safeEmail = String(email || '').slice(0, 200);
+  const safeSubject = String(subject || '').slice(0, 200);
+  const safeMessage = String(message || '').slice(0, 4000);
+  const text = [
+    'Touristlio iletişim formu',
+    '',
+    `Ad: ${safeName}`,
+    `E-posta: ${safeEmail}`,
+    `Konu: ${safeSubject}`,
+    '',
+    safeMessage,
+  ].join('\n');
+  return sendMail({
+    to,
+    replyTo: safeEmail,
+    subject: `[İletişim] ${safeSubject}`,
+    text,
+  });
+}
+
 module.exports = {
   isConfigured,
   sendMail,
@@ -253,4 +277,5 @@ module.exports = {
   sendTiolaRejectionEmail,
   sendBlogRejectionEmail,
   sendAdminMessageEmail,
+  sendContactFormEmail,
 };
