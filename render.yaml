@@ -48,6 +48,9 @@ services:
         sync: false
       - key: SITE_URL
         sync: false
+      # Emergency: skip in-app apex→www 301 if Cloudflare already redirects
+      - key: DISABLE_WWW_REDIRECT
+        sync: false
       # Auto-generated on first deploy; override in Dashboard for a stable secret across redeploys
       - key: JWT_SECRET
         generateValue: true

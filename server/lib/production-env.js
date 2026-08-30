@@ -7,7 +7,7 @@ function validateProductionEnv() {
   const cors = process.env.CORS_ORIGIN || '';
   if (!cors || cors.includes('localhost')) {
     logger.warn({
-      msg: 'Production: CORS_ORIGIN should be your live domain (e.g. https://touristlio.com)',
+      msg: 'Production: CORS_ORIGIN should be your live domain (e.g. https://www.touristlio.com)',
     });
   }
 

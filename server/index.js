@@ -18,6 +18,7 @@ const { staticAssetHeaders } = require('./middleware/static-cache');
 const { sendPublicHtml, publicHtmlMiddleware, htmlPageRoutesMiddleware } = require('./lib/send-public-html');
 const { getAppVersion } = require('./lib/app-version');
 const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require('./lib/cors-origins');
+const { canonicalHostMiddleware } = require('./middleware/canonical-host');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -49,6 +50,8 @@ const app = express();
 if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
 }
+
+app.use(canonicalHostMiddleware());
 
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 const { apiPreflightMiddleware } = require('./middleware/api-preflight');

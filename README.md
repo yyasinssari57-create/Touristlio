@@ -105,8 +105,8 @@ Repoda `render.yaml` blueprint dosyası vardır. Ayrıntılı Türkçe adımlar:
 
 1. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint** → GitHub reposunu bağlayın.
 2. Deploy tamamlanınca **Environment** sekmesinde şunları doldurun:
-   - `CORS_ORIGIN` = `https://touristlio.com`
-   - `SITE_URL` = `https://touristlio.com`
+   - `CORS_ORIGIN` = `https://www.touristlio.com`
+   - `SITE_URL` = `https://www.touristlio.com`
    - `ADMIN_PASSWORD` = güçlü şifre
    - `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
 3. İlk deploy shell'inde (veya lokalden bağlanıp): `npm run seed`

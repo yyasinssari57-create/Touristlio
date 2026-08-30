@@ -1513,8 +1513,8 @@ async function uploadPlacePhotos(placeId, inputId, opts = {}) {
 function turkishFetchError(err, context) {
   const msg = String(err?.message || '');
   if (msg === 'Failed to fetch' || err?.name === 'TypeError') {
-    const wwwHint = location.hostname.indexOf('www.') === 0
-      ? ' www olmadan touristlio.com adresine yönlendiriliyorsunuz; sayfa yenilenmezse adres çubuğundaki www önekini kaldırın.'
+    const wwwHint = location.hostname === 'touristlio.com'
+      ? ' Canlı site https://www.touristlio.com üzerinde; apex adres 301 ile www’ye gider.'
       : '';
     return 'Sunucuya bağlanılamadı — bağlantınızı kontrol edin ve oturumunuzun açık olduğundan emin olun.' + wwwHint;
   }
