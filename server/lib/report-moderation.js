@@ -1,9 +1,9 @@
 const path = require('path');
-const fs = require('fs');
 const { db } = require('../db');
 const notifications = require('./notifications');
 const authModel = require('../modules/auth/auth.model');
 const { sendTiolaRejectionEmail, sendBlogRejectionEmail } = require('./mailer');
+const { unlinkImageAndVariants } = require('./image-process');
 
 const REPORT_STATUSES = {
   PENDING: 'pending',
@@ -147,7 +147,7 @@ function removeProfilePhoto(userId) {
   if (!row.avatar_url) return { ok: true, alreadyRemoved: true, hadPhoto: false };
 
   const filePath = path.join(__dirname, '..', '..', row.avatar_url.replace(/^\//, ''));
-  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch { /* ignore */ }
+  try { unlinkImageAndVariants(filePath); } catch { /* ignore */ }
   authModel.clearAvatarPhoto(userId);
   if (!row.avatar_preset) {
     authModel.updateAvatarPreset(userId, 'none', row.avatar_color || '#0ea5e9');

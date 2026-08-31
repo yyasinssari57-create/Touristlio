@@ -37,7 +37,7 @@
         <h3 id="avatarCropTitle" class="avatar-crop-title" data-i18n="avatarCropTitle">Fotoğrafı kırp</h3>
         <div class="avatar-crop-stage" id="avatarCropStage">
           <div class="avatar-crop-viewport" id="avatarCropViewport">
-            <img class="avatar-crop-img" id="avatarCropImg" alt="" draggable="false"/>
+            <img class="avatar-crop-img" id="avatarCropImg" alt="" draggable="false" loading="lazy"/>
           </div>
           <div class="avatar-crop-overlay" aria-hidden="true"></div>
         </div>

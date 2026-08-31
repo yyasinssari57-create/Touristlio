@@ -1,7 +1,7 @@
 const crypto = require('crypto');
-const { validationResult } = require('express-validator');
 const path = require('path');
-const fs = require('fs');
+const { validationResult } = require('express-validator');
+const { unlinkImageAndVariants } = require('../../lib/image-process');
 const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById, needsRehash } = require('../../auth');
 const { AVATAR_PRESETS, AVATAR_COLORS, isValidPreset, isValidColor } = require('../../lib/avatars');
 const authModel = require('./auth.model');
@@ -230,7 +230,7 @@ function updateAvatarPhoto(userId, file) {
   const url = `/uploads/${path.basename(file.filename || file.path)}`;
   if (row.avatar_url && row.avatar_url !== url) {
     const oldPath = path.join(__dirname, '..', '..', '..', row.avatar_url.replace(/^\//, ''));
-    try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch { /* ignore */ }
+    try { unlinkImageAndVariants(oldPath); } catch { /* ignore */ }
   }
   authModel.updateAvatarUrl(userId, url);
   return {

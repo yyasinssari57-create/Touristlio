@@ -94,7 +94,9 @@ nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filte
 
 /* HERO — tam genişlikte profesyonel arka plan görseli + okunabilirlik overlay */
 .hero{min-height:100vh;min-height:100dvh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(var(--nav-h) + 40px) 40px 60px;overflow:hidden;}
-.hbg{position:absolute;inset:0;background-color:#071629;background-image:url(/images/hero.webp);background-size:cover;background-position:center;background-repeat:no-repeat;}
+.hbg{position:absolute;inset:0;background-color:#071629;background-image:url(/images/hero-800w.webp);background-size:cover;background-position:center;background-repeat:no-repeat;}
+@media (max-width:480px){.hbg{background-image:url(/images/hero-480w.webp);}}
+@media (min-width:801px){.hbg{background-image:url(/images/hero.webp);}}
 .hmesh{position:absolute;inset:0;pointer-events:none;background:none;}
 .hov{position:absolute;inset:0;pointer-events:none;background:rgba(0,0,0,.4);}
 .hc{position:relative;z-index:2;max-width:620px;}

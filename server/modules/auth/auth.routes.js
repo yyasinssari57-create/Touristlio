@@ -8,6 +8,7 @@ const { authLimiter } = require('../../middleware/rateLimit');
 const { fail } = require('../../lib/apiResponse');
 const controller = require('./auth.controller');
 const { imageFileFilter, validateUploadedImage } = require('../../lib/image-mime');
+const { processImageUpload } = require('../../middleware/process-image-upload');
 const { MIN_PASSWORD_LENGTH } = require('../../auth');
 
 const uploadRoot = path.join(__dirname, '..', '..', '..', 'uploads');
@@ -90,6 +91,6 @@ router.post('/avatar-upload', authRequired, (req, res, next) => {
     }
     next();
   });
-}, validateUploadedImage(), controller.updateAvatarPhoto);
+}, validateUploadedImage(), processImageUpload(), controller.updateAvatarPhoto);
 
 module.exports = router;

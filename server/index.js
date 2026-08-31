@@ -14,6 +14,7 @@ const { clear: clearCache } = require('./lib/cache');
 const { authRequired, requireRole } = require('./middleware/auth');
 const { csrfProtection } = require('./middleware/csrf');
 const { uploadsStaticHeaders } = require('./middleware/uploads-static');
+const { uploadsSrcsetFallback } = require('./middleware/uploads-srcset');
 const { staticAssetHeaders } = require('./middleware/static-cache');
 const { sendPublicHtml, publicHtmlMiddleware, htmlPageRoutesMiddleware } = require('./lib/send-public-html');
 const { getAppVersion } = require('./lib/app-version');
@@ -118,7 +119,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/uploads', uploadsStaticHeaders, express.static(path.join(__dirname, '..', 'uploads')));
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+app.use('/uploads', uploadsStaticHeaders, uploadsSrcsetFallback(UPLOADS_DIR), express.static(UPLOADS_DIR));
 
 const { buildSitemapXml, buildRobotsTxt } = require('./lib/sitemap');
 app.get('/robots.txt', (_req, res) => {
@@ -275,8 +277,10 @@ app.use((err, req, res, _next) => {
     if (err.message === 'CORS blocked') {
       return res.status(403).json({ error: 'İstek reddedildi (CORS)' });
     }
-    const message = isProd ? 'Sunucu hatası' : (err.message || 'Sunucu hatası');
-    return res.status(500).json({ error: message });
+    const status = Number(err.status);
+    const code = (status >= 400 && status < 500) ? status : 500;
+    const message = (code < 500 || !isProd) ? (err.message || 'Sunucu hatası') : 'Sunucu hatası';
+    return res.status(code).json({ error: message });
   }
   res.status(500);
   sendPublicHtml(res, PUBLIC_DIR, '500.html');

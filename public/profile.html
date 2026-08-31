@@ -24,7 +24,7 @@
 
   <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span></span></a>
 
-  <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46"/></a>
+  <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.webp?v=6" alt="" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" /></a>
 
   <div class="nav-r"><a href="/" class="btn nav-btn-ghost nav-link-plain" data-i18n="explore">Keşfet</a>
 
@@ -98,7 +98,7 @@
               <div class="avatar-color-label" data-i18n="avatarColorLabel">Arka plan rengi</div>
               <div id="avatarColorRow" class="av-color-row"></div>
               <div class="avatar-upload-row">
-                <label class="btn bo bsm"><span data-i18n="avatarUpload">Fotoğraf yükle</span><input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden/></label>
+                <label class="btn bo bsm"><span data-i18n="avatarUpload">Fotoğraf yükle</span><input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp" hidden/></label>
                 <button type="button" class="btn bp bsm" id="btnSaveAvatar" onclick="saveAvatarPreset()" data-i18n="avatarSave">Kaydet</button>
               </div>
               <p class="avatar-upload-hint" data-i18n="avatarHint">Yuvarlak kırpılmış görünüm · max 3 MB</p>
@@ -147,6 +147,7 @@
 </div>
 
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
 <script src="/js/avatars.js?v=__APP_VERSION__"></script>
@@ -338,7 +339,7 @@ async function init(){
 
       se.style.display='none';
 
-      sg.innerHTML = saved.places.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img"><img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}"/></div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></div>`).join('');
+      sg.innerHTML = saved.places.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></div>`).join('');
 
     }
 

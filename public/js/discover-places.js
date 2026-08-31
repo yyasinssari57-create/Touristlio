@@ -135,7 +135,7 @@ window.TL_DISCOVER = (function () {
     if (!grid) return;
     grid.innerHTML = cities.map((c) => `
       <button type="button" class="city-card" data-slug="${c.slug}" aria-label="${escapeHtml(c.name)}">
-        <img src="${cityImg(c)}" alt="" loading="lazy"/>
+        ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { kind: 'card' }) : `<img src="${cityImg(c)}" alt="" loading="lazy"/>`}
         <div class="city-card-body">
           <h3>${escapeHtml(lang === 'en' ? c.nameEn : c.name)}</h3>
           <span>${c.placeCount || 0} ${t('placesFound')}</span>
@@ -217,7 +217,9 @@ window.TL_DISCOVER = (function () {
             const name = p.name || p.title;
             return `
             <article class="discover-place-card" data-id="${p.id}" tabindex="0" role="button">
-              <img src="${placeImg(p)}" alt="" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>
+              ${window.TL_IMG?.tag
+                ? window.TL_IMG.tag(placeImg(p), { kind: 'card', extra: typeof imgFallback === 'function' ? `onerror="imgFallback(this,'${p.category}',${p.id})"` : '' })
+                : `<img src="${placeImg(p)}" alt="" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>`}
               <div>
                 <h4>${escapeHtml(name)}</h4>
                 <p>${escapeHtml(window.TL_I18N?.catLabel(lang, p.category) || catLabel(p.category))} · ${escapeHtml(p.district || p.city || '')}</p>

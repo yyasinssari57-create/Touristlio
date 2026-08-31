@@ -31,6 +31,8 @@ const { ok, fail } = require('../lib/apiResponse');
 const { mapReport } = require('./reports');
 const reportMod = require('../lib/report-moderation');
 const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
+const { processImageUpload } = require('../middleware/process-image-upload');
+const { unlinkImageAndVariants } = require('../lib/image-process');
 const logger = require('../lib/logger');
 
 const SCRIPT_TIMEOUT_MS = 120000;
@@ -720,7 +722,7 @@ function isExternalPhotoUrl(url) {
   return /^https?:\/\//i.test(u) && !/\/uploads\//i.test(u);
 }
 
-router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), validateUploadedImage(), (req, res) => {
+router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), validateUploadedImage(), processImageUpload(), (req, res) => {
   const placeId = parsePositiveInt(req.params.id, res);
   if (!placeId) return;
   const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
@@ -769,7 +771,7 @@ const mediaUpload = multer({
   fileFilter: imageFileFilter,
 });
 
-router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), (req, res) => {
+router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), processImageUpload(), (req, res) => {
   if (!req.file) return fail(res, 'Görsel gerekli', 400);
   const url = `/uploads/media/${req.file.filename}`;
   return ok(res, { url });
@@ -2126,7 +2128,7 @@ router.delete('/media', checkPermission('admin.places', 'admin.content'), (req, 
     }
   }
 
-  fs.unlinkSync(resolved);
+  unlinkImageAndVariants(resolved);
   logAdmin(req, 'media.delete', 'media', null, normalized);
   return ok(res, { deleted: true, path: normalized });
 });

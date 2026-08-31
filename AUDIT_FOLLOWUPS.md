@@ -77,7 +77,24 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Keşfet haritası (`#discoverMap`) ilk yüklemede Türkiye varsayılanı; şehir seçilince uçar.
 - Detay haritası (`#pdMap`) lat/lng yoksa gizlenir (artık seed’de dolu).
 
-- [YÜKSEK-3] Görsel Optimizasyon — WebP + Lazy Loading + EXIF Temizleme
+## YÜKSEK-3 (görsel — WebP + lazy + EXIF)
+
+- Tamamlandı: statik raster logolar WebP (`logo.webp`, `logo-round.webp`, `nav-logo.webp`); `hero.webp` + `hero-480w` / `hero-800w` srcset.
+- Tüm HTML `<img>` `loading="lazy"` (ana sayfa hero CSS `background-image`, eager preload `/images/hero.webp`).
+- Upload: Sharp — EXIF/GPS strip (Sharp 0.35: `withMetadata()` çağrılmaz; `.withMetadata(false)` bu sürümde EXIF’i **korur**), max 1920×1080, otomatik WebP, magic byte yalnızca jpeg/png/webp.
+- Srcset: Unsplash `fm=webp&w=`, `/uploads` 480/800/1080; eksik varyantlar on-the-fly üretilir.
+- GIF yeni yüklemede reddedilir. SVG / Leaflet vendor PNG dokunulmadı.
+- Eski `uploads/` dosyaları gitignore’da; retroaktif dönüşüm yok (yeni yüklemeler WebP).
+- `logo-round.png` 700KB → `logo-round.webp` ~8KB; PNG kopyaları fallback için duruyor.
+- OG `index.html` statik fallback logo-round.webp; sunucu SEO hâlâ `hero.webp` (KRİTİK-5).
+
+### Leftover
+- Mevcut diskteki eski JPEG/PNG upload’lar (Tiola/avatar) EXIF içerebilir — bir kerelik migration yazılmadı.
+- GIF animasyon desteği kalktı; eski GIF URL’leri 404 olabilir.
+- Hero LCP preload hâlâ tam `hero.webp` (mobilde 480w gösterilse de büyük dosya önyüklenebilir).
+- Unsplash uzak görseller indirilip WebP’ye çevrilmiyor; tarayıcı `fm=webp` srcset kullanır.
+- Leaflet `vendor/**/*.png` (marker/layers) dönüştürülmedi.
+
 - [YÜKSEK-4] JSON-LD Schema.org Yapılandırılmış Veri Eksik
 - [YÜKSEK-5] Ana Sayfa İstatistikleri "—" Gösteriyor
 - [YÜKSEK-6] Error Boundary Eksikliği

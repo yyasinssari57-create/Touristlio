@@ -23,7 +23,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <meta property="og:site_name" content="Touristlio"/>
 <meta property="og:title" content="Touristlio — Sadece Ziyaret Etme. Hisset."/>
 <meta property="og:description" content="Gizli köşelerden ikonik yapılara — gerçek gezginlerin Tiola deneyimleriyle keşfedin."/>
-<meta property="og:image" content="/images/logo-round.png"/>
+<meta property="og:image" content="/images/logo-round.webp"/>
 <meta property="og:locale" content="tr_TR"/>
 <meta property="og:locale:alternate" content="en_US"/>
 <link rel="canonical" href="https://www.touristlio.com/"/>
@@ -51,7 +51,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <div class="auth-ov" id="authOv">
   <div class="auth-box">
     <button class="aclose" onclick="closeAuth()">✕</button>
-    <img src="/images/logo.png" alt="Touristlio" class="auth-logo-img" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
+    <img src="/images/logo.webp" alt="Touristlio" class="auth-logo-img" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
     <div class="asub" data-i18n="authSub">Seyahatini yıldızla, kaydet ve paylaş</div>
     <div class="atabs">
       <div class="atab on" id="tabA" onclick="swTab('login',this)" data-i18n="authTabLogin">Giriş Yap</div>
@@ -77,7 +77,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <p class="brand-slogan" data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></p>
     </div>
     <a href="/" class="nav-brand-center" onclick="showMainTab('explore');return false" aria-label="Touristlio">
-      <img src="/images/logo-round.png?v=5" alt="" class="brand-mark" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon-white.svg'"/>
+      <img src="/images/logo-round.webp?v=6" alt="" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/icon-white.svg'"/>
     </a>
     <div class="nav-spacer" aria-hidden="true"></div>
     <div class="nav-menu" id="navMenu">
@@ -316,7 +316,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
   <footer class="site-footer">
     <div>
-      <img src="/images/logo.png" alt="" class="logo-img footer-logo"/>
+      <img src="/images/logo.webp" alt="" class="logo-img footer-logo" loading="lazy" decoding="async"/>
       <div class="ftag" data-i18n="footerTag">Sadece ziyaret etme. Hisset.</div>
       <div class="footer-legal">
         <a href="/legal/about.html" data-i18n="footerAbout">Hakkımızda</a> ·
@@ -399,7 +399,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <div class="page" id="page-detail">
   <div class="detail-page">
     <div class="pd-hero">
-      <img id="pdImg" src="" alt="" loading="lazy"/>
+      <img id="pdImg" src="" alt="" loading="lazy" decoding="async"/>
       <button type="button" class="pd-save" id="pdSaveBtn" onclick="activePlace && toggleSave(activePlace.id,this)" aria-label="Favori" aria-pressed="false">🤍</button>
       <div class="pd-hero-ov">
         <div class="pd-cat" id="pdCat"></div>
@@ -464,7 +464,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
               </div>
               <textarea class="rft" id="rfTxt" data-i18n-placeholder="tiolaPlaceholder" placeholder="2. Deneyimini yaz (Tiola)..."></textarea>
               <div class="rf-photo-row"><label class="rf-photo-label" data-i18n="photoOptional">3. Fotoğraf (isteğe bağlı)</label><br/>
-              <input type="file" id="rfPhoto" accept="image/*"/></div>
+              <input type="file" id="rfPhoto" accept="image/jpeg,image/png,image/webp"/></div>
               <div class="rf-foot">
                 <div class="rnote" id="rfNote"></div>
                 <button class="btn bp bsm" onclick="postTiola()" data-i18n="sendTiola">Tiola Gönder</button>
@@ -598,7 +598,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <div id="writeTiolaForm">
             <select class="w-sel" id="arcPlace"><option value="" data-i18n="placeOptional">Mekân (isteğe bağlı)</option></select>
             <input class="w-sel" id="arcCity" data-i18n-placeholder="cityTagPh" placeholder="Şehir etiketi (genel Tiola için, isteğe bağlı)"/>
-            <input type="file" id="arcPhoto" accept="image/*"/>
+            <input type="file" id="arcPhoto" accept="image/jpeg,image/png,image/webp"/>
             <div class="write-member-row">
               <div class="me-g"><div class="me-lbl" data-i18n="memberRating">Yıldızınız</div>
                 <div class="rfstars" id="arcStars"><span onclick="arcRate(1)">★</span><span onclick="arcRate(2)">★</span><span onclick="arcRate(3)">★</span><span onclick="arcRate(4)">★</span><span onclick="arcRate(5)">★</span></div>
@@ -633,7 +633,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
                   <div class="avatar-upload-row">
                     <label class="btn bo bsm">
                       <span data-i18n="avatarUpload">Fotoğraf yükle</span>
-                      <input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden/>
+                      <input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp" hidden/>
                     </label>
                     <button type="button" class="btn bp bsm" id="btnSaveAvatar" onclick="saveAvatarPreset()" data-i18n="avatarSave">Kaydet</button>
                   </div>
@@ -681,6 +681,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <script src="/vendor/leaflet/leaflet.js?v=__APP_VERSION__"></script>
 <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js?v=__APP_VERSION__"></script>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/avatars.js?v=__APP_VERSION__"></script>
 <script src="/js/avatar-crop.js?v=__APP_VERSION__"></script>
 <script src="/js/content-delete.js?v=__APP_VERSION__"></script>

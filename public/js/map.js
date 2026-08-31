@@ -54,7 +54,9 @@ window.TL_MAP = (function () {
 
   function popupHtml(m, lang) {
     const img = m.imageUrl
-      ? `<img src="${m.imageUrl}" alt="" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`
+      ? (window.TL_IMG?.tag
+        ? window.TL_IMG.tag(m.imageUrl, { kind: 'thumb', extra: 'style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px"' })
+        : `<img src="${m.imageUrl}" alt="" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`)
       : '';
     return `<div class="map-popup">
       ${img}

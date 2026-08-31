@@ -13,6 +13,7 @@ const { sanitizeText } = require('../lib/sanitize');
 const { enrichTiolaLikes, toggleTiolaLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
 const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
+const { processImageUpload } = require('../middleware/process-image-upload');
 const { containsBannedWord } = require('../lib/contentFilter');
 
 
@@ -32,8 +33,6 @@ const MIME_TO_EXT = {
   'image/png': '.png',
 
   'image/webp': '.webp',
-
-  'image/gif': '.gif',
 
 };
 
@@ -289,7 +288,7 @@ router.get('/', authOptional, (req, res) => {
 
 
 
-router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), (req, res) => {
+router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), processImageUpload(), (req, res) => {
 
   const { text, stars, category, placeId, cityTag, countryTag, parentId } = req.body || {};
 

@@ -1,9 +1,9 @@
 const path = require('path');
-const fs = require('fs');
 const { db } = require('../db');
 const authModel = require('../modules/auth/auth.model');
 const { sanitizeText, sanitizeName } = require('./sanitize');
 const { isValidPreset, isValidColor } = require('./avatars');
+const { unlinkImageAndVariants } = require('./image-process');
 
 const VALID_TYPES = new Set(['avatar_preset', 'avatar_photo', 'display_name']);
 const VALID_STATUS = new Set(['pending', 'approved', 'rejected']);
@@ -78,7 +78,7 @@ function applyApproved(row) {
     const existing = authModel.findById(userId);
     if (existing?.avatar_url && existing.avatar_url !== payload.avatarUrl) {
       const oldPath = path.join(__dirname, '..', '..', existing.avatar_url.replace(/^\//, ''));
-      try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch { /* ignore */ }
+      try { unlinkImageAndVariants(oldPath); } catch { /* ignore */ }
     }
     authModel.updateAvatarUrl(userId, payload.avatarUrl);
   } else if (row.change_type === 'display_name') {

@@ -36,8 +36,7 @@ function tiolaPhotoUrl(ti) {
 function renderTiolaPhotoHtml(ti, extraClass = '') {
   const url = tiolaPhotoUrl(ti);
   if (!url) return '';
-  const cls = extraClass ? ` class="${extraClass}"` : '';
-  return `<img src="${url}" alt="" loading="lazy"${cls}/>`;
+  return responsiveImg(url, { className: extraClass, kind: 'card' });
 }
 
 function placeImg(p) {
@@ -52,7 +51,21 @@ function placeImg(p) {
 
 function imgFallback(el, category, placeId) {
   el.onerror = null;
-  el.src = fallbackImgUrl(category, placeId);
+  const url = fallbackImgUrl(category, placeId);
+  if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(el, url, { kind: el.dataset.imgKind || 'card' });
+  else el.src = url;
+}
+
+function responsiveImg(url, opts) {
+  const o = opts || {};
+  if (window.TL_IMG?.tag) return window.TL_IMG.tag(url, o);
+  const src = safeUrl(url);
+  if (!src) return '';
+  const loading = o.eager ? 'eager' : 'lazy';
+  const alt = String(o.alt || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const cls = o.className ? ` class="${o.className}"` : '';
+  const extra = o.extra ? ` ${o.extra}` : '';
+  return `<img src="${src}" alt="${alt}" loading="${loading}" decoding="async"${cls}${extra}/>`;
 }
 
 let user = JSON.parse(localStorage.getItem('tl_user') || 'null');
@@ -429,7 +442,7 @@ function renderCategoryCards() {
     const label = lang === 'en' ? c.nameEn : c.nameTr;
     return `
       <div class="ccard" data-cat="${c.slug}" onclick="setCatAndSwitch('${c.slug}')">
-        <img src="${categoryImage(c.slug, c.imageUrl)}" alt="" loading="lazy"/>
+        ${responsiveImg(categoryImage(c.slug, c.imageUrl), { kind: 'card' })}
         <div class="cinfo">
           <div class="cname">${escapeHtml(label)}</div>
           <div class="ccnt" id="cat-cnt-${c.slug}">—</div>
@@ -553,7 +566,7 @@ function renderNearbyCards(list) {
   if (!el) return;
   el.innerHTML = (list || []).map((x) => `
     <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail(${x.id})">
-      <img class="ni-img" src="${placeImg(x)}" alt="" loading="lazy" onerror="imgFallback(this,'${x.category}',${x.id})"/>
+      ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
       <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${x.distanceKm != null ? ` · ${x.distanceKm} km` : ''}</div></div>
     </div>`).join('') || `<p class="empty-hint">${t('nearbyEmpty')}</p>`;
 }
@@ -563,7 +576,7 @@ function renderSimilarCards(list) {
   if (!el) return;
   el.innerHTML = (list || []).map((x) => `
     <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0">
-      <img class="ni-img" src="${placeImg(x)}" alt="" loading="lazy" onerror="imgFallback(this,'${x.category}',${x.id})"/>
+      ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
       <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}</div></div>
     </div>`).join('') || `<p class="empty-hint">${t('similarEmpty')}</p>`;
 }
@@ -727,7 +740,7 @@ function renderGrid(list, append = false) {
   const html = list.map((p) => `
     <div class="pc" onclick="openDetail(${p.id})">
       <div class="pc-img">
-        <img src="${placeImg(p)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="imgFallback(this,'${p.category}',${p.id})"/>
+        ${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
         <div class="pc-badge">${catLabel(p.category)}</div>
         ${p.isLocal ? `<div class="pc-local">${t('localPick')}</div>` : ''}
         <div class="pc-save" onclick="event.stopPropagation();toggleSave(${p.id},this)">${savedIds.has(p.id) ? '❤️' : '🤍'}</div>
@@ -829,7 +842,7 @@ function onSearch(val) {
       } else {
         drop.innerHTML = res.map((p) => `
           <div class="sd-item" onmousedown="pickSearch(${p.id})">
-            <img class="sd-img" src="${placeImg(p)}" onerror="imgFallback(this,'${p.category}',${p.id})"/>
+            ${responsiveImg(placeImg(p), { className: 'sd-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
             <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(p.location)}</div>
             <div class="sd-rat">${stars(p.tiolaRating)} ${p.tiolaCount || 0} ${t('tiolaCount')}</div></div>
           </div>`).join('');
@@ -1313,11 +1326,14 @@ function renderDetailGallery(p) {
     return;
   }
   gal.style.display = 'flex';
-  gal.innerHTML = imgs.map((src, i) => `
-    <img src="${src}" alt="" loading="lazy" class="${i === 0 ? 'active' : ''}" data-idx="${i}"/>`).join('');
+  gal.innerHTML = imgs.map((src, i) =>
+    responsiveImg(src, { kind: 'thumb', className: i === 0 ? 'active' : '', extra: `data-idx="${i}"` })).join('');
   gal.querySelectorAll('img').forEach((thumb) => {
     thumb.onclick = () => {
-      document.getElementById('pdImg').src = thumb.src;
+      const src = imgs[Number(thumb.dataset.idx)] || thumb.getAttribute('src');
+      const hero = document.getElementById('pdImg');
+      if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(hero, src, { kind: 'detail' });
+      else hero.src = src;
       gal.querySelectorAll('img').forEach((x) => x.classList.remove('active'));
       thumb.classList.add('active');
     };
@@ -1345,8 +1361,11 @@ async function openDetail(id, skipRoute) {
     activePlace = p;
     updateSeoForPlace(p);
     const imgEl = document.getElementById('pdImg');
-    imgEl.src = placeImg(p);
-    imgEl.loading = 'lazy';
+    if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(imgEl, placeImg(p), { kind: 'detail' });
+    else {
+      imgEl.src = placeImg(p);
+      imgEl.loading = 'lazy';
+    }
     imgEl.onerror = function () { imgFallback(this, p.category, p.id); };
     renderDetailGallery(p);
     document.getElementById('pdCat').textContent = catLabel(p.category);
@@ -1575,7 +1594,7 @@ async function renderBlog() {
       const authorChip = renderProfileChip(b.userId, b.authorName, avUser, 'bav');
       return `
       <div class="bcard${isFeat ? ' feat' : ''}" data-content-type="blog" data-content-id="${b.id}" onclick="openBlogDetail('${escapeHtml(b.slug || b.id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBlogDetail('${escapeHtml(b.slug || b.id)}')">
-        <img class="bimg" src="${safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id })}" alt=""/>
+        ${responsiveImg(safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id }), { className: 'bimg', kind: 'card' })}
         ${b.featured ? `<div class="bfeat-badge">${escapeHtml(labels.featuredLbl)}</div>` : ''}
         <div class="bbody">
           <div class="bcat-lbl">${escapeHtml(b.categoryLabel || b.category || '')}</div>
@@ -1619,7 +1638,7 @@ async function openBlogDetail(slug) {
     }, 'tiola-mini');
     document.getElementById('blogDetailBody').innerHTML = `
       <div data-content-type="blog" data-content-id="${b.id}">
-      ${img ? `<img class="bd-cover" src="${img}" alt=""/>` : ''}
+      ${img ? responsiveImg(img, { className: 'bd-cover', kind: 'detail' }) : ''}
       <div class="bd-cat">${escapeHtml(b.categoryLabel || b.category || '')}</div>
       <h2 class="bd-title">${escapeHtml(b.title)}</h2>
       <div class="bd-meta">${authorChip}${b.publishedAt ? ' · ' + new Date(b.publishedAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'tr-TR') : ''}</div>
@@ -1740,7 +1759,7 @@ async function updateProfilePage() {
         if (ve) ve.style.display = 'none';
         vg.innerHTML = visited.places.map((p) => `
           <div class="pc" onclick="openDetail(${p.id})">
-            <div class="pc-img"><img src="${placeImg(p)}" alt="" loading="lazy"/></div>
+            <div class="pc-img">${responsiveImg(placeImg(p), { kind: 'card' })}</div>
             <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${p.visitedAt || ''}</div></div>
           </div>`).join('');
       }
@@ -1786,7 +1805,7 @@ async function updateProfilePage() {
     se.style.display = 'none';
     sg.innerHTML = saved.places.map((p) => `
       <div class="pc" onclick="openDetail(${p.id})">
-        <div class="pc-img"><img src="${placeImg(p)}" onerror="imgFallback(this,'${p.category}',${p.id})"/><div class="pc-save" onclick="event.stopPropagation();toggleSave(${p.id},this)">❤️</div></div>
+        <div class="pc-img">${responsiveImg(placeImg(p), { kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}<div class="pc-save" onclick="event.stopPropagation();toggleSave(${p.id},this)">❤️</div></div>
         <div class="pc-body"><div class="pc-name">${p.name}</div></div>
       </div>`).join('');
   }

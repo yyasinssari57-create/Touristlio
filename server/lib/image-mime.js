@@ -1,14 +1,14 @@
 const fs = require('fs');
+const FileType = require('file-type');
 
-const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 async function detectImageMime(filePath) {
-  const { fileTypeFromBuffer } = await import('file-type');
   const fd = fs.openSync(filePath, 'r');
   try {
     const buf = Buffer.alloc(4100);
     const bytesRead = fs.readSync(fd, buf, 0, 4100, 0);
-    const detected = await fileTypeFromBuffer(buf.subarray(0, bytesRead));
+    const detected = await FileType.fromBuffer(buf.subarray(0, bytesRead));
     return detected?.mime || null;
   } finally {
     fs.closeSync(fd);
@@ -23,8 +23,8 @@ function isAllowedImageMime(mime) {
  * Multer fileFilter — header check only; call validateUploadedImage after upload for magic bytes.
  */
 function imageFileFilter(_req, file, cb) {
-  if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
-  else cb(new Error('Sadece resim dosyaları (JPG, PNG, WebP, GIF)'));
+  if (/^image\/(jpeg|png|webp)$/.test(file.mimetype)) cb(null, true);
+  else cb(new Error('Sadece JPEG, PNG veya WebP kabul edilir'));
 }
 
 /**
