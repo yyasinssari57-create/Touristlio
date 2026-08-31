@@ -227,20 +227,24 @@ app.get('/places', (_req, res) => {
 app.get('/places/:slug', (req, res) => {
   const { findPlaceRow } = require('./lib/place-lookup');
   const { mapPlaceRow } = require('./lib/place-map');
+  const { placeStats } = require('./db');
+  const { jsonLdForPlace, loadApprovedTiolasForPlace } = require('./lib/jsonld');
   const row = findPlaceRow(req.params.slug);
   if (!row) {
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
-  const place = mapPlaceRow(row, { tiolaCount: 0, tiolaRating: null });
+  const place = mapPlaceRow(row, placeStats(row.id));
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
   const desc = lang === 'en'
     ? (place.descriptionEn || place.overviewEn || place.description || '')
     : (place.description || place.overview || '');
+  const tiolas = loadApprovedTiolasForPlace(place.id);
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: `${place.name} — Touristlio`,
     description: String(desc).slice(0, 200),
     image: place.imageUrl,
+    jsonLd: jsonLdForPlace(place, tiolas, lang),
   });
 });
 
@@ -250,15 +254,19 @@ app.get('/blog/:slug', (req, res) => {
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
-  const { db } = require('./db');
-  const row = db.prepare(`
-    SELECT id FROM blogs WHERE slug = ? AND status = 'approved'
-  `).get(slug);
-  if (!row) {
+  const { loadApprovedBlog, jsonLdForBlog } = require('./lib/jsonld');
+  const blog = loadApprovedBlog(slug);
+  if (!blog) {
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
-  return sendPublicHtml(res, PUBLIC_DIR, 'index.html');
+  const lang = req.tlLang === 'en' ? 'en' : 'tr';
+  return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
+    title: `${blog.title} — Touristlio`,
+    description: String(blog.excerpt || blog.body || '').slice(0, 200),
+    image: blog.imageUrl,
+    jsonLd: jsonLdForBlog(blog, lang),
+  });
 });
 
 app.get('*', (req, res, next) => {

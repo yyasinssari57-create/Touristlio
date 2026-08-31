@@ -147,18 +147,40 @@ function stripExistingSeo(html) {
     .replace(/<meta\s+name="twitter:[^"]+"[^>]*>/gi, '');
 }
 
+function stripExistingJsonLd(html) {
+  return String(html).replace(
+    /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi,
+    '',
+  );
+}
+
 function injectSeoHead(html, opts = {}) {
   const resolvedLang = opts.lang || langFromPath(opts.pathname);
   const block = buildSeoHead({ ...opts, lang: resolvedLang });
   let next = stripExistingSeo(html);
   next = next.replace(/<html\s+lang="[^"]*"/i, `<html lang="${resolvedLang === 'en' ? 'en' : 'tr'}"`);
   if (next.includes('<!-- TL_SEO -->')) {
-    return next.replace('<!-- TL_SEO -->', block);
+    next = next.replace('<!-- TL_SEO -->', block);
+  } else if (/<\/head>/i.test(next)) {
+    next = next.replace(/<\/head>/i, `${block}\n</head>`);
+  } else {
+    next = block + next;
   }
-  if (/<\/head>/i.test(next)) {
-    return next.replace(/<\/head>/i, `${block}\n</head>`);
+
+  const jsonLdBlocks = opts.jsonLd;
+  if (Array.isArray(jsonLdBlocks) && jsonLdBlocks.length) {
+    const { jsonLdScriptTags } = require('./jsonld');
+    const jsonLdHtml = jsonLdScriptTags(jsonLdBlocks);
+    next = stripExistingJsonLd(next);
+    if (next.includes('<!-- TL_JSONLD -->')) {
+      next = next.replace('<!-- TL_JSONLD -->', jsonLdHtml);
+    } else if (/<\/head>/i.test(next)) {
+      next = next.replace(/<\/head>/i, `${jsonLdHtml}\n</head>`);
+    } else {
+      next += jsonLdHtml;
+    }
   }
-  return block + next;
+  return next;
 }
 
 module.exports = {

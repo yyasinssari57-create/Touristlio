@@ -42,12 +42,16 @@ function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   const req = res.req;
   const pathname = (req && (req.originalUrl || req.url) || '/').split('?')[0];
   const { injectSeoHead, langFromPath } = require('./seo');
+  const { autoJsonLd } = require('./jsonld');
   const noindex = /login|register|profile|verify-email|reset-password|admin|404\.html|500\.html/.test(relativePath);
+  const lang = seo.lang || req?.tlLang || langFromPath(pathname);
+  const jsonLd = seo.jsonLd != null ? seo.jsonLd : autoJsonLd(pathname, relativePath, lang);
   html = injectSeoHead(html, {
     pathname,
-    lang: req?.tlLang || langFromPath(pathname),
+    lang,
     noindex,
     ...seo,
+    jsonLd,
   });
   res.set({
     ...NO_CACHE_HEADERS,

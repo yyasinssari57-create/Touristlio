@@ -493,20 +493,126 @@ function updateSeoForPlace(p) {
   injectPlaceJsonLd(p);
 }
 
-function injectPlaceJsonLd(p) {
-  document.querySelectorAll('script[data-tl-jsonld]').forEach((s) => s.remove());
-  const faqList = lang === 'en' ? (p.faqEN || []) : (p.faqTR || []);
-  const origin = location.origin;
-  const blocks = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'TouristDestination',
-      name: p.name,
-      description: placeField(p, 'overview') || placeField(p, 'description'),
-      geo: p.lat != null ? { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng } : undefined,
-      address: { '@type': 'PostalAddress', addressLocality: p.city, addressCountry: p.country },
-      image: placeImg(p),
+function schemaOrigin() {
+  return publicOrigin();
+}
+
+function travelAgencyJsonLd() {
+  const origin = schemaOrigin();
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'TravelAgency',
+    name: 'Touristlio',
+    url: origin,
+    logo: `${origin}/images/logo.webp`,
+    description: 'Topluluk tabanlı seyahat rehberliği platformu',
+  };
+}
+
+function absSchemaUrl(url) {
+  const s = safeUrl(url);
+  if (!s) return undefined;
+  if (s.startsWith('http')) return s;
+  return schemaOrigin() + s;
+}
+
+function reviewJsonLd(ti, place) {
+  if (!ti) return null;
+  const itemName = place?.name || ti.placeName;
+  const itemReviewed = itemName
+    ? { '@type': 'TouristAttraction', name: itemName }
+    : { '@type': 'TravelAgency', name: 'Touristlio', url: schemaOrigin() };
+  const block = {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    itemReviewed,
+    author: { '@type': 'Person', name: ti.userName || 'Gezgin' },
+    reviewBody: ti.text || undefined,
+    datePublished: ti.createdAt || undefined,
+  };
+  if (ti.stars) {
+    block.reviewRating = {
+      '@type': 'Rating',
+      ratingValue: String(ti.stars),
+      bestRating: '5',
+      worstRating: '1',
+    };
+  }
+  return block;
+}
+
+function articleJsonLd(b) {
+  const origin = schemaOrigin();
+  const url = `${origin}/blog/${encodeURIComponent(b.slug || b.id)}`;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: String(b.title || '').slice(0, 110),
+    description: (b.excerpt || '').slice(0, 300) || undefined,
+    image: absSchemaUrl(b.imageUrl),
+    datePublished: b.publishedAt || b.createdAt,
+    dateModified: b.publishedAt || b.createdAt,
+    author: { '@type': 'Person', name: b.authorName || 'Touristlio' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Touristlio',
+      logo: { '@type': 'ImageObject', url: `${origin}/images/logo.webp` },
     },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    url,
+  };
+}
+
+function setJsonLdBlocks(blocks) {
+  document.querySelectorAll('script[data-tl-jsonld]').forEach((s) => s.remove());
+  (blocks || []).filter(Boolean).forEach((data) => {
+    const s = document.createElement('script');
+    s.type = 'application/ld+json';
+    s.dataset.tlJsonld = '1';
+    s.textContent = JSON.stringify(data);
+    document.head.appendChild(s);
+  });
+}
+
+function injectHomeJsonLd(tiolas) {
+  const blocks = [travelAgencyJsonLd()];
+  (tiolas || []).forEach((ti) => {
+    if (ti.status && ti.status !== 'approved') return;
+    if (ti.parentId) return;
+    blocks.push(reviewJsonLd(ti));
+  });
+  setJsonLdBlocks(blocks);
+}
+
+function injectPlaceJsonLd(p, tiolas) {
+  const origin = schemaOrigin();
+  const img = absSchemaUrl(placeImg(p));
+  const attraction = {
+    '@context': 'https://schema.org',
+    '@type': 'TouristAttraction',
+    name: p.name,
+    description: placeField(p, 'overview') || placeField(p, 'description') || undefined,
+    url: origin + placePublicPath(p),
+    image: img,
+    address: { '@type': 'PostalAddress', addressLocality: p.city, addressCountry: p.country },
+  };
+  if (p.lat != null && p.lng != null) {
+    attraction.geo = { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng };
+  }
+  const count = Number(p.tiolaCount) || 0;
+  const rating = Number(p.tiolaRating);
+  if (count > 0 && Number.isFinite(rating) && rating > 0) {
+    attraction.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: String(rating),
+      reviewCount: count,
+      bestRating: '5',
+      worstRating: '1',
+    };
+  }
+  const faqList = lang === 'en' ? (p.faqEN || []) : (p.faqTR || []);
+  const blocks = [
+    attraction,
     {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
@@ -528,13 +634,12 @@ function injectPlaceJsonLd(p) {
       })),
     });
   }
-  blocks.forEach((data) => {
-    const s = document.createElement('script');
-    s.type = 'application/ld+json';
-    s.dataset.tlJsonld = '1';
-    s.textContent = JSON.stringify(data);
-    document.head.appendChild(s);
+  (tiolas || []).forEach((ti) => {
+    if (ti.status && ti.status !== 'approved') return;
+    if (ti.parentId) return;
+    blocks.push(reviewJsonLd(ti, p));
   });
+  setJsonLdBlocks(blocks);
 }
 
 function renderFaqAccordion(p) {
@@ -1079,6 +1184,8 @@ async function showMainTab(tab, skipRoute) {
   if (tab !== 'detail') window.TL_ANALYTICS?.trackTab(tab);
   if (tab === 'places') setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
   else if (tab !== 'detail') setCanonical(lang === 'en' ? '/en/' : '/');
+  if (tab === 'explore') injectHomeJsonLd();
+  else if (tab !== 'detail') setJsonLdBlocks([travelAgencyJsonLd()]);
   const tasks = [];
   if (tab === 'blog') tasks.push(loadBlogPage().then(renderBlog));
   if (tab === 'profile') tasks.push(Promise.resolve(updateProfilePage()));
@@ -1138,6 +1245,7 @@ async function loadTiolaFeed() {
     const items = data.tiolas;
     document.getElementById('tiolaEmpty').style.display = items.length ? 'none' : 'block';
     feed.innerHTML = items.map((ti) => renderTiolaCard(ti)).join('');
+    if (getActiveMainTab() === 'explore') injectHomeJsonLd(items);
   } catch (e) {
     feed.innerHTML = `<div class="no-res">${e.message}</div>`;
   }
@@ -1466,6 +1574,7 @@ async function renderRevList() {
       <div class="tiola-replies-wrap" id="rev-replies-${r.id}" style="display:none"></div>
     </div>`;
   }).join('') || `<div class="no-res">${t('noApprovedTiola')}</div>`;
+  if (activePlace) injectPlaceJsonLd(activePlace, data.tiolas);
 }
 
 function updateRevForm() {
@@ -1653,6 +1762,7 @@ async function openBlogDetail(slug) {
       </div>`;
     document.getElementById('blogDetailOv').classList.add('on');
     document.body.style.overflow = 'hidden';
+    setJsonLdBlocks([articleJsonLd(b)]);
   } catch (e) {
     window.TL_TOAST?.error?.(e.message) || alert(e.message);
   }
@@ -1661,6 +1771,7 @@ async function openBlogDetail(slug) {
 function closeBlogDetail() {
   document.getElementById('blogDetailOv')?.classList.remove('on');
   document.body.style.overflow = '';
+  setJsonLdBlocks([travelAgencyJsonLd()]);
 }
 
 function showPTab(name, el, skipRoute) {

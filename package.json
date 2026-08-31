@@ -19,6 +19,7 @@
     "logo:extract": "node server/scripts/extract-nav-logo.js",
     "images:convert": "node server/scripts/convert-static-images.js",
     "verify:images": "node server/scripts/verify-images.js",
+    "verify:jsonld": "node server/scripts/verify-jsonld.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",

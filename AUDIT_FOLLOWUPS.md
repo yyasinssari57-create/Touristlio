@@ -95,7 +95,25 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Unsplash uzak görseller indirilip WebP’ye çevrilmiyor; tarayıcı `fm=webp` srcset kullanır.
 - Leaflet `vendor/**/*.png` (marker/layers) dönüştürülmedi.
 
-- [YÜKSEK-4] JSON-LD Schema.org Yapılandırılmış Veri Eksik
+## YÜKSEK-4 (JSON-LD Schema.org)
+
+- Tamamlandı: sunucu HTML’e `application/ld+json` enjekte eder (Googlebot JS’siz görür).
+  - Ana sayfa `/` ve `/en/` → **TravelAgency** (`name`, `url`, `logo` `/images/logo.webp`, `description` denetimdeki metin).
+  - `/places/:slug` → **TouristAttraction** (dinamik: ad, açıklama, url, görsel, adres, geo). Tiola ortalaması varsa **AggregateRating** (yalnızca Tiola; Google puanı yok).
+  - Her onaylı üst seviye Tiola → ayrı **Review** (`itemReviewed` = mekân, `reviewRating` Tiola yıldızı).
+  - `/blog/:slug` → **Article** (headline, yazar, publisher Touristlio, tarih).
+  - `/legal/contact.html` → **ContactPage** (`mainEntity` TravelAgency + e-posta).
+- SPA: `TouristDestination` → `TouristAttraction`; ana sayfa feed ve mekân Tiola listesi Review ekler; blog overlay Article.
+- UI’da Google puanı yok; AggregateRating yalnızca mevcut Tiola yıldızlarıyla (kartlarda zaten görünen).
+
+### Leftover
+- SPA içinden blog açılınca URL hâlâ `#blog`; Article HTML’si yalnızca doğrudan `/blog/:slug` isteğinde. Overlay kapanınca TravelAgency’ye döner.
+- Tiola’ların kendi kanonik URL’si yok; Review mekân sayfasına / ana sayfa feed’ine bağlı. Google Review zengin sonucu için `itemReviewed` + görünür yıldız şart — Search Console’da doğrula.
+- Ana sayfa ilk HTML’de sadece TravelAgency; feed Review’ları JS sonrası (crawler JS çalıştırmazsa mekân URL’lerindeki Review’lar asıl kaynak).
+- `AggregateRating` yalnızca `tiolaCount > 0` iken; puansız mekânda rich snippet rating çıkmaz.
+- FAQPage / BreadcrumbList hâlâ istemci tarafında (önceki davranış); sunucu HTML’sine taşınmadı.
+- logo.webp Absolute URL `SITE_URL` / `siteBaseUrl()` (www). Localhost curl’de origin localhost olabilir.
+
 - [YÜKSEK-5] Ana Sayfa İstatistikleri "—" Gösteriyor
 - [YÜKSEK-6] Error Boundary Eksikliği
 - [YÜKSEK-7] Form Güvenliği — reCAPTCHA + Sanitization
