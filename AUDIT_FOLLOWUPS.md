@@ -194,11 +194,24 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Hava/erişilebilirlik chip’leri hâlâ görsel; listeyi filtrelemez (önceki davranış).
 - Ana sayfa filtresizken URL `/#explore` kalır; query olunca `/explore?...`.
 - `/search` kendi `q/category/sort/page` query’sini kullanır (`/explore` şeması değil).
-- Keşfet grid hâlâ “Daha Fazla Yükle” (ORTA-3 sayfalama).
 - `tl_route` localStorage filtre tutmaz; kaynak URL.
 - Ülke eşlemesi `LIKE %turkey%`; “South Turkey” diye bir ülke yok.
 
-- [ORTA-3] Sayfalama (Pagination) Eksikliği
+## ORTA-3 (sayfalama)
+
+- Tamamlandı: `GET /api/places` ve `GET /api/search` `?page=1&limit=20` (varsayılan limit 20). Yanıt: `total`, `page`, `limit`, `offset`, `count`, `totalPages`, `hasMore`. Eski `offset` hâlâ çalışır; `page` varsa o kazanır.
+- Keşfet: “Daha Fazla Yükle” + sayfa numaraları (önceki / pencere / sonraki). `PAGE_SIZE=20`. URL `/explore?...&page=2` (page=1 yazılmaz).
+- `/search` prev/next artık sayfayı sıfırlamıyor; `page`+`limit=20` gönderir; toplam API’den.
+- `npm run verify:pagination`
+- Google puanı yok; Tiola kullanıcı üretimi.
+
+### Leftover
+- “Daha Fazla Yükle” kartları biriktirir; paylaşılabilir URL yalnızca numaralı sayfa atlamasını tutar (append oturumu restore edilmez).
+- Discover (`gezilecek-yerler`) hâlâ `limit=100` tek istek — keşfet grid’i değil.
+- Liste hâlâ bellekte slice (SQL LIMIT yok); ORTA-5 index’ler ayrı.
+- Markers API 500 pin tavanı aynı (YÜKSEK-2 leftover).
+- Admin listeleri kendi `parsePagination` (max 100) — public helper’dan ayrı.
+
 - [ORTA-4] Anti-Bot / Sahte Oy Koruması
 - [ORTA-5] Veritabanı Index'leri — Filtreleme Performansı
 - [ORTA-6] Blog Sayfası Çalışır Hale Getir

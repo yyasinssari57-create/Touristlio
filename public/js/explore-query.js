@@ -7,11 +7,12 @@
   'use strict';
 
   const SEARCH_DEBOUNCE_MS = 300;
+  const DEFAULT_PAGE_LIMIT = 20;
 
-  /** Key order matches the audit example first, then extra filters. */
+  /** Key order matches the audit example first, then extra filters, then page. */
   const QUERY_KEYS = [
     'country', 'category', 'score', 'q', 'group',
-    'city', 'district', 'continent', 'entry', 'local', 'sort',
+    'city', 'district', 'continent', 'entry', 'local', 'sort', 'page',
   ];
 
   function slugifyFilter(value) {
@@ -37,6 +38,7 @@
     if (val == null) return true;
     if (val === '' || val === 'all' || val === 'popularity') return true;
     if (key === 'score' && (val === 0 || val === '0')) return true;
+    if (key === 'page' && (val === 1 || val === '1')) return true;
     return false;
   }
 
@@ -75,11 +77,33 @@
       entry: (params.get('entry') || '').trim(),
       local: (params.get('local') || '').trim(),
       sort: (params.get('sort') || '').trim(),
+      page: Math.max(Number(params.get('page')) || 1, 1),
     };
   }
 
   function hasExploreFilters(state) {
-    return buildExploreSearch(state).toString().length > 0;
+    const copy = { ...(state || {}), page: 1 };
+    return buildExploreSearch(copy).toString().length > 0;
+  }
+
+  /** Compact page list: 1 … 4 5 6 … 20 */
+  function pageWindow(current, totalPages, radius) {
+    const total = Math.max(1, Math.floor(Number(totalPages) || 1));
+    const cur = Math.min(Math.max(1, Math.floor(Number(current) || 1)), total);
+    const r = Number.isFinite(Number(radius)) ? Math.max(0, Math.floor(Number(radius))) : 2;
+    const pages = [];
+    const start = Math.max(1, cur - r);
+    const end = Math.min(total, cur + r);
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push('…');
+    }
+    for (let i = start; i <= end; i += 1) pages.push(i);
+    if (end < total) {
+      if (end < total - 1) pages.push('…');
+      pages.push(total);
+    }
+    return pages;
   }
 
   function explorePathWithQuery(state, lang) {
@@ -90,12 +114,14 @@
 
   const api = {
     SEARCH_DEBOUNCE_MS,
+    DEFAULT_PAGE_LIMIT,
     QUERY_KEYS,
     slugifyFilter,
     buildExploreSearch,
     parseExploreSearch,
     hasExploreFilters,
     explorePathWithQuery,
+    pageWindow,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

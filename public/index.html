@@ -182,7 +182,15 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <p class="browse-hint" id="browseHint" data-i18n="browseHint">Kategori seçin veya arama yapın — destinasyonlar burada listelenir.</p>
       <div class="pgrid" id="pgrid"></div>
-      <div class="load-more-wrap"><button type="button" class="btn bo" id="loadMoreBtn" style="display:none" onclick="loadMorePlaces()" data-i18n="loadMore">Daha Fazla Yükle</button></div>
+      <div class="load-more-wrap" id="explorePager" style="display:none">
+        <nav class="explore-pagination" id="explorePagination" data-i18n-aria="paginationAria" aria-label="Sayfalama" hidden>
+          <button type="button" class="btn bo bsm" id="explorePagePrev" data-i18n="searchPrev">← Önceki</button>
+          <div class="explore-page-nums" id="explorePageNums"></div>
+          <button type="button" class="btn bo bsm" id="explorePageNext" data-i18n="searchNext">Sonraki →</button>
+        </nav>
+        <p class="page-info" id="explorePageInfo"></p>
+        <button type="button" class="btn bo" id="loadMoreBtn" style="display:none" onclick="loadMorePlaces()" data-i18n="loadMore">Daha Fazla Yükle</button>
+      </div>
       <div class="no-res" id="noRes" style="display:none" data-i18n="noResults">🔍 Sonuç bulunamadı. Farklı filtreler deneyin.</div>
       <div class="osm-hint" id="osmHint" style="display:none"></div>
     </div>

@@ -95,9 +95,12 @@ let lastOsmHint = false;
 let searchTimer;
 let filterRequestId = 0;
 const SEARCH_DEBOUNCE_MS = (window.TL_EXPLORE_QUERY && window.TL_EXPLORE_QUERY.SEARCH_DEBOUNCE_MS) || 300;
-const PAGE_SIZE = 12;
+const PAGE_SIZE = (window.TL_EXPLORE_QUERY && window.TL_EXPLORE_QUERY.DEFAULT_PAGE_LIMIT) || 20;
 let placesTotal = 0;
+let placesTotalPages = 1;
 let homeStatsPromise = null;
+let placesPage = 1;
+let exploreUrlPage = 1;
 let placesOffset = 0;
 let cardsLoaded = false;
 let currentFilterParams = {};
@@ -836,13 +839,17 @@ function updateAuthUI() {
 }
 
 async function loadPlaces(params = {}, append = false, reqId = filterRequestId) {
-  const qs = new URLSearchParams({ ...params, limit: PAGE_SIZE, offset: append ? placesOffset : 0 }).toString();
-  const data = await api('/places?' + qs);
+  const page = append ? placesPage + 1 : (Number(params.page) || placesPage || 1);
+  const qs = new URLSearchParams({ ...params, limit: PAGE_SIZE, page });
+  qs.delete('offset');
+  const data = await api('/places?' + qs.toString());
   if (reqId !== filterRequestId) return data;
   if (append) places = places.concat(data.places);
   else places = data.places;
   placesTotal = data.total ?? data.count ?? places.length;
-  placesOffset = append ? places.length : data.places.length;
+  placesPage = data.page || page;
+  placesOffset = append ? places.length : ((placesPage - 1) * PAGE_SIZE + (data.places || []).length);
+  placesTotalPages = data.totalPages || Math.max(1, Math.ceil(placesTotal / PAGE_SIZE) || 1);
   lastOsmHint = !!data.osmHint;
   cardsLoaded = true;
   return data;
@@ -916,8 +923,55 @@ function renderGrid(list, append = false) {
     </div>`).join('');
   if (append && grid) grid.insertAdjacentHTML('beforeend', html);
   else if (grid) grid.innerHTML = html;
+  renderExplorePagination();
+}
+
+function renderExplorePagination() {
   const loadMore = document.getElementById('loadMoreBtn');
-  if (loadMore) loadMore.style.display = places.length < placesTotal ? 'inline-flex' : 'none';
+  const nav = document.getElementById('explorePagination');
+  const nums = document.getElementById('explorePageNums');
+  const prev = document.getElementById('explorePagePrev');
+  const next = document.getElementById('explorePageNext');
+  const info = document.getElementById('explorePageInfo');
+  const wrap = document.getElementById('explorePager');
+  const totalPages = Math.max(1, placesTotalPages || Math.ceil(placesTotal / PAGE_SIZE) || 1);
+  const hasResults = cardsLoaded && placesTotal > 0;
+  const showPager = hasResults && totalPages > 1;
+  if (wrap) wrap.style.display = hasResults ? '' : 'none';
+  if (loadMore) {
+    const canLoadMore = places.length < placesTotal;
+    loadMore.style.display = canLoadMore ? 'inline-flex' : 'none';
+    loadMore.disabled = !!placesLoading;
+  }
+  if (prev) {
+    prev.disabled = placesPage <= 1 || !!placesLoading;
+    prev.setAttribute('aria-disabled', prev.disabled ? 'true' : 'false');
+    prev.onclick = () => goToPlacesPage(placesPage - 1);
+  }
+  if (next) {
+    next.disabled = placesPage >= totalPages || !!placesLoading;
+    next.setAttribute('aria-disabled', next.disabled ? 'true' : 'false');
+    next.onclick = () => goToPlacesPage(placesPage + 1);
+  }
+  if (nav) {
+    const aria = t('paginationAria');
+    if (aria) nav.setAttribute('aria-label', aria);
+  }
+  if (info) {
+    info.textContent = t('pageOf').replace('{0}', String(placesPage)).replace('{1}', String(totalPages));
+  }
+  if (nav) nav.hidden = !showPager;
+  if (nums) {
+    const windowPages = window.TL_EXPLORE_QUERY?.pageWindow
+      ? window.TL_EXPLORE_QUERY.pageWindow(placesPage, totalPages, 2)
+      : [placesPage];
+    nums.innerHTML = windowPages.map((item) => {
+      if (item === '…') return '<span class="page-ellipsis" aria-hidden="true">…</span>';
+      const on = Number(item) === Number(placesPage) ? ' on' : '';
+      const current = on ? ' aria-current="page"' : '';
+      return `<button type="button" class="btn bo bsm page-num${on}" data-page="${item}" onclick="goToPlacesPage(${item})"${current}>${item}</button>`;
+    }).join('');
+  }
 }
 
 function buildFilterParams() {
@@ -953,6 +1007,7 @@ function collectExploreFilterState() {
     entry: activeEntry !== 'all' ? activeEntry : '',
     local: activeLocal !== 'all' ? activeLocal : '',
     sort: sortMode,
+    page: exploreUrlPage > 1 ? exploreUrlPage : 1,
   };
 }
 
@@ -1062,6 +1117,8 @@ function restoreExploreFiltersFromUrl(search) {
   activeEntry = parsed.entry || 'all';
   activeLocal = parsed.local || 'all';
   sortMode = parsed.sort || 'popularity';
+  placesPage = parsed.page || 1;
+  exploreUrlPage = placesPage;
 
   const sortSel = document.querySelector('#es-discover .sort-sel');
   if (sortSel) sortSel.value = sortMode;
@@ -1106,11 +1163,15 @@ async function applyFilters() {
   const reqId = ++filterRequestId;
   if (!placesLoading) showGridSkeleton();
   placesLoading = true;
+  if (!restoringRoute) {
+    placesPage = 1;
+    exploreUrlPage = 1;
+  }
   placesOffset = 0;
   currentFilterParams = buildFilterParams();
   updateClearFiltersVisibility();
   try {
-    await loadPlaces(currentFilterParams, false, reqId);
+    await loadPlaces({ ...currentFilterParams, page: placesPage }, false, reqId);
     if (reqId !== filterRequestId) return;
     renderGrid(places);
     if (isExploreMapTabActive()) await loadMapMarkers();
@@ -1123,11 +1184,35 @@ async function applyFilters() {
 async function loadMorePlaces() {
   if (placesLoading || places.length >= placesTotal) return;
   placesLoading = true;
+  renderExplorePagination();
   try {
     await loadPlaces(currentFilterParams, true);
     renderGrid(places, true);
   } finally {
     placesLoading = false;
+    renderExplorePagination();
+  }
+}
+
+async function goToPlacesPage(n) {
+  const totalPages = Math.max(1, placesTotalPages || 1);
+  const page = Math.min(Math.max(1, Number(n) || 1), totalPages);
+  if (placesLoading || page === placesPage) return;
+  const reqId = ++filterRequestId;
+  placesLoading = true;
+  placesPage = page;
+  exploreUrlPage = page;
+  if (!places.length) showGridSkeleton();
+  currentFilterParams = buildFilterParams();
+  try {
+    await loadPlaces({ ...currentFilterParams, page }, false, reqId);
+    if (reqId !== filterRequestId) return;
+    renderGrid(places);
+    document.getElementById('pgrid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (getActiveMainTab() === 'explore' && !restoringRoute) syncRoute(true);
+  } finally {
+    if (reqId === filterRequestId) placesLoading = false;
+    renderExplorePagination();
   }
 }
 

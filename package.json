@@ -25,6 +25,7 @@
     "verify:forms": "node server/scripts/verify-form-security.js",
     "verify:tiolas": "node server/scripts/verify-tiola-visibility.js",
     "verify:filters": "node server/scripts/verify-search-filters.js",
+    "verify:pagination": "node server/scripts/verify-pagination.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",

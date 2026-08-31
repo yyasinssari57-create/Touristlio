@@ -14,8 +14,9 @@ const { FILTER_GROUPS, GROUP_VISIBILITY } = require('../../lib/place-content');
 const { cacheKey, wrap, clear } = require('../../lib/cache');
 const { getStatsMap, invalidateStatsCache } = require('../../lib/stats-cache');
 const { searchPlacesRows } = require('../../lib/places-search');
+const { parseListPagination, paginationMeta } = require('../../lib/pagination');
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const META_CACHE_TTL = 60 * 1000;
 
 
@@ -262,13 +263,11 @@ function listPlaces(queryParams) {
 
   const { sort } = queryParams;
 
-  const limit = Math.min(Math.max(Number(queryParams.limit) || 12, 1), 500);
-
-  const offset = Math.max(Number(queryParams.offset) || 0, 0);
+  const { page, limit, offset } = parseListPagination(queryParams, { defaultLimit: 20, maxLimit: 500 });
 
 
 
-  const cacheParams = { ...queryParams, limit, offset };
+  const cacheParams = { ...queryParams, page, limit, offset };
 
   const key = cacheKey(`places-list-${CACHE_VERSION}`, cacheParams);
 
@@ -288,25 +287,24 @@ function listPlaces(queryParams) {
 
     places = sortPlaces(places, sort);
 
-    const total = places.length;
-
-    const page = places.slice(offset, offset + limit);
+    const slice = places.slice(offset, offset + limit);
+    const meta = paginationMeta({
+      total: places.length,
+      page,
+      limit,
+      offset,
+      count: slice.length,
+    });
 
     return {
 
-      places: page,
+      places: slice,
 
-      items: page.map(toApiPlace),
+      items: slice.map(toApiPlace),
 
-      count: page.length,
+      ...meta,
 
-      total,
-
-      limit,
-
-      offset,
-
-      osmHint: qNorm && total === 0,
+      osmHint: qNorm && meta.total === 0,
 
     };
 

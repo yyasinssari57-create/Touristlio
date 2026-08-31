@@ -47,14 +47,16 @@
   </form>
   <p class="search-meta" id="searchMeta" aria-live="polite"></p>
   <div class="pgrid" id="searchGrid"></div>
-  <div class="search-pagination">
-    <button type="button" class="btn bo" id="searchPrev" disabled data-i18n="searchPrev">← Önceki</button>
-    <span id="searchPageInfo"></span>
-    <button type="button" class="btn bo" id="searchNext" data-i18n="searchNext">Sonraki →</button>
+  <div class="search-pagination" id="searchPager">
+    <button type="button" class="btn bo bsm" id="searchPrev" disabled data-i18n="searchPrev">← Önceki</button>
+    <div class="search-page-nums" id="searchPageNums"></div>
+    <button type="button" class="btn bo bsm" id="searchNext" data-i18n="searchNext">Sonraki →</button>
   </div>
+  <p class="page-info" id="searchPageInfo"></p>
 </main>
 
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/explore-query.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
@@ -62,9 +64,10 @@
 <script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script>
 let lang = localStorage.getItem('tl_lang') || 'tr';
-let offset = 0;
-const LIMIT = 12;
+let page = 1;
+const LIMIT = (window.TL_EXPLORE_QUERY && window.TL_EXPLORE_QUERY.DEFAULT_PAGE_LIMIT) || 20;
 let total = 0;
+let totalPages = 1;
 
 function t(k) { return window.TL_I18N.t(lang, k); }
 
@@ -83,7 +86,7 @@ function paramsFromForm() {
     category: document.getElementById('searchCat').value,
     sort: document.getElementById('searchSort').value,
     limit: LIMIT,
-    offset,
+    page,
   };
 }
 
@@ -93,37 +96,66 @@ function updateUrl() {
   if (p.q) qs.set('q', p.q);
   if (p.category !== 'all') qs.set('category', p.category);
   if (p.sort !== 'popularity') qs.set('sort', p.sort);
-  if (offset) qs.set('page', String(Math.floor(offset / LIMIT) + 1));
+  if (page > 1) qs.set('page', String(page));
   history.replaceState(null, '', '/search?' + qs.toString());
   const title = p.q ? `${p.q} — Touristlio` : (lang === 'en' ? 'Search — Touristlio' : 'Arama — Touristlio');
   document.title = title;
 }
 
-async function runSearch(append) {
+function renderSearchPager() {
+  const prev = document.getElementById('searchPrev');
+  const next = document.getElementById('searchNext');
+  const info = document.getElementById('searchPageInfo');
+  const nums = document.getElementById('searchPageNums');
+  if (info) info.textContent = t('pageOf').replace('{0}', String(page)).replace('{1}', String(totalPages));
+  if (prev) prev.disabled = page <= 1;
+  if (next) next.disabled = page >= totalPages;
+  if (nums && window.TL_EXPLORE_QUERY?.pageWindow) {
+    nums.innerHTML = window.TL_EXPLORE_QUERY.pageWindow(page, totalPages, 2).map((item) => {
+      if (item === '…') return '<span class="page-ellipsis" aria-hidden="true">…</span>';
+      const on = Number(item) === Number(page) ? ' on' : '';
+      const current = on ? ' aria-current="page"' : '';
+      return `<button type="button" class="btn bo bsm page-num${on}" data-page="${item}"${current}>${item}</button>`;
+    }).join('');
+    nums.querySelectorAll('button[data-page]').forEach((btn) => {
+      btn.onclick = () => {
+        page = Number(btn.dataset.page) || 1;
+        runSearch(false);
+      };
+    });
+  }
+}
+
+async function runSearch(resetPage) {
   const grid = document.getElementById('searchGrid');
-  if (!append) {
-    offset = 0;
+  if (resetPage) {
+    page = 1;
     grid.innerHTML = window.TL_SKELETON.card(6);
   }
   const p = paramsFromForm();
-  const qs = new URLSearchParams(p).toString();
+  const qs = new URLSearchParams({
+    q: p.q,
+    category: p.category,
+    sort: p.sort,
+    limit: String(LIMIT),
+    page: String(page),
+  }).toString();
   try {
     const res = await fetch('/api/search?' + qs);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    total = data.total;
+    const payload = data.success === true && data.data != null ? data.data : data;
+    total = payload.total ?? 0;
+    page = payload.page || page;
+    totalPages = payload.totalPages || Math.max(1, Math.ceil(total / LIMIT) || 1);
     document.getElementById('searchMeta').textContent = `${total} ${t('placesFound')}${p.q ? ': ' + p.q : ''}`;
-    const html = data.places.map(pl => `
+    const html = (payload.places || []).map(pl => `
       <a class="pc" href="/?place=${pl.id}">
         <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(pl.imageUrl, { alt: pl.name, kind: 'card' }) : `<img src="${pl.imageUrl}" alt="${pl.name}" loading="lazy"/>`}</div>
         <div class="pc-body"><div class="pc-loc">📍 ${pl.location}</div><div class="pc-name">${pl.name}</div></div>
       </a>`).join('');
     grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/#explore/map" class="btn bo bsm" style="margin-top:12px;display:inline-flex">${t('mapExploreBtn')}</a></div>`;
-    const page = Math.floor(offset / LIMIT) + 1;
-    const pages = Math.max(1, Math.ceil(total / LIMIT));
-    document.getElementById('searchPageInfo').textContent = `${page} / ${pages}`;
-    document.getElementById('searchPrev').disabled = offset <= 0;
-    document.getElementById('searchNext').disabled = offset + LIMIT >= total;
+    renderSearchPager();
     updateUrl();
   } catch (e) {
     grid.innerHTML = '';
@@ -131,15 +163,15 @@ async function runSearch(append) {
   }
 }
 
-document.getElementById('searchForm').addEventListener('submit', (e) => { e.preventDefault(); runSearch(false); });
-document.getElementById('searchPrev').onclick = () => { offset = Math.max(0, offset - LIMIT); runSearch(false); };
-document.getElementById('searchNext').onclick = () => { offset += LIMIT; runSearch(false); };
+document.getElementById('searchForm').addEventListener('submit', (e) => { e.preventDefault(); runSearch(true); });
+document.getElementById('searchPrev').onclick = () => { if (page > 1) { page -= 1; runSearch(false); } };
+document.getElementById('searchNext').onclick = () => { if (page < totalPages) { page += 1; runSearch(false); } };
 document.getElementById('searchClear').onclick = () => {
   document.getElementById('searchQ').value = '';
   document.getElementById('searchCat').value = 'all';
   document.getElementById('searchSort').value = 'popularity';
-  offset = 0;
-  runSearch(false);
+  page = 1;
+  runSearch(true);
 };
 
 let searchDebounce;
@@ -150,7 +182,7 @@ const SEARCH_DEBOUNCE_MS = 300;
   const evt = el.tagName === 'SELECT' ? 'change' : 'input';
   el.addEventListener(evt, () => {
     clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(() => runSearch(false), SEARCH_DEBOUNCE_MS);
+    searchDebounce = setTimeout(() => runSearch(true), SEARCH_DEBOUNCE_MS);
   });
 });
 
@@ -159,7 +191,7 @@ const SEARCH_DEBOUNCE_MS = 300;
   if (qs.get('q')) document.getElementById('searchQ').value = qs.get('q');
   if (qs.get('category')) document.getElementById('searchCat').value = qs.get('category');
   if (qs.get('sort')) document.getElementById('searchSort').value = qs.get('sort');
-  if (qs.get('page')) offset = (Number(qs.get('page')) - 1) * LIMIT;
+  if (qs.get('page')) page = Math.max(Number(qs.get('page')) || 1, 1);
   window.TL_I18N.apply(lang);
   runSearch(false);
 })();
