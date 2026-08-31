@@ -256,9 +256,13 @@ window.TL_DISCOVER = (function () {
       activeCategory = null;
     }
     if (window.TL_MAP_DISCOVER) {
-      window.TL_MAP_DISCOVER.init('discoverMap');
-      window.TL_MAP_DISCOVER.setTurkeyView();
-      window.TL_MAP_DISCOVER.loadMarkers('/places/map/markers?country=Turkey');
+      try {
+        window.TL_MAP_DISCOVER.init('discoverMap');
+        window.TL_MAP_DISCOVER.setTurkeyView();
+        window.TL_MAP_DISCOVER.loadMarkers('/places/map/markers?country=Turkey');
+      } catch (err) {
+        window.TL_ERROR_BOUNDARY?.capture('map', err);
+      }
     }
     showView('places');
     renderCategoryFilters();

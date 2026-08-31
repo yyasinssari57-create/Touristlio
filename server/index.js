@@ -279,6 +279,13 @@ app.get('/blog/:slug', (req, res) => {
   });
 });
 
+/** Dev-only: throw so the HTML 500 fallback can be verified. */
+if (!isProd) {
+  app.get('/__error-test', () => {
+    throw new Error('YÜKSEK-6 test 500');
+  });
+}
+
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   if (req.path.match(/\.(html|xml|txt|css|js|png|jpg|svg|webp|ico)$/)) {
@@ -301,7 +308,9 @@ app.use((err, req, res, _next) => {
     return res.status(code).json({ error: message });
   }
   res.status(500);
-  sendPublicHtml(res, PUBLIC_DIR, '500.html');
+  sendPublicHtml(res, PUBLIC_DIR, '500.html', {
+    errorDetail: isProd ? null : (err && (err.stack || err.message)),
+  });
 });
 
 function spawnSitemapIfStale() {

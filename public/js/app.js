@@ -906,7 +906,8 @@ async function loadMapMarkers() {
     const data = await api('/places/map/markers?' + params);
     window.TL_MAP.renderExploreMarkers(data.markers || [], lang);
   } catch (e) {
-    console.warn('map markers', e);
+    if (!e.status) window.TL_ERROR_BOUNDARY?.capture('map', e);
+    else console.warn('map markers', e);
   }
 }
 
@@ -1248,6 +1249,7 @@ async function loadTiolaFeed() {
     feed.innerHTML = items.map((ti) => renderTiolaCard(ti)).join('');
     if (getActiveMainTab() === 'explore') injectHomeJsonLd(items);
   } catch (e) {
+    if (!e.status && window.TL_ERROR_BOUNDARY?.capture('tiolas', e)) return;
     feed.innerHTML = `<div class="no-res">${e.message}</div>`;
   }
 }
@@ -1631,8 +1633,9 @@ function goBack() {
 
 async function renderRevList() {
   if (!activePlace) return;
-  const data = await api('/tiolas?placeId=' + activePlace.id);
-  document.getElementById('revList').innerHTML = data.tiolas.map((r) => {
+  try {
+    const data = await api('/tiolas?placeId=' + activePlace.id);
+    document.getElementById('revList').innerHTML = data.tiolas.map((r) => {
     const profileChip = renderProfileChip(r.userId, r.userName, {
       name: r.userName,
       avatarColor: r.avatarColor,
@@ -1664,25 +1667,32 @@ async function renderRevList() {
       <div class="tiola-replies-wrap" id="rev-replies-${r.id}" style="display:none"></div>
     </div>`;
   }).join('') || `<div class="no-res">${t('noApprovedTiola')}</div>`;
-  if (activePlace) injectPlaceJsonLd(activePlace, data.tiolas);
+    if (activePlace) injectPlaceJsonLd(activePlace, data.tiolas);
+  } catch (e) {
+    if (!e.status) window.TL_ERROR_BOUNDARY?.capture('tiolas', e);
+  }
 }
 
 function updateRevForm() {
-  const av = document.getElementById('rfAv');
-  const nm = document.getElementById('rfNm');
-  const tp = document.getElementById('rfTp');
-  const me = document.getElementById('memberEx');
-  const nt = document.getElementById('rfNote');
-  if (!user) {
-    av.textContent = '?'; nm.textContent = t('notLoggedIn'); tp.textContent = '';
-    if (me) me.style.display = 'none';
-    nt.innerHTML = `<a href="#" onclick="openAuth();return false;">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
-  } else {
-    window.TL_AVATARS?.applyToElement(av, user);
-    nm.textContent = user.name;
-    tp.textContent = t('writeTiola');
-    if (me) me.style.display = 'flex';
-    nt.textContent = t('tiolaModeration');
+  try {
+    const av = document.getElementById('rfAv');
+    const nm = document.getElementById('rfNm');
+    const tp = document.getElementById('rfTp');
+    const me = document.getElementById('memberEx');
+    const nt = document.getElementById('rfNote');
+    if (!user) {
+      av.textContent = '?'; nm.textContent = t('notLoggedIn'); tp.textContent = '';
+      if (me) me.style.display = 'none';
+      nt.innerHTML = `<a href="#" onclick="openAuth();return false;">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
+    } else {
+      window.TL_AVATARS?.applyToElement(av, user);
+      nm.textContent = user.name;
+      tp.textContent = t('writeTiola');
+      if (me) me.style.display = 'flex';
+      nt.textContent = t('tiolaModeration');
+    }
+  } catch (e) {
+    window.TL_ERROR_BOUNDARY?.capture('form', e);
   }
 }
 
@@ -1714,7 +1724,7 @@ async function postTiola() {
     document.querySelectorAll('#rfStars span').forEach((s) => s.classList.remove('lit'));
     updateRevForm();
   } catch (e) {
-    /* toast from api */
+    if (!e.status) window.TL_ERROR_BOUNDARY?.capture('form', e);
   }
 }
 
@@ -2283,8 +2293,9 @@ function swTab(m, el) {
 }
 
 function buildAuthForm(m) {
-  authMode = m;
-  document.getElementById('authForm').innerHTML = m === 'login'
+  try {
+    authMode = m;
+    document.getElementById('authForm').innerHTML = m === 'login'
     ? `<input class="ain" id="loginEmail" type="email" placeholder="${t('authEmail')}"/>
        <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}"/>
        <button class="btn bp" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
@@ -2297,6 +2308,9 @@ function buildAuthForm(m) {
          <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${lang === 'en' ? 'I accept' : 'kabul ediyorum'}</label>
        </div>
        <button class="btn bp" style="width:100%;padding:11px" onclick="doRegSubmit()">${t('authCreate')}</button>`;
+  } catch (e) {
+    window.TL_ERROR_BOUNDARY?.capture('form', e);
+  }
 }
 
 async function doForgotPassword() {
@@ -2518,4 +2532,7 @@ window.addEventListener('popstate', () => {
   applyRouteFromUrl().finally(() => window.TL_LOADER?.hide());
 });
 
-init();
+init().catch((err) => {
+  if (window.TL_ERROR_BOUNDARY) window.TL_ERROR_BOUNDARY.capture(null, err);
+  else console.error(err);
+});

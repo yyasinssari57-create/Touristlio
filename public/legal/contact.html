@@ -13,7 +13,7 @@
   <h1 id="contactHeading" data-i18n="contactTitle">İletişim</h1>
   <div class="contact-card">
     <p class="contact-lead" data-i18n="contactP1">İstek, öneri ve şikayetlerinizi aşağıdaki form ile bize iletebilirsiniz.</p>
-    <form id="contactForm" class="contact-form" novalidate>
+    <form id="contactForm" class="contact-form" data-error-boundary="form" novalidate>
       <label class="contact-label" for="contactName" data-i18n="contactName">Ad Soyad</label>
       <input class="ain" id="contactName" name="name" type="text" autocomplete="name" required maxlength="120" data-i18n-placeholder="contactName" placeholder="Ad Soyad"/>
       <label class="contact-label" for="contactEmail" data-i18n="contactEmail">E-posta</label>
@@ -77,6 +77,8 @@ form.addEventListener('submit', async (e) => {
     showMsg(data.message || t('contactSuccess'), true);
     form.reset();
   } catch (err) {
+    const crash = err && (err.name === 'TypeError' || err.name === 'ReferenceError' || err.tlCrash);
+    if (crash && window.TL_ERROR_BOUNDARY?.capture('form', err)) return;
     showMsg(err.message || t('contactError'), false);
   } finally {
     submitBtn.disabled = false;

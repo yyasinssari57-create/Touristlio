@@ -25,6 +25,35 @@ function injectAppVersion(html) {
   return html.replace(/__APP_VERSION__/g, getAppVersion());
 }
 
+function injectClientErrorBoundary(html) {
+  const isProd = process.env.NODE_ENV === 'production';
+  let next = html;
+  if (!/\sdata-tl-dev=/.test(next)) {
+    next = next.replace(/<html\b([^>]*)>/i, (m, attrs) => `<html${attrs} data-tl-dev="${isProd ? '0' : '1'}">`);
+  }
+  if (!next.includes('/js/error-boundary.js')) {
+    const tag = `<script src="/js/error-boundary.js?v=${getAppVersion()}"></script>\n`;
+    if (/<head[^>]*>/i.test(next)) {
+      next = next.replace(/<head[^>]*>/i, (open) => `${open}\n${tag}`);
+    } else {
+      next = tag + next;
+    }
+  }
+  return next;
+}
+
+function injectErrorDetail(html, errorDetail) {
+  const token = '<!-- TL_ERROR_DETAIL -->';
+  if (!html.includes(token)) return html;
+  const isProd = process.env.NODE_ENV === 'production';
+  if (!errorDetail || isProd) return html.replace(token, '');
+  const text = String(errorDetail).slice(0, 4000)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return html.replace(token, `<pre class="tl-error-detail" id="tl-server-error-detail">${text}</pre>`);
+}
+
 function readPublicHtml(publicDir, relativePath) {
   const filePath = path.join(publicDir, relativePath);
   if (!fs.existsSync(filePath)) {
@@ -39,18 +68,22 @@ function readPublicHtml(publicDir, relativePath) {
 
 function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   let html = readPublicHtml(publicDir, relativePath);
+  html = injectClientErrorBoundary(html);
+  html = injectErrorDetail(html, seo.errorDetail);
   const req = res.req;
   const pathname = (req && (req.originalUrl || req.url) || '/').split('?')[0];
   const { injectSeoHead, langFromPath } = require('./seo');
   const { autoJsonLd } = require('./jsonld');
   const noindex = /login|register|profile|verify-email|reset-password|admin|404\.html|500\.html/.test(relativePath);
   const lang = seo.lang || req?.tlLang || langFromPath(pathname);
+  const seoRest = { ...seo };
+  delete seoRest.errorDetail;
   const jsonLd = seo.jsonLd != null ? seo.jsonLd : autoJsonLd(pathname, relativePath, lang);
   html = injectSeoHead(html, {
     pathname,
     lang,
     noindex,
-    ...seo,
+    ...seoRest,
     jsonLd,
   });
   res.set({
@@ -120,6 +153,8 @@ module.exports = {
   publicHtmlMiddleware,
   NO_CACHE_HEADERS,
   injectAppVersion,
+  injectClientErrorBoundary,
+  injectErrorDetail,
   HTML_PAGE_ROUTES,
   readPublicHtml,
 };

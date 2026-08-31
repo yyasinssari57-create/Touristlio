@@ -962,6 +962,33 @@ body.admin-body:not(.admin-session) {
   justify-content: center;
   margin-top: 16px;
 }
+.tl-error-detail {
+  display: block;
+  text-align: left;
+  max-height: 200px;
+  overflow: auto;
+  margin: 16px auto 0;
+  padding: 10px 12px;
+  max-width: 520px;
+  font-size: .72rem;
+  line-height: 1.4;
+  background: var(--navy);
+  color: #e2e8f0;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tl-error-fallback {
+  padding: 20px 16px;
+  text-align: center;
+}
+.tl-error-fallback .tl-error-title {
+  font-family: var(--fd);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0 0 8px;
+}
 
 /* ── Profile page ── */
 #profileRoot #pLoginNotice {

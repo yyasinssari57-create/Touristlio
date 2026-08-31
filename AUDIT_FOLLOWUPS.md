@@ -130,7 +130,24 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Dil değişince sayı formatı (1.090 / 1,090) yeniden çizilmez; ilk yükleme diline bağlı.
 - `verify:stats` canlı HTTP için `VERIFY_STATS_URL` ister.
 
-- [YÜKSEK-6] Error Boundary Eksikliği
+## YÜKSEK-6 (error boundary)
+
+- Tamamlandı: React yok; vanilla JS + Express karşılığı.
+  - `public/js/error-boundary.js` ilk script: `window` `error` + `unhandledrejection`.
+  - Global fallback: "Bir şeyler ters gitti", "Ana Sayfaya Dön", "Sayfayı Yenile".
+  - Hata detayı yalnızca development (`data-tl-dev=1` / localhost); production stack göstermez.
+  - Harita (`#es-map`, `#discoverMap`, `#pdMapWrap`), Tiola listesi (`#es-tiolas`, `#revList`) ve formlar (Tiola formu, auth, iletişim, arama) ayrı `data-error-boundary` ile sarılı.
+  - Express 500 HTML: aynı CTA'lar; dev'de stack `<!-- TL_ERROR_DETAIL -->` ile enjekte.
+- `npm run verify:errors` statik + inject + yerel `/__error-test` 500.
+
+### Leftover
+- React `<ErrorBoundary>` yok (stack Express + static JS).
+- Bölüm fallback'i aynı zone'daki tüm sarmalayıcıları değiştirir (keşfet haritası + detay haritası birlikte).
+- Cross-origin `Script error.` yutulur (tarayıcı gizler).
+- `/__error-test` ve `?tl_error_test=` yalnızca development.
+- Admin panel kendi uzun inline JS'ine sahip; global handler yüklenir (sunucu enjeksiyonu) ama bölüm sarmalayıcıları yok.
+- Eski 404 metni aynı; yalnızca 500 + JS overlay denetim kopyasına çekildi.
+
 - [YÜKSEK-7] Form Güvenliği — reCAPTCHA + Sanitization
 - [ORTA-1] Tiola Sistemi Görünmüyor
 - [ORTA-2] Arama ve Filtreleme State Yönetimi

@@ -34,6 +34,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.Default.css?v=__APP_VERSION__"/>
 <link rel="stylesheet" href="/css/style.css?v=__APP_VERSION__"/>
 <link rel="stylesheet" href="/css/inline-overrides.css?v=__APP_VERSION__"/>
+<script src="/js/error-boundary.js?v=__APP_VERSION__"></script>
 </head>
 <body>
 
@@ -57,7 +58,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="atab on" id="tabA" onclick="swTab('login',this)" data-i18n="authTabLogin">Giriş Yap</div>
       <div class="atab" id="tabB" onclick="swTab('reg',this)" data-i18n="authTabReg">Kayıt Ol</div>
     </div>
-    <div id="authForm"></div>
+    <div id="authForm" data-error-boundary="form"></div>
     <div class="asec" data-i18n="authSecure">🔒 Güvenli şifreleme · KVKK & GDPR uyumlu</div>
     <div class="aor" data-i18n="authOr">— veya —</div>
     
@@ -141,7 +142,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </div>
 
   <!-- MAP TAB -->
-  <div class="explore-section" id="es-map">
+  <div class="explore-section" id="es-map" data-error-boundary="map">
     <div class="discover-wrap map-tab-wrap">
       <div class="explore-map-hd">
         <h4 data-i18n="mapTitle">🗺️ Harita</h4>
@@ -288,7 +289,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
 
   <!-- TIOLA TAB -->
-  <div class="explore-section" id="es-tiolas">
+  <div class="explore-section" id="es-tiolas" data-error-boundary="tiolas">
     <div class="discover-wrap">
       <div class="results-bar">
         <h3 data-i18n-html="tiolaFeedTitle">Gezginlerden <em class="em-accent">Tiola</em></h3>
@@ -365,7 +366,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <aside class="discover-map-panel" aria-label="Harita">
         <div class="map-wrap map-wrap-sticky">
-          <div id="discoverMap" class="discover-map"></div>
+          <div id="discoverMap" class="discover-map" data-error-boundary="map"></div>
         </div>
       </aside>
     </div>
@@ -440,7 +441,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <div class="sec-block faq-block" id="pdFaq" style="display:none"></div>
           <div class="rev-wrap">
             <div class="rev-hd"><h2 data-i18n="detailTiolas">✨ Tiola'lar</h2><div class="af-badge" data-i18n="antiFraud">🛡️ Sahte oy koruması</div></div>
-            <div class="rform">
+            <div class="rform" data-error-boundary="form">
               <div class="rf-top">
                 <div class="rfav" id="rfAv">?</div>
                 <div><div class="rfnm" id="rfNm">—</div><div class="rftp" id="rfTp"></div></div>
@@ -470,7 +471,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
                 <button class="btn bp bsm" onclick="postTiola()" data-i18n="sendTiola">Tiola Gönder</button>
               </div>
             </div>
-            <div class="rlist" id="revList"></div>
+            <div class="rlist" id="revList" data-error-boundary="tiolas"></div>
           </div>
         </div>
         <div>
@@ -479,7 +480,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <div class="dr-stars t" id="pdTS"></div>
             <div class="dr-cnt" id="pdTC"></div>
           </div>
-          <div class="pd-map-wrap" id="pdMapWrap">
+          <div class="pd-map-wrap" id="pdMapWrap" data-error-boundary="map">
             <div id="pdMap" role="region" aria-label="Yer haritası"></div>
           </div>
           <div class="aside-card" id="pdWeather"></div>

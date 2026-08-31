@@ -1,4 +1,11 @@
 window.TL_MAP_DISCOVER = (function () {
+  function captureMapError(err) {
+    try {
+      if (window.TL_ERROR_BOUNDARY) window.TL_ERROR_BOUNDARY.capture('map', err);
+      else console.error('[Touristlio map]', err);
+    } catch { /* ignore */ }
+  }
+
   let map = null;
   let cluster = null;
   let lang = localStorage.getItem('tl_lang') || 'tr';
@@ -39,34 +46,38 @@ window.TL_MAP_DISCOVER = (function () {
     const el = document.getElementById(containerId);
     if (!el) return;
     const start = () => {
-      if (map) {
-        map.invalidateSize();
+      try {
+        if (map) {
+          map.invalidateSize();
+          if (pendingMarkers) {
+            paintMarkers(pendingMarkers);
+            pendingMarkers = null;
+          }
+          return;
+        }
+        if (typeof L === 'undefined') {
+          console.error('[Touristlio map] Leaflet failed to load (L is undefined)');
+          return;
+        }
+        if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
+        map = L.map(el, { scrollWheelZoom: true, zoomControl: false }).setView([39.0, 35.0], 6);
+        L.control.zoom({ position: 'topleft' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap',
+          maxZoom: 18,
+        }).addTo(map);
+        cluster = makeCluster();
+        map.addLayer(cluster);
+        if (typeof ResizeObserver === 'function') {
+          new ResizeObserver(() => map?.invalidateSize()).observe(el);
+        }
+        setTimeout(() => map.invalidateSize(), 80);
         if (pendingMarkers) {
           paintMarkers(pendingMarkers);
           pendingMarkers = null;
         }
-        return;
-      }
-      if (typeof L === 'undefined') {
-        console.error('[Touristlio map] Leaflet failed to load (L is undefined)');
-        return;
-      }
-      if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
-      map = L.map(el, { scrollWheelZoom: true, zoomControl: false }).setView([39.0, 35.0], 6);
-      L.control.zoom({ position: 'topleft' }).addTo(map);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 18,
-      }).addTo(map);
-      cluster = makeCluster();
-      map.addLayer(cluster);
-      if (typeof ResizeObserver === 'function') {
-        new ResizeObserver(() => map?.invalidateSize()).observe(el);
-      }
-      setTimeout(() => map.invalidateSize(), 80);
-      if (pendingMarkers) {
-        paintMarkers(pendingMarkers);
-        pendingMarkers = null;
+      } catch (err) {
+        captureMapError(err);
       }
     };
     if (window.TL_MAP?.whenContainerReady) {
@@ -82,31 +93,35 @@ window.TL_MAP_DISCOVER = (function () {
   }
 
   function paintMarkers(markers) {
-    if (!map || !cluster) {
-      pendingMarkers = markers;
-      return;
-    }
-    cluster.clearLayers();
-    const bounds = [];
-    (markers || []).forEach((m) => {
-      const lat = parseCoord(m.lat);
-      const lng = parseCoord(m.lng);
-      if (lat == null || lng == null) return;
-      const color = window.TL_MAP?.colorFor?.(m.category) || '#0ea5e9';
-      const icon = L.divIcon({
-        className: 'tl-map-pin',
-        html: `<span style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);display:block"></span>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+    try {
+      if (!map || !cluster) {
+        pendingMarkers = markers;
+        return;
+      }
+      cluster.clearLayers();
+      const bounds = [];
+      (markers || []).forEach((m) => {
+        const lat = parseCoord(m.lat);
+        const lng = parseCoord(m.lng);
+        if (lat == null || lng == null) return;
+        const color = window.TL_MAP?.colorFor?.(m.category) || '#0ea5e9';
+        const icon = L.divIcon({
+          className: 'tl-map-pin',
+          html: `<span style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);display:block"></span>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
+        const mk = L.marker([lat, lng], { icon });
+        mk.bindPopup(popupHtml(m), { maxWidth: 220 });
+        cluster.addLayer(mk);
+        bounds.push([lat, lng]);
       });
-      const mk = L.marker([lat, lng], { icon });
-      mk.bindPopup(popupHtml(m), { maxWidth: 220 });
-      cluster.addLayer(mk);
-      bounds.push([lat, lng]);
-    });
-    if (bounds.length === 1) map.setView(bounds[0], 13);
-    else if (bounds.length > 1) map.fitBounds(bounds, { padding: [32, 32], maxZoom: 14 });
-    map.invalidateSize();
+      if (bounds.length === 1) map.setView(bounds[0], 13);
+      else if (bounds.length > 1) map.fitBounds(bounds, { padding: [32, 32], maxZoom: 14 });
+      map.invalidateSize();
+    } catch (err) {
+      captureMapError(err);
+    }
   }
 
   async function loadMarkers(path) {

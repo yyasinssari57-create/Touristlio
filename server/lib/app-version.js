@@ -10,7 +10,7 @@ function getAppVersion() {
   if (cached) return cached;
 
   const publicDir = path.join(__dirname, '..', '..', 'public');
-  const assets = ['css/style.css', 'css/inline-overrides.css', 'js/app.js', 'index.html'];
+  const assets = ['css/style.css', 'css/inline-overrides.css', 'js/app.js', 'js/error-boundary.js', 'index.html'];
   let maxMtime = 0;
   for (const rel of assets) {
     try {

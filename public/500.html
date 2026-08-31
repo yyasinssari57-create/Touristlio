@@ -12,11 +12,12 @@
 <div class="error-box">
   <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="brand-mark" loading="lazy" decoding="async" />
   <h1>500</h1>
-  <p data-i18n="err500">Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.</p>
+  <p data-i18n="errOops">Bir şeyler ters gitti</p>
   <div class="error-actions">
-    <a href="/" class="btn bp" data-i18n="errHome">Ana sayfaya dön</a>
-    <button type="button" class="btn bo" onclick="location.reload()" data-i18n="errRetry">Tekrar dene</button>
+    <a href="/" class="btn bp" data-i18n="errHomeCta">Ana Sayfaya Dön</a>
+    <button type="button" class="btn bo" onclick="location.reload()" data-i18n="errReload">Sayfayı Yenile</button>
   </div>
+  <!-- TL_ERROR_DETAIL -->
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script>window.TL_I18N.apply(localStorage.getItem('tl_lang')||'tr');</script>
