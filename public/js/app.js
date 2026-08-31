@@ -1563,6 +1563,7 @@ function syncRoute(replace = true) {
 }
 
 async function showMainTab(tab, skipRoute) {
+  closeNavMenu();
   if (!skipRoute) window.TL_LOADER?.show();
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
@@ -2820,6 +2821,7 @@ async function submitBlog() {
 }
 
 function openAuth(mode) {
+  closeNavMenu();
   if (mode) authMode = mode;
   document.getElementById('authOv').classList.add('on');
   buildAuthForm(authMode);
@@ -2996,9 +2998,29 @@ async function doLogout() {
   } catch { setAuth(null); }
 }
 
-function toggleNavMenu() {
-  document.getElementById('navMenu')?.classList.toggle('open');
+function setNavMenuOpen(open) {
+  const menu = document.getElementById('navMenu');
+  const toggle = document.getElementById('navToggle');
+  if (!menu) return;
+  const next = !!open;
+  menu.classList.toggle('open', next);
+  document.documentElement.classList.toggle('nav-open', next);
+  document.body.classList.toggle('nav-open', next);
+  if (toggle) toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
 }
+
+function closeNavMenu() {
+  setNavMenuOpen(false);
+}
+
+function toggleNavMenu() {
+  const menu = document.getElementById('navMenu');
+  setNavMenuOpen(!menu?.classList.contains('open'));
+}
+
+window.addEventListener('resize', () => {
+  if (window.matchMedia('(min-width: 901px)').matches) closeNavMenu();
+});
 
 function updateCategoryCounts() {
   const counts = {};

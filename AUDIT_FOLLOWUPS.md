@@ -286,7 +286,22 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `/profile` SPA’dan sade; blog yaz / bekleyenler sekmeleri yalnızca ana SPA profilde.
 - Redis oturum deposu yok.
 
-- [DÜŞÜK-1] Mobil Uyum Kontrolleri
+## DÜŞÜK-1 (mobil uyum)
+
+- Tamamlandı: Express + statik CSS/JS (Next.js yok). Google puanı yok.
+  - 320–480px: `overflow-x: clip`, grid `minmax(min(…,100%),1fr)`, form/hero/auth kutuları `max-width:100%`.
+  - Butonlar: `.btn` / hamburger / sekmeler / sayfa numarası **min 48×48**. Chip/pill ve `.aclose` görsel kutuyu değiştirmeden `::after` isabet alanı.
+  - `img,picture,video { max-width:100% }`.
+  - Menü açıkken `html/body.nav-open { overflow:hidden }`; sekme / giriş / ≥901px resize menüyü kapatır.
+  - Layout, renk, `border-radius` aynı.
+- `npm run verify:mobile`
+
+### Leftover
+- Chip’lerde 48px isabet komşu pill’lerle örtüşebilir (görsel boyut bilinçli korunuyor).
+- Admin hamburger yok; topnav yatay kaydırılır.
+- Canlı 320px cihaz testi Yasin’in telefonunda doğrulanmalı.
+- [DÜŞÜK-2] henüz başlamadı.
+
 - [DÜŞÜK-2] Erişilebilirlik (Accessibility)
 - [DÜŞÜK-3] Loading States — Skeleton Loader
 - [DÜŞÜK-4] Kırık Linkleri Düzelt
