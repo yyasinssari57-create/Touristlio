@@ -68,6 +68,10 @@ if (!js.includes('function toStatCount') || !js.includes('function loadHomepageS
   fail('app.js missing homepage stats helpers');
 } else ok('app.js has toStatCount + loadHomepageStats');
 
+if (!js.includes('dataset.statValue') || !js.includes('duration + 80')) {
+  fail('animateStat should settle on the final value');
+} else ok('animateStat settles on the final formatted count');
+
 if (/getElementById\('stat-places'\)\.textContent = String\(placesTotal\)/.test(js)) {
   fail('stat-places still overwritten from placesTotal without 0-coercion path');
 } else ok('loadCategoryStats no longer writes raw placesTotal into the strip');
