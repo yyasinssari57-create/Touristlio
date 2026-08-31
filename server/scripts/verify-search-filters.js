@@ -175,6 +175,15 @@ async function checkLive(base) {
   if (!page.body.includes('id="resCnt"')) fail('served /explore missing resCnt');
   else ok('served /explore includes yer bulundu');
 
+  const turkey = await fetchText(`${root}/api/places?country=turkey&limit=12`);
+  let turkeyJson = {};
+  try { turkeyJson = JSON.parse(turkey.body); } catch { turkeyJson = {}; }
+  const turkeyPayload = turkeyJson.data || turkeyJson;
+  if (turkey.status !== 200) fail(`GET /api/places?country=turkey HTTP ${turkey.status}`);
+  else if (typeof turkeyPayload.total !== 'number' || turkeyPayload.total < 1) {
+    fail(`country=turkey expected seeded places, total=${turkeyPayload.total}`);
+  } else ok(`country=turkey total=${turkeyPayload.total} (slug match)`);
+
   const api = await fetchText(`${root}/api/places?country=turkey&category=nature&score=4&limit=12`);
   let json = {};
   try { json = JSON.parse(api.body); } catch { json = {}; }
