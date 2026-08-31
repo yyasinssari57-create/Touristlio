@@ -3049,9 +3049,16 @@ async function init() {
   renderGrid([]);
   loadHomepageStats();
   try {
+    await applyRouteFromUrl({ skipFilters: true });
+  } catch (e) {
+    console.error(e);
+  }
+  try {
     await loadCategoryMeta();
-    await applyFilters();
-    if (isExploreMapTabActive()) await loadMapMarkers();
+    if (document.getElementById('page-explore')?.classList.contains('active')) {
+      await applyFilters();
+      if (isExploreMapTabActive()) await loadMapMarkers();
+    }
     try {
       const me = await api('/auth/me');
       if (me.user) {
@@ -3064,9 +3071,6 @@ async function init() {
     }
   } catch (e) {
     console.error(e);
-  }
-  try {
-    await applyRouteFromUrl({ skipFilters: true });
   } finally {
     window.TL_LOADER?.hide();
     document.documentElement.classList.add('tl-ready');
