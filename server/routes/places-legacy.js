@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const { db } = require('../db');
 const { findPlaceRow, PLACE_PARAM_RESERVED } = require('../lib/place-lookup');
 const { authOptional, authRequired } = require('../middleware/auth');
+const { ok } = require('../lib/apiResponse');
 const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
 const { cacheKey, wrap } = require('../lib/cache');
 const { getStatsMap } = require('../lib/stats-cache');
@@ -51,7 +52,7 @@ router.get('/saved/all', authRequired, (req, res) => {
     WHERE sp.user_id = ?
     ORDER BY sp.created_at DESC
   `).all(req.user.id);
-  res.json({ places: rows.map(mapPlace) });
+  return ok(res, { places: rows.map(mapPlace) });
 });
 
 function resolvePlaceRow(req, res) {
@@ -124,7 +125,7 @@ router.get('/:id/saved', authRequired, (req, res) => {
   const saved = db.prepare(`
     SELECT 1 FROM saved_places WHERE user_id = ? AND place_id = ?
   `).get(req.user.id, row.id);
-  res.json({ saved: !!saved });
+  return ok(res, { saved: !!saved });
 });
 
 router.post('/:id/save', authRequired, (req, res) => {
@@ -133,14 +134,14 @@ router.post('/:id/save', authRequired, (req, res) => {
   db.prepare(`
     INSERT OR IGNORE INTO saved_places (user_id, place_id) VALUES (?, ?)
   `).run(req.user.id, row.id);
-  res.json({ saved: true });
+  return ok(res, { saved: true, placeId: row.id });
 });
 
 router.delete('/:id/save', authRequired, (req, res) => {
   const row = resolvePlaceRow(req, res);
   if (!row) return;
   db.prepare('DELETE FROM saved_places WHERE user_id = ? AND place_id = ?').run(req.user.id, row.id);
-  res.json({ saved: false });
+  return ok(res, { saved: false, placeId: row.id });
 });
 
 module.exports = { router, searchHandler, validationError };

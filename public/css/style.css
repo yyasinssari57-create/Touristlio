@@ -554,6 +554,8 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .auth-page-box h1{font-family:var(--fd);color:var(--navy);margin-bottom:6px;}
 .auth-page-sub{font-size:.82rem;color:var(--t2);margin-bottom:16px;}
 .auth-page-link{font-size:.78rem;text-align:center;margin-top:12px;color:var(--t2);}
+.auth-inline-error{display:block;margin:0 0 10px;padding:8px 10px;border-radius:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.28);color:#b91c1c;font-size:.78rem;line-height:1.4;}
+.auth-inline-error[hidden]{display:none!important;}
 .kvkk-check{display:flex;gap:8px;font-size:.72rem;color:var(--t2);margin:10px 0 14px;align-items:flex-start;}
 .legal-page{background:var(--l);min-height:100vh;min-height:100dvh;}
 .legal-wrap{max-width:720px;margin:90px auto 40px;padding:24px;background:var(--w);border-radius:var(--r2);line-height:1.7;color:var(--t2);}

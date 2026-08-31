@@ -29,6 +29,7 @@
     "verify:votes": "node server/scripts/verify-anti-bot.js",
     "verify:indexes": "node server/scripts/verify-indexes.js",
     "verify:blog": "node server/scripts/verify-blog-pages.js",
+    "verify:user-system": "node server/scripts/verify-user-system.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",

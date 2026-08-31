@@ -55,6 +55,10 @@
         <div class="prof-meta" id="profMeta"></div>
         <div class="prof-stats-grid">
           <div class="prof-stat-card">
+            <span class="psi-n" id="pRevCnt">0</span>
+            <span class="psi-l" data-i18n="profileStatReviews">Tiola</span>
+          </div>
+          <div class="prof-stat-card">
             <span class="psi-n" id="pSavedCnt">0</span>
             <span class="psi-l" data-i18n="profileStatSaved">Kaydedilen</span>
           </div>
@@ -71,7 +75,22 @@
 
     </div>
 
+    <div class="prof-badges" id="profBadges" aria-label="Rozetler"></div>
+
     <div class="prof-activity-bar" id="profActivityBar" style="display:none" aria-live="polite"></div>
+
+    <div class="profile-content-card">
+    <h3 class="profile-section-title" data-i18n="profileTabTiolas">✨ Tiola'larım</h3>
+    <div class="pgrid" id="myTiolaList"></div>
+    <div class="empty-state" id="tiolaListEmpty"><div class="empty-icon">✈️</div><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.</p></div>
+    </div>
+
+    <div class="profile-content-card">
+    <h3 class="profile-section-title" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</h3>
+    <div id="visitedCountries" class="badge-row" style="margin-bottom:12px"></div>
+    <div class="pgrid" id="visitedGrid"></div>
+    <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n="emptyVisited">Henüz ziyaret kaydı yok.</p></div>
+    </div>
 
     <div class="profile-content-card">
     <h3 class="profile-section-title" data-i18n="profileTabSaved">❤️ Kaydedilenler</h3>
@@ -147,6 +166,7 @@
 </div>
 
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
@@ -183,14 +203,7 @@ function safeUrl(url) {
 }
 
 function apiErrorMessage(data) {
-  const err = data?.error;
-  if (typeof err === 'string' && err) return err;
-  if (err && typeof err === 'object') {
-    if (typeof err.message === 'string' && err.message) return err.message;
-    if (Array.isArray(err) && err[0]?.msg) return err[0].msg;
-  }
-  if (Array.isArray(data?.errors) && data.errors[0]?.msg) return data.errors[0].msg;
-  return t('requestFailed');
+  return window.TL_AUTH.parseError(data, t('requestFailed'));
 }
 
 async function api(path, opts = {}) {
@@ -202,6 +215,11 @@ async function api(path, opts = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg = apiErrorMessage(data);
+    if (window.TL_AUTH.isSessionExpired(res, data)) {
+      window.TL_AUTH.clearLocalSession();
+      location.href = '/login';
+      throw new Error(msg);
+    }
     window.TL_TOAST?.error(msg);
     throw new Error(msg);
   }
@@ -216,19 +234,88 @@ function renderProfileMeta(u) {
   meta.textContent = u.email ? `${u.email} · ${verified}` : '';
 }
 
-function renderProfileActivitySummary({ saved = 0, visited = 0, countries = 0 }) {
+function renderProfileActivitySummary({ tiolas = 0, saved = 0, visited = 0, countries = 0 }) {
   const bar = document.getElementById('profActivityBar');
   if (!bar) return;
-  if (!saved && !visited && !countries) {
+  if (!tiolas && !saved && !visited && !countries) {
     bar.style.display = 'none';
     bar.innerHTML = '';
     return;
   }
   bar.style.display = 'flex';
   bar.innerHTML = `
+    <div class="prof-activity-item"><strong>${tiolas}</strong><span>${t('profileStatReviews')}</span></div>
     <div class="prof-activity-item"><strong>${saved}</strong><span>${t('profileStatSaved')}</span></div>
     <div class="prof-activity-item"><strong>${visited}</strong><span>${t('profileStatVisited')}</span></div>
     <div class="prof-activity-item"><strong>${countries}</strong><span>${t('profileStatCountries')}</span></div>`;
+}
+
+function renderOwnBadges(profile) {
+  const el = document.getElementById('profBadges');
+  if (!el) return;
+  const badges = profile?.badges || profile?.earnedBadges || [];
+  const earned = profile?.earnedBadges || badges.filter((b) => b.earned);
+  const next = profile?.nextBadge;
+  if (!badges.length && !earned.length) {
+    el.innerHTML = '';
+    return;
+  }
+  const chips = badges.map((b) => {
+    const on = b.earned !== false && (b.earned || earned.some((e) => e.id === b.id));
+    return `<span class="tiola-badge${on ? ' earned' : ' locked'}" title="${escapeHtml(b.name)}">${b.icon || ''} ${escapeHtml(b.name)}</span>`;
+  }).join('');
+  const nextHtml = next
+    ? `<p class="badge-next">${t('badgeNext')}: ${escapeHtml(next.icon || '')} ${escapeHtml(next.name)} · ${next.remaining} ${t('badgeMoreTiolas')}</p>`
+    : '';
+  el.innerHTML = `<div class="badge-block"><div class="badge-title">${t('badgesTitle')}</div><div class="badge-row">${chips}</div>${nextHtml}</div>`;
+}
+
+function renderTiolas(tiolas) {
+  const list = document.getElementById('myTiolaList');
+  const empty = document.getElementById('tiolaListEmpty');
+  if (!list) return;
+  const items = Array.isArray(tiolas) ? tiolas : [];
+  if (!items.length) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = items.map((ti) => {
+    const place = ti.placeName ? escapeHtml(ti.placeName) : '';
+    const stars = ti.stars ? '★'.repeat(Number(ti.stars) || 0) : '';
+    return `<div class="pc" ${ti.placeId ? `onclick="location.href='/?place=${ti.placeId}'"` : ''}>
+      <div class="pc-body">
+        <div class="pc-name">${place || 'Tiola'}</div>
+        <div style="font-size:.72rem;color:var(--gold)">${stars}</div>
+        <div style="font-size:.78rem;color:var(--t2);margin-top:4px">${escapeHtml((ti.text || '').slice(0, 160))}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderVisited(places, countries) {
+  const grid = document.getElementById('visitedGrid');
+  const empty = document.getElementById('visitedEmpty');
+  const countryRow = document.getElementById('visitedCountries');
+  const list = Array.isArray(places) ? places : [];
+  const countryNames = Array.isArray(countries) ? countries : [];
+  if (countryRow) {
+    countryRow.innerHTML = countryNames.map((c) =>
+      `<span class="tiola-badge earned">${escapeHtml(c)}</span>`
+    ).join('');
+  }
+  if (!grid) return;
+  if (!list.length) {
+    grid.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  grid.innerHTML = list.map((p) => `<div class="pc" onclick="location.href='/?place=${p.id}'">
+    <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div>
+    <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${escapeHtml(p.visitedAt || p.country || '')}</div></div>
+  </div>`).join('');
 }
 
 function renderProfileSettings(u) {
@@ -296,6 +383,7 @@ async function init(){
   try {
 
     const me = await api('/auth/me');
+    if (!me.user) return;
 
     document.getElementById('pLoginNotice').style.display='none';
 
@@ -309,37 +397,39 @@ async function init(){
 
     renderProfileSettings(me.user);
 
-    const [saved, visited] = await Promise.all([
+    const dash = await api('/auth/profile?lang=' + encodeURIComponent(lang));
+    const savedPlaces = dash.favorites || [];
+    const visitedPlaces = dash.visited || [];
+    const stats = dash.visitedStats || {};
+    const tiolas = dash.tiolas || [];
 
-      api('/places/saved/all'),
+    document.getElementById('pRevCnt').textContent = dash.tiolaCount ?? tiolas.length;
+    document.getElementById('pSavedCnt').textContent = savedPlaces.length;
+    document.getElementById('pVisitedCnt').textContent = stats.totalVisited || visitedPlaces.length;
+    document.getElementById('pCountriesCnt').textContent = stats.countriesVisited || (stats.countries || []).length;
 
-      api('/travel-lists/visited/stats'),
-
-    ]);
-
-    document.getElementById('pSavedCnt').textContent = saved.places.length;
-
-    document.getElementById('pVisitedCnt').textContent = visited.totalVisited || 0;
-
-    document.getElementById('pCountriesCnt').textContent = visited.countriesVisited || 0;
+    renderOwnBadges(dash);
+    renderTiolas(tiolas);
+    renderVisited(visitedPlaces, stats.countries || []);
 
     renderProfileActivitySummary({
-      saved: saved.places.length,
-      visited: visited.totalVisited || 0,
-      countries: visited.countriesVisited || 0,
+      tiolas: dash.tiolaCount ?? tiolas.length,
+      saved: savedPlaces.length,
+      visited: stats.totalVisited || visitedPlaces.length,
+      countries: stats.countriesVisited || (stats.countries || []).length,
     });
 
     const sg = document.getElementById('savedGrid');
 
     const se = document.getElementById('savedEmpty');
 
-    if(!saved.places.length){ sg.innerHTML=''; se.style.display='block'; }
+    if(!savedPlaces.length){ sg.innerHTML=''; se.style.display='block'; }
 
     else {
 
       se.style.display='none';
 
-      sg.innerHTML = saved.places.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></div>`).join('');
+      sg.innerHTML = savedPlaces.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></div>`).join('');
 
     }
 

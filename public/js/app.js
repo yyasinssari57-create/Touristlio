@@ -793,6 +793,29 @@ function apiErrorMessage(data) {
   return t('requestFailed');
 }
 
+function clearClientSession() {
+  user = null;
+  window.user = null;
+  savedIds = new Set();
+  window.TL_AUTH?.clearLocalSession();
+  try {
+    localStorage.removeItem('tl_user');
+    localStorage.removeItem('tl_token');
+  } catch { /* ignore */ }
+  updateAuthUI();
+}
+
+let sessionExpireNotified = false;
+function handleSessionExpired(msg) {
+  const hadUser = !!(user || (typeof localStorage !== 'undefined' && localStorage.getItem('tl_user')));
+  clearClientSession();
+  if (hadUser && !sessionExpireNotified) {
+    sessionExpireNotified = true;
+    window.TL_TOAST?.info(msg || t('sessionExpired'));
+    setTimeout(() => { sessionExpireNotified = false; }, 2500);
+  }
+}
+
 window.api = async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   const isForm = opts.body instanceof FormData;
@@ -805,12 +828,20 @@ window.api = async function api(path, opts = {}) {
   }
   if (!isForm && opts.body != null) headers['Content-Type'] = 'application/json';
   const body = isForm ? opts.body : (opts.body != null ? JSON.stringify(opts.body) : undefined);
-  const res = await fetch(API + path, { ...opts, headers, body, credentials: 'include' });
+  const fetchOpts = { ...opts, headers, body, credentials: 'include' };
+  delete fetchOpts.silent;
+  const res = await fetch(API + path, fetchOpts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg = apiErrorMessage(data);
-    if (res.status !== 404 && window.TL_TOAST) window.TL_TOAST.error(msg);
-    throw Object.assign(new Error(msg), { status: res.status });
+    const sessionExpired = window.TL_AUTH?.isSessionExpired(res, data)
+      || (res.status === 401 && /oturum süresi doldu/i.test(msg));
+    if (sessionExpired) {
+      handleSessionExpired(msg);
+    } else if (!opts.silent && res.status !== 404 && window.TL_TOAST) {
+      window.TL_TOAST.error(msg);
+    }
+    throw Object.assign(new Error(msg), { status: res.status, sessionExpired });
   }
   if (data && data.success === true && data.data != null) return data.data;
   return data;
@@ -820,10 +851,12 @@ function setAuth(u) {
   user = u;
   window.user = u;
   if (u) {
+    sessionExpireNotified = false;
     localStorage.setItem('tl_user', JSON.stringify(u));
   } else {
     localStorage.removeItem('tl_user');
     localStorage.removeItem('tl_token');
+    savedIds = new Set();
   }
   updateAuthUI();
 }
@@ -2409,14 +2442,24 @@ async function updateProfilePage() {
   updateBlogWriteNotice(user);
 
   try {
-    const me = await api('/auth/me');
+    const me = await api('/auth/me', { silent: true });
     if (me.user) {
       setAuth(me.user);
       renderProfileSettings(me.user);
       renderProfileMeta(me.user);
       updateBlogWriteNotice(me.user);
+    } else {
+      setAuth(null);
+      if (loginNotice) loginNotice.style.display = 'block';
+      if (pContent) pContent.style.display = 'none';
+      return;
     }
-  } catch {
+  } catch (e) {
+    if (e.sessionExpired || e.status === 401) {
+      if (loginNotice) loginNotice.style.display = 'block';
+      if (pContent) pContent.style.display = 'none';
+      return;
+    }
     renderProfileSettings(user);
   }
 
@@ -2798,6 +2841,7 @@ function buildAuthForm(m) {
     document.getElementById('authForm').innerHTML = m === 'login'
     ? `<input class="ain" id="loginEmail" type="email" placeholder="${t('authEmail')}"/>
        <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}"/>
+       <p id="authFormError" class="auth-inline-error" hidden></p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <button class="btn bp" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
        <p class="auth-page-link" style="margin-top:10px"><a href="#" onclick="doForgotPassword();return false">${t('forgotPassword')}</a></p>`
@@ -2809,20 +2853,45 @@ function buildAuthForm(m) {
          <input type="checkbox" id="gC" style="accent-color:var(--b);margin-top:2px"/>
          <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${lang === 'en' ? 'I accept' : 'kabul ediyorum'}</label>
        </div>
+       <p id="authFormError" class="auth-inline-error" hidden></p>
        <button class="btn bp" style="width:100%;padding:11px" onclick="doRegSubmit()">${t('authCreate')}</button>`;
   } catch (e) {
     window.TL_ERROR_BOUNDARY?.capture('form', e);
   }
 }
 
+function showAuthFormError(msg) {
+  const el = document.getElementById('authFormError');
+  if (window.TL_AUTH) window.TL_AUTH.show(el, msg);
+  else if (el) { el.hidden = false; el.textContent = msg; }
+}
+
+function hideAuthFormError() {
+  const el = document.getElementById('authFormError');
+  if (window.TL_AUTH) window.TL_AUTH.hide(el);
+  else if (el) { el.hidden = true; el.textContent = ''; }
+}
+
+async function reloadSavedIds() {
+  if (!user) { savedIds = new Set(); return; }
+  try {
+    const saved = await api('/places/saved/all', { silent: true });
+    savedIds = new Set((saved.places || []).map((p) => p.id));
+  } catch {
+    savedIds = new Set();
+  }
+  syncDetailSaveBtn();
+}
+
 async function doForgotPassword() {
+  hideAuthFormError();
   const email = document.getElementById('loginEmail')?.value?.trim();
   if (!email) {
-    window.TL_TOAST?.warning(t('authEmailRequired'));
+    showAuthFormError(t('authEmailRequired'));
     return;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    window.TL_TOAST?.warning(t('contactEmailInvalid') || 'Geçerli e-posta girin');
+    showAuthFormError(t('contactEmailInvalid') || 'Geçerli e-posta girin');
     return;
   }
   try {
@@ -2832,71 +2901,90 @@ async function doForgotPassword() {
     const data = await api('/auth/forgot-password', {
       method: 'POST',
       body,
+      silent: true,
     });
     window.TL_TOAST?.success(data.message || t('forgotPasswordSent'));
-  } catch { /* toast from api */ }
+  } catch (e) {
+    showAuthFormError(e.message || t('requestFailed'));
+  }
 }
 
 async function doLoginSubmit() {
+  hideAuthFormError();
   const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPass').value;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    window.TL_TOAST?.warning(t('contactEmailInvalid') || 'Geçerli e-posta girin');
+    showAuthFormError(t('contactEmailInvalid') || 'Geçerli e-posta girin');
+    return;
+  }
+  if (!password) {
+    showAuthFormError(t('authPassRequired'));
     return;
   }
   try {
     const body = await (window.TL_FORM_SECURITY
       ? window.TL_FORM_SECURITY.attach({
         email,
-        password: document.getElementById('loginPass').value,
+        password,
       }, 'login')
-      : {
-        email,
-        password: document.getElementById('loginPass').value,
-      });
+      : { email, password });
     const data = await api('/auth/login', {
       method: 'POST',
       body,
+      silent: true,
     });
     setAuth(data.user);
+    await reloadSavedIds();
     closeAuth();
     window.TL_TOAST?.success(t('loginSuccess'));
     if (activePlace) updateRevForm();
     if (document.getElementById('page-profile').classList.contains('active')) updateProfilePage();
-  } catch { /* toast from api */ }
+  } catch (e) {
+    showAuthFormError(e.message || t('requestFailed'));
+  }
 }
 
 async function doRegSubmit() {
-  if (!document.getElementById('gC')?.checked) { window.TL_TOAST?.warning(t('kvkkRequired')); return; }
+  hideAuthFormError();
+  const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPass').value;
+  if (name.length < 2) { showAuthFormError(t('authNameRequired')); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    window.TL_TOAST?.warning(t('contactEmailInvalid') || 'Geçerli e-posta girin');
+    showAuthFormError(t('contactEmailInvalid') || 'Geçerli e-posta girin');
     return;
   }
+  if (!password) { showAuthFormError(t('authPassRequired')); return; }
+  if (!document.getElementById('gC')?.checked) { showAuthFormError(t('kvkkRequired')); return; }
   try {
     const body = await (window.TL_FORM_SECURITY
       ? window.TL_FORM_SECURITY.attach({
-        name: document.getElementById('regName').value,
+        name,
         email,
-        password: document.getElementById('regPass').value,
+        password,
         kvkkAccepted: true,
       }, 'register')
       : {
-        name: document.getElementById('regName').value,
+        name,
         email,
-        password: document.getElementById('regPass').value,
+        password,
         kvkkAccepted: true,
       });
     const data = await api('/auth/register', {
       method: 'POST',
       body,
+      silent: true,
     });
     setAuth(data.user);
+    await reloadSavedIds();
     const verifyMsg = data.emailVerificationSent !== false
       ? t('registerSuccessVerify')
       : t('registerSuccess');
     window.TL_TOAST?.success(verifyMsg);
     closeAuth();
-  } catch { /* toast from api */ }
+  } catch (e) {
+    showAuthFormError(e.message || t('requestFailed'));
+  }
 }
 
 async function doLogout() {
@@ -3060,14 +3148,16 @@ async function init() {
       if (isExploreMapTabActive()) await loadMapMarkers();
     }
     try {
-      const me = await api('/auth/me');
+      const me = await api('/auth/me', { silent: true });
       if (me.user) {
         setAuth(me.user);
-        const saved = await api('/places/saved/all');
-        savedIds = new Set(saved.places.map((p) => p.id));
+        await reloadSavedIds();
+      } else {
+        setAuth(null);
       }
-    } catch {
-      setAuth(null);
+    } catch (e) {
+      if (e.sessionExpired) handleSessionExpired(e.message);
+      else setAuth(null);
     }
   } catch (e) {
     console.error(e);

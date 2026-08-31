@@ -23,11 +23,13 @@
     <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"/></label>
   </div>
   <label class="kvkk-check"><input type="checkbox" id="gC"/> <span data-i18n-html="authKvkkLabel">KVKK ve Kullanım Şartları kabul ediyorum</span></label>
+  <p id="authFormError" class="auth-inline-error" hidden></p>
   <button class="btn bp" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
   <p class="auth-page-link"><span data-i18n="hasAccount">Zaten hesabınız var mı?</span> <a href="/login" data-i18n="login">Giriş Yap</a></p>
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
 <script src="/js/toast.js?v=__APP_VERSION__"></script>
@@ -37,18 +39,21 @@ const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
 function t(k){ return window.TL_I18N.t(lang,k); }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-function authErrorMessage(data) {
-  if (typeof data?.error === 'string' && data.error) return data.error;
-  if (Array.isArray(data?.errors) && data.errors[0]?.msg) return data.errors[0].msg;
-  return t('requestFailed');
-}
+const errEl = document.getElementById('authFormError');
+function showErr(msg){ window.TL_AUTH.show(errEl, msg); }
+function hideErr(){ window.TL_AUTH.hide(errEl); }
 async function doReg(){
-  if(!gC.checked){ alert(t('kvkkRequired')); return; }
+  hideErr();
+  const name = regName.value.trim();
   const email = regEmail.value.trim();
-  if(!EMAIL_RE.test(email)){ alert(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
+  const password = regPass.value;
+  if(name.length < 2){ showErr(t('authNameRequired')); return; }
+  if(!EMAIL_RE.test(email)){ showErr(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
+  if(!password){ showErr(t('authPassRequired')); return; }
+  if(!gC.checked){ showErr(t('kvkkRequired')); return; }
   try {
     const body = await window.TL_FORM_SECURITY.attach({
-      name: regName.value, email, password: regPass.value, kvkkAccepted: true,
+      name, email, password, kvkkAccepted: true,
     }, 'register');
     const res = await fetch('/api/auth/register', {
       method:'POST', credentials:'include',
@@ -56,7 +61,7 @@ async function doReg(){
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
-    if(!res.ok) throw new Error(authErrorMessage(data));
+    if(!res.ok) throw new Error(window.TL_AUTH.parseError(data, t('requestFailed')));
     const result = data.data || data;
     localStorage.setItem('tl_user', JSON.stringify(result.user));
     const verifyMsg = result.emailVerificationSent !== false
@@ -64,7 +69,7 @@ async function doReg(){
       : t('registerSuccess');
     window.TL_TOAST?.success(verifyMsg);
     setTimeout(() => { location.href = '/profile'; }, 2000);
-  } catch(e){ alert(e.message || t('requestFailed')); }
+  } catch(e){ showErr(e.message || t('requestFailed')); }
 }
 </script>
 </body>

@@ -173,7 +173,14 @@ async function changePassword(req, userId) {
   }
   authModel.updatePasswordHash(userId, hashPassword(password));
   authModel.clearFailedLogin(userId);
-  return { status: 200, message: 'Şifre güncellendi' };
+  const updated = authModel.findById(userId);
+  const token = signToken(updated);
+  return {
+    status: 200,
+    message: 'Şifre güncellendi',
+    cookie: token,
+    user: sanitizeUser(updated),
+  };
 }
 
 async function changeEmail(req, userId) {
@@ -262,6 +269,80 @@ async function resendVerification(userId) {
   return { status: 200, message: 'Doğrulama e-postası gönderildi' };
 }
 
+function getDashboard(userId, lang = 'tr') {
+  const row = authModel.findById(userId);
+  if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
+  const { db } = require('../../db');
+  const { badgesForUser } = require('../../lib/tiola-badges');
+  const placesService = require('../places/places.service');
+  const { getStatsMap } = require('../../lib/stats-cache');
+
+  const badgePayload = badgesForUser(userId, lang === 'en' ? 'en' : 'tr');
+  const statsMap = getStatsMap();
+
+  const tiolaRows = db.prepare(`
+    SELECT t.id, t.text, t.stars, t.place_id, t.created_at, t.status,
+           p.name AS place_name, p.country AS place_country
+    FROM tiolas t
+    LEFT JOIN places p ON p.id = t.place_id
+    WHERE t.user_id = ? AND t.parent_id IS NULL AND t.status != 'deleted'
+    ORDER BY t.created_at DESC
+    LIMIT 50
+  `).all(userId);
+
+  const savedRows = db.prepare(`
+    SELECT p.* FROM saved_places sp
+    JOIN places p ON p.id = sp.place_id
+    WHERE sp.user_id = ?
+    ORDER BY sp.created_at DESC
+  `).all(userId);
+
+  const visitedRows = db.prepare(`
+    SELECT p.*, vp.visited_at FROM visited_places vp
+    JOIN places p ON p.id = vp.place_id
+    WHERE vp.user_id = ?
+    ORDER BY vp.visited_at DESC
+  `).all(userId);
+
+  const countries = [];
+  const seenCountry = new Set();
+  for (const r of visitedRows) {
+    const name = String(r.country || '').trim();
+    if (!name || seenCountry.has(name.toLowerCase())) continue;
+    seenCountry.add(name.toLowerCase());
+    countries.push(name);
+  }
+
+  return {
+    status: 200,
+    user: sanitizeUser(row),
+    tiolas: tiolaRows.map((t) => ({
+      id: t.id,
+      text: t.text,
+      stars: t.stars,
+      placeId: t.place_id,
+      placeName: t.place_name,
+      country: t.place_country,
+      createdAt: t.created_at,
+      status: t.status,
+    })),
+    favorites: savedRows.map((r) => placesService.mapPlace(r, statsMap)),
+    visited: visitedRows.map((r) => ({
+      ...placesService.mapPlace(r, statsMap),
+      visitedAt: r.visited_at,
+    })),
+    visitedStats: {
+      totalVisited: visitedRows.length,
+      countriesVisited: countries.length,
+      countries,
+    },
+    badges: badgePayload.badges,
+    earnedBadges: badgePayload.earned,
+    nextBadge: badgePayload.next,
+    tiolaCount: badgePayload.tiolaCount,
+  };
+}
+
 module.exports = {
   validationError,
   setAuthCookie,
@@ -277,4 +358,5 @@ module.exports = {
   getAvatarOptions,
   updateAvatarPreset,
   updateAvatarPhoto,
+  getDashboard,
 };

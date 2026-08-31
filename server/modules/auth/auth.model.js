@@ -123,7 +123,6 @@ function upgradePasswordHash(userId, passwordHash) {
 
 function updateEmailAddress(userId, email) {
   db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email.toLowerCase().trim(), userId);
-  touchPasswordChangedAt(userId);
 }
 
 function updateAvatarPreset(userId, preset, color) {

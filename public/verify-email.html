@@ -20,6 +20,7 @@
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
@@ -38,8 +39,8 @@ async function verify(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ token }),
     });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error);
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok) throw new Error(window.TL_AUTH.parseError(data, t('verifyEmailFail')));
     status.textContent = t('verifyEmailSuccess');
   } catch {
     status.textContent = t('verifyEmailFail');

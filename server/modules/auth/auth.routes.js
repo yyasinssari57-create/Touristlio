@@ -61,7 +61,8 @@ router.post('/login', authLimiter, recaptchaGuard('login'), [
 ], controller.login);
 
 router.post('/logout', controller.logout);
-router.get('/me', authRequired, controller.me);
+router.get('/me', controller.me);
+router.get('/profile', authRequired, controller.profile);
 
 router.post('/forgot-password', formLimiter, authLimiter, recaptchaGuard('forgot'), [
   emailRule(),

@@ -1,5 +1,6 @@
 const { ok, fail } = require('../../lib/apiResponse');
 const authService = require('./auth.service');
+const { loadUserFromToken, SESSION_EXPIRED_MSG } = require('../../middleware/auth');
 
 async function register(req, res) {
   const result = await authService.register(req);
@@ -24,7 +25,33 @@ function logout(_req, res) {
 }
 
 function me(req, res) {
-  return ok(res, { user: req.user });
+  const loaded = loadUserFromToken(req);
+  if (loaded.blocked) {
+    authService.clearAuthCookie(res);
+    return fail(res, 'Hesabınız engellenmiştir', 403);
+  }
+  if (loaded.stale || loaded.expired || loaded.invalid) {
+    authService.clearAuthCookie(res);
+    return fail(res, SESSION_EXPIRED_MSG, 401, { sessionExpired: true });
+  }
+  return ok(res, { user: loaded.user || null });
+}
+
+function profile(req, res) {
+  const lang = req.query.lang === 'en' ? 'en' : 'tr';
+  const result = authService.getDashboard(req.user.id, lang);
+  if (result.error) return fail(res, result.error, result.status);
+  return ok(res, {
+    user: result.user,
+    tiolas: result.tiolas,
+    favorites: result.favorites,
+    visited: result.visited,
+    visitedStats: result.visitedStats,
+    badges: result.badges,
+    earnedBadges: result.earnedBadges,
+    nextBadge: result.nextBadge,
+    tiolaCount: result.tiolaCount,
+  });
 }
 
 async function forgotPassword(req, res) {
@@ -36,6 +63,7 @@ async function forgotPassword(req, res) {
 function resetPassword(req, res) {
   const result = authService.resetPassword(req);
   if (result.error) return fail(res, result.error, result.status);
+  authService.clearAuthCookie(res);
   return ok(res, { message: result.message });
 }
 
@@ -48,7 +76,8 @@ function verifyEmail(req, res) {
 async function changePassword(req, res) {
   const result = await authService.changePassword(req, req.user.id);
   if (result.error) return fail(res, result.error, result.status);
-  return ok(res, { message: result.message });
+  if (result.cookie) authService.setAuthCookie(res, result.cookie);
+  return ok(res, { message: result.message, user: result.user });
 }
 
 async function changeEmail(req, res) {
@@ -94,6 +123,7 @@ module.exports = {
   login,
   logout,
   me,
+  profile,
   forgotPassword,
   resetPassword,
   verifyEmail,

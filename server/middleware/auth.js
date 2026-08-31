@@ -2,6 +2,8 @@ const { verifyToken, sanitizeUser, findUserById } = require('../auth');
 const { fail } = require('../lib/apiResponse');
 const authService = require('../modules/auth/auth.service');
 
+const SESSION_EXPIRED_MSG = 'Oturum süresi doldu, lütfen tekrar giriş yapın';
+
 function loadUserFromToken(req) {
   const header = req.headers.authorization;
   const cookieToken = req.cookies?.tl_token;
@@ -9,25 +11,33 @@ function loadUserFromToken(req) {
   if (header?.startsWith('Bearer ')) raw = header.slice(7);
   else if (cookieToken) raw = cookieToken;
 
-  if (!raw) return { user: null, blocked: false };
+  if (!raw) return { user: null, reason: 'none' };
   try {
     const payload = verifyToken(raw);
     const row = findUserById(payload.id);
-    if (!row) return { user: null, blocked: false };
-    if (row.is_blocked) return { user: null, blocked: true };
+    if (!row) return { user: null, reason: 'invalid' };
+    if (row.is_blocked) return { user: null, blocked: true, reason: 'blocked' };
     if (row.password_changed_at && payload.iat) {
-      const raw = String(row.password_changed_at).trim();
-      const iso = raw.includes('T') ? raw : raw.replace(' ', 'T');
+      const changedRaw = String(row.password_changed_at).trim();
+      const iso = changedRaw.includes('T') ? changedRaw : changedRaw.replace(' ', 'T');
       const changedMs = Date.parse(iso.endsWith('Z') ? iso : `${iso}Z`);
       if (!Number.isNaN(changedMs)) {
         const changedAt = Math.floor(changedMs / 1000);
-        if (payload.iat < changedAt) return { user: null, blocked: false, stale: true };
+        if (payload.iat < changedAt) return { user: null, stale: true, reason: 'stale' };
       }
     }
-    return { user: sanitizeUser(row), blocked: false };
-  } catch {
-    return { user: null, blocked: false };
+    return { user: sanitizeUser(row), reason: 'ok' };
+  } catch (err) {
+    if (err && err.name === 'TokenExpiredError') {
+      return { user: null, expired: true, reason: 'expired' };
+    }
+    return { user: null, invalid: true, reason: 'invalid' };
   }
+}
+
+function rejectExpiredSession(res) {
+  authService.clearAuthCookie(res);
+  return fail(res, SESSION_EXPIRED_MSG, 401, { sessionExpired: true });
 }
 
 function authOptional(req, res, next) {
@@ -37,15 +47,12 @@ function authOptional(req, res, next) {
 }
 
 function authRequired(req, res, next) {
-  const { user, blocked, stale } = loadUserFromToken(req);
+  const { user, blocked, stale, expired, invalid } = loadUserFromToken(req);
   if (blocked) {
     authService.clearAuthCookie(res);
     return fail(res, 'Hesabınız engellenmiştir', 403);
   }
-  if (stale) {
-    authService.clearAuthCookie(res);
-    return fail(res, 'Oturum süresi doldu, lütfen tekrar giriş yapın', 401);
-  }
+  if (stale || expired || invalid) return rejectExpiredSession(res);
   if (!user) return fail(res, 'Giriş gerekli', 401);
   req.user = user;
   next();
@@ -60,4 +67,11 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authOptional, authRequired, requireRole };
+module.exports = {
+  loadUserFromToken,
+  authOptional,
+  authRequired,
+  requireRole,
+  SESSION_EXPIRED_MSG,
+  rejectExpiredSession,
+};

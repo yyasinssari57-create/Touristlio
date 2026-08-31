@@ -266,7 +266,26 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Blog listesinde sayfalama yok (ORTA-3 yalnızca mekân).
 - Seed blog gövdesi excerpt ile aynı (kısa).
 
-- [ORTA-7] Kullanıcı Sistemi Tamamlama
+## ORTA-7 (kullanıcı sistemi)
+
+- Tamamlandı: Express + statik HTML/JS (Next.js yok). Google puanı yok.
+  - Login/register (SPA overlay + `/login` + `/register`) sunucu hata metnini satır içi gösterir (`{ success:false, error }`, şifre politikası, KVKK, yinelenen e-posta).
+  - `GET /api/auth/me` girişsiz **200 `{ user: null }`** (ana sayfa “Giriş gerekli” toast’ı yok). JWT süresi dolmuş / geçersiz / şifre sonrası eski token → **401 `sessionExpired`** + `tl_token` çerezi silinir; istemci `setAuth(null)`.
+  - Favori `POST/DELETE /api/places/:id/save` `saved_places` tablosuna yazılır; giriş sonrası kalpler API’den yenilenir.
+  - `GET /api/auth/profile`: Tiola’lar, favoriler, gezilen ülkeler, rozetler. `/profile` ve SPA profil bunları gösterir.
+  - Şifre unutma / sıfırlama: token 1 saat, kullanılmış token geçersiz; sıfırlama eski oturumu düşürür. Şifre değiştirince yeni JWT verilir (e-posta değişimi oturumu düşürmez).
+  - E-posta doğrulama: `/verify-email?token=` + `POST /api/auth/verify-email`.
+- `npm run verify:user-system`
+- bcrypt cost 12 / min 12 karakter zayıflatılmadı.
+
+### Leftover
+- SMTP yoksa doğrulama / sıfırlama e-postası gitmez; token DB’de durur. Yasin `SMTP_*` yazmalı.
+- Argon2id yok (KRİTİK-6 leftover); bcrypt cost 12.
+- Çok cihazlı oturum listesi / “diğer cihazlardan çıkış” yok (tek JWT çerezi).
+- `REQUIRE_EMAIL_VERIFICATION=true` olmadıkça doğrulanmamış hesap giriş yapabilir (kayıt sonrası cookie).
+- `/profile` SPA’dan sade; blog yaz / bekleyenler sekmeleri yalnızca ana SPA profilde.
+- Redis oturum deposu yok.
+
 - [DÜŞÜK-1] Mobil Uyum Kontrolleri
 - [DÜŞÜK-2] Erişilebilirlik (Accessibility)
 - [DÜŞÜK-3] Loading States — Skeleton Loader
