@@ -212,7 +212,21 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Markers API 500 pin tavanı aynı (YÜKSEK-2 leftover).
 - Admin listeleri kendi `parsePagination` (max 100) — public helper’dan ayrı.
 
-- [ORTA-4] Anti-Bot / Sahte Oy Koruması
+## ORTA-4 (anti-bot / sahte oy)
+
+- Tamamlandı: Tiola ekleme ve beğeni (`POST /api/tiolas`, `POST /api/tiolas/:id/like`) IP + kullanıcı kimliği ile dakikada 5 istek. Redis (`REDIS_URL`) varsa paylaşımlı sayaç; yoksa süreç belleği.
+- CSRF token: `GET /api/csrf` + `tl_csrf` çerezi; mutating Tiola isteklerinde `X-CSRF-Token` (veya gövde `csrfToken`) çerezle eşleşmeli. Mevcut origin kontrolü duruyor. Karşılaştırma `timingSafeEqual`.
+- Aynı kullanıcı + mekân için ikinci yıldız oyu 409; kısmi unique index `idx_tiolas_unique_user_place_vote`.
+- Anormal davranış pino `event: anti_bot` ile loglanır: `rate_limit`, `duplicate_vote`, `csrf_fail`, `spam_tiola`, `store_error`.
+- `npm run verify:votes` — rate limit 429, duplicate 409, CSRF 403.
+- Google puanı yok; yalnızca Tiola kullanıcı oyu.
+
+### Leftover
+- Canlıda Redis yoksa limit instance bellek; Render free yeniden başlayınca sıfırlanır, birden fazla instance paylaşmaz. Yasin `REDIS_URL` (Upstash / Redis Cloud / Render Redis) eklemeli.
+- CSRF token yalnızca Tiola mutating uçlarına zorunlu; iletişim/kayıt hâlâ origin + honeypot + form limiter (YÜKSEK-7).
+- Unique index mevcut çift oyları en eski kaydı tutup diğerlerini `deleted` yapar; silinen satırlar istatistikte yok (ORTA-1 recompute onayda).
+- `redis` paketi yüklü; `REDIS_URL` boşken bağlanılmaz.
+
 - [ORTA-5] Veritabanı Index'leri — Filtreleme Performansı
 - [ORTA-6] Blog Sayfası Çalışır Hale Getir
 - [ORTA-7] Kullanıcı Sistemi Tamamlama

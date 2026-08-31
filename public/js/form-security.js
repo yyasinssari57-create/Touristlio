@@ -5,6 +5,46 @@
 (function (global) {
   let cachedKey = null;
   let scriptPromise = null;
+  let cachedCsrf = '';
+  let csrfPromise = null;
+
+  function readCsrfCookie() {
+    try {
+      const m = String(global.document?.cookie || '').match(/(?:^|; )tl_csrf=([^;]*)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    } catch {
+      return '';
+    }
+  }
+
+  async function ensureCsrf() {
+    const fromCookie = readCsrfCookie();
+    if (fromCookie) {
+      cachedCsrf = fromCookie;
+      return cachedCsrf;
+    }
+    if (cachedCsrf) return cachedCsrf;
+    if (csrfPromise) return csrfPromise;
+    csrfPromise = (async () => {
+      try {
+        const res = await fetch('/api/csrf', { credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        cachedCsrf = data.csrfToken || readCsrfCookie() || '';
+      } catch {
+        cachedCsrf = readCsrfCookie();
+      }
+      return cachedCsrf;
+    })();
+    try {
+      return await csrfPromise;
+    } finally {
+      csrfPromise = null;
+    }
+  }
+
+  function getCsrfToken() {
+    return cachedCsrf || readCsrfCookie();
+  }
 
   async function getSiteKey() {
     if (cachedKey !== null) return cachedKey;
@@ -12,6 +52,8 @@
       const res = await fetch('/api/config/public', { credentials: 'include' });
       const data = await res.json().catch(() => ({}));
       cachedKey = (data.recaptchaEnabled && data.recaptchaSiteKey) ? String(data.recaptchaSiteKey) : '';
+      if (data.csrfToken) cachedCsrf = String(data.csrfToken);
+      else if (!cachedCsrf) cachedCsrf = readCsrfCookie();
     } catch {
       cachedKey = '';
     }
@@ -55,14 +97,17 @@
   async function attach(payload, action) {
     const recaptchaToken = await token(action);
     const website = honeypotValue();
+    const csrfToken = await ensureCsrf();
     if (payload instanceof FormData) {
       if (recaptchaToken) payload.append('recaptchaToken', recaptchaToken);
       if (!payload.has('website')) payload.append('website', website);
+      if (csrfToken && !payload.has('csrfToken')) payload.append('csrfToken', csrfToken);
       return payload;
     }
     const next = payload && typeof payload === 'object' ? { ...payload } : {};
     if (recaptchaToken) next.recaptchaToken = recaptchaToken;
     next.website = website;
+    if (csrfToken) next.csrfToken = csrfToken;
     return next;
   }
 
@@ -84,5 +129,15 @@
     honeypotHtml,
     honeypotValue,
     getSiteKey,
+    ensureCsrf,
+    getCsrfToken,
   };
+
+  if (global.document) {
+    if (global.document.readyState === 'loading') {
+      global.document.addEventListener('DOMContentLoaded', () => { ensureCsrf(); });
+    } else {
+      ensureCsrf();
+    }
+  }
 })(window);

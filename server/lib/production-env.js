@@ -17,6 +17,12 @@ function validateProductionEnv() {
     });
   }
 
+  if (!String(process.env.REDIS_URL || process.env.RATE_LIMIT_REDIS_URL || '').trim()) {
+    logger.warn({
+      msg: 'Production: REDIS_URL not set — Tiola vote limiter uses in-process memory (resets on restart, not shared across instances). Set REDIS_URL for Redis-backed 5/min limits.',
+    });
+  }
+
   if (mailer.isConfigured()) {
     logger.info({ msg: 'SMTP configured for transactional email' });
   }

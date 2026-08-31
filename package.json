@@ -26,6 +26,7 @@
     "verify:tiolas": "node server/scripts/verify-tiola-visibility.js",
     "verify:filters": "node server/scripts/verify-search-filters.js",
     "verify:pagination": "node server/scripts/verify-pagination.js",
+    "verify:votes": "node server/scripts/verify-anti-bot.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",
@@ -51,6 +52,7 @@
     "nodemailer": "^7.0.11",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
+    "redis": "^4.7.1",
     "sharp": "^0.35.4"
   }
 }

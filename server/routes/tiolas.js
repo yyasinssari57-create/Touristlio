@@ -10,6 +10,9 @@ const { authOptional, authRequired } = require('../middleware/auth');
 
 const { sanitizeText } = require('../lib/sanitize');
 const { isHoneypotFilled } = require('../middleware/honeypot');
+const { csrfTokenRequired } = require('../middleware/csrf');
+const { tiolaVoteLimiter } = require('../middleware/tiolaVoteLimit');
+const { logAbnormal } = require('../lib/anti-bot-log');
 
 const { enrichTiolaLikes, toggleTiolaLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
@@ -290,7 +293,7 @@ router.get('/', authOptional, (req, res) => {
 
 
 
-router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), processImageUpload(), (req, res) => {
+router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.single('photo'), validateUploadedImage(), processImageUpload(), (req, res) => {
 
   if (isHoneypotFilled(req.body)) {
     return res.status(400).json({ error: 'Geçersiz istek' });
@@ -365,9 +368,13 @@ router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), 
       `).get(req.user.id, pid);
 
       if (existing) {
-
+        logAbnormal({
+          kind: 'duplicate_vote',
+          req,
+          userId: req.user.id,
+          extra: { placeId: pid, existingId: existing.id },
+        });
         return res.status(409).json({ error: 'Bu mekânı zaten puanladınız' });
-
       }
 
     }
@@ -378,39 +385,47 @@ router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), 
 
   const initialStatus = looksLikeSpam(cleanText) ? 'spam' : 'pending';
 
+  if (initialStatus === 'spam') {
+    logAbnormal({
+      kind: 'spam_tiola',
+      req,
+      userId: req.user.id,
+      extra: { placeId: pid || null },
+    });
+  }
+
   const photoPath = req.file ? req.file.filename : null;
 
-
-
-  const info = db.prepare(`
-
-    INSERT INTO tiolas (user_id, place_id, stars, category, text, photo_path, city_tag, country_tag, status, parent_id)
-
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-
-  `).run(
-
-    req.user.id,
-
-    pid,
-
-    parent ? null : starNum,
-
-    category ? sanitizeText(category, 60) || null : null,
-
-    cleanText,
-
-    photoPath,
-
-    cityTag ? sanitizeText(cityTag, 80) : null,
-
-    countryTag ? sanitizeText(countryTag, 80) : null,
-
-    initialStatus,
-
-    parent,
-
-  );
+  let info;
+  try {
+    info = db.prepare(`
+      INSERT INTO tiolas (user_id, place_id, stars, category, text, photo_path, city_tag, country_tag, status, parent_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      req.user.id,
+      pid,
+      parent ? null : starNum,
+      category ? sanitizeText(category, 60) || null : null,
+      cleanText,
+      photoPath,
+      cityTag ? sanitizeText(cityTag, 80) : null,
+      countryTag ? sanitizeText(countryTag, 80) : null,
+      initialStatus,
+      parent,
+    );
+  } catch (err) {
+    const unique = err && (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || String(err.message || '').includes('UNIQUE'));
+    if (unique && starNum && !parent && pid) {
+      logAbnormal({
+        kind: 'duplicate_vote',
+        req,
+        userId: req.user.id,
+        extra: { placeId: pid, constraint: true },
+      });
+      return res.status(409).json({ error: 'Bu mekânı zaten puanladınız' });
+    }
+    throw err;
+  }
 
 
 
@@ -436,7 +451,7 @@ router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), 
 
 
 
-router.post('/:id/like', authRequired, (req, res) => {
+router.post('/:id/like', authRequired, csrfTokenRequired, tiolaVoteLimiter, (req, res) => {
 
   const id = Number(req.params.id);
 
@@ -456,7 +471,7 @@ router.post('/:id/like', authRequired, (req, res) => {
 
 
 
-router.delete('/:id', authRequired, (req, res) => {
+router.delete('/:id', authRequired, csrfTokenRequired, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
 

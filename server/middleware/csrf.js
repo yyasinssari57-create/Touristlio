@@ -1,4 +1,10 @@
+const crypto = require('crypto');
 const { fail } = require('../lib/apiResponse');
+const { logAbnormal } = require('../lib/anti-bot-log');
+
+const CSRF_COOKIE = 'tl_csrf';
+const CSRF_HEADER = 'x-csrf-token';
+const TOKEN_BYTES = 32;
 
 function siteOrigin() {
   const base = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -61,7 +67,103 @@ function csrfProtection(req, res, next) {
   const { origin, referer } = req.headers;
 
   if (isAllowedOrigin(origin, referer, allowed)) return next();
+  logAbnormal({ kind: 'csrf_fail', req, extra: { reason: 'origin' } });
   return fail(res, 'İstek reddedildi (CSRF)', 403);
 }
 
-module.exports = { csrfProtection, siteOrigin };
+function cookieOpts() {
+  return {
+    httpOnly: false,
+    secure: process.env.COOKIE_SECURE === 'true'
+      || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'),
+    sameSite: process.env.COOKIE_SAMESITE || 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  };
+}
+
+function newCsrfToken() {
+  return crypto.randomBytes(TOKEN_BYTES).toString('hex');
+}
+
+function isHexToken(value) {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value);
+}
+
+function tokensEqual(a, b) {
+  if (!a || !b) return false;
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  if (left.length !== right.length) {
+    crypto.timingSafeEqual(left, left);
+    return false;
+  }
+  return crypto.timingSafeEqual(left, right);
+}
+
+function readCsrfCookie(req) {
+  const raw = req.cookies?.[CSRF_COOKIE];
+  return isHexToken(raw) ? raw : '';
+}
+
+function tokenFromRequest(req) {
+  const header = req.get(CSRF_HEADER) || req.get('X-CSRF-Token') || '';
+  if (header) return String(header).trim();
+  const body = req.body || {};
+  if (body.csrfToken) return String(body.csrfToken).trim();
+  if (body._csrf) return String(body._csrf).trim();
+  return '';
+}
+
+/**
+ * Issue or reuse a double-submit CSRF cookie. Returns the token.
+ */
+function issueCsrfCookie(req, res) {
+  const existing = readCsrfCookie(req);
+  if (existing) {
+    req.csrfToken = existing;
+    return existing;
+  }
+  const token = newCsrfToken();
+  res.cookie(CSRF_COOKIE, token, cookieOpts());
+  req.csrfToken = token;
+  return token;
+}
+
+/**
+ * Double-submit CSRF token check for Tiola mutating requests.
+ * Requires X-CSRF-Token (or body csrfToken) to match the tl_csrf cookie.
+ */
+function csrfTokenRequired(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+  const cookieToken = readCsrfCookie(req);
+  const sent = tokenFromRequest(req);
+  if (!cookieToken || !sent || !tokensEqual(cookieToken, sent)) {
+    logAbnormal({
+      kind: 'csrf_fail',
+      req,
+      extra: {
+        reason: !cookieToken ? 'missing_cookie' : (!sent ? 'missing_token' : 'mismatch'),
+      },
+    });
+    return fail(res, 'İstek reddedildi (CSRF)', 403);
+  }
+  return next();
+}
+
+function csrfTokenHandler(req, res) {
+  const csrfToken = issueCsrfCookie(req, res);
+  res.json({ csrfToken });
+}
+
+module.exports = {
+  csrfProtection,
+  csrfTokenRequired,
+  csrfTokenHandler,
+  issueCsrfCookie,
+  tokenFromRequest,
+  tokensEqual,
+  siteOrigin,
+  CSRF_COOKIE,
+};

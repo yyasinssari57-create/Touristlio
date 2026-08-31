@@ -795,6 +795,13 @@ function apiErrorMessage(data) {
 window.api = async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   const isForm = opts.body instanceof FormData;
+  const method = String(opts.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !headers['X-CSRF-Token'] && !headers['x-csrf-token']) {
+    const csrf = window.TL_FORM_SECURITY
+      ? (window.TL_FORM_SECURITY.getCsrfToken() || await window.TL_FORM_SECURITY.ensureCsrf())
+      : '';
+    if (csrf) headers['X-CSRF-Token'] = csrf;
+  }
   if (!isForm && opts.body != null) headers['Content-Type'] = 'application/json';
   const body = isForm ? opts.body : (opts.body != null ? JSON.stringify(opts.body) : undefined);
   const res = await fetch(API + path, { ...opts, headers, body, credentials: 'include' });

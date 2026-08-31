@@ -12,7 +12,7 @@ const { validateProductionEnv } = require('./lib/production-env');
 const { apiLimiter, adminLimiter } = require('./middleware/rateLimit');
 const { clear: clearCache } = require('./lib/cache');
 const { authRequired, requireRole } = require('./middleware/auth');
-const { csrfProtection } = require('./middleware/csrf');
+const { csrfProtection, csrfTokenHandler, issueCsrfCookie } = require('./middleware/csrf');
 const { uploadsStaticHeaders } = require('./middleware/uploads-static');
 const { uploadsSrcsetFallback } = require('./middleware/uploads-srcset');
 const { staticAssetHeaders } = require('./middleware/static-cache');
@@ -144,6 +144,7 @@ app.use(express.static(PUBLIC_DIR, {
 }));
 
 app.use('/api/auth', csrfProtection, authRoutes);
+app.get('/api/csrf', csrfTokenHandler);
 app.use('/api/places', placesRoutes);
 app.use('/api/tiolas', csrfProtection, tiolasRoutes);
 app.use('/api/blogs', csrfProtection, blogsRoutes);
@@ -176,11 +177,13 @@ app.get('/api/stats', (_req, res) => {
   }
 });
 
-app.get('/api/config/public', (_req, res) => {
+app.get('/api/config/public', (req, res) => {
   const settingsService = require('./modules/settings/settings.service');
+  const csrfToken = issueCsrfCookie(req, res);
   res.json({
     affiliateEnabled: process.env.AFFILIATE_ENABLED === 'true',
     siteUrl: process.env.SITE_URL || 'http://localhost:3000',
+    csrfToken,
     ...settingsService.getPublic(),
     ...publicRecaptchaConfig(),
   });
