@@ -3,6 +3,7 @@
  * Ratings/reviews are Tiola (user-generated) only — never Google.
  */
 const { siteBaseUrl, absUrl, canonicalFor, stripEnPrefix } = require('./seo');
+const { sanitizeText } = require('./sanitize');
 
 const LOGO_PATH = '/images/logo.webp';
 const AGENCY_DESCRIPTION = 'Topluluk tabanlı seyahat rehberliği platformu';
@@ -114,7 +115,7 @@ function reviewSchema(tiola, place) {
       '@type': 'Person',
       name: tiola.userName || tiola.user_name || 'Gezgin',
     },
-    reviewBody: tiola.text ? String(tiola.text).slice(0, 5000) : undefined,
+    reviewBody: tiola.text ? sanitizeText(tiola.text, 5000) : undefined,
     datePublished: toIso(tiola.createdAt || tiola.created_at),
   };
   const stars = Number(tiola.stars);

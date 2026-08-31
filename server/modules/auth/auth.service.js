@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const { unlinkImageAndVariants } = require('../../lib/image-process');
 const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById, needsRehash } = require('../../auth');
 const { AVATAR_PRESETS, AVATAR_COLORS, isValidPreset, isValidColor } = require('../../lib/avatars');
+const { sanitizeName, isValidEmail } = require('../../lib/sanitize');
 const authModel = require('./auth.model');
 const logger = require('../../lib/logger');
 const mailer = require('../../lib/mailer');
@@ -55,7 +56,11 @@ function isLocalDevEmail(email) {
 async function register(req) {
   const err = validationError(req);
   if (err) return { error: err, status: 400 };
-  const { name, email, password } = req.body;
+  const name = sanitizeName(req.body.name, 120);
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const { password } = req.body;
+  if (!name || name.length < 2) return { error: 'Ad en az 2 karakter olmalı', status: 400 };
+  if (!isValidEmail(email)) return { error: 'Geçerli e-posta girin', status: 400 };
   if (authModel.findByEmail(email)) {
     return { error: 'Bu e-posta zaten kayıtlı', status: 409 };
   }

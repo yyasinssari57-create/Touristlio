@@ -4,8 +4,11 @@ const express = require('express');
 const multer = require('multer');
 const { body } = require('express-validator');
 const { authRequired } = require('../../middleware/auth');
-const { authLimiter } = require('../../middleware/rateLimit');
+const { authLimiter, formLimiter } = require('../../middleware/rateLimit');
 const { fail } = require('../../lib/apiResponse');
+const { isValidEmail, EMAIL_RE } = require('../../lib/sanitize');
+const { recaptchaGuard } = require('../../middleware/recaptcha');
+const { honeypotGuard } = require('../../middleware/honeypot');
 const controller = require('./auth.controller');
 const { imageFileFilter, validateUploadedImage } = require('../../lib/image-mime');
 const { processImageUpload } = require('../../middleware/process-image-upload');
@@ -35,9 +38,16 @@ const passwordRules = () =>
     .matches(/[A-Z]/).withMessage('Şifre en az bir büyük harf içermeli')
     .matches(/[0-9]/).withMessage('Şifre en az bir rakam içermeli');
 
-router.post('/register', authLimiter, [
+const emailRule = (message = 'Geçerli e-posta girin') =>
+  body('email').trim().custom((v) => {
+    const email = String(v || '').trim();
+    if (!isValidEmail(email) || !EMAIL_RE.test(email)) throw new Error(message);
+    return true;
+  });
+
+router.post('/register', formLimiter, authLimiter, recaptchaGuard('register'), honeypotGuard(), [
   body('name').trim().isLength({ min: 2 }).withMessage('Ad en az 2 karakter olmalı'),
-  body('email').trim().isEmail().withMessage('Geçerli e-posta girin'),
+  emailRule(),
   passwordRules(),
   body('kvkkAccepted').custom((v) => {
     if (v === true || v === 'true') return true;
@@ -45,16 +55,16 @@ router.post('/register', authLimiter, [
   }),
 ], controller.register);
 
-router.post('/login', authLimiter, [
-  body('email').trim().isEmail().withMessage('Geçerli e-posta girin'),
+router.post('/login', authLimiter, recaptchaGuard('login'), [
+  emailRule(),
   body('password').notEmpty().withMessage('Şifre gerekli'),
 ], controller.login);
 
 router.post('/logout', controller.logout);
 router.get('/me', authRequired, controller.me);
 
-router.post('/forgot-password', authLimiter, [
-  body('email').trim().isEmail().withMessage('Geçerli e-posta girin'),
+router.post('/forgot-password', formLimiter, authLimiter, recaptchaGuard('forgot'), [
+  emailRule(),
 ], controller.forgotPassword);
 
 router.post('/reset-password', authLimiter, [
@@ -72,7 +82,7 @@ router.post('/change-password', authRequired, authLimiter, [
 ], controller.changePassword);
 
 router.post('/change-email', authRequired, authLimiter, [
-  body('email').trim().isEmail().withMessage('Geçerli e-posta girin'),
+  emailRule(),
   body('password').notEmpty().withMessage('Şifre gerekli'),
 ], controller.changeEmail);
 

@@ -9,6 +9,7 @@ const { db } = require('../db');
 const { authOptional, authRequired } = require('../middleware/auth');
 
 const { sanitizeText } = require('../lib/sanitize');
+const { isHoneypotFilled } = require('../middleware/honeypot');
 
 const { enrichTiolaLikes, toggleTiolaLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
@@ -290,6 +291,10 @@ router.get('/', authOptional, (req, res) => {
 
 router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), processImageUpload(), (req, res) => {
 
+  if (isHoneypotFilled(req.body)) {
+    return res.status(400).json({ error: 'Geçersiz istek' });
+  }
+
   const { text, stars, category, placeId, cityTag, countryTag, parentId } = req.body || {};
 
   const cleanText = sanitizeText(text, 2000);
@@ -390,7 +395,7 @@ router.post('/', authRequired, upload.single('photo'), validateUploadedImage(), 
 
     parent ? null : starNum,
 
-    category || null,
+    category ? sanitizeText(category, 60) || null : null,
 
     cleanText,
 

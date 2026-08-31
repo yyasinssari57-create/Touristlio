@@ -20,6 +20,14 @@ function validateProductionEnv() {
   if (mailer.isConfigured()) {
     logger.info({ msg: 'SMTP configured for transactional email' });
   }
+
+  const siteKey = String(process.env.RECAPTCHA_SITE_KEY || '').trim();
+  const secret = String(process.env.RECAPTCHA_SECRET || '').trim();
+  if (!siteKey || !secret) {
+    logger.warn({
+      msg: 'Production: RECAPTCHA_SITE_KEY / RECAPTCHA_SECRET not set — forms work without reCAPTCHA v3. Set both in env to enable invisible v3.',
+    });
+  }
 }
 
 module.exports = { validateProductionEnv };

@@ -19,6 +19,9 @@
   <input class="ain" id="regName" type="text" data-i18n-placeholder="authName" placeholder="Ad Soyad"/>
   <input class="ain" id="regEmail" type="email" data-i18n-placeholder="authEmail" placeholder="E-posta"/>
   <input class="ain" id="regPass" type="password" data-i18n-placeholder="authPassMin" placeholder="Şifre (min 12 karakter)"/>
+  <div class="tl-hp" aria-hidden="true">
+    <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"/></label>
+  </div>
   <label class="kvkk-check"><input type="checkbox" id="gC"/> <span data-i18n-html="authKvkkLabel">KVKK ve Kullanım Şartları kabul ediyorum</span></label>
   <button class="btn bp" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
   <p class="auth-page-link"><span data-i18n="hasAccount">Zaten hesabınız var mı?</span> <a href="/login" data-i18n="login">Giriş Yap</a></p>
@@ -28,10 +31,12 @@
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
 <script src="/js/toast.js?v=__APP_VERSION__"></script>
+<script src="/js/form-security.js?v=__APP_VERSION__"></script>
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
 function t(k){ return window.TL_I18N.t(lang,k); }
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function authErrorMessage(data) {
   if (typeof data?.error === 'string' && data.error) return data.error;
   if (Array.isArray(data?.errors) && data.errors[0]?.msg) return data.errors[0].msg;
@@ -39,17 +44,22 @@ function authErrorMessage(data) {
 }
 async function doReg(){
   if(!gC.checked){ alert(t('kvkkRequired')); return; }
+  const email = regEmail.value.trim();
+  if(!EMAIL_RE.test(email)){ alert(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
   try {
+    const body = await window.TL_FORM_SECURITY.attach({
+      name: regName.value, email, password: regPass.value, kvkkAccepted: true,
+    }, 'register');
     const res = await fetch('/api/auth/register', {
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name: regName.value, email: regEmail.value, password: regPass.value, kvkkAccepted: true }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if(!res.ok) throw new Error(authErrorMessage(data));
-    const payload = data.data || data;
-    localStorage.setItem('tl_user', JSON.stringify(payload.user));
-    const verifyMsg = payload.emailVerificationSent !== false
+    const result = data.data || data;
+    localStorage.setItem('tl_user', JSON.stringify(result.user));
+    const verifyMsg = result.emailVerificationSent !== false
       ? t('registerSuccessVerify')
       : t('registerSuccess');
     window.TL_TOAST?.success(verifyMsg);

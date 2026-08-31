@@ -20,6 +20,7 @@ const { sendPublicHtml, publicHtmlMiddleware, htmlPageRoutesMiddleware } = requi
 const { getAppVersion } = require('./lib/app-version');
 const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require('./lib/cors-origins');
 const { canonicalHostMiddleware } = require('./middleware/canonical-host');
+const { recaptchaConfig, publicRecaptchaConfig } = require('./middleware/recaptcha');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -56,6 +57,10 @@ app.use(canonicalHostMiddleware());
 
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 const { apiPreflightMiddleware } = require('./middleware/api-preflight');
+const recaptchaOn = recaptchaConfig().enabled;
+const recaptchaSrc = recaptchaOn
+  ? ['https://www.google.com', 'https://www.gstatic.com', 'https://www.recaptcha.net']
+  : [];
 
 app.use(apiPreflightMiddleware(corsOrigins));
 
@@ -63,14 +68,15 @@ app.use(helmet({
   contentSecurityPolicy: isProd ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com', ...recaptchaSrc],
       scriptSrcAttr: ["'unsafe-inline'"],
       // unsafe-inline: index.html critical <style> + admin panel visibility toggles (style="" / el.style)
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
-      connectSrc: getConnectSrcOrigins(),
+      connectSrc: [...getConnectSrcOrigins(), ...recaptchaSrc],
+      frameSrc: recaptchaOn ? recaptchaSrc : ["'self'"],
       frameAncestors: ["'self'"],
     },
   } : false,
@@ -176,6 +182,7 @@ app.get('/api/config/public', (_req, res) => {
     affiliateEnabled: process.env.AFFILIATE_ENABLED === 'true',
     siteUrl: process.env.SITE_URL || 'http://localhost:3000',
     ...settingsService.getPublic(),
+    ...publicRecaptchaConfig(),
   });
 });
 

@@ -239,7 +239,8 @@ async function submitTiolaReply(parentId, placeId) {
   fd.append('parentId', parentId);
   if (placeId) fd.append('placeId', placeId);
   try {
-    const data = await api('/tiolas', { method: 'POST', body: fd });
+    const body = await (window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.attach(fd, 'tiola') : fd);
+    const data = await api('/tiolas', { method: 'POST', body });
     window.TL_TOAST?.success(data.message || t('tiolaPending'));
     if (ta) ta.value = '';
     toggleReplyForm(parentId);
@@ -1716,7 +1717,8 @@ async function postTiola() {
   const photo = document.getElementById('rfPhoto')?.files?.[0];
   if (photo) fd.append('photo', photo);
   try {
-    const data = await api('/tiolas', { method: 'POST', body: fd });
+    const body = await (window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.attach(fd, 'tiola') : fd);
+    const data = await api('/tiolas', { method: 'POST', body });
     window.TL_TOAST?.success(data.message || t('tiolaPending'));
     document.getElementById('rfTxt').value = '';
     document.getElementById('rfPhoto').value = '';
@@ -2244,7 +2246,8 @@ async function submitArc() {
   const photo = document.getElementById('arcPhoto')?.files?.[0];
   if (photo) fd.append('photo', photo);
   try {
-    const data = await api('/tiolas', { method: 'POST', body: fd });
+    const body = await (window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.attach(fd, 'tiola') : fd);
+    const data = await api('/tiolas', { method: 'POST', body });
     alert(data.message || t('tiolaPending'));
     document.getElementById('arcTxt').value = '';
     document.getElementById('arcPhoto').value = '';
@@ -2263,11 +2266,14 @@ async function submitBlog() {
   const body = document.getElementById('blogBody').value.trim();
   if (!title || !body) { window.TL_TOAST?.warning(t('titleRequired')); return; }
   try {
+    const payload = await (window.TL_FORM_SECURITY
+      ? window.TL_FORM_SECURITY.attach({
+        title, body, category: document.getElementById('blogCat').value,
+      }, 'blog')
+      : { title, body, category: document.getElementById('blogCat').value });
     const data = await api('/blogs', {
       method: 'POST',
-      body: {
-        title, body, category: document.getElementById('blogCat').value,
-      },
+      body: payload,
     });
     window.TL_TOAST?.success(data.message || t('tiolaPending'));
     document.getElementById('blogTitle').value = '';
@@ -2298,11 +2304,13 @@ function buildAuthForm(m) {
     document.getElementById('authForm').innerHTML = m === 'login'
     ? `<input class="ain" id="loginEmail" type="email" placeholder="${t('authEmail')}"/>
        <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}"/>
+       ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <button class="btn bp" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
        <p class="auth-page-link" style="margin-top:10px"><a href="#" onclick="doForgotPassword();return false">${t('forgotPassword')}</a></p>`
     : `<input class="ain" id="regName" type="text" placeholder="${t('authName')}"/>
        <input class="ain" id="regEmail" type="email" placeholder="${t('authEmail')}"/>
        <input class="ain" id="regPass" type="password" placeholder="${t('authPassMin')}"/>
+       ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <div style="display:flex;gap:6px;align-items:flex-start;font-size:.68rem;color:var(--t2);margin-bottom:8px">
          <input type="checkbox" id="gC" style="accent-color:var(--b);margin-top:2px"/>
          <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${lang === 'en' ? 'I accept' : 'kabul ediyorum'}</label>
@@ -2319,23 +2327,41 @@ async function doForgotPassword() {
     window.TL_TOAST?.warning(t('authEmailRequired'));
     return;
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    window.TL_TOAST?.warning(t('contactEmailInvalid') || 'Geçerli e-posta girin');
+    return;
+  }
   try {
+    const body = await (window.TL_FORM_SECURITY
+      ? window.TL_FORM_SECURITY.attach({ email }, 'forgot')
+      : { email });
     const data = await api('/auth/forgot-password', {
       method: 'POST',
-      body: { email },
+      body,
     });
     window.TL_TOAST?.success(data.message || t('forgotPasswordSent'));
   } catch { /* toast from api */ }
 }
 
 async function doLoginSubmit() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    window.TL_TOAST?.warning(t('contactEmailInvalid') || 'Geçerli e-posta girin');
+    return;
+  }
   try {
+    const body = await (window.TL_FORM_SECURITY
+      ? window.TL_FORM_SECURITY.attach({
+        email,
+        password: document.getElementById('loginPass').value,
+      }, 'login')
+      : {
+        email,
+        password: document.getElementById('loginPass').value,
+      });
     const data = await api('/auth/login', {
       method: 'POST',
-      body: {
-        email: document.getElementById('loginEmail').value,
-        password: document.getElementById('loginPass').value,
-      },
+      body,
     });
     setAuth(data.user);
     closeAuth();
@@ -2347,15 +2373,28 @@ async function doLoginSubmit() {
 
 async function doRegSubmit() {
   if (!document.getElementById('gC')?.checked) { window.TL_TOAST?.warning(t('kvkkRequired')); return; }
+  const email = document.getElementById('regEmail').value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    window.TL_TOAST?.warning(t('contactEmailInvalid') || 'Geçerli e-posta girin');
+    return;
+  }
   try {
-    const data = await api('/auth/register', {
-      method: 'POST',
-      body: {
+    const body = await (window.TL_FORM_SECURITY
+      ? window.TL_FORM_SECURITY.attach({
         name: document.getElementById('regName').value,
-        email: document.getElementById('regEmail').value,
+        email,
         password: document.getElementById('regPass').value,
         kvkkAccepted: true,
-      },
+      }, 'register')
+      : {
+        name: document.getElementById('regName').value,
+        email,
+        password: document.getElementById('regPass').value,
+        kvkkAccepted: true,
+      });
+    const data = await api('/auth/register', {
+      method: 'POST',
+      body,
     });
     setAuth(data.user);
     const verifyMsg = data.emailVerificationSent !== false

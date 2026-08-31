@@ -1,0 +1,300 @@
+/**
+ * [YÜKSEK-7] Form security: XSS sanitization, email regex, honeypot, rate limit, optional reCAPTCHA.
+ * Usage: node server/scripts/verify-form-security.js
+ * Optional: VERIFY_FORMS_URL=http://127.0.0.1:3047 node server/scripts/verify-form-security.js
+ */
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const { spawn } = require('child_process');
+const {
+  sanitizeText,
+  sanitizeName,
+  isValidEmail,
+  EMAIL_RE,
+  escapeHtml,
+} = require('../lib/sanitize');
+const { isHoneypotFilled } = require('../middleware/honeypot');
+const { recaptchaConfig, publicRecaptchaConfig, tokenFromRequest } = require('../middleware/recaptcha');
+
+const ROOT = path.join(__dirname, '..', '..');
+let failed = 0;
+function ok(msg) { console.log('  ✓', msg); }
+function fail(msg) {
+  console.error('  ✗', msg);
+  failed += 1;
+}
+
+console.log('verify-form-security');
+
+const xss = '<script>alert(1)</script>Merhaba';
+const cleaned = sanitizeText(xss, 2000);
+if (cleaned.includes('<script') || cleaned.includes('alert(1)')) fail('sanitizeText left script markup');
+else ok('sanitizeText strips script tags');
+if (!cleaned.includes('Merhaba')) fail('sanitizeText dropped surrounding text');
+else ok('sanitizeText keeps plain text');
+
+const img = sanitizeText('<img src=x onerror=alert(1)>Tiola yorumu', 2000);
+if (/onerror|<|>/i.test(img) && img.includes('onerror')) fail('sanitizeText left event handler');
+else ok('sanitizeText strips img onerror');
+if (!img.includes('Tiola yorumu')) fail('sanitizeText dropped Tiola text');
+else ok('sanitizeText keeps Tiola user text');
+
+const named = sanitizeName('<b>Yasin</b>');
+if (named !== 'Yasin') fail(`sanitizeName expected Yasin, got ${JSON.stringify(named)}`);
+else ok('sanitizeName strips tags');
+
+if (!EMAIL_RE.test('yasin@touristlio.com')) fail('EMAIL_RE rejected valid address');
+else ok('EMAIL_RE accepts valid email');
+if (EMAIL_RE.test('not-an-email') || EMAIL_RE.test('a@b') || isValidEmail('<script>@x.com')) {
+  fail('email validator too loose');
+} else ok('email validator rejects invalid / XSS');
+if (!isValidEmail('user@example.com')) fail('isValidEmail rejected user@example.com');
+else ok('isValidEmail matches audit regex');
+
+if (!isHoneypotFilled({ website: 'http://spam.example' })) fail('honeypot missed website field');
+else ok('honeypot detects website');
+if (isHoneypotFilled({ website: '' }) || isHoneypotFilled({ name: 'Yasin' })) fail('honeypot false positive');
+else ok('empty honeypot is ignored');
+
+if (escapeHtml('<x>').includes('<')) fail('escapeHtml left bracket');
+else ok('escapeHtml encodes brackets');
+
+const prevSite = process.env.RECAPTCHA_SITE_KEY;
+const prevSecret = process.env.RECAPTCHA_SECRET;
+delete process.env.RECAPTCHA_SITE_KEY;
+delete process.env.RECAPTCHA_SECRET;
+if (recaptchaConfig().enabled) fail('reCAPTCHA enabled without keys');
+else ok('reCAPTCHA skipped when keys missing');
+if (publicRecaptchaConfig().recaptchaSiteKey) fail('public config leaked site key without enable');
+else ok('public config hides site key when disabled');
+process.env.RECAPTCHA_SITE_KEY = 'site-for-test-not-secret';
+process.env.RECAPTCHA_SECRET = 'secret-for-test-not-a-real-key';
+if (!recaptchaConfig().enabled) fail('reCAPTCHA should enable when both env vars set');
+else ok('reCAPTCHA enables when both env vars set');
+if (tokenFromRequest({ body: { recaptchaToken: 'abc' }, headers: {} }) !== 'abc') {
+  fail('tokenFromRequest missed recaptchaToken');
+} else ok('tokenFromRequest reads body token');
+if (prevSite == null) delete process.env.RECAPTCHA_SITE_KEY;
+else process.env.RECAPTCHA_SITE_KEY = prevSite;
+if (prevSecret == null) delete process.env.RECAPTCHA_SECRET;
+else process.env.RECAPTCHA_SECRET = prevSecret;
+
+const contactHtml = fs.readFileSync(path.join(ROOT, 'public', 'legal', 'contact.html'), 'utf8');
+if (!contactHtml.includes('name="website"') || !contactHtml.includes('tl-hp')) fail('contact form missing honeypot');
+else ok('contact honeypot markup');
+if (!contactHtml.includes('/js/form-security.js')) fail('contact.html missing form-security.js');
+else ok('contact loads form-security.js');
+if (!contactHtml.includes('[^\\s@]+@') || !contactHtml.includes('EMAIL_RE')) {
+  fail('contact.html missing email regex');
+} else ok('contact client email regex');
+
+const fsJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'form-security.js'), 'utf8');
+if (!fsJs.includes('grecaptcha') || !fsJs.includes('recaptchaSiteKey')) fail('form-security.js missing reCAPTCHA client');
+else ok('form-security.js reCAPTCHA helper');
+
+const indexHtml = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
+if (!indexHtml.includes('/js/form-security.js')) fail('index.html missing form-security.js');
+else ok('index.html loads form-security.js');
+
+function postJson(url, body, extraHeaders) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const payload = JSON.stringify(body);
+    const req = http.request({
+      hostname: u.hostname,
+      port: u.port,
+      path: u.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        Origin: `${u.protocol}//${u.host}`,
+        ...(extraHeaders || {}),
+      },
+      timeout: 10000,
+    }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        let json = {};
+        try { json = JSON.parse(data); } catch { /* ignore */ }
+        resolve({ status: res.statusCode, json, body: data });
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.write(payload);
+    req.end();
+  });
+}
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, { timeout: 10000 }, (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => {
+        let json = {};
+        try { json = JSON.parse(body); } catch { /* ignore */ }
+        resolve({ status: res.statusCode, json, body });
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+function waitForServer(url, tries) {
+  const max = tries || 40;
+  return new Promise((resolve, reject) => {
+    let n = 0;
+    const tick = () => {
+      n += 1;
+      const req = http.get(url, { timeout: 1000 }, (res) => {
+        res.resume();
+        resolve();
+      });
+      req.on('error', () => {
+        if (n >= max) reject(new Error('server did not start'));
+        else setTimeout(tick, 150);
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        if (n >= max) reject(new Error('server did not start'));
+        else setTimeout(tick, 150);
+      });
+    };
+    tick();
+  });
+}
+
+async function checkLive(base) {
+  const root = base.replace(/\/$/, '');
+  const cfg = await fetchJson(`${root}/api/config/public`);
+  if (cfg.status !== 200) fail(`GET /api/config/public HTTP ${cfg.status}`);
+  else ok('GET /api/config/public HTTP 200');
+  if (cfg.json.recaptchaEnabled) fail('recaptchaEnabled should be false without keys');
+  else ok('recaptchaEnabled false without keys');
+  if (cfg.json.recaptchaSiteKey) fail('site key exposed without enable');
+  else ok('site key omitted when disabled');
+
+  const contactPage = await fetchJson(`${root}/legal/contact.html`);
+  if (contactPage.status !== 200) fail(`GET contact.html HTTP ${contactPage.status}`);
+  else ok('GET /legal/contact.html 200');
+  if (!contactPage.body.includes('name="website"')) fail('served contact missing honeypot');
+  else ok('served contact includes honeypot');
+  if (!contactPage.body.includes('form-security.js')) fail('served contact missing form-security.js');
+  else ok('served contact includes form-security.js');
+
+  const badEmail = await postJson(`${root}/api/contact`, {
+    name: 'Yasin Test',
+    email: 'not-an-email',
+    subject: 'Form güvenlik testi',
+    message: 'Bu mesaj e-posta doğrulaması için yeterince uzun.',
+  });
+  if (badEmail.status !== 400) fail(`invalid email HTTP ${badEmail.status}, expected 400`);
+  else ok('invalid email rejected 400');
+
+  const xssBody = await postJson(`${root}/api/contact`, {
+    name: '<script>alert(1)</script>Yasin',
+    email: 'form-security-verify@touristlio.local',
+    subject: '<img src=x onerror=alert(1)>Konu',
+    message: '<script>document.cookie</script>Gezi hakkında bir mesaj yazıyorum.',
+  });
+  if (xssBody.status !== 200) fail(`sanitized XSS contact HTTP ${xssBody.status}: ${xssBody.body.slice(0, 180)}`);
+  else ok('XSS payload accepted after sanitization (200)');
+
+  const honey = await postJson(`${root}/api/contact`, {
+    name: 'Bot User',
+    email: 'bot@example.com',
+    subject: 'Spam subject here',
+    message: 'This is a honeypot filled spam message.',
+    website: 'https://spam.example',
+  });
+  if (honey.status !== 200) fail(`honeypot HTTP ${honey.status}`);
+  else ok('honeypot returns fake success');
+  if (!honey.json.ok && !honey.json.message) fail('honeypot missing success payload');
+  else ok('honeypot success payload');
+
+  const fourth = await postJson(`${root}/api/contact`, {
+    name: 'Yasin',
+    email: 'yasin-rate@touristlio.local',
+    subject: 'Rate limit check',
+    message: 'Dördüncü gönderim rate limit için.',
+  });
+  if (fourth.status !== 429) fail(`4th form POST HTTP ${fourth.status}, expected 429`);
+  else ok('4th submission rate-limited 429 (3 / 5 min)');
+}
+
+async function checkRecaptchaRequired(base) {
+  const root = base.replace(/\/$/, '');
+  const missing = await postJson(`${root}/api/contact`, {
+    name: 'Yasin',
+    email: 'yasin@touristlio.local',
+    subject: 'reCAPTCHA required',
+    message: 'Anahtar varken token zorunlu olmalı.',
+  });
+  if (missing.status !== 400) fail(`keys-on missing token HTTP ${missing.status}, expected 400`);
+  else ok('reCAPTCHA required when keys set (missing token → 400)');
+  if (!String(missing.json.error || '').toLowerCase().includes('güvenlik')) {
+    fail(`expected güvenlik error, got ${JSON.stringify(missing.json)}`);
+  } else ok('reCAPTCHA error copy');
+}
+
+function spawnServer(port, extraEnv) {
+  return spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')], {
+    cwd: ROOT,
+    env: {
+      ...process.env,
+      PORT: String(port),
+      NODE_ENV: 'development',
+      SITEMAP_ON_START: 'false',
+      LIVE_DATA_CRON: 'false',
+      RECAPTCHA_SITE_KEY: '',
+      RECAPTCHA_SECRET: '',
+      ...extraEnv,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+async function withServer(port, extraEnv, fn) {
+  const child = spawnServer(port, extraEnv);
+  let stderr = '';
+  child.stderr.on('data', (c) => { stderr += c; });
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    await waitForServer(base, 50);
+    await fn(base);
+  } catch (e) {
+    fail(`live server :${port}: ${e.message}${stderr ? ` (${stderr.slice(0, 220)})` : ''}`);
+  } finally {
+    child.kill('SIGTERM');
+    await new Promise((r) => setTimeout(r, 200));
+    try { child.kill('SIGKILL'); } catch { /* ignore */ }
+  }
+}
+
+async function main() {
+  const given = process.env.VERIFY_FORMS_URL;
+  if (given) {
+    await checkLive(given);
+  } else {
+    await withServer(process.env.VERIFY_FORMS_PORT || '3047', {}, checkLive);
+    await withServer(process.env.VERIFY_FORMS_RECAPTCHA_PORT || '3048', {
+      RECAPTCHA_SITE_KEY: 'test-site-key-not-secret',
+      RECAPTCHA_SECRET: 'test-secret-not-a-real-key',
+    }, checkRecaptchaRequired);
+  }
+  if (failed) {
+    console.error(`verify-form-security: ${failed} failed`);
+    process.exit(1);
+  }
+  console.log('verify-form-security: ok');
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

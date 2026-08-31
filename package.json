@@ -22,6 +22,7 @@
     "verify:jsonld": "node server/scripts/verify-jsonld.js",
     "verify:stats": "node server/scripts/verify-homepage-stats.js",
     "verify:errors": "node server/scripts/verify-error-boundary.js",
+    "verify:forms": "node server/scripts/verify-form-security.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",

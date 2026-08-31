@@ -18,6 +18,9 @@
   <p class="auth-page-sub" data-i18n="authSub">Seyahatini yıldızla, kaydet ve paylaş</p>
   <input class="ain" id="loginEmail" type="email" data-i18n-placeholder="authEmail" placeholder="E-posta"/>
   <input class="ain" id="loginPass" type="password" data-i18n-placeholder="authPass" placeholder="Şifre"/>
+  <div class="tl-hp" aria-hidden="true">
+    <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"/></label>
+  </div>
   <button class="btn bp" onclick="doLogin()" data-i18n="login">Giriş Yap</button>
   <p class="auth-page-link"><a href="#" onclick="forgotPass();return false" data-i18n="forgotPassword">Şifremi unuttum</a></p>
   <p class="auth-page-link"><span data-i18n="noAccount">Hesabınız yok mu?</span> <a href="/register" data-i18n="authTabReg">Kayıt Ol</a></p>
@@ -26,42 +29,51 @@
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
+<script src="/js/form-security.js?v=__APP_VERSION__"></script>
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
 function t(k){ return window.TL_I18N.t(lang,k); }
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function authErrorMessage(data) {
   if (typeof data?.error === 'string' && data.error) return data.error;
   if (Array.isArray(data?.errors) && data.errors[0]?.msg) return data.errors[0].msg;
   return t('requestFailed');
 }
 async function doLogin(){
+  const email = loginEmail.value.trim();
+  if(!EMAIL_RE.test(email)){ alert(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
   try {
+    const body = await window.TL_FORM_SECURITY.attach({
+      email, password: loginPass.value,
+    }, 'login');
     const res = await fetch('/api/auth/login', {
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email: loginEmail.value, password: loginPass.value }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if(!res.ok) throw new Error(authErrorMessage(data));
-    const payload = data.data || data;
-    localStorage.setItem('tl_user', JSON.stringify(payload.user));
+    const result = data.data || data;
+    localStorage.setItem('tl_user', JSON.stringify(result.user));
     location.href = '/profile';
   } catch(e){ alert(e.message || t('requestFailed')); }
 }
 async function forgotPass(){
   const email = loginEmail.value.trim();
   if(!email){ alert(t('authEmailRequired')); return; }
+  if(!EMAIL_RE.test(email)){ alert(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
   try {
+    const body = await window.TL_FORM_SECURITY.attach({ email }, 'forgot');
     const res = await fetch('/api/auth/forgot-password', {
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if(!res.ok) throw new Error(authErrorMessage(data));
-    const payload = data.data || data;
-    alert(payload.message || t('forgotPasswordSent'));
+    const result = data.data || data;
+    alert(result.message || t('forgotPasswordSent'));
   } catch(e){ alert(e.message || t('requestFailed')); }
 }
 </script>

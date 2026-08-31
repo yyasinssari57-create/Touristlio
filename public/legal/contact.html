@@ -22,6 +22,9 @@
       <input class="ain" id="contactSubject" name="subject" type="text" required maxlength="200" data-i18n-placeholder="contactSubject" placeholder="Konu"/>
       <label class="contact-label" for="contactMessage" data-i18n="contactMessage">Mesaj</label>
       <textarea class="ain contact-textarea" id="contactMessage" name="message" required minlength="10" maxlength="4000" rows="6" data-i18n-placeholder="contactMessage" placeholder="Mesaj"></textarea>
+      <div class="tl-hp" aria-hidden="true">
+        <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"/></label>
+      </div>
       <p id="contactFormMsg" class="contact-form-msg" role="status" hidden></p>
       <button class="btn bp" type="submit" id="contactSubmit" data-i18n="contactSend">Gönder</button>
     </form>
@@ -33,10 +36,12 @@
   <p class="contact-back"><a href="/" data-i18n="contactBack">← Ana sayfaya dön</a></p>
 </article>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/form-security.js?v=__APP_VERSION__"></script>
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';
 window.TL_I18N.apply(lang);
 function t(k){ return window.TL_I18N.t(lang, k); }
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const form = document.getElementById('contactForm');
 const msgEl = document.getElementById('contactFormMsg');
 const submitBtn = document.getElementById('contactSubmit');
@@ -55,7 +60,7 @@ form.addEventListener('submit', async (e) => {
     showMsg(t('contactRequired'), false);
     return;
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!EMAIL_RE.test(email)) {
     showMsg(t('contactEmailInvalid'), false);
     return;
   }
@@ -66,11 +71,12 @@ form.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = t('contactSending');
   try {
+    const payload = await window.TL_FORM_SECURITY.attach({ name, email, subject, message }, 'contact');
     const res = await fetch('/api/contact', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, subject, message }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || t('contactError'));

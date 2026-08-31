@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('./db');
 const { effectivePermissions } = require('./middleware/rbac');
+const { sanitizeName } = require('./lib/sanitize');
 
 const crypto = require('crypto');
 
@@ -125,10 +126,11 @@ function findUserById(id) {
 function createUser({ name, email, password, role = 'member' }) {
   const colors = ['#0ea5e9', '#0d9488', '#b45309', '#e8642a', '#7c3aed'];
   const hash = hashPassword(password);
+  const cleanName = sanitizeName(name, 120) || 'Gezgin';
   const info = db.prepare(`
     INSERT INTO users (name, email, password_hash, role, avatar_color)
     VALUES (?, ?, ?, ?, ?)
-  `).run(name.trim(), email.toLowerCase().trim(), hash, role, colors[Math.floor(Math.random() * colors.length)]);
+  `).run(cleanName, email.toLowerCase().trim(), hash, role, colors[Math.floor(Math.random() * colors.length)]);
   return findUserById(info.lastInsertRowid);
 }
 

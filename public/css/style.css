@@ -667,6 +667,7 @@ body.admin-session #loginScreen{display:none;}
 .admin-status.err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
 .admin-status.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+.tl-hp{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;}
 @media(max-width:900px){
   .discover-layout{grid-template-columns:1fr;}
   .discover-map-panel{position:fixed;bottom:0;left:0;right:0;height:38vh;z-index:150;border-left:none;border-top:1px solid var(--l2);box-shadow:0 -8px 24px rgba(0,0,0,.08);overflow:hidden;}

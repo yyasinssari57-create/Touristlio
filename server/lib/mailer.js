@@ -261,11 +261,13 @@ async function sendContactFormEmail({ name, email, subject, message }) {
     '',
     safeMessage,
   ].join('\n');
+  const html = `<pre style="font-family:Inter,Arial,sans-serif;white-space:pre-wrap">${escapeHtml(text)}</pre>`;
   return sendMail({
     to,
     replyTo: safeEmail,
     subject: `[İletişim] ${safeSubject}`,
     text,
+    html,
   });
 }
 

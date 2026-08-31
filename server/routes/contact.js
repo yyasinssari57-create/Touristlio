@@ -1,16 +1,28 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { db } = require('../db');
-const { sanitizeName, sanitizeText } = require('../lib/sanitize');
+const { sanitizeName, sanitizeText, isValidEmail, EMAIL_RE } = require('../lib/sanitize');
 const { sendContactFormEmail, isConfigured } = require('../lib/mailer');
 const { contactLimiter } = require('../middleware/rateLimit');
+const { recaptchaGuard } = require('../middleware/recaptcha');
+const { honeypotGuard } = require('../middleware/honeypot');
 const logger = require('../lib/logger');
 
 const router = express.Router();
 
-router.post('/', contactLimiter, [
+const CONTACT_OK = {
+  ok: true,
+  message: 'Mesajınız kaydedildi. En kısa sürede dönüş yapacağız.',
+};
+
+router.post('/', contactLimiter, recaptchaGuard('contact'), honeypotGuard(CONTACT_OK), [
   body('name').trim().isLength({ min: 2, max: 120 }).withMessage('Ad soyad en az 2 karakter olmalı'),
-  body('email').trim().isEmail().withMessage('Geçerli bir e-posta girin').isLength({ max: 200 }),
+  body('email').trim().custom((v) => {
+    if (!isValidEmail(v) || !EMAIL_RE.test(String(v).trim())) {
+      throw new Error('Geçerli bir e-posta girin');
+    }
+    return true;
+  }),
   body('subject').trim().isLength({ min: 3, max: 200 }).withMessage('Konu en az 3 karakter olmalı'),
   body('message').trim().isLength({ min: 10, max: 4000 }).withMessage('Mesaj en az 10 karakter olmalı'),
 ], async (req, res) => {
@@ -26,6 +38,9 @@ router.post('/', contactLimiter, [
 
   if (!name || !email || !subject || !message) {
     return res.status(400).json({ error: 'Tüm alanları doldurun' });
+  }
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Geçerli bir e-posta girin' });
   }
 
   try {

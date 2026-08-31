@@ -85,14 +85,17 @@ const liveDataLimiter = rateLimit({
   message: { error: 'Çok fazla istek. Bir dakika bekleyin.' },
 });
 
-const contactLimiter = rateLimit({
+/** Public form posts: same IP, 3 submissions / 5 minutes (contact, register, forgot-password). */
+const formLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 3,
+  max: Number(process.env.FORM_RATE_LIMIT_MAX) || 3,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => `contact:ip:${req.ip}`,
-  message: { error: 'Çok fazla mesaj gönderdiniz. 5 dakika sonra tekrar deneyin.' },
+  keyGenerator: (req) => `form:ip:${req.ip}`,
+  message: { error: 'Çok fazla gönderim. 5 dakika sonra tekrar deneyin.' },
 });
+
+const contactLimiter = formLimiter;
 
 module.exports = {
   apiLimiter,
@@ -104,4 +107,5 @@ module.exports = {
   reportLimiter,
   adminAnalyticsLimiter,
   contactLimiter,
+  formLimiter,
 };

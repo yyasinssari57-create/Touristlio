@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { db } = require('../db');
 const { authOptional, authRequired } = require('../middleware/auth');
 const { sanitizeText } = require('../lib/sanitize');
+const { isHoneypotFilled } = require('../middleware/honeypot');
 const blogDb = require('../lib/blog-db');
 const settingsService = require('../modules/settings/settings.service');
 const { enrichBlogLikes, toggleBlogLike } = require('../lib/likes');
@@ -168,6 +169,10 @@ router.post('/', authRequired, [
 ], (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  if (isHoneypotFilled(req.body)) {
+    return res.status(400).json({ error: 'Geçersiz istek' });
+  }
 
   if (!req.user.emailVerified) {
     return res.status(403).json({
