@@ -86,6 +86,7 @@ let blogCat = 'all';
 let blogMeta = null;
 let blogSearchQ = '';
 let blogSearchTimer;
+let activeBlogSlug = null;
 let savedIds = new Set();
 let authMode = 'login';
 const pathIsEn = location.pathname === '/en' || location.pathname.startsWith('/en/');
@@ -398,7 +399,7 @@ function openPublicProfile(userId) {
 
 function closePublicProfile() {
   document.getElementById('publicProfOv')?.classList.remove('on');
-  if (!document.querySelector('.auth-ov.on, .blog-detail-ov.on, #blogDetailOv.on')) {
+  if (!document.querySelector('.auth-ov.on')) {
     document.body.style.overflow = '';
   }
 }
@@ -1296,6 +1297,27 @@ function placePublicPath(p) {
   return prefix || '/';
 }
 
+function blogPublicPath(b) {
+  const prefix = lang === 'en' ? '/en' : '';
+  const slug = b?.slug || b?.id;
+  if (!slug) return `${prefix}/blog`;
+  return `${prefix}/blog/${encodeURIComponent(slug)}`;
+}
+
+function blogListPath() {
+  return lang === 'en' ? '/en/blog' : '/blog';
+}
+
+function showBlogListing() {
+  document.getElementById('blogListing')?.removeAttribute('hidden');
+  document.getElementById('blogArticle')?.setAttribute('hidden', '');
+}
+
+function showBlogArticle() {
+  document.getElementById('blogListing')?.setAttribute('hidden', '');
+  document.getElementById('blogArticle')?.removeAttribute('hidden');
+}
+
 function publicOrigin() {
   const host = location.hostname;
   if (host === 'localhost' || host === '127.0.0.1') return location.origin;
@@ -1354,7 +1376,10 @@ function getCurrentRoute() {
     if (viewingProfileUserId) route.profileUserId = viewingProfileUserId;
     else route.profileTab = getActiveProfileTab();
   }
-  if (main === 'blog' && blogCat !== 'all') route.blogCat = blogCat;
+  if (main === 'blog') {
+    if (activeBlogSlug) route.blogSlug = activeBlogSlug;
+    else if (blogCat !== 'all') route.blogCat = blogCat;
+  }
   if (main === 'detail' && activePlace?.id) {
     route.placeId = activePlace.id;
     route.placeSlug = activePlace.slug || null;
@@ -1389,8 +1414,16 @@ function readRouteFromUrl() {
     return { main: 'detail', placeId: Number(segments[1]), detailTab: segments[2] || 'overview' };
   }
 
-  if (pathParts[0] === 'blog' && pathParts[1] && pathParts[1] !== 'cat') {
-    return { main: 'blog', blogSlug: decodeURIComponent(pathParts[1]) };
+  if (pathParts[0] === 'blog') {
+    if (pathParts[1] && pathParts[1] !== 'cat') {
+      return { main: 'blog', blogSlug: decodeURIComponent(pathParts[1]) };
+    }
+    const blogRoute = { main: 'blog' };
+    if (pathParts[1] === 'cat' && pathParts[2]) blogRoute.blogCat = pathParts[2];
+    if (segments[0] === 'blog' && segments[1] === 'cat' && segments[2]) {
+      blogRoute.blogCat = segments[2];
+    }
+    return blogRoute;
   }
 
   const tabParam = params.get('tab');
@@ -1474,7 +1507,13 @@ function writeRouteToUrl(route, replace = true) {
       hash = route.profileTab && route.profileTab !== 'tiolas' ? `#profile/${route.profileTab}` : '#profile';
     }
   } else if (route.main === 'blog') {
-    hash = route.blogCat && route.blogCat !== 'all' ? `#blog/cat/${route.blogCat}` : '#blog';
+    if (route.blogSlug) {
+      path = `/blog/${encodeURIComponent(route.blogSlug)}`;
+      hash = '';
+    } else {
+      path = '/blog';
+      hash = route.blogCat && route.blogCat !== 'all' ? `#blog/cat/${route.blogCat}` : '';
+    }
   }
 
   if (lang === 'en') {
@@ -1500,11 +1539,25 @@ async function showMainTab(tab, skipRoute) {
   if (tab !== 'detail') prevTab = tab;
   if (tab !== 'detail') window.TL_ANALYTICS?.trackTab(tab);
   if (tab === 'places') setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
+  else if (tab === 'blog') setCanonical(activeBlogSlug ? blogPublicPath({ slug: activeBlogSlug }) : blogListPath());
   else if (tab !== 'detail') setCanonical(lang === 'en' ? '/en/' : '/');
   if (tab === 'explore') injectHomeJsonLd();
   else if (tab !== 'detail') setJsonLdBlocks([travelAgencyJsonLd()]);
   const tasks = [];
-  if (tab === 'blog') tasks.push(loadBlogPage().then(renderBlog));
+  if (tab === 'blog') {
+    if (!skipRoute) {
+      activeBlogSlug = null;
+      showBlogListing();
+    } else if (!activeBlogSlug) {
+      showBlogListing();
+    }
+    const back = document.getElementById('blogBackLink');
+    if (back) {
+      back.href = blogListPath();
+      back.textContent = t('blogBack');
+    }
+    tasks.push(loadBlogPage().then(renderBlog));
+  }
   if (tab === 'profile') tasks.push(Promise.resolve(updateProfilePage()));
   if (tab === 'explore') tasks.push(loadTiolaFeed());
   if (tab === 'places') window.TL_DISCOVER?.onTabShown();
@@ -2202,21 +2255,25 @@ async function renderBlog() {
     };
       const menuBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
       const authorChip = renderProfileChip(b.userId, b.authorName, avUser, 'bav');
+      const href = blogPublicPath(b);
+      const slugAttr = escapeHtml(b.slug || String(b.id));
+      const dateStr = formatDate(b.publishedAt || b.createdAt);
+      const dateIso = b.publishedAt || b.createdAt || '';
       return `
-      <div class="bcard${isFeat ? ' feat' : ''}" data-content-type="blog" data-content-id="${b.id}" onclick="openBlogDetail('${escapeHtml(b.slug || b.id)}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openBlogDetail('${escapeHtml(b.slug || b.id)}')">
+      <a class="bcard${isFeat ? ' feat' : ''}" href="${escapeHtml(href)}" data-content-type="blog" data-content-id="${b.id}" onclick="event.preventDefault();openBlogDetail('${slugAttr}')">
         ${responsiveImg(safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id }), { className: 'bimg', kind: 'card' })}
         ${b.featured ? `<div class="bfeat-badge">${escapeHtml(labels.featuredLbl)}</div>` : ''}
         <div class="bbody">
           <div class="bcat-lbl">${escapeHtml(b.categoryLabel || b.category || '')}</div>
           <div class="btitle">${escapeHtml(b.title)}</div>
-          ${isFeat ? `<div class="bexc">${escapeHtml(b.excerpt || '')}</div>` : ''}
-          <div class="bmeta"><div class="bauthor">${authorChip}</div></div>
-          <div class="tiola-actions-row bcard-actions-row" onclick="event.stopPropagation()">
+          <div class="bexc">${escapeHtml(b.excerpt || '')}</div>
+          <div class="bmeta"><div class="bauthor">${authorChip}</div>${dateStr ? `<time class="bdate" datetime="${escapeHtml(dateIso)}">${escapeHtml(dateStr)}</time>` : ''}</div>
+          <div class="tiola-actions-row bcard-actions-row" onclick="event.stopPropagation();event.preventDefault()">
             ${renderLikeBar('blog', b.id, b.likeCount, b.likedByMe, { countOnly: true })}
             ${menuBtn}
           </div>
         </div>
-      </div>`;
+      </a>`;
     };
     grid.innerHTML = card(feat, true) + rest.map((b) => card(b, false)).join('');
   } catch (e) {
@@ -2232,11 +2289,14 @@ function setBlogCat(cat, el) {
   syncRoute(true);
 }
 
-async function openBlogDetail(slug) {
+async function openBlogDetail(slug, skipRoute) {
   if (!slug) return;
   try {
     const data = await api('/blogs/' + encodeURIComponent(slug) + '?lang=' + lang);
     const b = data.blog;
+    if (!b) {
+      throw Object.assign(new Error(t('blogEmpty') || 'Blog bulunamadı'), { status: 404 });
+    }
     const img = safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id });
     const tags = (b.tags || []).map((tag) => `<span class="bd-tag">${escapeHtml(tag)}</span>`).join('');
     const menuBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
@@ -2246,12 +2306,14 @@ async function openBlogDetail(slug) {
       avatarUrl: b.avatarUrl,
       avatarPreset: b.avatarPreset,
     }, 'tiola-mini');
-    document.getElementById('blogDetailBody').innerHTML = `
+    const bodyEl = document.getElementById('blogDetailBody');
+    if (!bodyEl) return;
+    bodyEl.innerHTML = `
       <div data-content-type="blog" data-content-id="${b.id}">
       ${img ? responsiveImg(img, { className: 'bd-cover', kind: 'detail' }) : ''}
       <div class="bd-cat">${escapeHtml(b.categoryLabel || b.category || '')}</div>
-      <h2 class="bd-title">${escapeHtml(b.title)}</h2>
-      <div class="bd-meta">${authorChip}${b.publishedAt ? ' · ' + new Date(b.publishedAt).toLocaleDateString(lang === 'en' ? 'en-GB' : 'tr-TR') : ''}</div>
+      <h1 class="bd-title">${escapeHtml(b.title)}</h1>
+      <div class="bd-meta">${authorChip}${b.publishedAt ? ' · ' + formatDate(b.publishedAt) : ''}</div>
       ${b.excerpt ? `<p style="color:var(--t2);font-size:.85rem;margin-bottom:12px">${escapeHtml(b.excerpt)}</p>` : ''}
       <div class="bd-body">${escapeHtml(b.body || '')}</div>
       ${tags ? `<div class="bd-tags">${tags}</div>` : ''}
@@ -2261,18 +2323,49 @@ async function openBlogDetail(slug) {
         ${menuBtn}
       </div>
       </div>`;
-    document.getElementById('blogDetailOv').classList.add('on');
-    document.body.style.overflow = 'hidden';
+    activeBlogSlug = b.slug || slug;
+    showBlogArticle();
+    const back = document.getElementById('blogBackLink');
+    if (back) {
+      back.href = blogListPath();
+      back.textContent = t('blogBack');
+    }
+    document.title = `${b.title} — Touristlio`;
+    setCanonical(blogPublicPath(b));
     setJsonLdBlocks([articleJsonLd(b)]);
+    window.scrollTo(0, 0);
+    if (!skipRoute) {
+      writeRouteToUrl({ main: 'blog', blogSlug: activeBlogSlug }, false);
+    }
   } catch (e) {
+    activeBlogSlug = null;
+    showBlogListing();
+    if (e.status === 404) {
+      window.TL_TOAST?.error?.(e.message) || alert(e.message);
+      if (!skipRoute) writeRouteToUrl({ main: 'blog' }, true);
+      return;
+    }
     window.TL_TOAST?.error?.(e.message) || alert(e.message);
   }
 }
 
-function closeBlogDetail() {
-  document.getElementById('blogDetailOv')?.classList.remove('on');
+function closeBlogDetail(skipRoute) {
+  activeBlogSlug = null;
+  showBlogListing();
   document.body.style.overflow = '';
   setJsonLdBlocks([travelAgencyJsonLd()]);
+  setCanonical(blogListPath());
+  const hero = document.getElementById('blogHeroTitle');
+  if (hero) {
+    const page = blogMeta?.page || {};
+    document.title = lang === 'en'
+      ? 'Travel Stories — Touristlio'
+      : 'Seyahat Hikayeleri — Touristlio';
+    if (page.heroTitle) {
+      /* keep listing hero as-is */
+    }
+  }
+  if (!skipRoute) writeRouteToUrl({ main: 'blog', blogCat: blogCat !== 'all' ? blogCat : undefined }, true);
 }
 
 function showPTab(name, el, skipRoute) {
@@ -2855,7 +2948,10 @@ function refreshAfterLang() {
   if (document.getElementById('page-blog')?.classList.contains('active')) {
     blogMeta = null;
     blogSearchQ = document.getElementById('blogSearch')?.value?.trim() || '';
-    loadBlogPage().then(renderBlog);
+    const slug = activeBlogSlug;
+    loadBlogPage().then(renderBlog).then(() => {
+      if (slug) return openBlogDetail(slug, true);
+    });
   }
   if (document.getElementById('page-profile')?.classList.contains('active')) updateProfilePage();
   if (document.getElementById('authOv')?.classList.contains('on')) buildAuthForm(authMode);
@@ -2893,9 +2989,14 @@ async function applyRouteFromUrl(opts = {}) {
     }
     if (route.blogSlug) {
       skipRouteSync = true;
+      activeBlogSlug = route.blogSlug;
       showMainTab('blog', true);
-      await openBlogDetail(route.blogSlug);
+      await openBlogDetail(route.blogSlug, true);
       return;
+    }
+    if (route.main === 'blog') {
+      activeBlogSlug = null;
+      showBlogListing();
     }
     if (route.main === 'blog' && route.blogCat) blogCat = route.blogCat;
     if (route.main === 'profile') {

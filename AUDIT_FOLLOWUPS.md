@@ -249,7 +249,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Admin listeleri kendi sayfalama; public helper’dan ayrı.
 - FTS tablosu yoksa liste eski in-memory yola düşer.
 
-- [ORTA-6] Blog Sayfası Çalışır Hale Getir
+## ORTA-6 (blog sayfası)
+
+- Tamamlandı: Express + statik HTML/JS (Next.js yok). Google puanı yok.
+  - `GET /blog` ve `GET /en/blog` liste sayfası (`index.html` + SEO “Seyahat Hikayeleri”).
+  - `GET /api/blogs` yalnızca `status = 'approved'` (`is_published = true` karşılığı); kart: başlık, kategori, yazar, tarih, özet, kapak.
+  - `GET /blog/:slug` (KRİTİK-4) artık tam sayfa: overlay kalktı, `#blogArticle` içinde kapak + gövde + Article JSON-LD. Yayınlanmamış / bilinmeyen slug → 404.html.
+  - SPA URL: `/blog`, `/blog/:slug` (eski `#blog` hash hâlâ okunur). Kartlar gerçek `<a href="/blog/slug">`.
+- Sitemap’e `/blog` ve `/en/blog` eklendi.
+- `npm run verify:blog`
+
+### Leftover
+- `/blog` hâlâ SPA (`index.html`); tam SSR makale gövdesi HTML’de yok (yerler gibi) — crawler Article JSON-LD + title görür, gövde JS sonrası.
+- Eski `#blog` / `?tab=blog` linkleri çalışır; paylaşılabilir kanonik artık `/blog`.
+- Overlay (modal) kaldırıldı; detay sayfa içi. Profil “yazılarım” bekleyen taslağı `/blog/:slug` ile açarsa sahip API’den görür, kamu 404.
+- Blog listesinde sayfalama yok (ORTA-3 yalnızca mekân).
+- Seed blog gövdesi excerpt ile aynı (kısa).
+
 - [ORTA-7] Kullanıcı Sistemi Tamamlama
 - [DÜŞÜK-1] Mobil Uyum Kontrolleri
 - [DÜŞÜK-2] Erişilebilirlik (Accessibility)

@@ -219,6 +219,19 @@ function jsonLdForBlog(blog, lang = 'tr') {
   return article ? [article] : [];
 }
 
+function jsonLdForBlogIndex(lang = 'tr') {
+  return [compact({
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: lang === 'en' ? 'Travel Stories — Touristlio' : 'Seyahat Hikayeleri — Touristlio',
+    description: lang === 'en'
+      ? 'Travel guides, hidden gems and cultural stories from local writers'
+      : 'Yerel yazarlardan gezi rehberleri, gizli köşeler ve kültürel keşifler',
+    url: canonicalFor('/blog', lang),
+    isPartOf: { '@type': 'WebSite', name: 'Touristlio', url: siteBaseUrl() },
+  })].filter(Boolean);
+}
+
 function jsonLdForHomeWithTiolas(tiolas = []) {
   const reviews = (tiolas || [])
     .filter(isTopLevelApprovedTiola)
@@ -290,6 +303,7 @@ function autoJsonLd(pathname, relativePath, lang = 'tr') {
   let p = stripEnPrefix(pathname || '/').split('?')[0];
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
   if (p === '/' || p === '' || p === '/explore') return jsonLdForHome();
+  if (p === '/blog') return jsonLdForBlogIndex(lang);
   if (p.includes('contact')) return jsonLdForContact(lang);
   return [];
 }
@@ -304,6 +318,7 @@ module.exports = {
   jsonLdForContact,
   jsonLdForPlace,
   jsonLdForBlog,
+  jsonLdForBlogIndex,
   jsonLdForHomeWithTiolas,
   loadApprovedTiolasForPlace,
   loadApprovedBlog,

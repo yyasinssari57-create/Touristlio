@@ -272,6 +272,16 @@ app.get('/places/:slug', (req, res) => {
   });
 });
 
+app.get('/blog', (req, res) => {
+  const lang = req.tlLang === 'en' ? 'en' : 'tr';
+  return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
+    title: lang === 'en' ? 'Travel Stories — Touristlio' : 'Seyahat Hikayeleri — Touristlio',
+    description: lang === 'en'
+      ? 'Travel guides, hidden gems and cultural stories from local writers on Touristlio.'
+      : 'Yerel yazarlardan gezi rehberleri, gizli köşeler ve kültürel keşifler.',
+  });
+});
+
 app.get('/blog/:slug', (req, res) => {
   const slug = String(req.params.slug || '').trim();
   if (!slug) {

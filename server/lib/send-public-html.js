@@ -18,6 +18,7 @@ const HTML_PAGE_ROUTES = {
   '/reset-password': 'reset-password.html',
   '/search': 'search.html',
   '/explore': 'index.html',
+  '/blog': 'index.html',
   '/gezilecek-yerler': 'index.html',
   '/404': '404.html',
 };

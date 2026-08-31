@@ -53,6 +53,11 @@ function pageDefaults(pathname, lang) {
       ? { title: 'Places to visit — Touristlio', description: 'Browse destinations and community Tiolas on Touristlio.' }
       : { title: 'Gezilecek Yerler — Touristlio', description: 'Touristlio’da destinasyonları ve topluluk Tiola’larını keşfedin.' };
   }
+  if (p === '/blog') {
+    return en
+      ? { title: 'Travel Stories — Touristlio', description: 'Travel guides, hidden gems and cultural stories from local writers on Touristlio.' }
+      : { title: 'Seyahat Hikayeleri — Touristlio', description: 'Yerel yazarlardan gezi rehberleri, gizli köşeler ve kültürel keşifler.' };
+  }
   if (p.includes('contact')) {
     return en
       ? { title: 'Contact — Touristlio', description: 'Send a message to the Touristlio team.' }

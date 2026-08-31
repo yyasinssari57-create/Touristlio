@@ -16,6 +16,9 @@ const MAX_TITLE = 200;
 const MAX_EXCERPT = 500;
 const MAX_BODY = 20000;
 
+/** Audit is_published=true — this schema uses status='approved'. */
+const PUBLIC_BLOG_STATUS = 'approved';
+
 function categoryLabel(slug, lang) {
   const row = db.prepare('SELECT name_tr, name_en, icon FROM blog_categories WHERE slug = ? AND is_active = 1').get(slug);
   if (!row) return slug || '';
@@ -45,6 +48,7 @@ function mapBlog(row, lang = 'tr', userId = null) {
     tags,
     featured: !!row.featured,
     status: row.status,
+    isPublished: row.status === PUBLIC_BLOG_STATUS,
     rejectionReason: row.rejection_reason || null,
     likeCount: likes.likeCount,
     likedByMe: likes.likedByMe,
@@ -100,7 +104,8 @@ router.get('/', authOptional, (req, res) => {
     where += " AND b.user_id = ? AND b.status != 'deleted'";
     params.push(req.user.id);
   } else {
-    where += " AND b.status = 'approved'";
+    where += ' AND b.status = ?';
+    params.push(PUBLIC_BLOG_STATUS);
   }
   if (category && category !== 'all') {
     where += ' AND b.category = ?';
@@ -142,7 +147,7 @@ router.get('/:slug', authOptional, (req, res) => {
   }
 
   if (!row || row.status === 'deleted') return res.status(404).json({ error: 'Blog bulunamadı' });
-  if (row.status !== 'approved') {
+  if (row.status !== PUBLIC_BLOG_STATUS) {
     if (!req.user || (req.user.id !== row.user_id && !['admin', 'moderator', 'editor', 'staff'].includes(req.user.role))) {
       return res.status(404).json({ error: 'Blog bulunamadı' });
     }
@@ -154,7 +159,7 @@ router.get('/:slug', authOptional, (req, res) => {
 router.post('/:id/like', authRequired, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
-  const row = db.prepare("SELECT id, user_id, status FROM blogs WHERE id = ? AND status = 'approved'").get(id);
+  const row = db.prepare('SELECT id, user_id, status FROM blogs WHERE id = ? AND status = ?').get(id, PUBLIC_BLOG_STATUS);
   if (!row) return res.status(404).json({ error: 'Blog bulunamadı' });
   if (row.user_id === req.user.id) return res.status(400).json({ error: 'Kendi blogunuzu beğenemezsiniz' });
   const result = toggleBlogLike(req.user.id, id);

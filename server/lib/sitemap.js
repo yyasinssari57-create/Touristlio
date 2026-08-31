@@ -32,6 +32,8 @@ function staticUrls(base) {
     { loc: `${base}/`, priority: '1.0', changefreq: 'daily' },
     { loc: `${base}/en/`, priority: '0.9', changefreq: 'daily' },
     { loc: `${base}/gezilecek-yerler`, priority: '0.9', changefreq: 'daily' },
+    { loc: `${base}/blog`, priority: '0.8', changefreq: 'daily' },
+    { loc: `${base}/en/blog`, priority: '0.7', changefreq: 'daily' },
     { loc: `${base}/search`, priority: '0.6', changefreq: 'weekly' },
     { loc: `${base}/legal/about.html`, priority: '0.4', changefreq: 'monthly' },
     { loc: `${base}/legal/contact.html`, priority: '0.4', changefreq: 'monthly' },

@@ -386,7 +386,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
 <!-- ══════════════ BLOG PAGE ══════════════ -->
 <div class="page" id="page-blog">
-  <div class="blog-wrap">
+  <div class="blog-wrap" id="blogListing">
     <div class="blog-hero-card">
       <h1 id="blogHeroTitle">Seyahat <em>Hikayeleri</em></h1>
       <p id="blogHeroSub">Yerel yazarlardan özenle seçilmiş gezi rehberleri, gizli köşeler ve kültürel keşifler.</p>
@@ -397,14 +397,12 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
     </div>
     <div class="blog-grid" id="blogGrid"></div>
   </div>
-</div>
-
-<!-- BLOG DETAIL OVERLAY -->
-<div class="auth-ov" id="blogDetailOv">
-  <div class="auth-box blog-detail-box">
-    <button class="aclose" onclick="closeBlogDetail()" aria-label="Kapat">✕</button>
-    <div id="blogDetailBody"></div>
-  </div>
+  <article class="blog-article-page" id="blogArticle" hidden>
+    <div class="blog-wrap">
+      <a class="blog-back" id="blogBackLink" href="/blog" onclick="event.preventDefault();closeBlogDetail();" data-i18n="blogBack">← Tüm yazılar</a>
+      <div class="blog-detail-box blog-detail-page" id="blogDetailBody"></div>
+    </div>
+  </article>
 </div>
 
 <!-- ══════════════ DETAIL PAGE ══════════════ -->
