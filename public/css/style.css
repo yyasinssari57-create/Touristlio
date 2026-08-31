@@ -92,11 +92,11 @@ nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filte
 .page.active{display:block;}
 .page-pad{padding-top:var(--nav-h);}
 
-/* HERO — doğrudan siyah navbar altında */
+/* HERO — tam genişlikte profesyonel arka plan görseli + okunabilirlik overlay */
 .hero{min-height:100vh;min-height:100dvh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(var(--nav-h) + 40px) 40px 60px;overflow:hidden;}
-.hbg{position:absolute;inset:0;background:linear-gradient(158deg,#e4f3ff 0%,#b0d8f5 25%,#42a0d8 55%,#0a386a 80%,#071629 100%);}
-.hmesh{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1px);background-size:30px 30px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,#000 20%,transparent 70%);}
-.hov{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(255,255,255,.03),rgba(7,22,41,.4));}
+.hbg{position:absolute;inset:0;background-color:#071629;background-image:url(/images/hero.webp);background-size:cover;background-position:center;background-repeat:no-repeat;}
+.hmesh{position:absolute;inset:0;pointer-events:none;background:none;}
+.hov{position:absolute;inset:0;pointer-events:none;background:rgba(0,0,0,.4);}
 .hc{position:relative;z-index:2;max-width:620px;}
 .hpill{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.16);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.28);color:#fff;font-size:.75rem;letter-spacing:1.2px;text-transform:uppercase;padding:6px 16px;border-radius:100px;margin-bottom:20px;animation:fu .7s ease both;}
 .hero h1{font-family:var(--fd);font-size:clamp(2.4rem,5vw,4.8rem);font-weight:700;line-height:.96;letter-spacing:-2px;color:#fff;margin-bottom:14px;animation:fu .7s .07s ease both;text-shadow:0 4px 20px rgba(7,22,41,.3);}
@@ -374,6 +374,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
   .nav-menu .nav-r{flex-wrap:wrap;justify-content:center;width:100%;}
   .profile-wrap{padding:calc(var(--nav-h) + 24px) 16px 40px;}
   .hero{padding:calc(var(--nav-h) + 28px) 16px 44px;min-height:auto;}
+  .hbg{background-size:cover;background-position:center;}
   .hc{max-width:100%;width:100%;}
   .srch-wrap{max-width:100%;width:100%;}
   .explore-nav-inner{padding:0 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}

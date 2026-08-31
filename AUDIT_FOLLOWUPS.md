@@ -45,25 +45,43 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Cloudflare SSL Full + apex→www (veya CF 301 kapalı, sadece Express). www→apex kuralı olmamalı.
 - Hetzner / VPS dokümanları hâlâ örnek olarak apex `https://touristlio.com` gösteriyor; canlı env www olmalı.
 - `public/index.html` statik canonical www; SSR enjeksiyonu KRİTİK-5 ile aynı host.
-- KRİTİK-8 **başlanmadı**.
 
-## KRİTİK-8 (KVKK analitik / çerez onayı)
+## KRİTİK-8 eşleşmesi (dosya vs önceki commit)
 
-- Tamamlandı (kod): ziyaret analitiği `localStorage tl_cookie_ok=1` + çerez `tl_cookie_ok=1` olmadan **POST yazılmaz**.
-- Banner’da **Kabul / Reddet**; giriş, kayıt, arama, profil sayfalarında da banner.
-- **Dosya notu:** `touristlio_cursor_audit.md` bu ortamda 507 satır; okunan kopya satır 150’de KRİTİK-7’de kesiliyor. KRİTİK-8 başlığı dosyada doğrulanamadı; bu madde KVKK + sessiz `/api/analytics/track` (önceki leftover) ile ele alındı.
+- Yüklenen tam denetim (`touristlio_cursor_audit.md`, 506 satır) **KRİTİK-8 başlığı içermiyor.** KRİTİK-7’den sonra doğrudan [YÜKSEK-1] geliyor.
+- `origin/main` commit `7f43487` (“KVKK — Çerez onayı olmadan analitik”) dosyadaki bir KRİTİK-8 değil; önceki leftover’dan ekstra iş. Yeniden yapılmadı.
 - Canlıda: çerez reddi sonrası Network’te `track` olmamalı; kabul sonrası `stored: true`.
-- Eski `tl_cookie_ok` kabulü olan kullanıcılar analitiği sürdürür (cookie senkron).
 
-## Kalan başlıklar (satır 151–497 okunamadı)
+## YÜKSEK-1 (hero görsel)
 
-Tam listedeki sonraki `[YÜKSEK-N] / [ORTA-N] / [DÜŞÜK-N]` başlıkları Downloads’taki 507 satırlık dosyada. Transkript grep’inde yalnızca dipnot:
+- Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.
+- Mevcut metin / şehir pill’leri taşınmadı; noktalı mesh görseli fotoğrafın üstünde bırakılmadı (HTML div duruyor).
+- Repoda zaten `public/images/hero.webp` vardı (İstanbul / Galata, KRİTİK-5 OG). Denetimin önerdiği Unsplash flatlay (`photo-1488646953014`) ile **değiştirilmedi** — mevcut görsel markaya daha uygun.
+- Slogan (“Sadece Ziyaret Etme. Hisset.”) navbar’da; hero içinde h1 yok. Taşınmadı.
+- Mobilde `.hero { min-height: auto }` kısa kalabilir; cover/center yine geçerli.
 
-- ~498: `@touristlio_cursor_audit.md — [KRİTİK-1] numaralı görevi uygula.`
-- ~499: `Her görevi tamamladıktan sonra dur ve onay bekle.`
-- ~504–505: derleyen / 30 Ağustos 2026
+## Kalan başlıklar (dosya sırası — henüz yapılmadı)
 
-Sıradaki ajan: tam dosyayı offset 150 ile oku; uydurma başlık kullanma.
+- [YÜKSEK-2] Harita Entegrasyonu Çalışmıyor
+- [YÜKSEK-3] Görsel Optimizasyon — WebP + Lazy Loading + EXIF Temizleme
+- [YÜKSEK-4] JSON-LD Schema.org Yapılandırılmış Veri Eksik
+- [YÜKSEK-5] Ana Sayfa İstatistikleri "—" Gösteriyor
+- [YÜKSEK-6] Error Boundary Eksikliği
+- [YÜKSEK-7] Form Güvenliği — reCAPTCHA + Sanitization
+- [ORTA-1] Tiola Sistemi Görünmüyor
+- [ORTA-2] Arama ve Filtreleme State Yönetimi
+- [ORTA-3] Sayfalama (Pagination) Eksikliği
+- [ORTA-4] Anti-Bot / Sahte Oy Koruması
+- [ORTA-5] Veritabanı Index'leri — Filtreleme Performansı
+- [ORTA-6] Blog Sayfası Çalışır Hale Getir
+- [ORTA-7] Kullanıcı Sistemi Tamamlama
+- [DÜŞÜK-1] Mobil Uyum Kontrolleri
+- [DÜŞÜK-2] Erişilebilirlik (Accessibility)
+- [DÜŞÜK-3] Loading States — Skeleton Loader
+- [DÜŞÜK-4] Kırık Linkleri Düzelt
+- [DÜŞÜK-5] Kod Temizliği
+- [DÜŞÜK-6] Analitik ve İzleme
 
 ## Genel
 - Görevler bitince bu listedeki her maddeyi sırayla açıp kapat.
+- Tam denetim kopyası: `/workspace/touristlio_cursor_audit.md`
