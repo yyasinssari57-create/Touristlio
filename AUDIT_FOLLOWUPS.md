@@ -208,7 +208,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 ### Leftover
 - “Daha Fazla Yükle” kartları biriktirir; paylaşılabilir URL yalnızca numaralı sayfa atlamasını tutar (append oturumu restore edilmez).
 - Discover (`gezilecek-yerler`) hâlâ `limit=100` tek istek — keşfet grid’i değil.
-- Liste hâlâ bellekte slice (SQL LIMIT yok); ORTA-5 index’ler ayrı.
+- Liste SQL LIMIT ORTA-5’te kapandı (`searchPlacesPage`); FTS yoksa bellek yedeği.
 - Markers API 500 pin tavanı aynı (YÜKSEK-2 leftover).
 - Admin listeleri kendi `parsePagination` (max 100) — public helper’dan ayrı.
 
@@ -225,9 +225,30 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Canlıda Redis yoksa limit instance bellek; Render free yeniden başlayınca sıfırlanır, birden fazla instance paylaşmaz. Yasin `REDIS_URL` (Upstash / Redis Cloud / Render Redis) eklemeli.
 - CSRF token yalnızca Tiola mutating uçlarına zorunlu; iletişim/kayıt hâlâ origin + honeypot + form limiter (YÜKSEK-7).
 - Unique index mevcut çift oyları en eski kaydı tutup diğerlerini `deleted` yapar; silinen satırlar istatistikte yok (ORTA-1 recompute onayda).
-- `redis` paketi yüklü; `REDIS_URL` boşken bağlanılmaz.
+- Redis paketi yüklü; `REDIS_URL` boşken bağlanılmaz.
 
-- [ORTA-5] Veritabanı Index'leri — Filtreleme Performansı
+## ORTA-5 (veritabanı index'leri)
+
+- Tamamlandı: SQLite migration `008_filter_indexes.js` (Postgres GIN/JSONB yok).
+  - Mekân listesi: `idx_places_country_city_score` `(country, city, tiola_rating)` — denetimdeki `(country_id, city_id, score)`.
+  - `idx_places_country_city_score_lc` `(LOWER(country), LOWER(city), tiola_rating)` — LIKE sorguları.
+  - Filtreleme: `idx_places_category_published` `(category, status)` — `(category_id, is_published)`.
+  - Blog: `idx_blogs_created_at` `(created_at)` (`idx_blogs_status (status, created_at)` zaten vardı).
+  - JSON etiketler: `idx_places_categories` TEXT (GIN yok). Kategori üyeliği `category =` + `categories LIKE`.
+  - Sıralama/LIMIT: `idx_places_tiola_rating`.
+- ORTA-3 leftover: `GET /api/places` ve `GET /api/search` artık SQL `COUNT` + `LIMIT/OFFSET` (`searchPlacesPage`). Bellekte slice yalnızca FTS yoksa.
+- `npm run verify:indexes` — PRAGMA index_info, EXPLAIN QUERY PLAN, SQL LIMIT, canlı liste.
+- Google puanı yok; skor `places.tiola_rating`.
+
+### Leftover
+- SQLite `LIKE '%x%'` baştaki joker yüzünden her zaman index kullanmayabilir; `turkey%` öneki + expression index var.
+- `az` sıralama SQL `COLLATE NOCASE` (Türkçe `localeCompare` değil).
+- JSON dizi üyeliği GIN değil; `LIKE %"slug"%`.
+- Discover (`gezilecek-yerler`) hâlâ `limit=100` tek istek (ORTA-3 leftover).
+- Markers API 500 pin tavanı aynı.
+- Admin listeleri kendi sayfalama; public helper’dan ayrı.
+- FTS tablosu yoksa liste eski in-memory yola düşer.
+
 - [ORTA-6] Blog Sayfası Çalışır Hale Getir
 - [ORTA-7] Kullanıcı Sistemi Tamamlama
 - [DÜŞÜK-1] Mobil Uyum Kontrolleri

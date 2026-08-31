@@ -27,6 +27,7 @@
     "verify:filters": "node server/scripts/verify-search-filters.js",
     "verify:pagination": "node server/scripts/verify-pagination.js",
     "verify:votes": "node server/scripts/verify-anti-bot.js",
+    "verify:indexes": "node server/scripts/verify-indexes.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",

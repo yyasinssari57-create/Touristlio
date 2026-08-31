@@ -1,6 +1,15 @@
 const { resolveCoords } = require('./city-coords');
 const { buildFaqForPlace } = require('./faq-templates');
 
+/** Discover /api/places?category= buckets (same as former in-memory filterPlaces). */
+const DISCOVER_GROUPS = {
+  museum: ['museum'],
+  nature: ['nature', 'park', 'beach', 'viewpoint'],
+  food: ['restaurant', 'cafe', 'market'],
+  historical: ['landmark', 'religious', 'museum'],
+  entertainment: ['nightlife', 'adventure', 'shopping', 'spa'],
+};
+
 /** Advanced filter buckets → legacy category slugs */
 const FILTER_GROUPS = {
   cities: ['city'],
@@ -141,6 +150,7 @@ function enrichContentFields(p, id) {
 }
 
 module.exports = {
+  DISCOVER_GROUPS,
   FILTER_GROUPS,
   GROUP_VISIBILITY,
   deriveCategories,

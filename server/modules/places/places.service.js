@@ -2,21 +2,19 @@ const { db } = require('../../db');
 
 const { normalizeSearch, matchesQuery } = require('../../lib/search-normalize');
 
-const { matchesFilterGroup } = require('../../lib/place-content');
-
 const { mapPlaceRow, mapMarker } = require('../../lib/place-map');
 const { ensurePlaceCoords } = require('../../lib/city-coords');
 
 const catalogDb = require('../../lib/catalog-db');
 const { slugify } = catalogDb;
 const { getCityImage, TURKEY_CITY_META } = require('../../lib/city-images');
-const { FILTER_GROUPS, GROUP_VISIBILITY } = require('../../lib/place-content');
+const { DISCOVER_GROUPS, FILTER_GROUPS, GROUP_VISIBILITY, matchesFilterGroup } = require('../../lib/place-content');
 const { cacheKey, wrap, clear } = require('../../lib/cache');
 const { getStatsMap, invalidateStatsCache } = require('../../lib/stats-cache');
-const { searchPlacesRows } = require('../../lib/places-search');
+const { searchPlacesPage } = require('../../lib/places-search');
 const { parseListPagination, paginationMeta } = require('../../lib/pagination');
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const META_CACHE_TTL = 60 * 1000;
 
 
@@ -127,21 +125,7 @@ function filterPlaces(rows, queryParams, statsMap = getStatsMap(), options = {})
 
     const cat = String(category).toLowerCase();
 
-    const discoverGroups = {
-
-      museum: ['museum'],
-
-      nature: ['nature', 'park', 'beach', 'viewpoint'],
-
-      food: ['restaurant', 'cafe', 'market'],
-
-      historical: ['landmark', 'religious', 'museum'],
-
-      entertainment: ['nightlife', 'adventure', 'shopping', 'spa'],
-
-    };
-
-    const allowed = discoverGroups[cat] || [cat];
+    const allowed = DISCOVER_GROUPS[cat] || [cat];
 
     filtered = filtered.filter((r) => {
 
@@ -274,33 +258,48 @@ function listPlaces(queryParams) {
 
 
   return wrap(key, () => {
-    const { q, country, city } = queryParams;
-    let rows;
-    if (q || country || city) {
-      rows = searchPlacesRows({ q, country, city });
-    } else {
-      rows = db.prepare('SELECT * FROM places').all();
-    }
     const statsMap = getStatsMap();
-    const skipTextSearch = !!q;
-    let { places, qNorm } = filterPlaces(rows, queryParams, statsMap, { skipTextSearch });
+    const { rows, total, qNorm, inMemoryFallback } = searchPlacesPage({
+      ...queryParams,
+      categoryMode: 'discover',
+      sort,
+      limit,
+      offset,
+    });
 
-    places = sortPlaces(places, sort);
+    let places;
+    if (inMemoryFallback) {
+      const filtered = filterPlaces(rows, queryParams, statsMap, { skipTextSearch: false });
+      places = sortPlaces(filtered.places, sort).slice(offset, offset + limit);
+      const meta = paginationMeta({
+        total: filtered.places.length,
+        page,
+        limit,
+        offset,
+        count: places.length,
+      });
+      return {
+        places,
+        items: places.map(toApiPlace),
+        ...meta,
+        osmHint: filtered.qNorm && meta.total === 0,
+      };
+    }
 
-    const slice = places.slice(offset, offset + limit);
+    places = rows.map((r) => mapPlace(r, statsMap));
     const meta = paginationMeta({
-      total: places.length,
+      total,
       page,
       limit,
       offset,
-      count: slice.length,
+      count: places.length,
     });
 
     return {
 
-      places: slice,
+      places,
 
-      items: slice.map(toApiPlace),
+      items: places.map(toApiPlace),
 
       ...meta,
 
@@ -315,10 +314,21 @@ function listPlaces(queryParams) {
 
 
 function listMarkers(queryParams, lang = 'tr') {
-  const rows = db.prepare('SELECT * FROM places').all();
   const statsMap = getStatsMap();
-  const { places } = filterPlaces(rows, queryParams, statsMap);
-  return places.slice(0, 500).map((p) => {
+  const { rows, inMemoryFallback } = searchPlacesPage({
+    ...queryParams,
+    categoryMode: 'discover',
+    orderSql: ' ORDER BY p.id ASC',
+    limit: 500,
+    offset: 0,
+  });
+  let places;
+  if (inMemoryFallback) {
+    places = filterPlaces(rows, queryParams, statsMap).places.slice(0, 500);
+  } else {
+    places = rows.map((r) => mapPlace(r, statsMap));
+  }
+  return places.map((p) => {
     const coords = ensurePlaceCoords(p);
     return mapMarker({ ...p, lat: coords.lat, lng: coords.lng }, lang);
   }).filter((m) => m.lat != null && m.lng != null);

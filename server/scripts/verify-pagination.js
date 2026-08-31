@@ -135,10 +135,18 @@ const service = fs.readFileSync(path.join(ROOT, 'server', 'modules', 'places', '
 if (!service.includes('parseListPagination') || !service.includes('paginationMeta')) {
   fail('places.service missing pagination helper');
 } else ok('GET /api/places uses parseListPagination');
+if (!service.includes('searchPlacesPage')) fail('places.service missing searchPlacesPage');
+else ok('GET /api/places uses SQL searchPlacesPage');
+
+const searchLib = fs.readFileSync(path.join(ROOT, 'server', 'lib', 'places-search.js'), 'utf8');
+if (!searchLib.includes('LIMIT ? OFFSET ?')) fail('places-search missing SQL LIMIT OFFSET');
+else ok('places-search SQL LIMIT OFFSET');
 
 const searchRoute = fs.readFileSync(path.join(ROOT, 'server', 'routes', 'search.js'), 'utf8');
 if (!searchRoute.includes('parseListPagination')) fail('search route missing page parser');
 else ok('GET /api/search uses parseListPagination');
+if (!searchRoute.includes('searchPlacesPage')) fail('search route missing searchPlacesPage');
+else ok('GET /api/search uses SQL searchPlacesPage');
 
 const i18n = fs.readFileSync(path.join(ROOT, 'public', 'js', 'i18n.js'), 'utf8');
 if (!i18n.includes('pageOf:') || !i18n.includes('paginationAria:')) fail('i18n pagination strings missing');
