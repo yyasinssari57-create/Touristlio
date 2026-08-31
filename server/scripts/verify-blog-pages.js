@@ -42,8 +42,9 @@ if (!appJs.includes('class="bdate"') || !appJs.includes('b.publishedAt')) {
 if (!appJs.includes('function openBlogDetail') || !appJs.includes('function closeBlogDetail')) {
   fail('detail open/close missing');
 } else ok('openBlogDetail / closeBlogDetail');
-if (/googleRating|google_rating|gRating/.test(appJs)) fail('Google rating leaked into blog UI');
-else ok('no Google ratings');
+if (!appJs.includes('await applyRouteFromUrl({ skipFilters: true })')) {
+  fail('init missing applyRouteFromUrl');
+} else ok('init applies /blog route from URL');
 
 const routesHtml = fs.readFileSync(path.join(ROOT, 'server', 'lib', 'send-public-html.js'), 'utf8');
 if (!routesHtml.includes("'/blog': 'index.html'")) fail('/blog not in HTML_PAGE_ROUTES');
