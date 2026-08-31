@@ -737,11 +737,11 @@ html.nav-open,body.nav-open{overflow:hidden;overscroll-behavior:none;}
     min-height:48px;min-width:48px;
   }
   /* Küçük chip/pill ve kapatma: görsel kutu aynı, görünmez genişletilmiş isabet */
-  .hpl,.fpill,.cpill,.gpill,.fchip,.bcat-chip,.lb,.dtab,.profile-chip-btn,.aclose{
+  .hpl,.fpill,.cpill,.gpill,.fchip,.bcat-chip,.lb,.dtab,.profile-chip-btn,.aclose,.pc-save,.pd-save{
     position:relative;isolation:isolate;
   }
   .hpl::after,.fpill::after,.cpill::after,.gpill::after,.fchip::after,
-  .bcat-chip::after,.lb::after,.dtab::after,.profile-chip-btn::after,.aclose::after{
+  .bcat-chip::after,.lb::after,.dtab::after,.profile-chip-btn::after,.aclose::after,.pc-save::after,.pd-save::after{
     content:"";position:absolute;top:50%;left:50%;
     width:max(100%,48px);height:max(100%,48px);
     transform:translate(-50%,-50%);
@@ -753,7 +753,6 @@ html.nav-open,body.nav-open{overflow:hidden;overscroll-behavior:none;}
   .auth-page-box{margin-left:12px;margin-right:12px;width:auto;}
   .legal-wrap{margin-left:12px;margin-right:12px;}
   .map-search-inp,.search-page-form input,.search-page-form select{min-width:0;}
-  .cookie-banner p{min-width:0;}
   .discover-place-card img{max-width:88px;}
   .pc-img img,.bcard img,.tiola-card img,.pd-hero img,.city-card img{max-width:100%;}
 }
