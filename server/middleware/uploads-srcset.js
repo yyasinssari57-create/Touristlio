@@ -44,4 +44,4 @@ function uploadsSrcsetFallback(uploadRoot) {
   };
 }
 
-module.exports = { uploadsSrcsetFallback, variantName };
+module.exports = { uploadsSrcsetFallback };
