@@ -1,6 +1,6 @@
 const { slugify } = require('./catalog-db');
 
-const PLACE_PARAM_RESERVED = new Set(['meta', 'map', 'search', 'saved', 'cities']);
+const PLACE_PARAM_RESERVED = new Set(['meta', 'map', 'search', 'saved', 'cities', 'stats']);
 
 function getDb(externalDb) {
   if (externalDb && typeof externalDb.prepare === 'function') return externalDb;

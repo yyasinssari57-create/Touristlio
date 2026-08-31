@@ -114,7 +114,22 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - FAQPage / BreadcrumbList hâlâ istemci tarafında (önceki davranış); sunucu HTML’sine taşınmadı.
 - logo.webp Absolute URL `SITE_URL` / `siteBaseUrl()` (www). Localhost curl’de origin localhost olabilir.
 
-- [YÜKSEK-5] Ana Sayfa İstatistikleri "—" Gösteriyor
+## YÜKSEK-5 (ana sayfa istatistikleri)
+
+- Tamamlandı: şerit artık `—` göstermiyor. İlk HTML `...` (yükleme); API null/undefined/hata → **0**.
+- `GET /api/stats` ve `GET /api/places/stats` tam katalog sayıları döner: kapsanan ülke, listelenen yer (arşiv hariç), onaylı üst seviye **Tiola** (Google puanı yok).
+- Değer gelince ease-out sayaç animasyonu; `prefers-reduced-motion` veya 0 ise anında yazılır.
+- Üçüncü sütun artık "Tiola" yazısı değil, `id="stat-tiolas"` sayı alanı.
+- `updateCategoryCounts` şeridi yüklü sayfa boyutuyla ezmiyor.
+
+### Leftover
+- Kategori kartlarındaki `cat-cnt-*` hâlâ ilk boyamada `—` (şerit değil; kart doldurulunca `0 yer`).
+- Public `GET /api/places` hâlâ taslak yerleri de sayabilir; şerit `status != archived` kullanır.
+- İstatistik önbelleği 2 dk; Tiola onayında anında invalidate yok (places cache ile birlikte düşer).
+- Ülke adları flag-normalize edilmeden `COUNT(DISTINCT country)`.
+- Dil değişince sayı formatı (1.090 / 1,090) yeniden çizilmez; ilk yükleme diline bağlı.
+- `verify:stats` canlı HTTP için `VERIFY_STATS_URL` ister.
+
 - [YÜKSEK-6] Error Boundary Eksikliği
 - [YÜKSEK-7] Form Güvenliği — reCAPTCHA + Sanitization
 - [ORTA-1] Tiola Sistemi Görünmüyor

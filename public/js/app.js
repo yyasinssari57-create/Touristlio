@@ -95,6 +95,7 @@ let lastOsmHint = false;
 let searchTimer;
 const PAGE_SIZE = 12;
 let placesTotal = 0;
+let homeStatsPromise = null;
 let placesOffset = 0;
 let cardsLoaded = false;
 let currentFilterParams = {};
@@ -1351,15 +1352,90 @@ function setCatAndSwitch(cat) {
   document.getElementById('es-discover')?.scrollIntoView({ behavior: 'smooth' });
 }
 
+function toStatCount(value) {
+  if (value == null || value === '' || value === '—' || value === '–' || value === '-' || value === '...') return 0;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+}
+
+function formatStatCount(n) {
+  const loc = lang === 'en' ? 'en-US' : 'tr-TR';
+  return toStatCount(n).toLocaleString(loc);
+}
+
+function setHomepageStatsLoading() {
+  ['stat-countries', 'stat-places', 'stat-tiolas'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = '...';
+    el.classList.add('is-loading');
+    el.setAttribute('aria-busy', 'true');
+  });
+  document.getElementById('homeStatsStrip')?.setAttribute('aria-busy', 'true');
+}
+
+function prefersReducedMotion() {
+  return typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function animateStat(el, target) {
+  const to = toStatCount(target);
+  el.classList.remove('is-loading');
+  el.removeAttribute('aria-busy');
+  if (prefersReducedMotion() || to === 0) {
+    el.textContent = formatStatCount(to);
+    return;
+  }
+  const duration = 900;
+  const start = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - ((1 - t) ** 3);
+    el.textContent = formatStatCount(Math.round(to * eased));
+    if (t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function applyHomepageStats(stats) {
+  const countries = toStatCount(stats && stats.countries);
+  const listed = toStatCount(stats && (stats.places ?? stats.placesCount));
+  const tiolas = toStatCount(stats && (stats.tiolas ?? stats.tiolaCount));
+  const sc = document.getElementById('stat-countries');
+  const sp = document.getElementById('stat-places');
+  const st = document.getElementById('stat-tiolas');
+  if (sc) animateStat(sc, countries);
+  if (sp) animateStat(sp, listed);
+  if (st) animateStat(st, tiolas);
+  document.getElementById('homeStatsStrip')?.setAttribute('aria-busy', 'false');
+}
+
+function loadHomepageStats() {
+  if (homeStatsPromise) return homeStatsPromise;
+  setHomepageStatsLoading();
+  homeStatsPromise = api('/stats')
+    .then((data) => {
+      applyHomepageStats(data);
+      return data;
+    })
+    .catch(() => {
+      applyHomepageStats({ countries: 0, places: 0, tiolas: 0 });
+      return { countries: 0, places: 0, tiolas: 0 };
+    });
+  return homeStatsPromise;
+}
+
 async function loadCategoryStats() {
+  loadHomepageStats();
   if (!categoryMeta) await loadCategoryMeta();
   if (placesTotal > 0) { updateCategoryCounts(); return; }
   try {
     const data = await api('/places?limit=1&offset=0&sort=popularity');
-    placesTotal = data.total || 0;
-    document.getElementById('stat-places').textContent = String(placesTotal);
+    placesTotal = toStatCount(data.total);
     const meta = await api('/places?limit=500&offset=0&sort=az');
-    places = meta.places;
+    places = meta.places || [];
     updateCategoryCounts();
   } catch (e) { console.warn(e); }
 }
@@ -2290,11 +2366,7 @@ function updateCategoryCounts() {
       el.textContent = `${counts[cat]} ${t('placesCount')}`;
     }
   });
-  const countries = new Set(places.map((p) => p.country).filter(Boolean));
-  const sp = document.getElementById('stat-places');
-  const sc = document.getElementById('stat-countries');
-  if (sp) sp.textContent = String(places.length);
-  if (sc) sc.textContent = String(countries.size);
+  loadHomepageStats();
 }
 
 function refreshAfterLang() {
@@ -2401,6 +2473,7 @@ async function init() {
   });
   updateAuthUI();
   renderGrid([]);
+  loadHomepageStats();
   try {
     await loadCategoryMeta();
     await applyFilters();

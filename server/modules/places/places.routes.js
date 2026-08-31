@@ -8,6 +8,7 @@ const legacyPlaces = require('../../routes/places-legacy');
 const router = express.Router();
 
 router.get('/meta/categories', controller.metaCategories);
+router.get('/stats', controller.homepageStats);
 router.get('/cities', controller.cities);
 router.get('/map/markers', authOptional, controller.markers);
 router.get('/search', searchLimiter, [

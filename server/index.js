@@ -160,6 +160,16 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'Touristlio', version: getAppVersion(), ts: new Date().toISOString() });
 });
 
+/** Public homepage counters: countries, listed places, approved Tiolas (never null). */
+app.get('/api/stats', (_req, res) => {
+  try {
+    const { getHomepageStats } = require('./lib/stats-cache');
+    res.json(getHomepageStats());
+  } catch {
+    res.json({ countries: 0, places: 0, tiolas: 0 });
+  }
+});
+
 app.get('/api/config/public', (_req, res) => {
   const settingsService = require('./modules/settings/settings.service');
   res.json({

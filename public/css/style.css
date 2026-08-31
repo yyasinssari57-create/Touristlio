@@ -316,6 +316,7 @@ textarea.rft:focus{border-color:var(--b);}
 .stats-strip{background:linear-gradient(135deg,var(--navy),#1a4a7a);padding:36px 40px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
 .sc{border-left:2px solid rgba(255,255,255,.15);padding-left:14px;}
 .sn{font-family:var(--fd);font-size:1.9rem;font-weight:700;color:#93d8f8;}
+.sn.is-loading{opacity:.7;letter-spacing:.08em;}
 .sl{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:1px;}
 
 /* CAT SHOWCASE */

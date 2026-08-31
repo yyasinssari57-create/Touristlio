@@ -307,10 +307,10 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="cg" id="categoryCardsGrid"></div>
     </div>
 
-    <div class="stats-strip">
-      <div class="sc"><div class="sn" id="stat-countries">—</div><div class="sl" data-i18n="statCountries">Kapsanan Ülke</div></div>
-      <div class="sc"><div class="sn" id="stat-places">—</div><div class="sl" data-i18n="statPlaces">Listelenen Yer</div></div>
-      <div class="sc"><div class="sn">Tiola</div><div class="sl" data-i18n="statTiola">Topluluk Puanı</div></div>
+    <div class="stats-strip" id="homeStatsStrip" aria-busy="true">
+      <div class="sc"><div class="sn is-loading" id="stat-countries">...</div><div class="sl" data-i18n="statCountries">Kapsanan Ülke</div></div>
+      <div class="sc"><div class="sn is-loading" id="stat-places">...</div><div class="sl" data-i18n="statPlaces">Listelenen Yer</div></div>
+      <div class="sc"><div class="sn is-loading" id="stat-tiolas">...</div><div class="sl" data-i18n="statTiola">Topluluk Yıldızı</div></div>
     </div>
   </div>
 

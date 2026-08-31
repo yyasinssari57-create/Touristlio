@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const { ok, fail } = require('../../lib/apiResponse');
 const placesService = require('./places.service');
+const { getHomepageStats } = require('../../lib/stats-cache');
 
 function validationError(req, res) {
   const errors = validationResult(req);
@@ -48,10 +49,19 @@ function metaCategories(_req, res) {
   }
 }
 
+function homepageStats(_req, res) {
+  try {
+    return ok(res, getHomepageStats());
+  } catch {
+    return ok(res, { countries: 0, places: 0, tiolas: 0 });
+  }
+}
+
 module.exports = {
   list,
   markers,
   cities,
   metaCategories,
+  homepageStats,
   validationError,
 };
