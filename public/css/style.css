@@ -164,7 +164,7 @@ nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filte
 .pc-loc{font-size:.72rem;color:var(--t3);margin-bottom:2px;}
 .pc-name{font-family:var(--fd);font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:7px;line-height:1.2;}
 .pc-rats{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;}
-.rat{display:flex;align-items:center;gap:4px;font-size:.67rem;}
+.rat{display:flex;align-items:center;gap:4px;font-size:.67rem;flex-wrap:wrap;}
 .rl{color:var(--t3);width:58px;flex-shrink:0;font-size:.72rem;}
 .sg{color:var(--star);}
 .st{color:var(--star2);}
@@ -260,7 +260,11 @@ nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filte
 .rev-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .rev-hd h2{font-family:var(--fd);font-size:1.1rem;font-weight:700;color:var(--navy);}
 .af-badge{font-size:.67rem;color:var(--ok);background:rgba(16,185,129,.08);padding:5px 10px;border-radius:100px;border:1px solid rgba(16,185,129,.18);}
-.rform{background:var(--l);border-radius:var(--r2);padding:14px;margin-bottom:12px;border:1.5px solid var(--l2);}
+.rform{background:var(--l);border-radius:var(--r2);padding:14px;margin-bottom:12px;border:1.5px solid var(--l2);position:relative;}
+.rform-lock{display:none;flex-direction:column;align-items:flex-start;gap:8px;background:rgba(255,255,255,.92);border:1px dashed rgba(14,165,233,.35);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+.rform--guest .rform-lock{display:flex;}
+.rform-lock p{margin:0;font-size:.78rem;color:var(--t2);line-height:1.4;}
+.rform--guest textarea.rft,.rform--guest .rf-photo-row,.rform--guest .member-ex{opacity:.55;}
 .rf-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .rfav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.74rem;color:#fff;flex-shrink:0;}
 .rfnm{font-size:.8rem;font-weight:600;color:var(--navy);}
@@ -299,6 +303,16 @@ textarea.rft:focus{border-color:var(--b);}
 .psi{text-align:center;}
 .psi-n{font-family:var(--fd);font-size:1.05rem;font-weight:700;color:#93d8f8;display:block;}
 .psi-l{font-size:.67rem;color:rgba(255,255,255,.6);}
+.prof-badges{margin:-8px 0 16px;}
+.badge-block{background:var(--w);border:1.5px solid var(--l2);border-radius:var(--r2);padding:12px 14px;box-shadow:var(--sh);}
+.badge-title{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2);margin-bottom:8px;}
+.badge-row{display:flex;flex-wrap:wrap;gap:6px;}
+.tiola-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:.72rem;font-weight:600;border:1.5px solid var(--l2);background:var(--l);color:var(--t3);}
+.tiola-badge.earned{background:rgba(14,165,233,.1);border-color:rgba(14,165,233,.35);color:var(--navy);}
+.tiola-badge.locked{opacity:.45;}
+.badge-next{margin:8px 0 0;font-size:.72rem;color:var(--t2);}
+.badge-empty{font-size:.78rem;color:var(--t3);}
+.public-prof-card .badge-block{margin:0 0 12px;box-shadow:none;}
 .ptabs{display:flex;gap:2px;background:var(--w);border:1.5px solid var(--l2);border-radius:100px;padding:3px;margin-bottom:18px;}
 .ptab{flex:1;text-align:center;padding:7px;border-radius:100px;font-size:.76rem;font-weight:600;cursor:pointer;color:var(--t2);transition:all .2s;}
 .ptab.on{background:var(--b);color:#fff;}
@@ -639,6 +653,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .discover-place-card img{width:88px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;transform:translateZ(0);}
 .discover-place-card h4{font-size:.9rem;font-weight:700;color:var(--navy);margin-bottom:4px;}
 .discover-place-card p{font-size:.72rem;color:var(--t2);}
+.discover-tiola-rat{margin-top:4px;font-size:.72rem;color:var(--star2);font-weight:600;}
 .discover-empty{text-align:center;padding:40px 20px;color:var(--t2);}
 .discover-empty .empty-icon{font-size:2.5rem;margin-bottom:10px;}
 .admin-shell{min-height:calc(100vh - var(--nav-h));min-height:calc(100dvh - var(--nav-h));padding-top:var(--nav-h);}

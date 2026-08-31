@@ -165,7 +165,21 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Eski DB’deki Tiola/blog satırları retroaktif temizlenmedi; yeni kayıtlarda XSS strip var, eski metin çıkışta `escapeHtml`.
 - Girişe 3/5 dk limiti uygulanmadı (yanlış şifrede kilitlenmesin diye); bot’a karşı reCAPTCHA (anahtar varsa) + `authLimiter`.
 
-- [ORTA-1] Tiola Sistemi Görünmüyor
+## ORTA-1 (Tiola görünürlüğü)
+
+- Tamamlandı: mekân kartlarında (keşfet grid, discover listesi, arama, yakındaki/benzer) ortalama **Tiola** puanı + yorum sayısı. Google puanı yok.
+- Detay formu girişsiz kilitli; login/kayıt sonrası yıldız + kategori + gönder aktif.
+- `places.tiola_count` / `places.tiola_rating` kolonları; onay / kaldırma / silme / rapor geri alma sonrası yeniden hesaplanır. Liste AVG() yapmaz, kolon + 2 dk bellek önbelleği.
+- Rozetler onaylı üst seviye Tiola sayısına göre: 1 İlk Tiola, 5 Gezgin, 10 Yerel Rehber, 25 Tiola Ustası, 50 Elçi. Profil + herkese açık profil.
+- `npm run verify:tiolas`
+
+### Leftover
+- Bekleyen (pending) Tiola kamu ortalamasına yansımaz; ortalama onayda güncellenir.
+- Keşfet kartlarında hâlâ Google yok; puan 0.0 / 0 Tiola boş mekânlarda görünür (tire yok).
+- Rozetler hesaplanır, ayrı `user_badges` tablosu yok (silinen Tiola sayıyı düşürür).
+- Redis/anti-bot Tiola limiti ORTA-4.
+- Profil `profile.html` ayrı sayfası rozet HTML’si taşımaz; ana SPA profil kullanır.
+
 - [ORTA-2] Arama ve Filtreleme State Yönetimi
 - [ORTA-3] Sayfalama (Pagination) Eksikliği
 - [ORTA-4] Anti-Bot / Sahte Oy Koruması

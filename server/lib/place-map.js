@@ -15,8 +15,12 @@ function mapPlaceRow(row, stats) {
   const thingsToDo = parseJson(row.things_to_do, []);
   const thingsToDoEn = parseJson(row.things_to_do_en, []);
   const photos = parseJson(row.photos, row.image_url ? [resolvePlaceImageUrl(row.image_url, row.category, row.id)] : []);
-  const tiolaCount = stats?.tiolaCount || 0;
-  const tiolaRating = stats?.tiolaRating || null;
+  const tiolaCount = (stats && stats.tiolaCount != null)
+    ? stats.tiolaCount
+    : (row.tiola_count || 0);
+  const tiolaRating = (stats && stats.tiolaRating != null)
+    ? stats.tiolaRating
+    : (row.tiola_rating ?? null);
   const popularity = row.popularity != null
     ? row.popularity
     : tiolaCount * 2 + (tiolaRating || 0) * 10;

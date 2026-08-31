@@ -16,6 +16,7 @@ const { canModifyOwnContent } = require('../lib/content-ownership');
 const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
 const { processImageUpload } = require('../middleware/process-image-upload');
 const { containsBannedWord } = require('../lib/contentFilter');
+const { refreshPlaceStatsForTiola } = require('../lib/tiola-stats');
 
 
 
@@ -478,6 +479,7 @@ router.delete('/:id', authRequired, (req, res) => {
     `).run(id, id);
   }
 
+  refreshPlaceStatsForTiola(id);
   res.json({ deleted: true, message: 'Paylaşımınız silindi' });
 });
 

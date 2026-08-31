@@ -349,15 +349,25 @@ try {
 }
 
 function placeStats(placeId) {
-  const all = allPlaceStats();
-  return all.get(placeId) || { tiolaCount: 0, tiolaRating: null };
+  try {
+    const row = db.prepare(`
+      SELECT tiola_count AS tiolaCount, tiola_rating AS tiolaRating FROM places WHERE id = ?
+    `).get(placeId);
+    if (row) {
+      return { tiolaCount: row.tiolaCount || 0, tiolaRating: row.tiolaRating ?? null };
+    }
+  } catch {
+    /* columns not migrated yet */
+  }
+  return allPlaceStats().get(placeId) || { tiolaCount: 0, tiolaRating: null };
 }
 
-function allPlaceStats() {
+function aggregatePlaceStats() {
   const rows = db.prepare(`
     SELECT place_id AS placeId, COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
     FROM tiolas
-    WHERE status = 'approved' AND stars IS NOT NULL AND stars > 0 AND place_id IS NOT NULL
+    WHERE status = 'approved' AND parent_id IS NULL
+      AND stars IS NOT NULL AND stars > 0 AND place_id IS NOT NULL
     GROUP BY place_id
   `).all();
   const map = new Map();
@@ -365,6 +375,23 @@ function allPlaceStats() {
     map.set(row.placeId, { tiolaCount: row.count || 0, tiolaRating: row.avg || null });
   }
   return map;
+}
+
+function allPlaceStats() {
+  try {
+    const rows = db.prepare(`
+      SELECT id AS placeId, tiola_count AS count, tiola_rating AS avg
+      FROM places
+      WHERE COALESCE(tiola_count, 0) > 0
+    `).all();
+    const map = new Map();
+    for (const row of rows) {
+      map.set(row.placeId, { tiolaCount: row.count || 0, tiolaRating: row.avg ?? null });
+    }
+    return map;
+  } catch {
+    return aggregatePlaceStats();
+  }
 }
 
 module.exports = { db, dbPath, isEphemeralStorage, placeStats, allPlaceStats };

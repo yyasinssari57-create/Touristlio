@@ -34,6 +34,7 @@ const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
 const { processImageUpload } = require('../middleware/process-image-upload');
 const { unlinkImageAndVariants } = require('../lib/image-process');
 const logger = require('../lib/logger');
+const { refreshPlaceStatsForTiola } = require('../lib/tiola-stats');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
@@ -180,6 +181,7 @@ router.post('/tiolas/:id/approve', checkPermission('admin.moderate'), (req, res)
     UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
+  refreshPlaceStatsForTiola(id);
   logAdmin(req, 'tiola.approve', 'tiola', id, null);
   logModeration(req, 'tiola', id, 'approve', null);
   return ok(res, { approved: true });
@@ -209,6 +211,7 @@ router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req,
     UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
     WHERE id = ? AND status = 'approved'
   `).run(req.user.id, reason, id);
+  refreshPlaceStatsForTiola(id);
 
   const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
   notifications.createNotification({
@@ -258,6 +261,7 @@ router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req,
     UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, reason, id);
+  refreshPlaceStatsForTiola(id);
 
   const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
   notifications.createNotification({
@@ -311,6 +315,7 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
           WHERE id = ? AND status IN ('pending', 'spam')
         `).run(req.user.id, id);
         if (!r.changes) { errors.push({ id, error: 'Onaylanamadı' }); continue; }
+        refreshPlaceStatsForTiola(id);
         logAdmin(req, 'tiola.approve', 'tiola', id, 'bulk');
         logModeration(req, 'tiola', id, 'approve', 'bulk');
         processed += 1;
@@ -328,6 +333,7 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
           UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
           WHERE id = ? AND status IN ('pending', 'spam')
         `).run(req.user.id, cleanReason, id);
+        refreshPlaceStatsForTiola(id);
         const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
         notifications.createNotification({
           userId: row.user_id,
@@ -362,6 +368,7 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
           UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
           WHERE id = ? AND status = 'approved'
         `).run(req.user.id, cleanReason, id);
+        refreshPlaceStatsForTiola(id);
         const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
         notifications.createNotification({
           userId: row.user_id,

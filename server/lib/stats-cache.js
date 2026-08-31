@@ -23,6 +23,13 @@ function getStatsMap() {
   return cache;
 }
 
+/** Force the next list read to pick up places.tiola_count / tiola_rating. */
+function primeStatsMap() {
+  cache = allPlaceStats();
+  cacheAt = Date.now();
+  return cache;
+}
+
 function queryHomepageStats() {
   const placesRow = db.prepare(`
     SELECT COUNT(*) AS c FROM places
@@ -65,6 +72,7 @@ function invalidateStatsCache() {
 
 module.exports = {
   getStatsMap,
+  primeStatsMap,
   getHomepageStats,
   toNonNegInt,
   invalidateStatsCache,

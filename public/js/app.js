@@ -313,6 +313,30 @@ function renderProfileChip(userId, userName, avUser, sizeClass = 'tiola-mini') {
   </button>`;
 }
 
+function renderBadgesHtml(profile, opts = {}) {
+  const badges = profile?.badges || profile?.earnedBadges || [];
+  const earned = (profile?.earnedBadges || badges.filter((b) => b.earned));
+  const next = profile?.nextBadge || null;
+  const compact = !!opts.compact;
+  if (!badges.length && !earned.length) {
+    return `<div class="badge-row"><span class="badge-empty">${t('noBadgesYet')}</span></div>`;
+  }
+  const chips = (badges.length ? badges : earned).map((b) => {
+    const on = b.earned !== false && (b.earned || earned.some((e) => e.id === b.id));
+    return `<span class="tiola-badge${on ? ' earned' : ' locked'}" title="${escapeHtml(b.name)} (${b.min}+ Tiola)">${b.icon || ''} ${escapeHtml(b.name)}</span>`;
+  }).join('');
+  const nextHtml = next && !compact
+    ? `<p class="badge-next">${t('badgeNext')}: ${escapeHtml(next.icon || '')} ${escapeHtml(next.name)} · ${next.remaining} ${t('badgeMoreTiolas')}</p>`
+    : '';
+  return `<div class="badge-block"><div class="badge-title">${t('badgesTitle')}</div><div class="badge-row">${chips}</div>${nextHtml}</div>`;
+}
+
+function renderOwnBadges(profile) {
+  const el = document.getElementById('profBadges');
+  if (!el) return;
+  el.innerHTML = renderBadgesHtml(profile || {});
+}
+
 function buildPublicProfileCard(p) {
   const avHtml = window.TL_AVATARS?.renderHtml({
     name: p.name,
@@ -342,6 +366,7 @@ function buildPublicProfileCard(p) {
           <div><strong>${p.blogCount || 0}</strong><span>Blog</span></div>
           <div><strong>${p.likeCount || 0}</strong><span>${t('profileStatLikes')}</span></div>
         </div>
+        ${renderBadgesHtml(p, { compact: true })}
         <h4 class="public-prof-section">${t('profileTabTiolas')}</h4>
         ${tiolaList}
       </div>
@@ -353,7 +378,7 @@ async function renderPublicProfilePage(userId) {
   if (!el) return;
   el.innerHTML = `<p class="public-prof-empty">${t('loading') || 'Yükleniyor…'}</p>`;
   try {
-    const data = await api('/profiles/' + userId);
+    const data = await api('/profiles/' + userId + '?lang=' + encodeURIComponent(lang));
     const p = data.profile;
     if (!p) throw new Error('Profil bulunamadı');
     el.innerHTML = buildPublicProfileCard(p);
@@ -671,21 +696,27 @@ function toggleFaq(i) {
 function renderNearbyCards(list) {
   const el = document.getElementById('nearbyList');
   if (!el) return;
-  el.innerHTML = (list || []).map((x) => `
+  el.innerHTML = (list || []).map((x) => {
+    const s = formatTiolaScore(x);
+    return `
     <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail(${x.id})">
       ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
-      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${x.distanceKm != null ? ` · ${x.distanceKm} km` : ''}</div></div>
-    </div>`).join('') || `<p class="empty-hint">${t('nearbyEmpty')}</p>`;
+      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${x.distanceKm != null ? ` · ${x.distanceKm} km` : ''} · <span class="st">${s.stars}</span> ${s.num} (${s.count})</div></div>
+    </div>`;
+  }).join('') || `<p class="empty-hint">${t('nearbyEmpty')}</p>`;
 }
 
 function renderSimilarCards(list) {
   const el = document.getElementById('similarList');
   if (!el) return;
-  el.innerHTML = (list || []).map((x) => `
+  el.innerHTML = (list || []).map((x) => {
+    const s = formatTiolaScore(x);
+    return `
     <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0">
       ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
-      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}</div></div>
-    </div>`).join('') || `<p class="empty-hint">${t('similarEmpty')}</p>`;
+      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)} · <span class="st">${s.stars}</span> ${s.num} (${s.count})</div></div>
+    </div>`;
+  }).join('') || `<p class="empty-hint">${t('similarEmpty')}</p>`;
 }
 
 function renderDetailWidgets(data) {
@@ -799,6 +830,7 @@ function updateAuthUI() {
     }
   }
   if (joinBtn) joinBtn.style.display = user ? 'none' : '';
+  updateRevForm();
 }
 
 async function loadPlaces(params = {}, append = false) {
@@ -814,8 +846,26 @@ async function loadPlaces(params = {}, append = false) {
 }
 
 function stars(n) {
-  if (!n) return '';
-  return '★'.repeat(Math.floor(n));
+  const v = Number(n);
+  if (!Number.isFinite(v) || v <= 0) return '☆☆☆☆☆';
+  const filled = Math.max(0, Math.min(5, Math.round(v)));
+  return '★'.repeat(filled) + '☆'.repeat(5 - filled);
+}
+
+function formatTiolaScore(p) {
+  const count = Number(p?.tiolaCount) || 0;
+  const rating = Number(p?.tiolaRating);
+  const has = count > 0 && Number.isFinite(rating) && rating > 0;
+  return {
+    stars: stars(has ? rating : 0),
+    num: has ? Number(rating).toFixed(1) : '0.0',
+    count,
+  };
+}
+
+function renderTiolaRatingLine(p) {
+  const s = formatTiolaScore(p);
+  return `<div class="rat"><span class="rl">${t('touristlio')}</span><span class="st">${s.stars}</span><span class="rn">${s.num}</span><span class="rc">(${s.count} ${t('tiolaCount')})</span></div>`;
 }
 
 function showGridSkeleton() {
@@ -856,7 +906,7 @@ function renderGrid(list, append = false) {
         <div class="pc-loc">📍 ${escapeHtml(p.location)}</div>
         <div class="pc-name">${escapeHtml(p.name)}</div>
         <div class="pc-rats">
-          <div class="rat"><span class="rl">${t('touristlio')}</span><span class="st">${stars(p.tiolaRating)}</span><span class="rc">(${p.tiolaCount || 0} ${t('tiolaCount')})</span></div>
+          ${renderTiolaRatingLine(p)}
         </div>
         <div class="pc-foot"><div class="pc-type">${catLabel(p.category)}</div><div style="font-size:.61rem;color:var(--t3)">${escapeHtml(p.country)}</div></div>
       </div>
@@ -948,12 +998,15 @@ function onSearch(val) {
       if (!res.length) {
         drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="exploreOnMap()">${t('mapExploreBtn')}</button></div>`;
       } else {
-        drop.innerHTML = res.map((p) => `
+        drop.innerHTML = res.map((p) => {
+          const s = formatTiolaScore(p);
+          return `
           <div class="sd-item" onmousedown="pickSearch(${p.id})">
             ${responsiveImg(placeImg(p), { className: 'sd-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
             <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(p.location)}</div>
-            <div class="sd-rat">${stars(p.tiolaRating)} ${p.tiolaCount || 0} ${t('tiolaCount')}</div></div>
-          </div>`).join('');
+            <div class="sd-rat">${s.stars} ${s.num} (${s.count} ${t('tiolaCount')})</div></div>
+          </div>`;
+        }).join('');
       }
       drop.classList.add('show');
     } catch (e) {
@@ -1602,8 +1655,9 @@ async function openDetail(id, skipRoute) {
     setCanonical(`${location.origin}${placePublicPath(p)}`);
     syncDetailSaveBtn();
     if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
-    document.getElementById('pdTS').textContent = stars(p.tiolaRating) || '—';
-    document.getElementById('pdTC').textContent = (p.tiolaCount || 0) + ' ' + t('tiolaCount');
+    const score = formatTiolaScore(p);
+    document.getElementById('pdTS').textContent = `${score.stars} ${score.num}`;
+    document.getElementById('pdTC').textContent = `${score.count} ${t('tiolaCount')}`;
     document.getElementById('icCountry').textContent = p.country;
     document.getElementById('icCity').textContent = p.city;
     document.getElementById('icCat').textContent = p.categoryDisplay || catLabel(p.category);
@@ -1674,6 +1728,21 @@ async function renderRevList() {
   }
 }
 
+function setTiolaFormActive(active) {
+  const form = document.getElementById('tiolaDetailForm') || document.querySelector('.rform');
+  const txt = document.getElementById('rfTxt');
+  const photo = document.getElementById('rfPhoto');
+  const cat = document.getElementById('revCatSel');
+  const send = document.getElementById('rfSendBtn') || form?.querySelector('.rf-foot .btn');
+  [txt, photo, cat, send].forEach((el) => {
+    if (el) el.disabled = !active;
+  });
+  if (form) {
+    form.classList.toggle('rform--active', !!active);
+    form.classList.toggle('rform--guest', !active);
+  }
+}
+
 function updateRevForm() {
   try {
     const av = document.getElementById('rfAv');
@@ -1681,16 +1750,19 @@ function updateRevForm() {
     const tp = document.getElementById('rfTp');
     const me = document.getElementById('memberEx');
     const nt = document.getElementById('rfNote');
+    if (!av || !nm || !tp || !nt) return;
     if (!user) {
       av.textContent = '?'; nm.textContent = t('notLoggedIn'); tp.textContent = '';
       if (me) me.style.display = 'none';
       nt.innerHTML = `<a href="#" onclick="openAuth();return false;">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
+      setTiolaFormActive(false);
     } else {
       window.TL_AVATARS?.applyToElement(av, user);
       nm.textContent = user.name;
       tp.textContent = t('writeTiola');
       if (me) me.style.display = 'flex';
       nt.textContent = t('tiolaModeration');
+      setTiolaFormActive(true);
     }
   } catch (e) {
     window.TL_ERROR_BOUNDARY?.capture('form', e);
@@ -1943,11 +2015,13 @@ async function updateProfilePage() {
 
   document.getElementById('pRevCnt').textContent = topLevelTiolas.length;
   const pLike = document.getElementById('pLikeCnt');
-  if (pLike) {
-    try {
-      const prof = await api('/profiles/' + user.id);
-      pLike.textContent = prof.profile?.likeCount ?? 0;
-    } catch { pLike.textContent = '0'; }
+  try {
+    const prof = await api('/profiles/' + user.id + '?lang=' + encodeURIComponent(lang));
+    if (pLike) pLike.textContent = prof.profile?.likeCount ?? 0;
+    renderOwnBadges(prof.profile);
+  } catch {
+    if (pLike) pLike.textContent = '0';
+    renderOwnBadges({ badges: [] });
   }
   document.getElementById('pSavedCnt').textContent = savedIds.size;
   document.getElementById('pCntCnt').textContent = visitedStats.countriesVisited || new Set(approvedT.map((t) => t.countryTag || t.placeId)).size;

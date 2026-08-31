@@ -1,10 +1,11 @@
 const express = require('express');
 const { validationResult } = require('express-validator');
-const { db, allPlaceStats } = require('../db');
+const { db } = require('../db');
 const { findPlaceRow, PLACE_PARAM_RESERVED } = require('../lib/place-lookup');
 const { authOptional, authRequired } = require('../middleware/auth');
 const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
 const { cacheKey, wrap } = require('../lib/cache');
+const { getStatsMap } = require('../lib/stats-cache');
 const { findNearbyPlaces, findSimilarPlaces } = require('../lib/geo');
 const { getWeather } = require('../services/weatherService');
 const { currencyForCountry, timezoneForCountry, parseEntryFeeTry } = require('../lib/currency');
@@ -14,19 +15,8 @@ const placesService = require('../modules/places/places.service');
 const router = express.Router();
 const { mapPlace: mapPlaceFromService } = placesService;
 
-let legacyStatsCache = null;
-let legacyStatsCacheAt = 0;
-
-function getLegacyStats() {
-  const now = Date.now();
-  if (legacyStatsCache && now - legacyStatsCacheAt < 120000) return legacyStatsCache;
-  legacyStatsCache = allPlaceStats();
-  legacyStatsCacheAt = now;
-  return legacyStatsCache;
-}
-
 function mapPlace(row) {
-  return mapPlaceFromService(row, getLegacyStats());
+  return mapPlaceFromService(row, getStatsMap());
 }
 
 function validationError(req, res) {

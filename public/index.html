@@ -441,7 +441,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <div class="sec-block faq-block" id="pdFaq" style="display:none"></div>
           <div class="rev-wrap">
             <div class="rev-hd"><h2 data-i18n="detailTiolas">✨ Tiola'lar</h2><div class="af-badge" data-i18n="antiFraud">🛡️ Sahte oy koruması</div></div>
-            <div class="rform" data-error-boundary="form">
+            <div class="rform rform--guest" id="tiolaDetailForm" data-error-boundary="form">
+              <div class="rform-lock" id="rfLock">
+                <p data-i18n="tiolaFormLocked">Tiola yazmak için giriş yapın. Misafirler yorumları okuyabilir.</p>
+                <button type="button" class="btn bp bsm" onclick="openAuth()" data-i18n="loginToTiola">Giriş yap</button>
+              </div>
               <div class="rf-top">
                 <div class="rfav" id="rfAv">?</div>
                 <div><div class="rfnm" id="rfNm">—</div><div class="rftp" id="rfTp"></div></div>
@@ -463,12 +467,12 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
                   </select>
                 </div>
               </div>
-              <textarea class="rft" id="rfTxt" data-i18n-placeholder="tiolaPlaceholder" placeholder="2. Deneyimini yaz (Tiola)..."></textarea>
+              <textarea class="rft" id="rfTxt" data-i18n-placeholder="tiolaPlaceholder" placeholder="2. Deneyimini yaz (Tiola)..." disabled></textarea>
               <div class="rf-photo-row"><label class="rf-photo-label" data-i18n="photoOptional">3. Fotoğraf (isteğe bağlı)</label><br/>
-              <input type="file" id="rfPhoto" accept="image/jpeg,image/png,image/webp"/></div>
+              <input type="file" id="rfPhoto" accept="image/jpeg,image/png,image/webp" disabled/></div>
               <div class="rf-foot">
                 <div class="rnote" id="rfNote"></div>
-                <button class="btn bp bsm" onclick="postTiola()" data-i18n="sendTiola">Tiola Gönder</button>
+                <button class="btn bp bsm" id="rfSendBtn" type="button" onclick="postTiola()" data-i18n="sendTiola" disabled>Tiola Gönder</button>
               </div>
             </div>
             <div class="rlist" id="revList" data-error-boundary="tiolas"></div>
@@ -549,6 +553,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           </div>
         </div>
       </div>
+      <div class="prof-badges" id="profBadges" aria-label="Rozetler"></div>
       <div class="prof-activity-bar" id="profActivityBar" style="display:none" aria-live="polite"></div>
       <div class="ptabs">
         <div class="ptab on" data-ptab="tiolas" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</div>

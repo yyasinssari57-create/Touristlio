@@ -67,6 +67,17 @@ window.TL_DISCOVER = (function () {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  function tiolaLine(p) {
+    const count = Number(p?.tiolaCount) || 0;
+    const rating = Number(p?.tiolaRating);
+    const has = count > 0 && Number.isFinite(rating) && rating > 0;
+    const filled = has ? Math.max(0, Math.min(5, Math.round(rating))) : 0;
+    const stars = '★'.repeat(filled) + '☆'.repeat(5 - filled);
+    const num = has ? rating.toFixed(1) : '0.0';
+    const label = t('tiolaCount') || 'Tiola';
+    return `${stars} ${num} (${count} ${label})`;
+  }
+
   function buildQuery() {
     const q = new URLSearchParams();
     q.set('limit', '100');
@@ -223,6 +234,7 @@ window.TL_DISCOVER = (function () {
               <div>
                 <h4>${escapeHtml(name)}</h4>
                 <p>${escapeHtml(window.TL_I18N?.catLabel(lang, p.category) || catLabel(p.category))} · ${escapeHtml(p.district || p.city || '')}</p>
+                <p class="discover-tiola-rat">${tiolaLine(p)}</p>
               </div>
             </article>`;
           }).join('');

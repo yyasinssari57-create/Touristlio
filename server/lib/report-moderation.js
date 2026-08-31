@@ -4,6 +4,7 @@ const notifications = require('./notifications');
 const authModel = require('../modules/auth/auth.model');
 const { sendTiolaRejectionEmail, sendBlogRejectionEmail } = require('./mailer');
 const { unlinkImageAndVariants } = require('./image-process');
+const { refreshPlaceStatsForTiola } = require('./tiola-stats');
 
 const REPORT_STATUSES = {
   PENDING: 'pending',
@@ -198,6 +199,7 @@ function removeReportedContent(content, adminId, reason) {
     } else {
       return { ok: false, error: 'Bu Tiola kaldırılamaz (durum: ' + content.status + ')' };
     }
+    refreshPlaceStatsForTiola(content.id);
     return { ok: true, prevStatus };
   }
 
@@ -244,6 +246,7 @@ function restoreReportedContent(report) {
         UPDATE tiolas SET status = 'approved', moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL
         WHERE id = ? AND status = 'rejected'
       `).run(content.id);
+      refreshPlaceStatsForTiola(content.id);
       return { ok: true, restored: true };
     }
     if (['pending', 'spam'].includes(prev)) {
@@ -251,6 +254,7 @@ function restoreReportedContent(report) {
         UPDATE tiolas SET status = ?, moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL
         WHERE id = ? AND status = 'rejected'
       `).run(prev, content.id);
+      refreshPlaceStatsForTiola(content.id);
       return { ok: true, restored: true };
     }
   }

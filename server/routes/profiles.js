@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const { authOptional } = require('../middleware/auth');
 const { getUserTiolaLikeCount } = require('../lib/likes');
+const { badgesForCount } = require('../lib/tiola-badges');
 
 const router = express.Router();
 
@@ -18,9 +19,12 @@ router.get('/:id', authOptional, (req, res) => {
     return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
   }
 
+  const lang = req.query.lang === 'en' ? 'en' : 'tr';
   const tiolaCount = db.prepare(`
-    SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'approved'
+    SELECT COUNT(*) AS c FROM tiolas
+    WHERE user_id = ? AND status = 'approved' AND parent_id IS NULL
   `).get(id).c;
+  const badgePayload = badgesForCount(tiolaCount, lang);
   const blogCount = db.prepare(`
     SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'approved'
   `).get(id).c;
@@ -43,6 +47,9 @@ router.get('/:id', authOptional, (req, res) => {
       avatarPreset: row.avatar_preset || null,
       memberSince: row.created_at,
       tiolaCount,
+      badges: badgePayload.badges,
+      earnedBadges: badgePayload.earned,
+      nextBadge: badgePayload.next,
       blogCount,
       likeCount,
       recentTiolas: recentTiolas.map((t) => ({

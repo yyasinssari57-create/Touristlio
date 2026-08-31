@@ -3,6 +3,7 @@ const moderationModel = require('./moderation.model');
 const { computeUserRiskScore } = require('../../middleware/rbac');
 
 const { db } = require('../../db');
+const { refreshPlaceStatsForTiola } = require('../../lib/tiola-stats');
 
 
 
@@ -65,6 +66,7 @@ function listPendingBlogs() {
 function approveTiola(id, moderatorId) {
 
   moderationModel.approveTiola(id, moderatorId);
+  refreshPlaceStatsForTiola(id);
 
   return { ok: true };
 
@@ -75,6 +77,7 @@ function approveTiola(id, moderatorId) {
 function rejectTiola(id, moderatorId) {
 
   moderationModel.rejectTiola(id, moderatorId);
+  refreshPlaceStatsForTiola(id);
 
   return { ok: true };
 
