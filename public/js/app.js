@@ -1384,19 +1384,33 @@ function animateStat(el, target) {
   const to = toStatCount(target);
   el.classList.remove('is-loading');
   el.removeAttribute('aria-busy');
+  el.dataset.statValue = String(to);
+  const finish = () => { el.textContent = formatStatCount(to); };
   if (prefersReducedMotion() || to === 0) {
-    el.textContent = formatStatCount(to);
+    finish();
     return;
   }
   const duration = 900;
   const start = performance.now();
+  let done = false;
   function frame(now) {
+    if (done) return;
     const t = Math.min(1, (now - start) / duration);
     const eased = 1 - ((1 - t) ** 3);
     el.textContent = formatStatCount(Math.round(to * eased));
     if (t < 1) requestAnimationFrame(frame);
+    else {
+      done = true;
+      finish();
+    }
   }
   requestAnimationFrame(frame);
+  setTimeout(() => {
+    if (!done) {
+      done = true;
+      finish();
+    }
+  }, duration + 80);
 }
 
 function applyHomepageStats(stats) {
