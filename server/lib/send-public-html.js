@@ -17,6 +17,7 @@ const HTML_PAGE_ROUTES = {
   '/verify-email': 'verify-email.html',
   '/reset-password': 'reset-password.html',
   '/search': 'search.html',
+  '/explore': 'index.html',
   '/gezilecek-yerler': 'index.html',
   '/404': '404.html',
 };

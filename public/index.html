@@ -168,14 +168,17 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
       </div>
       <div class="results-bar">
-        <h3><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
-        <select class="sort-sel" onchange="sortChange(this.value)">
+        <h3 id="placesFoundLabel" aria-live="polite"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
+        <div class="results-bar-actions">
+          <button type="button" class="btn bo bsm" id="clearFiltersBtn" onclick="resetFilters()" data-i18n="filterClear" hidden>Filtreler Temizle</button>
+          <select class="sort-sel" onchange="sortChange(this.value)">
           <option value="popularity" data-i18n-sort="sortPopularity">En Popüler</option>
           <option value="tiola" data-i18n-sort="sortTiola">En Yüksek Tiola Puanı</option>
           <option value="reviewed" data-i18n-sort="sortReviewed">En Çok Tiola</option>
           <option value="local" data-i18n-sort="sortLocal">Önce Yerel Seçimler</option>
           <option value="az" data-i18n-sort="sortAz">A → Z</option>
         </select>
+        </div>
       </div>
       <p class="browse-hint" id="browseHint" data-i18n="browseHint">Kategori seçin veya arama yapın — destinasyonlar burada listelenir.</p>
       <div class="pgrid" id="pgrid"></div>
@@ -194,7 +197,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="filter-grid">
         <div class="fg">
           <div class="fg-lbl" data-i18n="filterContinent">Kıta</div>
-          <select class="fg-sel" onchange="updateCountryList(this.value)" id="contSel">
+          <select class="fg-sel" onchange="onContinentChange(this.value)" id="contSel">
             <option value="" data-i18n="allContinents">Tüm Kıtalar</option>
             <option>Europe</option><option>Asia</option><option>Americas</option>
             <option>Middle East</option><option>Africa</option><option>Oceania</option>
@@ -202,7 +205,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         </div>
         <div class="fg">
           <div class="fg-lbl" data-i18n="filterCountry">Ülke</div>
-          <select class="fg-sel" id="cntSel" onchange="updateCityList(this.value)">
+          <select class="fg-sel" id="cntSel" onchange="onCountryChange(this.value)">
             <option value="" data-i18n="allCountries">Tüm Ülkeler</option>
             <option>Turkey 🇹🇷</option><option>France 🇫🇷</option><option>Japan 🇯🇵</option>
             <option>Italy 🇮🇹</option><option>Greece 🇬🇷</option><option>Spain 🇪🇸</option>
@@ -222,67 +225,67 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         </div>
         <div class="fg">
           <div class="fg-lbl" data-i18n="filterCity">Şehir</div>
-          <select class="fg-sel" id="citSel" onchange="updateDistrictList(this.value)">
+          <select class="fg-sel" id="citSel" onchange="onCityChange(this.value)">
             <option value="" data-i18n="allCities">Tüm Şehirler</option>
           </select>
         </div>
         <div class="fg">
           <div class="fg-lbl" data-i18n="filterDistrict">İlçe / Bölge</div>
-          <select class="fg-sel" id="disSel"><option value="" data-i18n="allDistricts">Tüm İlçeler</option></select>
+          <select class="fg-sel" id="disSel" onchange="onDistrictChange()"><option value="" data-i18n="allDistricts">Tüm İlçeler</option></select>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterMinTiola">Minimum Tiola puanı</div>
         <div class="fchips">
-          <div class="fchip gold on" onclick="setStar(this,0)" data-i18n="all">Tümü</div>
-          <div class="fchip gold" onclick="setStar(this,3)">⭐ 3+</div>
-          <div class="fchip gold" onclick="setStar(this,4)">⭐ 4+</div>
-          <div class="fchip gold" onclick="setStar(this,4.5)">⭐ 4.5+</div>
+          <div class="fchip gold on" onclick="setStar(this,0)" data-score="0" data-i18n="all">Tümü</div>
+          <div class="fchip gold" onclick="setStar(this,3)" data-score="3">⭐ 3+</div>
+          <div class="fchip gold" onclick="setStar(this,4)" data-score="4">⭐ 4+</div>
+          <div class="fchip gold" onclick="setStar(this,4.5)" data-score="4.5">⭐ 4.5+</div>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterEntry">Giriş Ücreti</div>
         <div class="fchips">
-          <div class="fchip on" onclick="soloChip(this,'.entry-chip');activeEntry='all';" data-v="all" data-i18n="all">Tümü</div>
-          <div class="fchip entry-chip" onclick="soloChip(this,'.entry-chip');activeEntry='free';" data-v="free" data-i18n="entryFree">🆓 Ücretsiz</div>
-          <div class="fchip entry-chip" onclick="soloChip(this,'.entry-chip');activeEntry='paid';" data-v="paid" data-i18n="entryPaid">💳 Ücretli</div>
+          <div class="fchip on" onclick="setEntryFilter(this,'all')" data-entry="all" data-i18n="all">Tümü</div>
+          <div class="fchip entry-chip" onclick="setEntryFilter(this,'free')" data-entry="free" data-i18n="entryFree">🆓 Ücretsiz</div>
+          <div class="fchip entry-chip" onclick="setEntryFilter(this,'paid')" data-entry="paid" data-i18n="entryPaid">💳 Ücretli</div>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterPlaces">Yerler</div>
         <div class="fchips">
-          <div class="fchip on" onclick="soloChip(this,'.local-chip');activeLocal='all';" data-i18n="all">Tümü</div>
-          <div class="fchip teal local-chip" onclick="soloChip(this,'.local-chip');activeLocal='local';" data-i18n="filterLocalPicks">👤 Yerel Seçimleri</div>
+          <div class="fchip on" onclick="setLocalFilter(this,'all')" data-local="all" data-i18n="all">Tümü</div>
+          <div class="fchip teal local-chip" onclick="setLocalFilter(this,'local')" data-local="local" data-i18n="filterLocalPicks">👤 Yerel Seçimleri</div>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterWeather">Hava Durumuna Göre</div>
         <div class="fchips">
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherOutdoor">☀️ Açık Hava</div>
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherIndoor">🌧️ Kapalı Mekan</div>
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherWinter">❄️ Kış Aktivitesi</div>
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherSunrise">🌅 Gün Doğumu/Batımı</div>
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="weatherNight">🌙 Gece</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherOutdoor">☀️ Açık Hava</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherIndoor">🌧️ Kapalı Mekan</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherWinter">❄️ Kış Aktivitesi</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherSunrise">🌅 Gün Doğumu/Batımı</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherNight">🌙 Gece</div>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterAccess">Erişilebilirlik</div>
         <div class="fchips">
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessWheel">♿ Engelli Erişimi</div>
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessFamily">👨‍👩‍👧 Aile Dostu</div>
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessPet">🐶 Evcil Hayvan</div>
-          <div class="fchip" onclick="this.classList.toggle('on')" data-i18n="accessParking">🅿️ Otopark Var</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessWheel">♿ Engelli Erişimi</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessFamily">👨‍👩‍👧 Aile Dostu</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessPet">🐶 Evcil Hayvan</div>
+          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessParking">🅿️ Otopark Var</div>
         </div>
       </div>
 
       <div class="filter-actions">
         <button class="btn bp" onclick="applyFilters();showExploreTab('discover',document.getElementById('et-discover'))" data-i18n="filterShow">🔍 Sonuçları Göster</button>
-        <button class="btn bo" onclick="resetFilters()" data-i18n="filterReset">↺ Sıfırla</button>
+        <button class="btn bo" onclick="resetFilters()" data-i18n="filterClear">Filtreler Temizle</button>
       </div>
     </div>
   </div>
@@ -716,6 +719,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <script src="/js/map-discover.js?v=__APP_VERSION__"></script>
 <script src="/js/discover-places.js?v=__APP_VERSION__"></script>
 <script src="/js/form-security.js?v=__APP_VERSION__"></script>
+<script src="/js/explore-query.js?v=__APP_VERSION__"></script>
 <script src="/js/app.js?v=__APP_VERSION__"></script>
 </body>
 </html>

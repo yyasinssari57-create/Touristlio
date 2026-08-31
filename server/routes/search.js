@@ -29,6 +29,10 @@ function filterAndSort(req) {
   }
 
   let places = rows.map(mapPlace);
+  const minScore = Number(req.query.score || req.query.minTiola);
+  if (Number.isFinite(minScore) && minScore > 0) {
+    places = places.filter((p) => p.tiolaRating != null && p.tiolaRating >= minScore);
+  }
   if (sort === 'az') places.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
   else if (sort === 'popularity') places.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
   else places.sort((a, b) => (b.tiolaRating || 0) - (a.tiolaRating || 0));

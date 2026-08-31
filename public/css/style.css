@@ -140,6 +140,8 @@ nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filte
 .discover-wrap{padding:24px 40px;}
 .results-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
 .results-bar h3{font-family:var(--fd);font-size:clamp(1rem,1.3vw,1.15rem);font-weight:700;color:var(--navy);}
+.results-bar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+#clearFiltersBtn[hidden]{display:none!important;}
 .sort-sel{background:var(--l);border:1.5px solid var(--l2);color:var(--navy);padding:6px 9px;border-radius:7px;font-size:.75rem;outline:none;}
 .explore-filter-strip{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 .discover-filter-bar,.map-filter-bar{margin-bottom:16px;}

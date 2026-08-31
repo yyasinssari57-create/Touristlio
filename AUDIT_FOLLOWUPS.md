@@ -180,7 +180,24 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Redis/anti-bot Tiola limiti ORTA-4.
 - Profil `profile.html` ayrı sayfası rozet HTML’si taşımaz; ana SPA profil kullanır.
 
-- [ORTA-2] Arama ve Filtreleme State Yönetimi
+## ORTA-2 (arama / filtre state)
+
+- Tamamlandı: keşfet araması 300ms debounce ile hem dropdown hem grid’i günceller; boş arama da sonuçları sıfırlar.
+- Aktif filtreler paylaşılabilir URL’ye yazılır: `/explore?country=turkey&category=nature&score=4` (`q`, `group`, `city`, `district`, `entry`, `local`, `sort` da eklenir). `/en/explore?...` İngilizce.
+- İlk yükleme ve geri/ileri (popstate) query’den state’i geri yükler. `score` = minimum Tiola (Google yok).
+- `#resCnt` “X yer bulundu” her sonuçta güncellenir (`aria-live`).
+- “Filtreler Temizle” (keşfet sonuç çubuğu + gelişmiş filtre sekmesi + `/search`) tüm state + URL’yi sıfırlar. Eski kırık `syncFilterChipState` çağrısı kaldırıldı.
+- `GET /explore` index.html; API `score` ≡ `minTiola`; ülke slug (`turkey`) SQL/filtrede eşleşir.
+- `npm run verify:filters`
+
+### Leftover
+- Hava/erişilebilirlik chip’leri hâlâ görsel; listeyi filtrelemez (önceki davranış).
+- Ana sayfa filtresizken URL `/#explore` kalır; query olunca `/explore?...`.
+- `/search` kendi `q/category/sort/page` query’sini kullanır (`/explore` şeması değil).
+- Keşfet grid hâlâ “Daha Fazla Yükle” (ORTA-3 sayfalama).
+- `tl_route` localStorage filtre tutmaz; kaynak URL.
+- Ülke eşlemesi `LIKE %turkey%`; “South Turkey” diye bir ülke yok.
+
 - [ORTA-3] Sayfalama (Pagination) Eksikliği
 - [ORTA-4] Anti-Bot / Sahte Oy Koruması
 - [ORTA-5] Veritabanı Index'leri — Filtreleme Performansı

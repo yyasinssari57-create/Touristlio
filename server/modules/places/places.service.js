@@ -100,6 +100,7 @@ function filterPlaces(rows, queryParams, statsMap = getStatsMap(), options = {})
     q, category, group, country, city, district, localOnly, entry, minTiola,
 
   } = queryParams;
+  const minScore = minTiola || queryParams.score;
 
   const qNorm = q ? normalizeSearch(q) : '';
 
@@ -209,9 +210,9 @@ function filterPlaces(rows, queryParams, statsMap = getStatsMap(), options = {})
 
 
 
-  if (minTiola) {
+  if (minScore) {
 
-    const min = Number(minTiola);
+    const min = Number(minScore);
 
     places = places.filter((p) => p.tiolaRating != null && p.tiolaRating >= min);
 

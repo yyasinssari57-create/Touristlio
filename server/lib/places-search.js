@@ -22,12 +22,14 @@ function searchPlacesRows({ q, country, city, category } = {}) {
     params.push(ftsQuery);
   }
   if (country) {
-    where.push('p.country = ?');
-    params.push(country);
+    const countryNeedle = String(country).toLowerCase().replace(/[%_]/g, '');
+    where.push('LOWER(p.country) LIKE ?');
+    params.push(`%${countryNeedle}%`);
   }
   if (city) {
-    where.push('p.city = ?');
-    params.push(city);
+    const cityNeedle = String(city).toLowerCase().replace(/[%_]/g, '');
+    where.push('LOWER(p.city) LIKE ?');
+    params.push(`%${cityNeedle}%`);
   }
   if (category) {
     where.push('(p.category = ? OR (p.categories IS NOT NULL AND p.categories LIKE ?))');

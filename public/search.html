@@ -43,6 +43,7 @@
       <option value="az" data-i18n="sortAz">A → Z</option>
     </select>
     <button type="submit" class="btn bp" data-i18n="searchBtn">🔍 Keşfet</button>
+    <button type="button" class="btn bo" id="searchClear" data-i18n="filterClear">Filtreler Temizle</button>
   </form>
   <p class="search-meta" id="searchMeta" aria-live="polite"></p>
   <div class="pgrid" id="searchGrid"></div>
@@ -133,6 +134,25 @@ async function runSearch(append) {
 document.getElementById('searchForm').addEventListener('submit', (e) => { e.preventDefault(); runSearch(false); });
 document.getElementById('searchPrev').onclick = () => { offset = Math.max(0, offset - LIMIT); runSearch(false); };
 document.getElementById('searchNext').onclick = () => { offset += LIMIT; runSearch(false); };
+document.getElementById('searchClear').onclick = () => {
+  document.getElementById('searchQ').value = '';
+  document.getElementById('searchCat').value = 'all';
+  document.getElementById('searchSort').value = 'popularity';
+  offset = 0;
+  runSearch(false);
+};
+
+let searchDebounce;
+const SEARCH_DEBOUNCE_MS = 300;
+['searchQ', 'searchCat', 'searchSort'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+  el.addEventListener(evt, () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => runSearch(false), SEARCH_DEBOUNCE_MS);
+  });
+});
 
 (function init() {
   const qs = new URLSearchParams(location.search);

@@ -233,6 +233,10 @@ app.get('/search', (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'search.html');
 });
 
+app.get('/explore', (_req, res) => {
+  sendPublicHtml(res, PUBLIC_DIR, 'index.html');
+});
+
 app.get('/gezilecek-yerler', (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });

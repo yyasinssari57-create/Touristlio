@@ -289,7 +289,7 @@ function autoJsonLd(pathname, relativePath, lang = 'tr') {
   }
   let p = stripEnPrefix(pathname || '/').split('?')[0];
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
-  if (p === '/' || p === '') return jsonLdForHome();
+  if (p === '/' || p === '' || p === '/explore') return jsonLdForHome();
   if (p.includes('contact')) return jsonLdForContact(lang);
   return [];
 }

@@ -93,6 +93,8 @@ let lang = pathIsEn ? 'en' : (localStorage.getItem('tl_lang') || 'tr');
 if (pathIsEn) localStorage.setItem('tl_lang', 'en');
 let lastOsmHint = false;
 let searchTimer;
+let filterRequestId = 0;
+const SEARCH_DEBOUNCE_MS = (window.TL_EXPLORE_QUERY && window.TL_EXPLORE_QUERY.SEARCH_DEBOUNCE_MS) || 300;
 const PAGE_SIZE = 12;
 let placesTotal = 0;
 let homeStatsPromise = null;
@@ -833,9 +835,10 @@ function updateAuthUI() {
   updateRevForm();
 }
 
-async function loadPlaces(params = {}, append = false) {
+async function loadPlaces(params = {}, append = false, reqId = filterRequestId) {
   const qs = new URLSearchParams({ ...params, limit: PAGE_SIZE, offset: append ? placesOffset : 0 }).toString();
   const data = await api('/places?' + qs);
+  if (reqId !== filterRequestId) return data;
   if (append) places = places.concat(data.places);
   else places = data.places;
   placesTotal = data.total ?? data.count ?? places.length;
@@ -880,7 +883,7 @@ function showGridSkeleton() {
 function renderGrid(list, append = false) {
   const grid = document.getElementById('pgrid');
   if (grid) grid.classList.remove('skeleton');
-  document.getElementById('resCnt').textContent = placesTotal || list.length;
+  updatePlacesFoundCount(placesTotal || list.length);
   const browseHint = document.getElementById('browseHint');
   if (browseHint) browseHint.style.display = cardsLoaded ? 'none' : 'block';
   document.getElementById('noRes').style.display = cardsLoaded && !list.length ? 'block' : 'none';
@@ -930,10 +933,147 @@ function buildFilterParams() {
     city: cit,
     district: dis,
     minTiola: activeStar || '',
+    score: activeStar || '',
     localOnly: activeLocal === 'local' ? '1' : '',
     entry: activeEntry === 'all' ? '' : activeEntry,
     sort: sortMode,
   };
+}
+
+function collectExploreFilterState() {
+  return {
+    q: document.getElementById('heroSearch')?.value.trim() || '',
+    country: document.getElementById('cntSel')?.value || '',
+    city: document.getElementById('citSel')?.value || '',
+    district: document.getElementById('disSel')?.value || '',
+    continent: document.getElementById('contSel')?.value || '',
+    category: activeFilterGroup !== 'all' ? '' : (activeCat !== 'all' ? activeCat : ''),
+    group: activeFilterGroup !== 'all' ? activeFilterGroup : '',
+    score: activeStar || 0,
+    entry: activeEntry !== 'all' ? activeEntry : '',
+    local: activeLocal !== 'all' ? activeLocal : '',
+    sort: sortMode,
+  };
+}
+
+function updatePlacesFoundCount(total) {
+  const n = Number(total);
+  const el = document.getElementById('resCnt');
+  if (el) el.textContent = String(Number.isFinite(n) ? n : 0);
+  updateClearFiltersVisibility();
+}
+
+function updateClearFiltersVisibility() {
+  const btn = document.getElementById('clearFiltersBtn');
+  if (!btn || !window.TL_EXPLORE_QUERY) return;
+  const active = window.TL_EXPLORE_QUERY.hasExploreFilters(collectExploreFilterState());
+  btn.hidden = !active;
+  btn.setAttribute('aria-hidden', active ? 'false' : 'true');
+}
+
+function findSelectOptionBySlug(selectEl, slug) {
+  if (!selectEl || !slug || !window.TL_EXPLORE_QUERY) return null;
+  const target = window.TL_EXPLORE_QUERY.slugifyFilter(slug);
+  return [...selectEl.options].find((o) => {
+    const val = window.TL_EXPLORE_QUERY.slugifyFilter(o.value || o.textContent);
+    return val && val === target;
+  }) || null;
+}
+
+function restoreExploreFiltersFromUrl(search) {
+  if (!window.TL_EXPLORE_QUERY) return false;
+  const parsed = window.TL_EXPLORE_QUERY.parseExploreSearch(
+    search != null ? search : location.search,
+  );
+  const hero = document.getElementById('heroSearch');
+  if (hero) hero.value = parsed.q || '';
+
+  const contSel = document.getElementById('contSel');
+  if (contSel) {
+    if (parsed.continent) {
+      const opt = findSelectOptionBySlug(contSel, parsed.continent);
+      if (opt) {
+        contSel.value = opt.value;
+        updateCountryList(opt.value);
+      } else {
+        contSel.value = '';
+      }
+    } else if (contSel.value) {
+      contSel.value = '';
+      updateCountryList('');
+    }
+  }
+
+  const cntSel = document.getElementById('cntSel');
+  if (cntSel) {
+    if (parsed.country) {
+      const opt = findSelectOptionBySlug(cntSel, parsed.country);
+      if (opt) {
+        cntSel.value = opt.value;
+        updateCityList(opt.value);
+      } else {
+        cntSel.value = '';
+      }
+    } else if (cntSel.value) {
+      cntSel.value = '';
+      updateCityList('');
+    }
+  }
+
+  const citSel = document.getElementById('citSel');
+  if (citSel) {
+    if (parsed.city) {
+      const opt = findSelectOptionBySlug(citSel, parsed.city);
+      if (opt) {
+        citSel.value = opt.value;
+        updateDistrictList(opt.value);
+      } else {
+        citSel.value = '';
+      }
+    } else if (citSel.value) {
+      citSel.value = '';
+      updateDistrictList('');
+    }
+  }
+
+  const disSel = document.getElementById('disSel');
+  if (disSel) {
+    if (parsed.district) {
+      const opt = findSelectOptionBySlug(disSel, parsed.district);
+      if (opt) disSel.value = opt.value;
+      else disSel.value = '';
+    } else {
+      disSel.value = '';
+    }
+  }
+
+  if (parsed.group && parsed.group !== 'all') {
+    activeFilterGroup = parsed.group;
+    activeCat = 'all';
+  } else if (parsed.category && parsed.category !== 'all') {
+    activeFilterGroup = 'all';
+    activeCat = parsed.category;
+  } else {
+    activeFilterGroup = 'all';
+    activeCat = 'all';
+  }
+
+  activeStar = parsed.score || 0;
+  activeEntry = parsed.entry || 'all';
+  activeLocal = parsed.local || 'all';
+  sortMode = parsed.sort || 'popularity';
+
+  const sortSel = document.querySelector('#es-discover .sort-sel');
+  if (sortSel) sortSel.value = sortMode;
+
+  syncExploreFilterState();
+  syncAdvancedFilterChips();
+  window.TL_MAP?.setMapFilters?.({
+    category: activeCat,
+    group: activeFilterGroup,
+  });
+  updateClearFiltersVisibility();
+  return window.TL_EXPLORE_QUERY.hasExploreFilters(parsed);
 }
 
 async function loadMapMarkers() {
@@ -963,16 +1103,20 @@ async function loadMapMarkers() {
 }
 
 async function applyFilters() {
+  const reqId = ++filterRequestId;
   if (!placesLoading) showGridSkeleton();
   placesLoading = true;
   placesOffset = 0;
   currentFilterParams = buildFilterParams();
+  updateClearFiltersVisibility();
   try {
-    await loadPlaces(currentFilterParams, false);
+    await loadPlaces(currentFilterParams, false, reqId);
+    if (reqId !== filterRequestId) return;
     renderGrid(places);
     if (isExploreMapTabActive()) await loadMapMarkers();
+    if (getActiveMainTab() === 'explore' && !restoringRoute) syncRoute(true);
   } finally {
-    placesLoading = false;
+    if (reqId === filterRequestId) placesLoading = false;
   }
 }
 
@@ -990,10 +1134,13 @@ async function loadMorePlaces() {
 function onSearch(val) {
   const drop = document.getElementById('srchDrop');
   clearTimeout(searchTimer);
-  if (!val.trim()) { drop.classList.remove('show'); return; }
+  const q = String(val || '').trim();
+  if (!q) drop?.classList.remove('show');
   searchTimer = setTimeout(async () => {
+    applyFilters();
+    if (!q) return;
     try {
-      const data = await api('/places/search?q=' + encodeURIComponent(val.trim()) + '&limit=7');
+      const data = await api('/places/search?q=' + encodeURIComponent(q) + '&limit=7');
       const res = data.places;
       if (!res.length) {
         drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="exploreOnMap()">${t('mapExploreBtn')}</button></div>`;
@@ -1013,7 +1160,7 @@ function onSearch(val) {
       drop.innerHTML = `<div class="sd-empty">${escapeHtml(e.message)}</div>`;
       drop.classList.add('show');
     }
-  }, 220);
+  }, SEARCH_DEBOUNCE_MS);
 }
 
 async function exploreOnMap() {
@@ -1159,6 +1306,16 @@ function readRouteFromUrl() {
     return { main: 'places' };
   }
 
+  const exploreTabs = ['discover', 'map', 'filter', 'tiolas', 'categories'];
+  const hasFilterQuery = ['country', 'category', 'score', 'q', 'group', 'city', 'district', 'minTiola']
+    .some((k) => params.get(k));
+  if (pathParts[0] === 'explore' || (pathNoEn === '/' && hasFilterQuery && !placeParam)) {
+    let explore = 'discover';
+    if (segments[0] === 'explore') explore = segments[1] || 'discover';
+    else if (exploreTabs.includes(segments[0])) explore = segments[0];
+    return { main: 'explore', explore };
+  }
+
   if (segments[0] === 'explore') {
     return { main: 'explore', explore: segments[1] || 'discover' };
   }
@@ -1205,7 +1362,19 @@ function writeRouteToUrl(route, replace = true) {
     path = '/gezilecek-yerler';
     hash = '#places';
   } else if (route.main === 'explore') {
-    hash = route.explore && route.explore !== 'discover' ? `#explore/${route.explore}` : '#explore';
+    const qs = window.TL_EXPLORE_QUERY
+      ? window.TL_EXPLORE_QUERY.buildExploreSearch(collectExploreFilterState())
+      : new URLSearchParams();
+    const qsStr = qs.toString();
+    const rawPath = (location.pathname || '/').replace(/\/+$/, '') || '/';
+    const pathNoEn = rawPath.replace(/^\/en(?=\/|$)/, '') || '/';
+    if (qsStr || pathNoEn === '/explore') {
+      path = '/explore';
+      search = qsStr ? `?${qsStr}` : '';
+      hash = route.explore && route.explore !== 'discover' ? `#explore/${route.explore}` : '';
+    } else {
+      hash = route.explore && route.explore !== 'discover' ? `#explore/${route.explore}` : '#explore';
+    }
   } else if (route.main === 'profile') {
     if (route.profileUserId) {
       hash = `#profile/u/${route.profileUserId}`;
@@ -1512,13 +1681,44 @@ async function loadCategoryStats() {
 
 function setStar(el, v) {
   activeStar = v;
-  document.querySelectorAll('.fchip.gold').forEach((c) => c.classList.remove('on'));
-  el.classList.add('on');
+  document.querySelectorAll('#es-filter .fchip.gold').forEach((c) => c.classList.remove('on'));
+  if (el) el.classList.add('on');
+  else syncAdvancedFilterChips();
+  applyFilters();
+}
+
+function setEntryFilter(el, v) {
+  activeEntry = v || 'all';
+  document.querySelectorAll('#es-filter .fchip[data-entry]').forEach((c) => {
+    c.classList.toggle('on', (c.dataset.entry || 'all') === activeEntry);
+  });
+  applyFilters();
+}
+
+function setLocalFilter(el, v) {
+  activeLocal = v || 'all';
+  document.querySelectorAll('#es-filter .fchip[data-local]').forEach((c) => {
+    c.classList.toggle('on', (c.dataset.local || 'all') === activeLocal);
+  });
+  applyFilters();
 }
 
 function soloChip(el, sel) {
   document.querySelectorAll(sel).forEach((c) => c.classList.remove('on'));
   el.classList.add('on');
+}
+
+function syncAdvancedFilterChips() {
+  document.querySelectorAll('#es-filter .fchip.gold').forEach((c) => {
+    const v = Number(c.getAttribute('data-score'));
+    c.classList.toggle('on', (Number.isFinite(v) ? v : 0) === Number(activeStar || 0));
+  });
+  document.querySelectorAll('#es-filter .fchip[data-entry]').forEach((c) => {
+    c.classList.toggle('on', (c.dataset.entry || 'all') === (activeEntry || 'all'));
+  });
+  document.querySelectorAll('#es-filter .fchip[data-local]').forEach((c) => {
+    c.classList.toggle('on', (c.dataset.local || 'all') === (activeLocal || 'all'));
+  });
 }
 
 function sortChange(v) { sortMode = v; applyFilters(); }
@@ -1529,12 +1729,28 @@ function resetFilters() {
   activeStar = 0;
   activeEntry = 'all';
   activeLocal = 'all';
-  syncFilterChipState('all', 'all');
-  document.getElementById('cntSel').value = '';
-  document.getElementById('citSel').innerHTML = `<option value="">${t('allCities')}</option>`;
-  document.getElementById('disSel').innerHTML = `<option value="">${t('allDistricts')}</option>`;
-  document.getElementById('heroSearch').value = '';
+  sortMode = 'popularity';
+  const hero = document.getElementById('heroSearch');
+  if (hero) hero.value = '';
+  document.getElementById('srchDrop')?.classList.remove('show');
+  const contSel = document.getElementById('contSel');
+  if (contSel) contSel.value = '';
+  const cntSel = document.getElementById('cntSel');
+  if (cntSel) {
+    cntSel.value = '';
+    updateCountryList('');
+  }
+  const citSel = document.getElementById('citSel');
+  if (citSel) citSel.innerHTML = `<option value="">${t('allCities')}</option>`;
+  const disSel = document.getElementById('disSel');
+  if (disSel) disSel.innerHTML = `<option value="">${t('allDistricts')}</option>`;
+  const sortSel = document.querySelector('#es-discover .sort-sel');
+  if (sortSel) sortSel.value = 'popularity';
+  document.querySelectorAll('#es-filter .fchip[data-ephemeral]').forEach((c) => c.classList.remove('on'));
+  syncExploreFilterState();
+  syncAdvancedFilterChips();
   window.TL_MAP?.setMapFilters?.({ category: 'all', group: 'all' });
+  updateClearFiltersVisibility();
   applyFilters();
 }
 
@@ -1553,6 +1769,25 @@ function updateCountryList(cont) {
   else (MAP[cont] || []).forEach((c) => { const o = document.createElement('option'); o.textContent = c; cs.appendChild(o); });
   document.getElementById('citSel').innerHTML = `<option value="">${t('allCities')}</option>`;
   document.getElementById('disSel').innerHTML = `<option value="">${t('allDistricts')}</option>`;
+}
+
+function onContinentChange(cont) {
+  updateCountryList(cont);
+  applyFilters();
+}
+
+function onCountryChange(cnt) {
+  updateCityList(cnt);
+  applyFilters();
+}
+
+function onCityChange(city) {
+  updateDistrictList(city);
+  applyFilters();
+}
+
+function onDistrictChange() {
+  applyFilters();
 }
 
 function updateCityList(cnt) {
@@ -2550,10 +2785,11 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.srch-wrap')) document.getElementById('srchDrop')?.classList.remove('show');
 });
 
-async function applyRouteFromUrl() {
+async function applyRouteFromUrl(opts = {}) {
   const route = readRouteFromUrl();
   restoringRoute = true;
   try {
+    if (route.main === 'explore') restoreExploreFiltersFromUrl();
     if (route.main === 'detail' && (route.placeSlug || route.placeId)) {
       const opened = await openDetail(route.placeSlug || route.placeId, true);
       if (opened === false) return;
@@ -2581,6 +2817,9 @@ async function applyRouteFromUrl() {
     if (route.main === 'explore' && route.explore && route.explore !== 'discover') {
       const el = document.getElementById('et-' + route.explore);
       if (el) showExploreTab(route.explore, el, true);
+    }
+    if (route.main === 'explore' && !opts.skipFilters) {
+      await applyFilters();
     }
     if (route.main === 'profile') {
       await updateProfilePage();
@@ -2612,6 +2851,7 @@ async function init() {
   document.querySelectorAll('.lb').forEach((b) => {
     b.classList.toggle('on', (lang === 'en' && b.textContent.trim() === 'EN') || (lang === 'tr' && b.textContent.trim() === 'TR'));
   });
+  restoreExploreFiltersFromUrl();
   updateAuthUI();
   renderGrid([]);
   loadHomepageStats();
@@ -2633,7 +2873,7 @@ async function init() {
     console.error(e);
   }
   try {
-    await applyRouteFromUrl();
+    await applyRouteFromUrl({ skipFilters: true });
   } finally {
     window.TL_LOADER?.hide();
     document.documentElement.classList.add('tl-ready');
