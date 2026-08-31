@@ -60,9 +60,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Slogan (“Sadece Ziyaret Etme. Hisset.”) navbar’da; hero içinde h1 yok. Taşınmadı.
 - Mobilde `.hero { min-height: auto }` kısa kalabilir; cover/center yine geçerli.
 
-## Kalan başlıklar (dosya sırası — henüz yapılmadı)
+## YÜKSEK-2 (harita)
 
-- [YÜKSEK-2] Harita Entegrasyonu Çalışmıyor
+- Tamamlandı: Leaflet + MarkerCluster `/public/vendor` altına alındı (unpkg SRI/CDN kırılınca `L` tanımsız kalıyordu).
+- Harita, `display:none` sekmesinde 0 boyutla init edilmiyor; görünür olunca `invalidateSize` + ResizeObserver.
+- Tüm mekânlar lat/lng: seed’de vardı; eksikler `ensurePlaceCoords` / migration backfill ile doldurulur. `GET /api/places/map/markers` her pin’de koordinat döner.
+- Marker clustering (maxClusterRadius 50 / 48).
+- Kategori/grup filtreleri harita pinleriyle senkron: `setExploreFilter` → `TL_MAP.setMapFilters` + markers API `category`/`group`.
+- Görsel pin rengi, zoom konumu, OSM karoları aynı; layout’a dokunulmadı.
+
+### Leftover
+- `GET /api/osm/search` hâlâ 501 — Nominatim proxy yok; harita OSM karoları + dahili pin’lerle çalışır, serbest OSM araması yok.
+- Markers API en fazla 500 pin (clustering bunun için). 1090 yerin hepsi tek seferde çizilmez.
+- OSM karoları `tile.openstreetmap.org` ayakta olmalı; offline/engelli ağda gri kutu.
+- `unpkg.com` CSP’de duruyor ama harita artık local vendor kullanıyor.
+- Keşfet haritası (`#discoverMap`) ilk yüklemede Türkiye varsayılanı; şehir seçilince uçar.
+- Detay haritası (`#pdMap`) lat/lng yoksa gizlenir (artık seed’de dolu).
+
 - [YÜKSEK-3] Görsel Optimizasyon — WebP + Lazy Loading + EXIF Temizleme
 - [YÜKSEK-4] JSON-LD Schema.org Yapılandırılmış Veri Eksik
 - [YÜKSEK-5] Ana Sayfa İstatistikleri "—" Gösteriyor

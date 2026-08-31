@@ -89,7 +89,11 @@ const COUNTRY_FALLBACK = {
 };
 
 function resolveCoords(city, country, placeId) {
-  const base = CITY_COORDS[city] || COUNTRY_FALLBACK[country] || [20, 0];
+  const base = CITY_COORDS[city]
+    || CITY_COORDS[String(city || '').replace(/ı/g, 'i').replace(/İ/g, 'I')]
+    || COUNTRY_FALLBACK[country]
+    || COUNTRY_FALLBACK[String(country || '').replace(/Türkiye/g, 'Turkey')]
+    || [20, 0];
   const seed = (placeId || 1) * 0.00137;
   const angle = ((placeId || 1) * 137) % 360 * (Math.PI / 180);
   const jitter = 0.012 + (seed % 0.008);
@@ -99,4 +103,42 @@ function resolveCoords(city, country, placeId) {
   ];
 }
 
-module.exports = { CITY_COORDS, COUNTRY_FALLBACK, resolveCoords };
+function isValidCoordPair(lat, lng) {
+  const la = Number(lat);
+  const ln = Number(lng);
+  return Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180;
+}
+
+function ensurePlaceCoords(place) {
+  if (isValidCoordPair(place?.lat, place?.lng)) {
+    return { lat: Number(place.lat), lng: Number(place.lng), filled: false };
+  }
+  const [lat, lng] = resolveCoords(place?.city, place?.country, place?.id);
+  return { lat, lng, filled: true };
+}
+
+function backfillMissingPlaceCoords(database) {
+  if (!database || typeof database.prepare !== 'function') return 0;
+  const rows = database.prepare(
+    'SELECT id, city, country, lat, lng FROM places WHERE lat IS NULL OR lng IS NULL',
+  ).all();
+  if (!rows.length) return 0;
+  const upd = database.prepare('UPDATE places SET lat = ?, lng = ? WHERE id = ?');
+  const tx = database.transaction((list) => {
+    for (const row of list) {
+      const { lat, lng } = ensurePlaceCoords(row);
+      upd.run(lat, lng, row.id);
+    }
+  });
+  tx(rows);
+  return rows.length;
+}
+
+module.exports = {
+  CITY_COORDS,
+  COUNTRY_FALLBACK,
+  resolveCoords,
+  ensurePlaceCoords,
+  isValidCoordPair,
+  backfillMissingPlaceCoords,
+};

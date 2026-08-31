@@ -68,7 +68,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+      imgSrc: ["'self'", 'data:', 'https:', 'blob:', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
       connectSrc: getConnectSrcOrigins(),
       frameAncestors: ["'self'"],
     },

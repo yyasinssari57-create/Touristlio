@@ -5,6 +5,7 @@ const { normalizeSearch, matchesQuery } = require('../../lib/search-normalize');
 const { matchesFilterGroup } = require('../../lib/place-content');
 
 const { mapPlaceRow, mapMarker } = require('../../lib/place-map');
+const { ensurePlaceCoords } = require('../../lib/city-coords');
 
 const catalogDb = require('../../lib/catalog-db');
 const { slugify } = catalogDb;
@@ -315,17 +316,13 @@ function listPlaces(queryParams) {
 
 
 function listMarkers(queryParams, lang = 'tr') {
-
-  let rows = db.prepare('SELECT * FROM places WHERE lat IS NOT NULL AND lng IS NOT NULL').all();
-
-  if (!rows.length) rows = db.prepare('SELECT * FROM places').all();
-
+  const rows = db.prepare('SELECT * FROM places').all();
   const statsMap = getStatsMap();
-
   const { places } = filterPlaces(rows, queryParams, statsMap);
-
-  return places.slice(0, 500).map((p) => mapMarker(p, lang));
-
+  return places.slice(0, 500).map((p) => {
+    const coords = ensurePlaceCoords(p);
+    return mapMarker({ ...p, lat: coords.lat, lng: coords.lng }, lang);
+  }).filter((m) => m.lat != null && m.lng != null);
 }
 
 

@@ -316,6 +316,11 @@ function runMigrations(db) {
       const filled = backfillPlaceSlugs(db);
       if (filled > 0) logger.info({ msg: 'Backfilled place slugs', count: filled });
     });
+    runOptional('backfillPlaceCoords', () => {
+      const { backfillMissingPlaceCoords } = require('./city-coords');
+      const filled = backfillMissingPlaceCoords(db);
+      if (filled > 0) logger.info({ msg: 'Backfilled place lat/lng', count: filled });
+    });
 
     runFileMigrations(db);
   } catch (err) {

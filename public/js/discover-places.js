@@ -267,6 +267,7 @@ window.TL_DISCOVER = (function () {
     lang = localStorage.getItem('tl_lang') || 'tr';
     await loadDiscoverCategories();
     renderCategoryFilters();
+    window.TL_MAP_DISCOVER?.init('discoverMap');
     setTimeout(() => {
       window.TL_MAP_DISCOVER?.invalidate();
       if (viewMode === 'places') loadPlacesAndMap();

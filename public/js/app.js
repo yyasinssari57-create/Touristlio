@@ -387,6 +387,7 @@ async function loadCategoryMeta() {
     if (activeCat !== 'all' && !slugs.has(activeCat)) activeCat = 'all';
     if (activeFilterGroup !== 'all' && !(data.groups || []).includes(activeFilterGroup)) activeFilterGroup = 'all';
     renderExploreFilters();
+    window.TL_MAP?.bindMapCatChips?.();
     renderCategoryCards();
     updateCategoryCounts();
   } catch (e) {
@@ -418,6 +419,7 @@ function renderExploreFilters() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   });
+  window.TL_MAP?.bindMapCatChips?.();
 }
 
 function renderCategoryCards() {
@@ -766,6 +768,10 @@ function buildFilterParams() {
 
 async function loadMapMarkers() {
   if (!window.TL_MAP) return;
+  window.TL_MAP.setMapFilters?.({
+    category: activeCat,
+    group: activeFilterGroup,
+  });
   const q = document.getElementById('heroSearch')?.value.trim() || '';
   const cnt = document.getElementById('cntSel')?.value.replace(/\s[\u{1F1E0}-\u{1F1FF}]{2}/gu, '').trim() || '';
   const cit = document.getElementById('citSel')?.value || '';
@@ -1086,21 +1092,23 @@ async function showExploreTab(name, el, skipRoute) {
   if (name === 'tiolas') tasks.push(loadTiolaFeed());
   if (name === 'categories') tasks.push(loadCategoryStats());
   if (name === 'map' && window.TL_MAP) {
-    tasks.push(new Promise((resolve) => {
-      setTimeout(async () => {
+    tasks.push((async () => {
+      await loadMapMarkers();
+      requestAnimationFrame(() => {
         window.TL_MAP.invalidateExplore('exploreMapFull');
-        await loadMapMarkers();
-        resolve();
-      }, 200);
-    }));
+        setTimeout(() => window.TL_MAP.invalidateExplore('exploreMapFull'), 200);
+      });
+    })());
   }
   if (!skipRoute && getActiveMainTab() === 'explore') syncRoute(true);
-  if (!skipRoute) {
-    try {
-      await Promise.all(tasks);
-    } finally {
-      window.TL_LOADER?.hide();
-    }
+  if (skipRoute) {
+    Promise.all(tasks).catch((e) => console.warn(e));
+    return;
+  }
+  try {
+    await Promise.all(tasks);
+  } finally {
+    window.TL_LOADER?.hide();
   }
 }
 
@@ -1198,6 +1206,10 @@ function setExploreFilter(key, el) {
     activeCat = key.slice(4);
   }
   syncExploreFilterState();
+  window.TL_MAP?.setMapFilters?.({
+    category: activeCat,
+    group: activeFilterGroup,
+  });
   applyFilters();
 }
 
@@ -1255,6 +1267,7 @@ function resetFilters() {
   document.getElementById('citSel').innerHTML = `<option value="">${t('allCities')}</option>`;
   document.getElementById('disSel').innerHTML = `<option value="">${t('allDistricts')}</option>`;
   document.getElementById('heroSearch').value = '';
+  window.TL_MAP?.setMapFilters?.({ category: 'all', group: 'all' });
   applyFilters();
 }
 

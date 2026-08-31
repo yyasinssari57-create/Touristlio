@@ -486,6 +486,9 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .map-wrap{position:relative;overflow:hidden;isolation:isolate;z-index:1;border-radius:var(--r2);}
 .map-wrap-sticky{width:100%;height:100%;}
 .map-full{height:min(70vh,640px);width:100%;border-radius:var(--r2);border:1.5px solid var(--l2);}
+.map-full.leaflet-container,
+.discover-map.leaflet-container,
+#pdMap.leaflet-container{width:100%;}
 .map-tab-wrap{padding-top:20px;}
 .map-wrap .leaflet-container,
 .discover-map-panel .leaflet-container,

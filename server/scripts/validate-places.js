@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const placesPath = path.join(__dirname, '..', 'data', 'places.json');
-const REQUIRED = ['id', 'name', 'country', 'city', 'category'];
+const REQUIRED = ['id', 'name', 'country', 'city', 'category', 'lat', 'lng'];
 const MIN_COUNT = Number(process.env.PLACES_MIN_COUNT) || 800;
 
 const places = JSON.parse(fs.readFileSync(placesPath, 'utf8'));
