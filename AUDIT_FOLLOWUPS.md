@@ -23,7 +23,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 ## KRİTİK-3 (iletişim)
 - SMTP (`SMTP_HOST` / `SMTP_USER` / `SMTP_PASS`) yoksa form DB’ye yazar, e-posta gitmez.
-- Admin panelde iletişim kutusu listesi yok.
+- Admin panelde iletişim kutusu listesi **var** (`/admin` → İletişim sekmesi, `GET /api/admin/contact-messages`). SMTP hâlâ Yasin env.
 
 ## KRİTİK-7 (apex vs www)
 - Tamamlandı: Express, yalnızca public host `touristlio.com` (apex) ise **301** → `https://www.touristlio.com` + aynı path/query. `www` ve diğer host’lar dokunulmaz. Localhost / `127.0.0.1` yönlendirilmez.
@@ -70,10 +70,10 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Görsel pin rengi, zoom konumu, OSM karoları aynı; layout’a dokunulmadı.
 
 ### Leftover
-- `GET /api/osm/search` hâlâ 501 — Nominatim proxy yok; harita OSM karoları + dahili pin’lerle çalışır, serbest OSM araması yok.
+- Nominatim proxy yok; `GET /api/osm/search` artık **200 + boş `results`** (`enabled: false`). UI OSM araması çağırmaz; osmHint haritaya yönlendirir.
 - Markers API en fazla 500 pin (clustering bunun için). 1090 yerin hepsi tek seferde çizilmez.
 - OSM karoları `tile.openstreetmap.org` ayakta olmalı; offline/engelli ağda gri kutu.
-- `unpkg.com` CSP’de duruyor ama harita artık local vendor kullanıyor.
+- `unpkg.com` CSP’den çıkarıldı (Leaflet local vendor).
 - Keşfet haritası (`#discoverMap`) ilk yüklemede Türkiye varsayılanı; şehir seçilince uçar.
 - Detay haritası (`#pdMap`) lat/lng yoksa gizlenir (artık seed’de dolu).
 
@@ -123,9 +123,9 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `updateCategoryCounts` şeridi yüklü sayfa boyutuyla ezmiyor.
 
 ### Leftover
-- Kategori kartlarındaki `cat-cnt-*` hâlâ ilk boyamada `—` (şerit değil; kart doldurulunca `0 yer`).
+- Kategori kartlarındaki `cat-cnt-*` katalog `placeCount` kullanır (`0 yer` / `N yer`); em-dash yok.
 - Public `GET /api/places` hâlâ taslak yerleri de sayabilir; şerit `status != archived` kullanır.
-- İstatistik önbelleği 2 dk; Tiola onayında anında invalidate yok (places cache ile birlikte düşer).
+- İstatistik önbelleği 2 dk; Tiola onayında `refreshPlaceStatsForTiola` → `invalidateStatsCache` zaten çağrılır.
 - Ülke adları flag-normalize edilmeden `COUNT(DISTINCT country)`.
 - Dil değişince sayı formatı (1.090 / 1,090) yeniden çizilmez; ilk yükleme diline bağlı.
 - `verify:stats` canlı HTTP için `VERIFY_STATS_URL` ister.
@@ -161,7 +161,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Canlıda reCAPTCHA **yok** (env boş). Yasin Google reCAPTCHA v3 çifti üretip Render/Hetzner’e `RECAPTCHA_SITE_KEY` ve `RECAPTCHA_SECRET` yazmalı; aksi halde yalnızca sanitization + honeypot + rate-limit aktif.
 - reCAPTCHA skor eşiği varsayılan 0.5 (`RECAPTCHA_MIN_SCORE`). Gerçek anahtarla Search Console / admin skorunu izle.
 - Redis yok; form limiti süreç belleğinde (Render free’de instance yeniden başlayınca sıfırlanır). ORTA-4 Tiola Redis limiter’ı ayrı.
-- Admin iletişim kutusu listesi hâlâ yok (KRİTİK-3 leftover).
+- Admin iletişim kutusu listesi eklendi (KRİTİK-3 leftover kapatıldı). SMTP hâlâ env.
 - Eski DB’deki Tiola/blog satırları retroaktif temizlenmedi; yeni kayıtlarda XSS strip var, eski metin çıkışta `escapeHtml`.
 - Girişe 3/5 dk limiti uygulanmadı (yanlış şifrede kilitlenmesin diye); bot’a karşı reCAPTCHA (anahtar varsa) + `authLimiter`.
 
@@ -207,7 +207,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 ### Leftover
 - “Daha Fazla Yükle” kartları biriktirir; paylaşılabilir URL yalnızca numaralı sayfa atlamasını tutar (append oturumu restore edilmez).
-- Discover (`gezilecek-yerler`) hâlâ `limit=100` tek istek — keşfet grid’i değil.
+- Discover (`gezilecek-yerler`) `page` + `limit=20` + “Daha Fazla Yükle” (keşfet grid ile aynı boyut).
 - Liste SQL LIMIT ORTA-5’te kapandı (`searchPlacesPage`); FTS yoksa bellek yedeği.
 - Markers API 500 pin tavanı aynı (YÜKSEK-2 leftover).
 - Admin listeleri kendi `parsePagination` (max 100) — public helper’dan ayrı.
@@ -244,7 +244,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - SQLite `LIKE '%x%'` baştaki joker yüzünden her zaman index kullanmayabilir; `turkey%` öneki + expression index var.
 - `az` sıralama SQL `COLLATE NOCASE` (Türkçe `localeCompare` değil).
 - JSON dizi üyeliği GIN değil; `LIKE %"slug"%`.
-- Discover (`gezilecek-yerler`) hâlâ `limit=100` tek istek (ORTA-3 leftover).
+- Discover (`gezilecek-yerler`) `page` + `limit=20` (ORTA-3 leftover kapatıldı).
 - Markers API 500 pin tavanı aynı.
 - Admin listeleri kendi sayfalama; public helper’dan ayrı.
 - FTS tablosu yoksa liste eski in-memory yola düşer.
@@ -380,7 +380,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Canlıda GA4 **yok** (env boş). Yasin Google Analytics 4’te Measurement ID üretip Render/Hetzner’e `GA_MEASUREMENT_ID` yazmalı; aksi halde yalnızca birinci taraf (onaylı) analitik çalışır.
 - Search Console HTML etiketi **yok**. Yasin Search Console’da URL-prefix (`https://www.touristlio.com`) doğrulama token’ını `GOOGLE_SITE_VERIFICATION` olarak yazmalı.
 - CrUX / Search Console hız raporu Chrome kullanıcılarından gelir; `web-vitals` RUM’u onaylı oturumlarla sınırlı.
-- Numaralı denetim maddeleri (KRİTİK → DÜŞÜK-6) bu maddeyle bitti. `AUDIT_FOLLOWUPS.md` leftover’ları Yasin onayı olmadan yapılmaz.
+- Numaralı denetim maddeleri (KRİTİK → DÜŞÜK-6) bu maddeyle bitti. Kalan Yasin-only ops: env anahtarları, SMTP, Render, Cloudflare, GA4, reCAPTCHA, stacked PR merge.
 
 ## Genel
 - Görevler bitince bu listedeki her maddeyi sırayla açıp kapat.

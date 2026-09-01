@@ -115,6 +115,17 @@ else ok('renderExplorePagination');
 if (/googleRating|google_rating|gRating/.test(appJs)) fail('Google rating leaked');
 else ok('no Google ratings');
 
+const discoverJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'discover-places.js'), 'utf8');
+if (/limit['"]?\s*,\s*['"]100['"]/.test(discoverJs) || discoverJs.includes("q.set('limit', '100')")) {
+  fail('discover still requests limit=100');
+} else ok('discover does not use limit=100');
+if (!discoverJs.includes('PAGE_SIZE = 20') || !discoverJs.includes("q.set('page'")) {
+  fail('discover missing page/limit=20');
+} else ok('discover uses page + limit=20');
+if (!html.includes('id="discoverLoadMoreBtn"') || !discoverJs.includes('discoverLoadMoreBtn')) {
+  fail('discover load more button missing');
+} else ok('discover Daha Fazla Yükle');
+
 const searchHtml = fs.readFileSync(path.join(ROOT, 'public', 'search.html'), 'utf8');
 if (!searchHtml.includes('page: String(page)') && !searchHtml.includes('page: String(page)')) {
   /* keep a real check below */

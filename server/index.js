@@ -69,10 +69,10 @@ app.use(helmet({
   contentSecurityPolicy: isProd ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com', ...recaptchaSrc, ...gaSrc],
+      scriptSrc: ["'self'", "'unsafe-inline'", ...recaptchaSrc, ...gaSrc],
       scriptSrcAttr: ["'unsafe-inline'"],
       // unsafe-inline: index.html critical <style> + admin panel visibility toggles (style="" / el.style)
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],

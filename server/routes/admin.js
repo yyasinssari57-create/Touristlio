@@ -1373,6 +1373,7 @@ router.get('/stats', checkPermission('admin.dashboard'), (_req, res) => {
     blogsPending: db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get().c,
     travelLists: db.prepare('SELECT COUNT(*) AS c FROM travel_lists').get().c,
     visitedRecords: db.prepare('SELECT COUNT(*) AS c FROM visited_places').get().c,
+    contactMessages: db.prepare('SELECT COUNT(*) AS c FROM contact_messages').get().c,
   };
   return ok(res, stats);
 });
@@ -1393,6 +1394,18 @@ router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) =
     },
     score: Math.round(100 - ((noPhoto + noFaq + noCoords + shortDesc) / Math.max(total, 1)) * 25),
   });
+});
+
+router.get('/contact-messages', checkPermission('admin.dashboard'), (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query);
+  const total = db.prepare('SELECT COUNT(*) AS c FROM contact_messages').get().c;
+  const rows = db.prepare(`
+    SELECT id, name, email, subject, message, created_at AS createdAt
+    FROM contact_messages
+    ORDER BY datetime(created_at) DESC
+    LIMIT ? OFFSET ?
+  `).all(limit, offset);
+  return ok(res, { items: rows, total, page, limit });
 });
 
 router.get('/moderation-history/:contentType/:contentId', checkPermission('admin.moderate', 'admin.content'), (req, res) => {

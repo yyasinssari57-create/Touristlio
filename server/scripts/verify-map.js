@@ -61,4 +61,16 @@ if (museumPlaces.length && museumMarkers.length === 0) {
 }
 
 console.log('  ✓ OK');
+
+const osmSrc = require('fs').readFileSync(require('path').join(__dirname, '..', 'routes', 'osm.js'), 'utf8');
+if (osmSrc.includes('501')) {
+  console.error('  ✗ /api/osm/search still returns 501');
+  process.exit(1);
+}
+if (!osmSrc.includes('results: []') || !osmSrc.includes('enabled: false')) {
+  console.error('  ✗ OSM search stub should return empty results while disabled');
+  process.exit(1);
+}
+console.log('  ✓ OSM search stub (empty, not 501)');
+
 process.exit(0);

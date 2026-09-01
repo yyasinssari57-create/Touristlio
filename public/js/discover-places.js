@@ -7,6 +7,10 @@ window.TL_DISCOVER = (function () {
   let cities = [];
   let loading = false;
   let viewMode = 'places';
+  const PAGE_SIZE = 20;
+  let discoverPage = 1;
+  let discoverTotal = 0;
+  let discoverHasMore = false;
 
   let discoverCats = [];
 
@@ -78,10 +82,10 @@ window.TL_DISCOVER = (function () {
     return `${stars} ${num} (${count} ${label})`;
   }
 
-  function buildQuery() {
+  function buildQuery(page) {
     const q = new URLSearchParams();
-    q.set('limit', '100');
-    q.set('offset', '0');
+    q.set('limit', String(PAGE_SIZE));
+    q.set('page', String(page || 1));
     q.set('sort', 'popularity');
     q.set('country', 'Turkey');
     if (selectedCity) q.set('city', selectedCity.nameEn || selectedCity.slug);
@@ -120,6 +124,8 @@ window.TL_DISCOVER = (function () {
     if (mode === 'cities') {
       citiesStep?.classList.add('active');
       placesStep?.classList.remove('active');
+      const pager = document.getElementById('discoverPager');
+      if (pager) pager.style.display = 'none';
     } else {
       citiesStep?.classList.remove('active');
       placesStep?.classList.add('active');
@@ -208,35 +214,22 @@ window.TL_DISCOVER = (function () {
     });
   }
 
-  async function loadPlacesAndMap() {
-    if (loading) return;
-    loading = true;
-    const list = document.getElementById('discoverPlaceList');
-    const empty = document.getElementById('discoverEmpty');
-    const count = document.getElementById('discoverPlaceCount');
-    if (list) {
-      if (window.TL_SKELETON?.fill) window.TL_SKELETON.fill(list, window.TL_SKELETON.list(4));
-      else list.innerHTML = window.TL_SKELETON?.card(4) || '';
-    }
-    try {
-      const data = await fetchJson('/places?' + buildQuery());
-      places = data.places || data.items || [];
-      const total = data.total ?? places.length;
-      if (count) count.textContent = String(total);
-      updateHeader();
-      if (!places.length) {
-        if (list) {
-          if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(list);
-          list.innerHTML = '';
-        }
-        empty?.style.setProperty('display', 'block');
-      } else {
-        empty?.style.setProperty('display', 'none');
-        if (list) {
-          if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(list);
-          list.innerHTML = places.map((p) => {
-            const name = p.name || p.title;
-            return `
+  function updateDiscoverPager() {
+    const pager = document.getElementById('discoverPager');
+    const btn = document.getElementById('discoverLoadMoreBtn');
+    if (!pager || !btn) return;
+    const show = viewMode === 'places' && discoverHasMore && places.length > 0;
+    pager.style.display = show ? '' : 'none';
+    btn.disabled = loading;
+  }
+
+  function renderPlaceCards(list, append) {
+    const el = document.getElementById('discoverPlaceList');
+    if (!el) return;
+    if (window.TL_SKELETON?.clear && !append) window.TL_SKELETON.clear(el);
+    const html = list.map((p) => {
+      const name = p.name || p.title;
+      return `
             <article class="discover-place-card" data-id="${p.id}" tabindex="0" role="button">
               ${window.TL_IMG?.tag
                 ? window.TL_IMG.tag(placeImg(p), { alt: name, kind: 'card', extra: typeof imgFallback === 'function' ? `onerror="imgFallback(this,'${p.category}',${p.id})"` : '' })
@@ -247,24 +240,63 @@ window.TL_DISCOVER = (function () {
                 <p class="discover-tiola-rat">${tiolaLine(p)}</p>
               </div>
             </article>`;
-          }).join('');
-          list.querySelectorAll('.discover-place-card').forEach((card) => {
-            const open = () => { if (typeof openDetail === 'function') openDetail(Number(card.dataset.id)); };
-            card.addEventListener('click', open);
-            card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
-          });
+    }).join('');
+    if (append) el.insertAdjacentHTML('beforeend', html);
+    else el.innerHTML = html;
+    el.querySelectorAll('.discover-place-card').forEach((card) => {
+      if (card.dataset.bound) return;
+      card.dataset.bound = '1';
+      const open = () => { if (typeof openDetail === 'function') openDetail(Number(card.dataset.id)); };
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
+  }
+
+  async function loadPlacesAndMap(append) {
+    if (loading) return;
+    loading = true;
+    const list = document.getElementById('discoverPlaceList');
+    const empty = document.getElementById('discoverEmpty');
+    const count = document.getElementById('discoverPlaceCount');
+    const moreBtn = document.getElementById('discoverLoadMoreBtn');
+    const page = append ? discoverPage + 1 : 1;
+    if (!append && list) {
+      if (window.TL_SKELETON?.fill) window.TL_SKELETON.fill(list, window.TL_SKELETON.list(4));
+      else list.innerHTML = window.TL_SKELETON?.card(4) || '';
+    }
+    if (append) window.TL_SKELETON?.button(moreBtn, true);
+    updateDiscoverPager();
+    try {
+      const data = await fetchJson('/places?' + buildQuery(page));
+      const batch = data.places || data.items || [];
+      places = append ? places.concat(batch) : batch;
+      discoverPage = data.page || page;
+      discoverTotal = data.total ?? places.length;
+      discoverHasMore = data.hasMore === true || places.length < discoverTotal;
+      if (count) count.textContent = String(discoverTotal);
+      updateHeader();
+      if (!places.length) {
+        if (list) {
+          if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(list);
+          list.innerHTML = '';
         }
+        empty?.style.setProperty('display', 'block');
+      } else {
+        empty?.style.setProperty('display', 'none');
+        if (list) renderPlaceCards(append ? batch : places, !!append);
       }
-      const mapQuery = buildQuery();
-      if (window.TL_MAP_DISCOVER) {
+      const mapQuery = buildQuery(1);
+      if (window.TL_MAP_DISCOVER && !append) {
         if (selectedCity) window.TL_MAP_DISCOVER.flyToCity(selectedCity.lat, selectedCity.lng);
         else window.TL_MAP_DISCOVER.setTurkeyView();
         window.TL_MAP_DISCOVER.loadMarkers('/places/map/markers?' + mapQuery);
       }
     } catch (e) {
-      if (list) list.innerHTML = `<div class="discover-empty">${escapeHtml(e.message)}</div>`;
+      if (list && !append) list.innerHTML = `<div class="discover-empty">${escapeHtml(e.message)}</div>`;
     } finally {
       loading = false;
+      if (append) window.TL_SKELETON?.button(moreBtn, false);
+      updateDiscoverPager();
     }
   }
 
@@ -273,6 +305,7 @@ window.TL_DISCOVER = (function () {
     if (!page) return;
     document.getElementById('discoverCitiesBtn')?.addEventListener('click', loadCities);
     document.getElementById('discoverBackBtn')?.addEventListener('click', clearCityFilter);
+    document.getElementById('discoverLoadMoreBtn')?.addEventListener('click', () => loadPlacesAndMap(true));
     await loadDiscoverCategories();
     if (activeCategory && !discoverCats.some((c) => (c.id || c.slug) === activeCategory)) {
       activeCategory = null;

@@ -80,6 +80,18 @@ if (/sp\.textContent = String\(places\.length\)/.test(js)) {
   fail('updateCategoryCounts still overwrites strip with loaded page length');
 } else ok('updateCategoryCounts does not overwrite homepage strip');
 
+if (/id="cat-cnt-\$\{c\.slug\}">—/.test(js) || /cat-cnt-[^"]+">—/.test(js)) {
+  fail('category cards still use em-dash placeholder');
+} else ok('category cards do not use em-dash');
+
+if (!js.includes('function categoryCountLabel') || !js.includes('c.placeCount')) {
+  fail('category cards should use catalog placeCount, not loaded page length');
+} else ok('category cards use categoryCountLabel + meta placeCount');
+
+if (/\/places\?limit=500/.test(js)) {
+  fail('loadCategoryStats still fetches 500 places to count categories');
+} else ok('loadCategoryStats does not fetch 500 places for counts');
+
 const dashAssign = js.match(/stat-(countries|places|tiolas)[\s\S]{0,80}textContent\s*=\s*['"]—['"]/);
 if (dashAssign) fail('app.js still assigns em-dash to a homepage stat');
 else ok('app.js does not assign em-dash to homepage stats');

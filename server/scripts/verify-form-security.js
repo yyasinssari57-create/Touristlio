@@ -89,6 +89,15 @@ if (!contactHtml.includes('[^\\s@]+@') || !contactHtml.includes('EMAIL_RE')) {
   fail('contact.html missing email regex');
 } else ok('contact client email regex');
 
+const adminHtml = fs.readFileSync(path.join(ROOT, 'public', 'admin.html'), 'utf8');
+if (!adminHtml.includes('id="adm-contact"') || !adminHtml.includes('loadContactInbox')) {
+  fail('admin contact inbox UI missing');
+} else ok('admin contact inbox UI');
+const adminRoutes = fs.readFileSync(path.join(ROOT, 'server', 'routes', 'admin.js'), 'utf8');
+if (!adminRoutes.includes('/contact-messages') || !adminRoutes.includes('FROM contact_messages')) {
+  fail('GET /api/admin/contact-messages missing');
+} else ok('admin contact-messages API');
+
 const fsJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'form-security.js'), 'utf8');
 if (!fsJs.includes('grecaptcha') || !fsJs.includes('recaptchaSiteKey')) fail('form-security.js missing reCAPTCHA client');
 else ok('form-security.js reCAPTCHA helper');

@@ -79,6 +79,10 @@ if (css.includes('.admin-wrap{') || css.includes('.status-pending{') || css.incl
   fail('dead CSS still in style.css (admin-wrap / status-pending / photo-preview)');
 } else ok('dead extract-css leftovers removed');
 
+const helmetSrc = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+if (/unpkg\.com/.test(helmetSrc)) fail('CSP still allows unused unpkg.com');
+else ok('CSP does not include unpkg.com');
+
 const htmlFiles = walk(path.join(ROOT, 'public')).filter((f) => f.endsWith('.html') && !f.includes(`${path.sep}vendor${path.sep}`));
 const htmlJoined = htmlFiles.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
 const htmlFont = (htmlJoined.match(/fonts\.googleapis\.com\/css2\?family=Inter/g) || []).length;

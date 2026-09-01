@@ -42,6 +42,7 @@
       <button type="button" role="tab" aria-selected="false" data-section="categories" data-permission="admin.categories" onclick="showAdminSection('categories',this)">Kategoriler</button>
       <button type="button" role="tab" aria-selected="false" data-section="moderation" data-permission="admin.moderate" onclick="showAdminSection('moderation',this)">Moderasyon</button>
       <button type="button" role="tab" aria-selected="false" data-section="reports" data-permission="admin.moderate" onclick="showAdminSection('reports',this)">Şikayetler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="contact" data-permission="admin.dashboard" onclick="showAdminSection('contact',this)">İletişim</button>
       <button type="button" role="tab" aria-selected="false" data-section="users" data-permission="admin.moderate" onclick="showAdminSection('users',this)">Kullanıcılar</button>
       <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" onclick="showAdminSection('content',this)">İçerik</button>
       <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.analytics" onclick="showAdminSection('analytics',this)">Analitik</button>
@@ -259,6 +260,14 @@
           <button type="button" data-rfilter="all" onclick="setReportFilter('all',this)">Tümü</button>
         </div>
         <div id="reportsList" aria-live="polite"></div>
+      </section>
+
+      <section id="adm-contact" class="adm-section" hidden role="tabpanel" aria-label="İletişim kutusu">
+        <h2 class="adm-h2-tight">İletişim kutusu</h2>
+        <p class="adm-cat-hint">Sitedeki iletişim formundan gelen mesajlar. SMTP yoksa da veritabanına yazılır.</p>
+        <p id="contactInboxCount" class="adm-mod-count" aria-live="polite"></p>
+        <div id="contactInboxList" aria-live="polite"></div>
+        <div id="contactInboxPagination" class="adm-pagination"></div>
       </section>
 
       <section id="adm-users" class="adm-section content-layout content-sidebar-open" hidden role="tabpanel" aria-label="Kullanıcılar">
@@ -1089,6 +1098,7 @@ let blogPendingPage = 1;
 let blogApprovedPage = 1;
 let mediaPage = 1;
 let auditPage = 1;
+let contactInboxPage = 1;
 let userDetailTab = 'genel';
 let userDetailData = null;
 let modCurrentItems = [];
@@ -1736,6 +1746,7 @@ function showAdminSection(id, btn) {
   if (id === 'roles' && currentUser?.role === 'admin') loadRoles();
   if (id === 'analytics' && hasAdminPerm('admin.analytics')) loadAnalytics();
   if (id === 'reports' && hasAdminPerm('admin.moderate')) loadReportsList();
+  if (id === 'contact' && hasAdminPerm('admin.dashboard')) loadContactInbox(1);
   if (id === 'audit-log' && currentUser?.role === 'admin') {
     populateAuditStaffFilter();
     loadAuditLog(1);
@@ -1812,6 +1823,42 @@ async function loadReportsList() {
         </div>
       </div>`;
     }).join('');
+  } catch (e) {
+    el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function loadContactInbox(page) {
+  if (!hasAdminPerm('admin.dashboard')) return;
+  contactInboxPage = page || 1;
+  const el = document.getElementById('contactInboxList');
+  const countEl = document.getElementById('contactInboxCount');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  try {
+    const qs = new URLSearchParams({ page: String(contactInboxPage), limit: '20' });
+    const data = await api('/admin/contact-messages?' + qs);
+    const items = data.items || [];
+    const total = data.total || 0;
+    if (countEl) countEl.textContent = total ? `${total} mesaj` : 'Mesaj yok';
+    if (!items.length) {
+      el.innerHTML = '<p style="color:var(--t3)">İletişim formu mesajı yok.</p>';
+      renderPagination('contactInboxPagination', 1, 0, 20, 'loadContactInbox');
+      return;
+    }
+    el.innerHTML = items.map((m) => `
+      <article class="admin-card admin-item">
+        <div style="flex:1;min-width:0">
+          <strong>${escapeHtml(m.subject || '(Konu yok)')}</strong>
+          <p style="font-size:.8rem;color:var(--t2);margin:4px 0 0">
+            ${escapeHtml(m.name || '')}
+            · <a href="mailto:${escapeHtml(m.email || '')}">${escapeHtml(m.email || '')}</a>
+            · ${escapeHtml(m.createdAt || '')}
+          </p>
+          <p style="font-size:.85rem;margin:8px 0 0;white-space:pre-wrap">${escapeHtml(m.message || '')}</p>
+        </div>
+      </article>`).join('');
+    renderPagination('contactInboxPagination', contactInboxPage, total, data.limit || 20, 'loadContactInbox');
   } catch (e) {
     el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
   }
@@ -4308,6 +4355,7 @@ async function refresh() {
         <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
         <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
         <div class="admin-card"><strong>${stats.blogsPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Blog</span></div>
+        <div class="admin-card"><strong>${stats.contactMessages || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">İletişim</span></div>
         <div class="admin-card"><strong>${stats.users}</strong><br><span style="font-size:.75rem;color:var(--t2)">Kullanıcı</span></div>`;
     } catch (e) { statsRow.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
   } else if (statsRow) {

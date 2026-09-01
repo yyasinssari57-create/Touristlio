@@ -468,6 +468,12 @@ function renderExploreFilters() {
   window.TL_MAP?.bindMapCatChips?.();
 }
 
+function categoryCountLabel(n) {
+  const count = Number(n);
+  const safe = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  return safe ? `${safe} ${t('placesCount')}` : t('placesCountZero');
+}
+
 function renderCategoryCards() {
   const grid = document.getElementById('categoryCardsGrid');
   if (!grid || !categoryMeta) return;
@@ -478,7 +484,7 @@ function renderCategoryCards() {
         ${responsiveImg(categoryImage(c.slug, c.imageUrl), { kind: 'card' })}
         <div class="cinfo">
           <div class="cname">${escapeHtml(label)}</div>
-          <div class="ccnt" id="cat-cnt-${c.slug}">—</div>
+          <div class="ccnt" id="cat-cnt-${c.slug}">${escapeHtml(categoryCountLabel(c.placeCount))}</div>
         </div>
       </div>`;
   }).join('');
@@ -1879,14 +1885,7 @@ function loadHomepageStats() {
 async function loadCategoryStats() {
   loadHomepageStats();
   if (!categoryMeta) await loadCategoryMeta();
-  if (placesTotal > 0) { updateCategoryCounts(); return; }
-  try {
-    const data = await api('/places?limit=1&offset=0&sort=popularity');
-    placesTotal = toStatCount(data.total);
-    const meta = await api('/places?limit=500&offset=0&sort=az');
-    places = meta.places || [];
-    updateCategoryCounts();
-  } catch (e) { console.warn(e); }
+  updateCategoryCounts();
 }
 
 function setStar(el, v) {
@@ -3119,19 +3118,10 @@ window.addEventListener('resize', () => {
 });
 
 function updateCategoryCounts() {
-  const counts = {};
-  places.forEach((p) => { counts[p.category] = (counts[p.category] || 0) + 1; });
   (categoryMeta?.categories || []).forEach((c) => {
     const el = document.getElementById(`cat-cnt-${c.slug}`);
     if (!el) return;
-    const n = counts[c.slug] || c.placeCount || 0;
-    el.textContent = n ? `${n} ${t('placesCount')}` : t('placesCountZero');
-  });
-  Object.keys(counts).forEach((cat) => {
-    const el = document.getElementById(`cat-cnt-${cat}`);
-    if (el && !categoryMeta?.categories?.some((c) => c.slug === cat)) {
-      el.textContent = `${counts[cat]} ${t('placesCount')}`;
-    }
+    el.textContent = categoryCountLabel(c.placeCount);
   });
   loadHomepageStats();
 }
