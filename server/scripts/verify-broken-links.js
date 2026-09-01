@@ -52,9 +52,14 @@ if (!fourHtml.includes('/gezilecek-yerler')) fail('404.html missing places CTA')
 else ok('404.html has Gezilecek Yerler CTA');
 
 const catchAll = indexJs.slice(indexJs.lastIndexOf("app.get('*'"));
-if (!catchAll.includes('404.html') || catchAll.includes("'index.html'")) {
+const catchFn = catchAll.split('app.use((err')[0] || catchAll;
+if (!catchFn.includes('404.html') || catchFn.includes("'index.html'")) {
   fail('unknown paths must serve 404.html, not index.html');
 } else ok('Express catch-all serves 404.html');
+
+if (!HTML_PAGE_ROUTES['/'] || HTML_PAGE_ROUTES['/'] !== 'index.html') {
+  fail('GET / must be in HTML_PAGE_ROUTES');
+} else ok('GET / serves index.html');
 
 ['/about', '/contact', '/privacy', '/terms', '/kvkk'].forEach((alias) => {
   if (!HTML_PAGE_ROUTES[alias]) fail(`missing alias ${alias}`);

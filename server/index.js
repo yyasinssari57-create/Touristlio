@@ -208,6 +208,10 @@ if (!isProd) {
   });
 }
 
+app.get('/', (_req, res) => {
+  sendPublicHtml(res, PUBLIC_DIR, 'index.html');
+});
+
 app.get('/admin', (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'admin.html');
 });

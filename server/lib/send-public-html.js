@@ -10,6 +10,7 @@ const NO_CACHE_HEADERS = {
 
 /** Extensionless public HTML routes (must run before express.static). */
 const HTML_PAGE_ROUTES = {
+  '/': 'index.html',
   '/admin': 'admin.html',
   '/login': 'login.html',
   '/register': 'register.html',
