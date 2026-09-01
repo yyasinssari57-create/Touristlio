@@ -1,38 +1,27 @@
 #!/usr/bin/env node
 /**
- * SQLite yedekleme — data/touristlio.db → backups/touristlio-YYYY-MM-DD_HH-mm-ss.db
- * Günlük cron: npm run backup:db
+ * PostgreSQL dump via pg_dump when DATABASE_URL is set.
  */
+require('dotenv').config();
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..', '..');
-const { dbPath } = require('../db');
-const src = dbPath;
-const backupsDir = path.join(
-  process.env.BACKUP_DIR || path.join(path.dirname(dbPath), 'backups'),
-);
+const backupsDir = process.env.BACKUP_DIR || path.join(root, 'backups');
+fs.mkdirSync(backupsDir, { recursive: true });
 
-function pad(n) {
-  return String(n).padStart(2, '0');
-}
-
-function timestamp() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
-}
-
-if (!fs.existsSync(src)) {
-  console.error('Veritabanı bulunamadı:', src);
+const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const out = path.join(backupsDir, `touristlio-${stamp}.sql`);
+const url = process.env.DATABASE_URL;
+if (!url) {
+  console.error('DATABASE_URL required for backup:db');
   process.exit(1);
 }
 
-if (!fs.existsSync(backupsDir)) {
-  fs.mkdirSync(backupsDir, { recursive: true });
+const r = spawnSync('pg_dump', [url, '-f', out], { stdio: 'inherit' });
+if (r.status !== 0) {
+  console.error('pg_dump failed — install postgresql-client or run dump from Supabase dashboard.');
+  process.exit(r.status || 1);
 }
-
-const dest = path.join(backupsDir, `touristlio-${timestamp()}.db`);
-fs.copyFileSync(src, dest);
-
-const stat = fs.statSync(dest);
-console.log(`Yedek oluşturuldu: ${dest} (${stat.size} bayt)`);
+console.log('Backup written:', out);

@@ -85,15 +85,15 @@ const SPAM_WORDS = [
 
 
 
-function mapTiola(row, userId) {
+async function mapTiola(row, userId) {
 
-  const likes = enrichTiolaLikes(row, userId);
+  const likes = await enrichTiolaLikes(row, userId);
 
   const replyCount = row.reply_count != null
 
     ? row.reply_count
 
-    : db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE parent_id = ? AND status = 'approved'").get(row.id).c;
+    : (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE parent_id = ? AND status = 'approved'").get(row.id)).c;
 
   return {
 
@@ -171,11 +171,11 @@ function tiolaSelect(extra = '') {
 
 
 
-function looksLikeSpam(text) {
+async function looksLikeSpam(text) {
 
   const lower = text.toLowerCase();
 
-  if (containsBannedWord(text)) return true;
+  if (await containsBannedWord(text)) return true;
 
   if (SPAM_WORDS.some((w) => lower.includes(w))) return true;
 
@@ -191,9 +191,9 @@ function looksLikeSpam(text) {
 
 
 
-function countMonthlyPlaceComments(userId, placeId) {
+async function countMonthlyPlaceComments(userId, placeId) {
 
-  return db.prepare(`
+  return (await db.prepare(`
 
     SELECT COUNT(*) AS c FROM tiolas
 
@@ -203,13 +203,13 @@ function countMonthlyPlaceComments(userId, placeId) {
 
       AND status NOT IN ('rejected', 'deleted')
 
-  `).get(userId, placeId).c;
+  `).get(userId, placeId)).c;
 
 }
 
 
 
-router.get('/', authOptional, (req, res) => {
+router.get('/', authOptional, async (req, res) => {
 
   const { placeId, general, status, mine, parentId, limit = 50 } = req.query;
 
@@ -275,7 +275,7 @@ router.get('/', authOptional, (req, res) => {
 
 
 
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
 
     ${tiolaSelect(where)}
 
@@ -287,13 +287,13 @@ router.get('/', authOptional, (req, res) => {
 
 
 
-  res.json({ tiolas: rows.map((r) => mapTiola(r, req.user?.id)) });
+  res.json({ tiolas: await Promise.all(rows.map((r) => mapTiola(r, req.user?.id))) });
 
 });
 
 
 
-router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.single('photo'), validateUploadedImage(), processImageUpload(), (req, res) => {
+router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.single('photo'), validateUploadedImage(), processImageUpload(), async (req, res) => {
 
   if (isHoneypotFilled(req.body)) {
     return res.status(400).json({ error: 'Geçersiz istek' });
@@ -323,7 +323,7 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
 
   if (parent) {
 
-    const parentRow = db.prepare('SELECT id, place_id, status FROM tiolas WHERE id = ?').get(parent);
+    const parentRow = await db.prepare('SELECT id, place_id, status FROM tiolas WHERE id = ?').get(parent);
 
     if (!parentRow) return res.status(404).json({ error: 'Yanıtlanan Tiola bulunamadı' });
 
@@ -333,11 +333,11 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
 
 
 
-  const pid = placeId ? Number(placeId) : (parent ? db.prepare('SELECT place_id FROM tiolas WHERE id = ?').get(parent)?.place_id : null);
+  const pid = placeId ? Number(placeId) : (parent ? (await db.prepare('SELECT place_id FROM tiolas WHERE id = ?').get(parent))?.place_id : null);
 
   if (pid) {
 
-    const place = db.prepare('SELECT id FROM places WHERE id = ?').get(pid);
+    const place = await db.prepare('SELECT id FROM places WHERE id = ?').get(pid);
 
     if (!place) return res.status(404).json({ error: 'Mekân bulunamadı' });
 
@@ -359,7 +359,7 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
 
     if (starNum && !parent) {
 
-      const existing = db.prepare(`
+      const existing = await db.prepare(`
 
         SELECT id FROM tiolas
 
@@ -398,7 +398,7 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
 
   let info;
   try {
-    info = db.prepare(`
+    info = await db.prepare(`
       INSERT INTO tiolas (user_id, place_id, stars, category, text, photo_path, city_tag, country_tag, status, parent_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
@@ -429,11 +429,11 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
 
 
 
-  const row = db.prepare(`${tiolaSelect('WHERE t.id = ?')}`).get(info.lastInsertRowid);
+  const row = await db.prepare(`${tiolaSelect('WHERE t.id = ?')}`).get(info.lastInsertRowid);
 
   res.status(201).json({
 
-    tiola: mapTiola(row, req.user.id),
+    tiola: await mapTiola(row, req.user.id),
 
     message: initialStatus === 'spam'
 
@@ -451,19 +451,19 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
 
 
 
-router.post('/:id/like', authRequired, csrfTokenRequired, tiolaVoteLimiter, (req, res) => {
+router.post('/:id/like', authRequired, csrfTokenRequired, tiolaVoteLimiter, async (req, res) => {
 
   const id = Number(req.params.id);
 
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
 
-  const row = db.prepare("SELECT id, user_id, status FROM tiolas WHERE id = ? AND status = 'approved'").get(id);
+  const row = await db.prepare("SELECT id, user_id, status FROM tiolas WHERE id = ? AND status = 'approved'").get(id);
 
   if (!row) return res.status(404).json({ error: 'Tiola bulunamadı' });
 
   if (row.user_id === req.user.id) return res.status(400).json({ error: 'Kendi Tiola\'nızı beğenemezsiniz' });
 
-  const result = toggleTiolaLike(req.user.id, id);
+  const result = await toggleTiolaLike(req.user.id, id);
 
   res.json(result);
 
@@ -471,11 +471,11 @@ router.post('/:id/like', authRequired, csrfTokenRequired, tiolaVoteLimiter, (req
 
 
 
-router.delete('/:id', authRequired, csrfTokenRequired, (req, res) => {
+router.delete('/:id', authRequired, csrfTokenRequired, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
 
-  const row = db.prepare('SELECT id, user_id, status, parent_id FROM tiolas WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT id, user_id, status, parent_id FROM tiolas WHERE id = ?').get(id);
   if (!row || row.status === 'deleted') {
     return res.status(404).json({ error: 'Tiola bulunamadı' });
   }
@@ -484,21 +484,21 @@ router.delete('/:id', authRequired, csrfTokenRequired, (req, res) => {
   }
 
   if (row.parent_id) {
-    db.prepare(`
+    await db.prepare(`
       UPDATE tiolas SET status = 'deleted', moderated_at = datetime('now') WHERE id = ?
     `).run(id);
   } else {
-    db.prepare(`
+    await db.prepare(`
       UPDATE tiolas SET status = 'deleted', moderated_at = datetime('now')
       WHERE id = ? OR parent_id = ?
     `).run(id, id);
   }
 
-  refreshPlaceStatsForTiola(id);
+  await refreshPlaceStatsForTiola(id);
   res.json({ deleted: true, message: 'Paylaşımınız silindi' });
 });
 
-router.get('/pending/count', authRequired, (req, res) => {
+router.get('/pending/count', authRequired, async (req, res) => {
 
   if (!['admin', 'moderator', 'staff'].includes(req.user.role)) {
 
@@ -506,11 +506,11 @@ router.get('/pending/count', authRequired, (req, res) => {
 
   }
 
-  const count = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get().c;
+  const count = (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get()).c;
 
-  const spamCount = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'spam'").get().c;
+  const spamCount = (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'spam'").get()).c;
 
-  const blogCount = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get().c;
+  const blogCount = (await db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get()).c;
 
   res.json({ tiolas: count, spam: spamCount, blogs: blogCount });
 

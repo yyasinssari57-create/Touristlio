@@ -12,10 +12,10 @@ const TIOLA_BADGES = [
   { id: 'elci', min: 50, icon: '🌍', nameTr: 'Elçi', nameEn: 'Ambassador' },
 ];
 
-function approvedTiolaCount(userId) {
+async function approvedTiolaCount(userId) {
   const id = Number(userId);
   if (!Number.isFinite(id) || id < 1) return 0;
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT COUNT(*) AS c FROM tiolas
     WHERE user_id = ? AND status = 'approved' AND parent_id IS NULL
   `).get(id);
@@ -46,8 +46,8 @@ function badgesForCount(count, lang = 'tr') {
   };
 }
 
-function badgesForUser(userId, lang = 'tr') {
-  return badgesForCount(approvedTiolaCount(userId), lang);
+async function badgesForUser(userId, lang = 'tr') {
+  return badgesForCount(await approvedTiolaCount(userId), lang);
 }
 
 module.exports = {

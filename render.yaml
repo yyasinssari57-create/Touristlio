@@ -13,16 +13,14 @@ services:
     buildCommand: npm ci
     startCommand: npm run start:prod
     healthCheckPath: /api/health
-    # Node 22 LTS — better-sqlite3 prebuilds; avoids gyp compile on old Node 20.3.x
-    # Persistent disk — Starter plan and above only.
-    # Free plan: no disk; app auto-creates data/ or falls back to /tmp (ephemeral).
+    # Node 22 LTS. Database is Supabase PostgreSQL (DATABASE_URL) — Render disk is ephemeral.
+    # Disk is only for uploaded images under /uploads, not the database.
     disk:
       name: touristlio-data
       mountPath: /opt/render/project/src/data
       sizeGB: 1
     envVars:
-      # Optional override — default is project data/touristlio.db
-      - key: DATABASE_PATH
+      - key: DATABASE_URL
         sync: false
       - key: NODE_VERSION
         value: "22.16.0"

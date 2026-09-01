@@ -83,7 +83,7 @@ app.use(helmet({
   } : false,
   crossOriginEmbedderPolicy: false,
 }));
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   cors({
     origin(origin, cb) {
       if (isCorsOriginAllowed(origin, corsOrigins, req.get('host'))) {
@@ -97,7 +97,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   const pathOnly = req.path || '';
   if (pathOnly.startsWith('/api')) return next();
@@ -118,7 +118,7 @@ const { maintenanceMiddleware } = require('./middleware/maintenance');
 app.use(maintenanceMiddleware);
 app.use('/api/', apiLimiter);
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     logger.info({ method: req.method, url: req.url, status: res.statusCode, ms: Date.now() - start });
@@ -130,11 +130,11 @@ const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 app.use('/uploads', uploadsStaticHeaders, uploadsSrcsetFallback(UPLOADS_DIR), express.static(UPLOADS_DIR));
 
 const { buildSitemapXml, buildRobotsTxt } = require('./lib/sitemap');
-app.get('/robots.txt', (_req, res) => {
+app.get('/robots.txt', async (_req, res) => {
   res.type('text/plain; charset=utf-8').send(buildRobotsTxt());
 });
-app.get('/sitemap.xml', (_req, res) => {
-  res.type('application/xml; charset=utf-8').send(buildSitemapXml());
+app.get('/sitemap.xml', async (_req, res) => {
+  res.type('application/xml; charset=utf-8').send(await buildSitemapXml());
 });
 
 app.use(htmlPageRoutesMiddleware(PUBLIC_DIR));
@@ -164,93 +164,111 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/profiles', csrfProtection, profilesRoutes);
 app.use('/api/contact', csrfProtection, require('./routes/contact'));
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'Touristlio', version: getAppVersion(), ts: new Date().toISOString() });
+app.get('/api/health', async (_req, res) => {
+  try {
+    const { db } = require('./db');
+    await db.prepare('SELECT 1 AS ok').get();
+    res.json({
+      ok: true,
+      service: 'Touristlio',
+      db: 'postgres',
+      version: getAppVersion(),
+      ts: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(503).json({
+      ok: false,
+      service: 'Touristlio',
+      db: 'error',
+      error: err.message,
+      ts: new Date().toISOString(),
+    });
+  }
 });
 
 /** Public homepage counters: countries, listed places, approved Tiolas (never null). */
-app.get('/api/stats', (_req, res) => {
+app.get('/api/stats', async (_req, res) => {
   try {
     const { getHomepageStats } = require('./lib/stats-cache');
-    res.json(getHomepageStats());
+    res.json(await getHomepageStats());
   } catch {
     res.json({ countries: 0, places: 0, tiolas: 0 });
   }
 });
 
-app.get('/api/config/public', (req, res) => {
+app.get('/api/config/public', async (req, res) => {
   const settingsService = require('./modules/settings/settings.service');
   const csrfToken = issueCsrfCookie(req, res);
   res.json({
     affiliateEnabled: process.env.AFFILIATE_ENABLED === 'true',
     siteUrl: process.env.SITE_URL || 'http://localhost:3000',
     csrfToken,
-    ...settingsService.getPublic(),
+    ...(await settingsService.getPublic()),
     ...publicRecaptchaConfig(),
     ...publicAnalyticsConfig(),
   });
 });
 
-app.get('/', (_req, res) => {
+app.get('/', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });
 
-app.get('/admin', (_req, res) => {
+app.get('/admin', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'admin.html');
 });
 
-app.get('/login', (_req, res) => {
+app.get('/login', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'login.html');
 });
 
-app.get('/register', (_req, res) => {
+app.get('/register', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'register.html');
 });
 
-app.get('/profile', (_req, res) => {
+app.get('/profile', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'profile.html');
 });
 
-app.get('/verify-email', (_req, res) => {
+app.get('/verify-email', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'verify-email.html');
 });
 
-app.get('/reset-password', (_req, res) => {
+app.get('/reset-password', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'reset-password.html');
 });
 
-app.get('/search', (_req, res) => {
+app.get('/search', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'search.html');
 });
 
-app.get('/explore', (_req, res) => {
+app.get('/explore', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });
 
-app.get('/gezilecek-yerler', (_req, res) => {
+app.get('/gezilecek-yerler', async (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });
 
-app.get(['/places', '/places/'], (_req, res) => {
+app.get(['/places', '/places/'], async (_req, res) => {
   res.redirect(302, '/gezilecek-yerler');
 });
 
-app.get('/places/:slug', (req, res) => {
+app.get('/places/:slug', async (req, res) => {
   const { findPlaceRow } = require('./lib/place-lookup');
   const { mapPlaceRow } = require('./lib/place-map');
   const { placeStats } = require('./db');
   const { jsonLdForPlace, loadApprovedTiolasForPlace } = require('./lib/jsonld');
-  const row = findPlaceRow(req.params.slug);
+  const row = await findPlaceRow(req.params.slug);
   if (!row) {
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
-  const place = mapPlaceRow(row, placeStats(row.id));
+  const place = mapPlaceRow(row, await placeStats(row.id));
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
   const desc = lang === 'en'
     ? (place.descriptionEn || place.overviewEn || place.description || '')
     : (place.description || place.overview || '');
-  const tiolas = loadApprovedTiolasForPlace(place.id);
+  const tiolas = await loadApprovedTiolasForPlace(place.id);
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: `${place.name} — Touristlio`,
     description: String(desc).slice(0, 200),
@@ -259,7 +277,7 @@ app.get('/places/:slug', (req, res) => {
   });
 });
 
-app.get('/blog', (req, res) => {
+app.get('/blog', async (req, res) => {
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: lang === 'en' ? 'Travel Stories — Touristlio' : 'Seyahat Hikayeleri — Touristlio',
@@ -269,7 +287,7 @@ app.get('/blog', (req, res) => {
   });
 });
 
-app.get('/blog/:slug', (req, res) => {
+app.get('/blog/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').trim();
   if (!slug) {
     res.status(404);
@@ -297,7 +315,7 @@ if (!isProd) {
   });
 }
 
-app.get('*', (req, res, next) => {
+app.get('*', async (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   res.status(404);
   return sendPublicHtml(res, PUBLIC_DIR, '404.html');
@@ -339,7 +357,10 @@ function spawnSitemapIfStale() {
   logger.info({ msg: 'Sitemap generation spawned on startup' });
 }
 
-app.listen(PORT, () => {
+async function boot() {
+  const { initDb } = require('./db');
+  await initDb();
+  app.listen(PORT, async () => {
   logger.info(`Touristlio V2 → http://localhost:${PORT}`);
   logger.info(`Admin → http://localhost:${PORT}/admin`);
   logger.info(`Search → http://localhost:${PORT}/search`);
@@ -347,41 +368,43 @@ app.listen(PORT, () => {
   spawnSitemapIfStale();
   try {
     const { maybeSeedOnStartup } = require('./lib/startup-seed');
-    maybeSeedOnStartup();
+    await maybeSeedOnStartup();
   } catch (err) {
     logger.warn({ msg: 'Startup seed hook skipped', err: err.message });
   }
   try {
     const { publishDueBlogs } = require('./lib/blog-scheduler');
-    const n = publishDueBlogs();
+    const n = await publishDueBlogs();
     if (n) logger.info({ msg: 'Startup scheduled blog publish', count: n });
   } catch (err) {
     logger.warn({ msg: 'Startup blog scheduler skipped', err: err.message });
   }
   startBackgroundJobs();
+  });
+}
+
+boot().catch((err) => {
+  logger.error({ msg: 'Startup failed', err: err.message, stack: err.stack });
+  process.exit(1);
 });
 
-function startBackgroundJobs() {
+async function startBackgroundJobs() {
   if (process.env.LIVE_DATA_CRON === 'false') return;
   try {
     const cron = require('node-cron');
     const { refreshAllPlaces } = require('./services/liveDataService');
     const { publishDueBlogs } = require('./lib/blog-scheduler');
     cron.schedule('0 */6 * * *', () => {
-      try {
-        const n = refreshAllPlaces();
-        logger.info({ msg: 'Live data cron', places: n });
-      } catch (err) {
-        logger.warn({ msg: 'Live data cron failed', err: err.message });
-      }
+      Promise.resolve()
+        .then(() => refreshAllPlaces())
+        .then((n) => logger.info({ msg: 'Live data cron', places: n }))
+        .catch((err) => logger.warn({ msg: 'Live data cron failed', err: err.message }));
     });
     cron.schedule('*/5 * * * *', () => {
-      try {
-        const n = publishDueBlogs();
-        if (n) logger.info({ msg: 'Scheduled blogs published', count: n });
-      } catch (err) {
-        logger.warn({ msg: 'Blog scheduler cron failed', err: err.message });
-      }
+      Promise.resolve()
+        .then(() => publishDueBlogs())
+        .then((n) => { if (n) logger.info({ msg: 'Scheduled blogs published', count: n }); })
+        .catch((err) => logger.warn({ msg: 'Blog scheduler cron failed', err: err.message }));
     });
   } catch (err) {
     logger.warn({ msg: 'Background cron jobs disabled', err: err.message });

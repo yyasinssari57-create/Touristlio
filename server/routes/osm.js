@@ -27,11 +27,11 @@ const OSM_DISABLED = {
   },
 };
 
-router.get('/status', (_req, res) => {
+router.get('/status', async (_req, res) => {
   res.json(OSM_DISABLED);
 });
 
-router.get('/search', (req, res) => {
+router.get('/search', async (req, res) => {
   const q = String(req.query.q || '').trim();
   if (!q || q.length < 2) {
     return res.status(400).json({ error: 'En az 2 karakter girin', results: [] });

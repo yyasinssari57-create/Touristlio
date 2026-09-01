@@ -30,9 +30,9 @@ function isResolvedStatus(status) {
   return RESOLVED_STATUSES.includes(status);
 }
 
-function getTargetContent(targetType, targetId) {
+async function getTargetContent(targetType, targetId) {
   if (targetType === 'profile') {
-    const u = db.prepare('SELECT id, name, email, is_blocked FROM users WHERE id = ?').get(targetId);
+    const u = await db.prepare('SELECT id, name, email, is_blocked FROM users WHERE id = ?').get(targetId);
     if (!u) return null;
     return {
       type: 'profile',
@@ -46,7 +46,7 @@ function getTargetContent(targetType, targetId) {
     };
   }
   if (targetType === 'tiola') {
-    const t = db.prepare(`
+    const t = await db.prepare(`
       SELECT t.id, t.text, t.status, t.user_id, t.city_tag, u.email AS user_email, u.name AS user_name,
              p.name AS place_name
       FROM tiolas t
@@ -69,7 +69,7 @@ function getTargetContent(targetType, targetId) {
     };
   }
   if (targetType === 'blog') {
-    const b = db.prepare(`
+    const b = await db.prepare(`
       SELECT b.id, b.title, b.excerpt, b.status, b.user_id, u.email AS user_email, u.name AS user_name
       FROM blogs b
       JOIN users u ON u.id = b.user_id
@@ -96,7 +96,7 @@ async function notifyContentOwnerRemoved(content, reason) {
 
   if (content.type === 'tiola') {
     const placeLabel = content.placeLabel || 'Genel Tiola';
-    notifications.createNotification({
+    await notifications.createNotification({
       userId: content.userId,
       type: 'tiola_removed',
       title: 'Tiola kaldırıldı',
@@ -117,7 +117,7 @@ async function notifyContentOwnerRemoved(content, reason) {
   }
 
   if (content.type === 'blog') {
-    notifications.createNotification({
+    await notifications.createNotification({
       userId: content.userId,
       type: 'blog_removed',
       title: 'Blog kaldırıldı',
@@ -142,25 +142,25 @@ async function notifyContentOwnerRemoved(content, reason) {
   }
 }
 
-function removeProfilePhoto(userId) {
-  const row = authModel.findById(userId);
+async function removeProfilePhoto(userId) {
+  const row = await authModel.findById(userId);
   if (!row) return { ok: false, error: 'Kullanıcı bulunamadı' };
   if (!row.avatar_url) return { ok: true, alreadyRemoved: true, hadPhoto: false };
 
   const filePath = path.join(__dirname, '..', '..', row.avatar_url.replace(/^\//, ''));
   try { unlinkImageAndVariants(filePath); } catch { /* ignore */ }
-  authModel.clearAvatarPhoto(userId);
+  await authModel.clearAvatarPhoto(userId);
   if (!row.avatar_preset) {
-    authModel.updateAvatarPreset(userId, 'none', row.avatar_color || '#0ea5e9');
+    await authModel.updateAvatarPreset(userId, 'none', row.avatar_color || '#0ea5e9');
   }
   return { ok: true, hadPhoto: true, alreadyRemoved: false };
 }
 
 async function notifyProfileAvatarRemoved(userId, reason) {
-  const row = authModel.findById(userId);
+  const row = await authModel.findById(userId);
   if (!row) return;
   const reportSuffix = ' Şikayet incelemesi sonucunda profil fotoğrafınız kaldırıldı.';
-  notifications.createNotification({
+  await notifications.createNotification({
     userId,
     type: 'profile_avatar_removed',
     title: 'Profil fotoğrafı kaldırıldı',
@@ -169,7 +169,7 @@ async function notifyProfileAvatarRemoved(userId, reason) {
   });
 }
 
-function removeReportedContent(content, adminId, reason) {
+async function removeReportedContent(content, adminId, reason) {
   if (content.type === 'profile') {
     const removal = removeProfilePhoto(content.userId);
     if (!removal.ok) return removal;
@@ -185,12 +185,12 @@ function removeReportedContent(content, adminId, reason) {
 
   if (content.type === 'tiola') {
     if (content.status === 'approved') {
-      db.prepare(`
+      await db.prepare(`
         UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
         WHERE id = ? AND status = 'approved'
       `).run(adminId, reason, content.id);
     } else if (['pending', 'spam'].includes(content.status)) {
-      db.prepare(`
+      await db.prepare(`
         UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
         WHERE id = ? AND status IN ('pending', 'spam')
       `).run(adminId, reason, content.id);
@@ -199,19 +199,19 @@ function removeReportedContent(content, adminId, reason) {
     } else {
       return { ok: false, error: 'Bu Tiola kaldırılamaz (durum: ' + content.status + ')' };
     }
-    refreshPlaceStatsForTiola(content.id);
+    await refreshPlaceStatsForTiola(content.id);
     return { ok: true, prevStatus };
   }
 
   if (content.type === 'blog') {
     if (content.status === 'approved') {
-      db.prepare(`
+      await db.prepare(`
         UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
           rejection_reason = ?, published_at = NULL
         WHERE id = ? AND status = 'approved'
       `).run(adminId, reason, content.id);
     } else if (content.status === 'pending') {
-      db.prepare(`
+      await db.prepare(`
         UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
         WHERE id = ? AND status = 'pending'
       `).run(adminId, reason, content.id);
@@ -226,7 +226,7 @@ function removeReportedContent(content, adminId, reason) {
   return { ok: false, error: 'Geçersiz hedef türü' };
 }
 
-function restoreReportedContent(report) {
+async function restoreReportedContent(report) {
   if (!report.content_prev_status || report.action_taken !== 'content_removed') {
     return { ok: true, restored: false };
   }
@@ -242,26 +242,26 @@ function restoreReportedContent(report) {
   const prev = report.content_prev_status;
   if (content.type === 'tiola') {
     if (prev === 'approved') {
-      db.prepare(`
+      await db.prepare(`
         UPDATE tiolas SET status = 'approved', moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL
         WHERE id = ? AND status = 'rejected'
       `).run(content.id);
-      refreshPlaceStatsForTiola(content.id);
+      await refreshPlaceStatsForTiola(content.id);
       return { ok: true, restored: true };
     }
     if (['pending', 'spam'].includes(prev)) {
-      db.prepare(`
+      await db.prepare(`
         UPDATE tiolas SET status = ?, moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL
         WHERE id = ? AND status = 'rejected'
       `).run(prev, content.id);
-      refreshPlaceStatsForTiola(content.id);
+      await refreshPlaceStatsForTiola(content.id);
       return { ok: true, restored: true };
     }
   }
 
   if (content.type === 'blog') {
     if (prev === 'approved') {
-      db.prepare(`
+      await db.prepare(`
         UPDATE blogs SET status = 'approved', moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL,
           published_at = COALESCE(published_at, datetime('now'))
         WHERE id = ? AND status = 'rejected'
@@ -269,7 +269,7 @@ function restoreReportedContent(report) {
       return { ok: true, restored: true };
     }
     if (prev === 'pending') {
-      db.prepare(`
+      await db.prepare(`
         UPDATE blogs SET status = 'pending', moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL
         WHERE id = ? AND status = 'rejected'
       `).run(content.id);
@@ -280,8 +280,8 @@ function restoreReportedContent(report) {
   return { ok: true, restored: false };
 }
 
-function clearReportResolution(id) {
-  db.prepare(`
+async function clearReportResolution(id) {
+  await db.prepare(`
     UPDATE reports
     SET status = ?, resolved_by = NULL, resolved_at = NULL,
         resolution_reason = NULL, action_taken = NULL, content_prev_status = NULL
@@ -289,8 +289,8 @@ function clearReportResolution(id) {
   `).run(REPORT_STATUSES.PENDING, id);
 }
 
-function setReportDismissed(id, adminId, note) {
-  db.prepare(`
+async function setReportDismissed(id, adminId, note) {
+  await db.prepare(`
     UPDATE reports
     SET status = ?, action_taken = 'dismissed', resolution_reason = ?,
         resolved_by = ?, resolved_at = datetime('now'), content_prev_status = NULL
@@ -298,8 +298,8 @@ function setReportDismissed(id, adminId, note) {
   `).run(REPORT_STATUSES.RESOLVED_DISMISSED, note || null, adminId, id);
 }
 
-function setReportRemoved(id, adminId, reason, prevStatus) {
-  db.prepare(`
+async function setReportRemoved(id, adminId, reason, prevStatus) {
+  await db.prepare(`
     UPDATE reports
     SET status = ?, action_taken = 'content_removed', resolution_reason = ?,
         resolved_by = ?, resolved_at = datetime('now'), content_prev_status = ?

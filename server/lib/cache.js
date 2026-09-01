@@ -32,10 +32,10 @@ function set(key, value, ttlMs = TTL_MS) {
   store.set(key, { value, expires: Date.now() + ttlMs });
 }
 
-function wrap(key, fn, ttlMs = TTL_MS) {
+async function wrap(key, fn, ttlMs = TTL_MS) {
   const cached = get(key);
   if (cached !== null) return cached;
-  const value = fn();
+  const value = await fn();
   set(key, value, ttlMs);
   return value;
 }

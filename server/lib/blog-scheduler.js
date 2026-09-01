@@ -1,8 +1,8 @@
 const { db } = require('../db');
 const logger = require('./logger');
 
-function publishDueBlogs() {
-  const due = db.prepare(`
+async function publishDueBlogs() {
+  const due = await db.prepare(`
     SELECT id FROM blogs
     WHERE status IN ('draft', 'pending')
       AND published_at IS NOT NULL
@@ -11,7 +11,7 @@ function publishDueBlogs() {
 
   if (!due.length) return 0;
 
-  const result = db.prepare(`
+  const result = await db.prepare(`
     UPDATE blogs SET
       status = 'approved',
       moderated_at = COALESCE(moderated_at, datetime('now')),
@@ -27,9 +27,9 @@ function publishDueBlogs() {
   return result.changes;
 }
 
-function listScheduled() {
-  publishDueBlogs();
-  const rows = db.prepare(`
+async function listScheduled() {
+  await publishDueBlogs();
+  const rows = await db.prepare(`
     SELECT b.id, b.title, b.slug, b.status, b.published_at, b.created_at,
            u.name AS user_name
     FROM blogs b

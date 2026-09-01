@@ -25,7 +25,7 @@ function fail(msg) {
   failed += 1;
 }
 
-function parseScripts(html) {
+async function parseScripts(html) {
   const re = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   const out = [];
   let m;

@@ -4,9 +4,9 @@ const settingsService = require('./settings.service');
 
 
 
-function getPublic(_req, res) {
+async function getPublic(_req, res) {
 
-  return ok(res, settingsService.getPublic());
+  return ok(res, await settingsService.getPublic());
 
 }
 

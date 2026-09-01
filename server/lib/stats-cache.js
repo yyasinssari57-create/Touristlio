@@ -15,32 +15,32 @@ function toNonNegInt(value) {
   return Math.floor(n);
 }
 
-function getStatsMap() {
+async function getStatsMap() {
   const now = Date.now();
   if (cache && now - cacheAt < STATS_CACHE_TTL) return cache;
-  cache = allPlaceStats();
+  cache = await allPlaceStats();
   cacheAt = now;
   return cache;
 }
 
 /** Force the next list read to pick up places.tiola_count / tiola_rating. */
-function primeStatsMap() {
-  cache = allPlaceStats();
+async function primeStatsMap() {
+  cache = await allPlaceStats();
   cacheAt = Date.now();
   return cache;
 }
 
-function queryHomepageStats() {
-  const placesRow = db.prepare(`
+async function queryHomepageStats() {
+  const placesRow = await db.prepare(`
     SELECT COUNT(*) AS c FROM places
     WHERE COALESCE(status, 'published') != 'archived'
   `).get();
-  const countriesRow = db.prepare(`
+  const countriesRow = await db.prepare(`
     SELECT COUNT(DISTINCT country) AS c FROM places
     WHERE COALESCE(status, 'published') != 'archived'
       AND country IS NOT NULL AND TRIM(country) != ''
   `).get();
-  const tiolasRow = db.prepare(`
+  const tiolasRow = await db.prepare(`
     SELECT COUNT(*) AS c FROM tiolas
     WHERE status = 'approved' AND parent_id IS NULL
   `).get();
@@ -51,11 +51,11 @@ function queryHomepageStats() {
   };
 }
 
-function getHomepageStats() {
+async function getHomepageStats() {
   const now = Date.now();
   if (homeCache && now - homeCacheAt < STATS_CACHE_TTL) return homeCache;
   try {
-    homeCache = queryHomepageStats();
+    homeCache = await queryHomepageStats();
   } catch {
     homeCache = { countries: 0, places: 0, tiolas: 0 };
   }

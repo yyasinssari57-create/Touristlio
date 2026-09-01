@@ -7,7 +7,7 @@ function buildFtsQuery(q) {
   if (!qNorm) return null;
   const words = qNorm.split(' ').filter((w) => w.length >= 2);
   if (!words.length) return null;
-  return words.map((w) => `"${w.replace(/"/g, '')}"*`).join(' AND ');
+  return words.map((w) => `${w.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]+/g, '')}:*`).filter(Boolean).join(' & ');
 }
 
 function likeNeedle(value) {
@@ -41,7 +41,7 @@ function buildPlacesWhere(filters = {}) {
   const params = [];
   const ftsQuery = q ? buildFtsQuery(q) : null;
   if (ftsQuery) {
-    where.push('p.id IN (SELECT rowid FROM places_fts WHERE places_fts MATCH ?)');
+    where.push("p.search_tsv @@ to_tsquery('simple', ?)");
     params.push(ftsQuery);
   }
 
@@ -109,49 +109,49 @@ function buildPlacesWhere(filters = {}) {
 function orderBySql(sort) {
   if (sort === 'reviewed') return ' ORDER BY COALESCE(p.tiola_count, 0) DESC, p.id DESC';
   if (sort === 'local') return ' ORDER BY p.is_local DESC, p.id DESC';
-  if (sort === 'az') return ' ORDER BY p.name COLLATE NOCASE ASC, p.id ASC';
+  if (sort === 'az') return ' ORDER BY LOWER(p.name) ASC, p.id ASC';
   if (sort === 'popularity') return ' ORDER BY COALESCE(p.popularity, 0) DESC, p.id DESC';
   return ' ORDER BY COALESCE(p.tiola_rating, 0) DESC, p.id DESC';
 }
 
-function runSelect(sql, params) {
-  return db.prepare(sql).all(...params);
+async function runSelect(sql, params) {
+  return await db.prepare(sql).all(...params);
 }
 
-function runCount(sql, params) {
-  return db.prepare(sql).get(...params).c;
+async function runCount(sql, params) {
+  return (await db.prepare(sql).get(...params)).c;
 }
 
 /**
  * Indexed place query with SQL COUNT + LIMIT/OFFSET (ORTA-5 leftover from in-memory slice).
  */
-function searchPlacesPage(filters = {}) {
+async function searchPlacesPage(filters = {}) {
   const built = buildPlacesWhere(filters);
   const order = filters.orderSql || orderBySql(filters.sort);
   const limit = filters.limit != null ? Number(filters.limit) : null;
   const offset = Math.max(0, Number(filters.offset) || 0);
   const hasLimit = limit != null && Number.isFinite(limit) && limit >= 0;
 
-  const tryRun = (whereSql, params, qNorm, extra = {}) => {
-    const total = runCount(`SELECT COUNT(*) AS c FROM places p${whereSql}`, params);
+  const tryRun = async (whereSql, params, qNorm, extra = {}) => {
+    const total = await runCount(`SELECT COUNT(*) AS c FROM places p${whereSql}`, params);
     const selectParams = [...params];
     let sql = `SELECT p.* FROM places p${whereSql}${order}`;
     if (hasLimit) {
       sql += ' LIMIT ? OFFSET ?';
       selectParams.push(limit, offset);
     }
-    const rows = runSelect(sql, selectParams);
+    const rows = await runSelect(sql, selectParams);
     return { rows, total, qNorm, ...extra };
   };
 
   try {
-    return tryRun(built.whereSql, built.params, built.qNorm);
+    return await tryRun(built.whereSql, built.params, built.qNorm);
   } catch {
     if (built.ftsQuery) {
       const withoutFts = buildPlacesWhere({ ...filters, q: undefined });
       try {
-        const total = runCount(`SELECT COUNT(*) AS c FROM places p${withoutFts.whereSql}`, withoutFts.params);
-        const rows = runSelect(
+        const total = await runCount(`SELECT COUNT(*) AS c FROM places p${withoutFts.whereSql}`, withoutFts.params);
+        const rows = await runSelect(
           `SELECT p.* FROM places p${withoutFts.whereSql}${order}`,
           withoutFts.params,
         );
@@ -163,28 +163,24 @@ function searchPlacesPage(filters = {}) {
         };
       } catch {
         return {
-          rows: runSelect('SELECT * FROM places', []),
-          total: runCount('SELECT COUNT(*) AS c FROM places', []),
+          rows: await runSelect('SELECT * FROM places', []),
+          total: await runCount('SELECT COUNT(*) AS c FROM places', []),
           qNorm: built.qNorm,
           inMemoryFallback: true,
         };
       }
     }
     return {
-      rows: runSelect('SELECT * FROM places', []),
-      total: runCount('SELECT COUNT(*) AS c FROM places', []),
+      rows: await runSelect('SELECT * FROM places', []),
+      total: await runCount('SELECT COUNT(*) AS c FROM places', []),
       qNorm: built.qNorm,
       inMemoryFallback: true,
     };
   }
 }
 
-/**
- * FTS5-backed place row fetch with optional country/city/category SQL filters.
- * Pass limit/offset for SQL pagination; omit them to load the full match set.
- */
-function searchPlacesRows(filters = {}) {
-  const { rows } = searchPlacesPage(filters);
+async function searchPlacesRows(filters = {}) {
+  const { rows } = await searchPlacesPage(filters);
   return rows;
 }
 

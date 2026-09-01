@@ -12,46 +12,46 @@ function validationError(req, res) {
   return false;
 }
 
-function list(req, res) {
+async function list(req, res) {
   try {
-    const payload = placesService.listPlaces(req.query);
+    const payload = await placesService.listPlaces(req.query);
     return ok(res, payload);
   } catch (e) {
     return fail(res, e.message || 'Liste alınamadı', 500);
   }
 }
 
-function markers(req, res) {
+async function markers(req, res) {
   try {
     const lang = req.query.lang === 'en' ? 'en' : 'tr';
-    const markers = placesService.listMarkers(req.query, lang);
+    const markers = await placesService.listMarkers(req.query, lang);
     return ok(res, { markers });
   } catch (e) {
     return fail(res, e.message || 'Harita verisi alınamadı', 500);
   }
 }
 
-function cities(req, res) {
+async function cities(req, res) {
   try {
-    const list = placesService.citiesWithCounts(req.query.country);
+    const list = await placesService.citiesWithCounts(req.query.country);
     return ok(res, { cities: list });
   } catch (e) {
     return fail(res, e.message || 'Şehirler alınamadı', 500);
   }
 }
 
-function metaCategories(_req, res) {
+async function metaCategories(_req, res) {
   try {
-    const payload = placesService.getMetaCategories();
+    const payload = await placesService.getMetaCategories();
     return ok(res, payload);
   } catch (e) {
     return fail(res, e.message || 'Kategori meta alınamadı', 500);
   }
 }
 
-function homepageStats(_req, res) {
+async function homepageStats(_req, res) {
   try {
-    return ok(res, getHomepageStats());
+    return ok(res, await getHomepageStats());
   } catch {
     return ok(res, { countries: 0, places: 0, tiolas: 0 });
   }

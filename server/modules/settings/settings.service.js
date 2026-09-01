@@ -32,15 +32,15 @@ const DEFAULTS = {
   maintenance_message: 'Site bakımda. Lütfen daha sonra tekrar deneyin.',
 };
 
-function getAll() {
-  const rows = require('./settings.model').allRows();
+async function getAll() {
+  const rows = await require('./settings.model').allRows();
   const out = { ...DEFAULTS };
   rows.forEach((r) => { out[r.key] = r.value; });
   return out;
 }
 
-function getPublic() {
-  const all = getAll();
+async function getPublic() {
+  const all = await getAll();
   return {
     siteName: all.site_name,
     tagline: all.site_tagline,
@@ -123,9 +123,9 @@ function set(key, value) {
   require('./settings.model').upsert(key, value);
 }
 
-function seedDefaults() {
+async function seedDefaults() {
   for (const [key, value] of Object.entries(DEFAULTS)) {
-    db.prepare('INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)').run(key, value);
+    await db.prepare('INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)').run(key, value);
   }
 }
 

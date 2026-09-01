@@ -1,7 +1,7 @@
 const { db } = require('../db');
 const { sanitizeText } = require('./sanitize');
 
-function log({ adminId, adminName, action, targetType, targetId, detail }) {
+async function log({ adminId, adminName, action, targetType, targetId, detail }) {
   if (!adminId || !action) return;
   const cleanAction = sanitizeText(action, 80);
   const cleanTargetType = targetType ? sanitizeText(targetType, 40) : null;
@@ -9,13 +9,13 @@ function log({ adminId, adminName, action, targetType, targetId, detail }) {
   const cleanName = adminName ? sanitizeText(adminName, 120) : null;
   const tid = targetId != null && Number.isFinite(Number(targetId)) ? Number(targetId) : null;
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO admin_audit_log (admin_id, admin_name, action, target_type, target_id, detail)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(adminId, cleanName, cleanAction, cleanTargetType, tid, cleanDetail);
 }
 
-function list({ page = 1, limit = 50, action, adminId, targetType, dateFrom, dateTo } = {}) {
+async function list({ page = 1, limit = 50, action, adminId, targetType, dateFrom, dateTo } = {}) {
   const pg = Math.max(Number(page) || 1, 1);
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const offset = (pg - 1) * lim;
@@ -49,10 +49,10 @@ function list({ page = 1, limit = 50, action, adminId, targetType, dateFrom, dat
     }
   }
 
-  const total = db.prepare(`
+  const total = (await db.prepare(`
     SELECT COUNT(*) AS c FROM admin_audit_log a ${where}
-  `).get(...params).c;
-  const rows = db.prepare(`
+  `).get(...params)).c;
+  const rows = await db.prepare(`
     SELECT a.id, a.admin_id, a.admin_name, a.action, a.target_type, a.target_id, a.detail, a.created_at,
            u.email AS admin_email, u.role AS admin_role
     FROM admin_audit_log a

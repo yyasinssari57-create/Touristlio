@@ -6,12 +6,12 @@ const { badgesForCount } = require('../lib/tiola-badges');
 
 const router = express.Router();
 
-router.get('/:id', authOptional, (req, res) => {
+router.get('/:id', authOptional, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id) || id < 1) {
     return res.status(400).json({ error: 'Geçersiz kullanıcı' });
   }
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT id, name, role, avatar_color, avatar_url, avatar_preset, created_at, is_blocked
     FROM users WHERE id = ?
   `).get(id);
@@ -20,16 +20,16 @@ router.get('/:id', authOptional, (req, res) => {
   }
 
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
-  const tiolaCount = db.prepare(`
+  const tiolaCount = (await db.prepare(`
     SELECT COUNT(*) AS c FROM tiolas
     WHERE user_id = ? AND status = 'approved' AND parent_id IS NULL
-  `).get(id).c;
+  `).get(id)).c;
   const badgePayload = badgesForCount(tiolaCount, lang);
-  const blogCount = db.prepare(`
+  const blogCount = (await db.prepare(`
     SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'approved'
-  `).get(id).c;
-  const likeCount = getUserTiolaLikeCount(id);
-  const recentTiolas = db.prepare(`
+  `).get(id)).c;
+  const likeCount = await getUserTiolaLikeCount(id);
+  const recentTiolas = await db.prepare(`
     SELECT t.id, t.text, t.stars, t.place_id, t.created_at, t.status,
            p.name AS place_name
     FROM tiolas t

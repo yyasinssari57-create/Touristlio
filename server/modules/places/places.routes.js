@@ -13,10 +13,10 @@ router.get('/cities', controller.cities);
 router.get('/map/markers', authOptional, controller.markers);
 router.get('/search', searchLimiter, [
   query('q').trim().notEmpty().withMessage('Arama terimi gerekli'),
-], (req, res, next) => {
+], async (req, res, next) => {
   if (controller.validationError(req, res)) return;
   next();
-}, (req, res) => {
+}, async (req, res) => {
   if (controller.validationError(req, res)) return;
   legacyPlaces.searchHandler(req, res);
 });

@@ -2,17 +2,17 @@ const { db } = require('../../db');
 
 
 
-function allRows() {
+async function allRows() {
 
-  return db.prepare('SELECT key, value FROM site_settings').all();
+  return await db.prepare('SELECT key, value FROM site_settings').all();
 
 }
 
 
 
-function upsert(key, value) {
+async function upsert(key, value) {
 
-  db.prepare(`
+  await db.prepare(`
 
     INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
 

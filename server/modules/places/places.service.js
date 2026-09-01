@@ -92,7 +92,7 @@ function toApiPlace(p) {
 
 
 
-function filterPlaces(rows, queryParams, statsMap = getStatsMap(), options = {}) {
+function filterPlaces(rows, queryParams, statsMap, options = {}) {
 
   const {
 
@@ -243,23 +243,19 @@ function sortPlaces(places, sort) {
 
 
 
-function listPlaces(queryParams) {
+async function listPlaces(queryParams) {
 
   const { sort } = queryParams;
 
   const { page, limit, offset } = parseListPagination(queryParams, { defaultLimit: 20, maxLimit: 500 });
 
-
-
   const cacheParams = { ...queryParams, page, limit, offset };
 
   const key = cacheKey(`places-list-${CACHE_VERSION}`, cacheParams);
 
-
-
-  return wrap(key, () => {
-    const statsMap = getStatsMap();
-    const { rows, total, qNorm, inMemoryFallback } = searchPlacesPage({
+  return wrap(key, async () => {
+    const statsMap = await getStatsMap();
+    const { rows, total, qNorm, inMemoryFallback } = await searchPlacesPage({
       ...queryParams,
       categoryMode: 'discover',
       sort,
@@ -313,9 +309,9 @@ function listPlaces(queryParams) {
 
 
 
-function listMarkers(queryParams, lang = 'tr') {
-  const statsMap = getStatsMap();
-  const { rows, inMemoryFallback } = searchPlacesPage({
+async function listMarkers(queryParams, lang = 'tr') {
+  const statsMap = await getStatsMap();
+  const { rows, inMemoryFallback } = await searchPlacesPage({
     ...queryParams,
     categoryMode: 'discover',
     orderSql: ' ORDER BY p.id ASC',
@@ -343,7 +339,7 @@ const TURKEY_CITIES = TURKEY_CITY_META.map((c) => ({
 
 
 
-function citiesWithCounts(country) {
+async function citiesWithCounts(country) {
 
   const countryNorm = country ? normalizeCountry(country).toLowerCase() : '';
 
@@ -351,7 +347,7 @@ function citiesWithCounts(country) {
 
   if (countryNorm) {
 
-    rows = db.prepare(`
+    rows = await db.prepare(`
       SELECT city, country, COUNT(*) AS c FROM places
       WHERE lower(country) LIKE ? OR lower(country) LIKE ?
       GROUP BY city, country
@@ -359,7 +355,7 @@ function citiesWithCounts(country) {
 
   } else {
 
-    rows = db.prepare(`
+    rows = await db.prepare(`
       SELECT city, country, COUNT(*) AS c FROM places
       WHERE city IS NOT NULL AND trim(city) != ''
       GROUP BY city, country
@@ -384,7 +380,7 @@ function citiesWithCounts(country) {
     });
 
     const catalogBySlug = new Map(
-      catalogDb.listCities({ includeInactive: true })
+      (await catalogDb.listCities({ includeInactive: true }))
         .filter((row) => /turkey|türkiye/i.test(row.country || ''))
         .map((row) => [row.slug, row]),
     );
@@ -399,7 +395,7 @@ function citiesWithCounts(country) {
 
   }
 
-  const catalogRows = catalogDb.listCities({ includeInactive: true });
+  const catalogRows = await catalogDb.listCities({ includeInactive: true });
   const catalogByKey = new Map(
     catalogRows.map((row) => [`${row.country}|${row.slug}`, row]),
   );
@@ -423,10 +419,10 @@ function citiesWithCounts(country) {
 
 const GROUP_ORDER = ['historical', 'nature', 'museums', 'restaurants', 'hotels', 'activities'];
 
-function getMetaCategories() {
+async function getMetaCategories() {
   const key = cacheKey(`places-meta-categories-${CACHE_VERSION}`, {});
-  return wrap(key, () => {
-    const allCats = catalogDb.listCategories();
+  return wrap(key, async () => {
+    const allCats = await catalogDb.listCategories();
     const categories = allCats.map((c) => ({
         slug: c.slug,
         nameTr: c.nameTr,

@@ -2,14 +2,14 @@ const { db } = require('../db');
 const adminPlace = require('./admin-place');
 const { sanitizeText } = require('./sanitize');
 
-function escapeCsv(val) {
+async function escapeCsv(val) {
   const s = val == null ? '' : String(val);
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
 
-function exportPlacesJson() {
-  const rows = db.prepare('SELECT * FROM places ORDER BY id ASC').all();
+async function exportPlacesJson() {
+  const rows = await db.prepare('SELECT * FROM places ORDER BY id ASC').all();
   return rows.map((row) => {
     let photos = [];
     let tags = [];
@@ -44,8 +44,8 @@ function exportPlacesJson() {
   });
 }
 
-function exportPlacesCsv() {
-  const rows = db.prepare(`
+async function exportPlacesCsv() {
+  const rows = await db.prepare(`
     SELECT id, name, country, city, district, category, lat, lng, status, description, image_url
     FROM places ORDER BY id ASC
   `).all();
@@ -69,7 +69,7 @@ function exportPlacesCsv() {
   return lines.join('\n');
 }
 
-function parseCsv(text) {
+async function parseCsv(text) {
   const lines = String(text || '').split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) return [];
   const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
@@ -112,7 +112,7 @@ function normalizeImportRow(row) {
   };
 }
 
-function importPlaces(items, { updateExisting = true } = {}) {
+async function importPlaces(items, { updateExisting = true } = {}) {
   if (!Array.isArray(items) || !items.length) {
     throw new Error('İçe aktarılacak yer bulunamadı');
   }
@@ -132,10 +132,10 @@ function importPlaces(items, { updateExisting = true } = {}) {
 
       let existing = null;
       if (row.id) {
-        existing = db.prepare('SELECT id FROM places WHERE id = ?').get(row.id);
+        existing = await db.prepare('SELECT id FROM places WHERE id = ?').get(row.id);
       }
       if (!existing) {
-        existing = db.prepare(`
+        existing = await db.prepare(`
           SELECT id FROM places WHERE name = ? AND city = ? AND country = ? LIMIT 1
         `).get(row.name, row.city, row.country);
       }
@@ -145,10 +145,10 @@ function importPlaces(items, { updateExisting = true } = {}) {
           errors.push({ index: i, error: 'Zaten mevcut', id: existing.id });
           continue;
         }
-        adminPlace.updatePlace(existing.id, row);
+        await adminPlace.updatePlace(existing.id, row);
         updated += 1;
       } else {
-        const createdRow = adminPlace.insertPlace(row);
+        const createdRow = await adminPlace.insertPlace(row);
         created += 1;
         if (row.id && createdRow.id !== row.id) {
           /* id auto-assigned; acceptable for bulk import */

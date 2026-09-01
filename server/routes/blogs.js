@@ -19,17 +19,17 @@ const MAX_BODY = 20000;
 /** Audit is_published=true — this schema uses status='approved'. */
 const PUBLIC_BLOG_STATUS = 'approved';
 
-function categoryLabel(slug, lang) {
-  const row = db.prepare('SELECT name_tr, name_en, icon FROM blog_categories WHERE slug = ? AND is_active = 1').get(slug);
+async function categoryLabel(slug, lang) {
+  const row = await db.prepare('SELECT name_tr, name_en, icon FROM blog_categories WHERE slug = ? AND is_active = 1').get(slug);
   if (!row) return slug || '';
   const name = lang === 'en' ? (row.name_en || row.name_tr) : row.name_tr;
   return row.icon ? `${row.icon} ${name}` : name;
 }
 
-function mapBlog(row, lang = 'tr', userId = null) {
-  const tags = blogDb.parseTagsStored(row.tags);
+async function mapBlog(row, lang = 'tr', userId = null) {
+  const tags = await blogDb.parseTagsStored(row.tags);
   const displayAuthor = row.author_name || row.author_name_user || 'Anonim';
-  const likes = enrichBlogLikes(row, userId);
+  const likes = await enrichBlogLikes(row, userId);
   return {
     id: row.id,
     userId: row.user_id,
@@ -65,10 +65,10 @@ function publicBlogSelect() {
   `;
 }
 
-router.get('/meta', (_req, res) => {
+router.get('/meta', async (_req, res) => {
   const lang = String(_req.query.lang || 'tr').startsWith('en') ? 'en' : 'tr';
   const page = settingsService.getBlogPageSettings();
-  const categories = blogDb.listBlogCategories().map((c) => ({
+  const categories = (await blogDb.listBlogCategories()).map((c) => ({
     slug: c.slug,
     label: lang === 'en'
       ? (c.icon ? `${c.icon} ${c.nameEn}` : c.nameEn)
@@ -93,7 +93,7 @@ router.get('/meta', (_req, res) => {
   });
 });
 
-router.get('/', authOptional, (req, res) => {
+router.get('/', authOptional, async (req, res) => {
   const { category, mine, featured, q } = req.query;
   const lang = String(req.query.lang || 'tr').startsWith('en') ? 'en' : 'tr';
   const params = [];
@@ -120,27 +120,27 @@ router.get('/', authOptional, (req, res) => {
     params.push(like, like, like);
   }
 
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     ${publicBlogSelect()}
     ${where}
     ORDER BY b.featured DESC, datetime(COALESCE(b.published_at, b.created_at)) DESC
   `).all(...params);
 
-  res.json({ blogs: rows.map((r) => mapBlog(r, lang, req.user?.id)) });
+  res.json({ blogs: await Promise.all(rows.map((r) => mapBlog(r, lang, req.user?.id))) });
 });
 
-router.get('/:slug', authOptional, (req, res) => {
+router.get('/:slug', authOptional, async (req, res) => {
   const lang = String(req.query.lang || 'tr').startsWith('en') ? 'en' : 'tr';
   const slug = sanitizeText(req.params.slug, 120);
   if (!slug) return res.status(400).json({ error: 'Geçersiz slug' });
 
-  let row = db.prepare(`
+  let row = await db.prepare(`
     ${publicBlogSelect()}
     WHERE b.slug = ?
   `).get(slug);
 
   if (!row && /^\d+$/.test(slug)) {
-    row = db.prepare(`
+    row = await db.prepare(`
       ${publicBlogSelect()}
       WHERE b.id = ?
     `).get(Number(slug));
@@ -153,16 +153,16 @@ router.get('/:slug', authOptional, (req, res) => {
     }
   }
 
-  res.json({ blog: mapBlog(row, lang, req.user?.id) });
+  res.json({ blog: await mapBlog(row, lang, req.user?.id) });
 });
 
-router.post('/:id/like', authRequired, (req, res) => {
+router.post('/:id/like', authRequired, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
-  const row = db.prepare('SELECT id, user_id, status FROM blogs WHERE id = ? AND status = ?').get(id, PUBLIC_BLOG_STATUS);
+  const row = await db.prepare('SELECT id, user_id, status FROM blogs WHERE id = ? AND status = ?').get(id, PUBLIC_BLOG_STATUS);
   if (!row) return res.status(404).json({ error: 'Blog bulunamadı' });
   if (row.user_id === req.user.id) return res.status(400).json({ error: 'Kendi blogunuzu beğenemezsiniz' });
-  const result = toggleBlogLike(req.user.id, id);
+  const result = await toggleBlogLike(req.user.id, id);
   res.json(result);
 });
 
@@ -171,7 +171,7 @@ router.post('/', authRequired, [
     .optional({ nullable: true, checkFalsy: true })
     .isURL({ protocols: ['https'], require_protocol: true })
     .withMessage('Görsel URL geçerli bir HTTPS adresi olmalı'),
-], (req, res) => {
+], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
@@ -192,10 +192,10 @@ router.post('/', authRequired, [
     return res.status(400).json({ error: 'Başlık ve içerik gerekli' });
   }
   const cleanExcerpt = sanitizeText(excerpt || cleanBody, MAX_EXCERPT).slice(0, MAX_EXCERPT);
-  const slug = blogDb.uniqueBlogSlug(db, blogDb.slugify(cleanTitle) || `blog-${Date.now()}`);
+  const slug = await blogDb.uniqueBlogSlug(db, await blogDb.slugify(cleanTitle) || `blog-${Date.now()}`);
   const combined = `${cleanTitle} ${cleanExcerpt} ${cleanBody}`;
-  const initialStatus = containsBannedWord(combined) ? 'spam' : 'pending';
-  const info = db.prepare(`
+  const initialStatus = await containsBannedWord(combined) ? 'spam' : 'pending';
+  const info = await db.prepare(`
     INSERT INTO blogs (user_id, category, title, slug, excerpt, body, image_url, place_id, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
@@ -209,23 +209,23 @@ router.post('/', authRequired, [
     placeId ? Number(placeId) : null,
     initialStatus,
   );
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT b.*, u.name AS author_name_user FROM blogs b
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(info.lastInsertRowid);
   res.status(201).json({
-    blog: mapBlog(row, 'tr', req.user.id),
+    blog: await mapBlog(row, 'tr', req.user.id),
     message: initialStatus === 'spam'
       ? 'Blog yazınız spam olarak işaretlendi ve yayınlanmayacak.'
       : 'Blog yazın alındı. Onay sonrası yayınlanacak.',
   });
 });
 
-router.delete('/:id', authRequired, (req, res) => {
+router.delete('/:id', authRequired, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Geçersiz id' });
 
-  const row = db.prepare('SELECT id, user_id, status FROM blogs WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT id, user_id, status FROM blogs WHERE id = ?').get(id);
   if (!row || row.status === 'deleted') {
     return res.status(404).json({ error: 'Blog bulunamadı' });
   }
@@ -233,7 +233,7 @@ router.delete('/:id', authRequired, (req, res) => {
     return res.status(403).json({ error: 'Bu içeriği silme yetkiniz yok' });
   }
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE blogs SET status = 'deleted', moderated_at = datetime('now')
     WHERE id = ?
   `).run(id);

@@ -117,20 +117,20 @@ function ensurePlaceCoords(place) {
   return { lat, lng, filled: true };
 }
 
-function backfillMissingPlaceCoords(database) {
+async function backfillMissingPlaceCoords(database) {
   if (!database || typeof database.prepare !== 'function') return 0;
-  const rows = database.prepare(
+  const rows = await database.prepare(
     'SELECT id, city, country, lat, lng FROM places WHERE lat IS NULL OR lng IS NULL',
   ).all();
   if (!rows.length) return 0;
   const upd = database.prepare('UPDATE places SET lat = ?, lng = ? WHERE id = ?');
-  const tx = database.transaction((list) => {
+  const tx = database.transaction(async (list) => {
     for (const row of list) {
       const { lat, lng } = ensurePlaceCoords(row);
-      upd.run(lat, lng, row.id);
+      await upd.run(lat, lng, row.id);
     }
   });
-  tx(rows);
+  await tx(rows);
   return rows.length;
 }
 

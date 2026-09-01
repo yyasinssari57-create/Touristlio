@@ -96,16 +96,6 @@ const dashAssign = js.match(/stat-(countries|places|tiolas)[\s\S]{0,80}textConte
 if (dashAssign) fail('app.js still assigns em-dash to a homepage stat');
 else ok('app.js does not assign em-dash to homepage stats');
 
-const stats = getHomepageStats();
-if (stats && isNonNegInt(stats.countries) && isNonNegInt(stats.places) && isNonNegInt(stats.tiolas)) {
-  ok(`getHomepageStats integers (countries=${stats.countries}, places=${stats.places}, tiolas=${stats.tiolas})`);
-} else {
-  fail(`getHomepageStats must return non-negative integers, got ${JSON.stringify(stats)}`);
-}
-if (stats.countries == null || stats.places == null || stats.tiolas == null) {
-  fail('getHomepageStats returned null/undefined field');
-} else ok('getHomepageStats has no null fields');
-
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const req = http.get(url, { timeout: 8000 }, (res) => {
@@ -159,13 +149,41 @@ async function checkLive() {
   }
 }
 
-checkLive().then(() => {
+async function checkDbStats() {
+  const url = String(process.env.DATABASE_URL || '').trim();
+  if (!url || /şifreni buraya yaz|YOUR_PASSWORD|\[.*\]/i.test(url)) {
+    ok('skip getHomepageStats DB (DATABASE_URL placeholder or unset)');
+    return;
+  }
+  try {
+    const { initDb } = require('../db');
+    await initDb();
+  } catch (e) {
+    fail(`initDb for homepage stats failed: ${e.message}`);
+    return;
+  }
+  const stats = await getHomepageStats();
+  if (stats && isNonNegInt(stats.countries) && isNonNegInt(stats.places) && isNonNegInt(stats.tiolas)) {
+    ok(`getHomepageStats integers (countries=${stats.countries}, places=${stats.places}, tiolas=${stats.tiolas})`);
+  } else {
+    fail(`getHomepageStats must return non-negative integers, got ${JSON.stringify(stats)}`);
+  }
+  if (stats.countries == null || stats.places == null || stats.tiolas == null) {
+    fail('getHomepageStats returned null/undefined field');
+  } else ok('getHomepageStats has no null fields');
+}
+
+async function main() {
+  await checkDbStats();
+  await checkLive();
   if (failed) {
     console.error(`verify-homepage-stats: ${failed} failed`);
     process.exit(1);
   }
   console.log('verify-homepage-stats: ok');
-}).catch((e) => {
+}
+
+main().catch((e) => {
   console.error(e);
   process.exit(1);
 });

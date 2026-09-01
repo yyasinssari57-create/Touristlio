@@ -25,8 +25,8 @@ function mapRequest(row, userRow) {
   };
 }
 
-function listPending() {
-  const rows = db.prepare(`
+async function listPending() {
+  const rows = await db.prepare(`
     SELECT pcr.*, u.name AS user_name, u.email AS user_email
     FROM profile_change_requests pcr
     JOIN users u ON u.id = pcr.user_id
@@ -36,60 +36,60 @@ function listPending() {
   return rows.map((r) => mapRequest(r, { name: r.user_name, email: r.user_email }));
 }
 
-function listForUser(userId) {
-  const rows = db.prepare(`
+async function listForUser(userId) {
+  const rows = await db.prepare(`
     SELECT * FROM profile_change_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
   `).all(userId);
-  const user = db.prepare('SELECT name, email FROM users WHERE id = ?').get(userId);
+  const user = await db.prepare('SELECT name, email FROM users WHERE id = ?').get(userId);
   return rows.map((r) => mapRequest(r, user));
 }
 
-function hasPendingOfType(userId, changeType) {
-  return !!db.prepare(`
+async function hasPendingOfType(userId, changeType) {
+  return !!await db.prepare(`
     SELECT id FROM profile_change_requests
     WHERE user_id = ? AND change_type = ? AND status = 'pending'
   `).get(userId, changeType);
 }
 
-function createRequest(userId, changeType, payload) {
+async function createRequest(userId, changeType, payload) {
   if (!VALID_TYPES.has(changeType)) throw new Error('Geçersiz profil değişiklik türü');
   if (hasPendingOfType(userId, changeType)) {
     throw new Error('Bu alan için zaten bekleyen bir talebiniz var');
   }
-  const info = db.prepare(`
+  const info = await db.prepare(`
     INSERT INTO profile_change_requests (user_id, change_type, payload, status)
     VALUES (?, ?, ?, 'pending')
   `).run(userId, changeType, JSON.stringify(payload || {}));
-  const row = db.prepare('SELECT * FROM profile_change_requests WHERE id = ?').get(info.lastInsertRowid);
-  const user = db.prepare('SELECT name, email FROM users WHERE id = ?').get(userId);
+  const row = await db.prepare('SELECT * FROM profile_change_requests WHERE id = ?').get(info.lastInsertRowid);
+  const user = await db.prepare('SELECT name, email FROM users WHERE id = ?').get(userId);
   return mapRequest(row, user);
 }
 
-function applyApproved(row) {
+async function applyApproved(row) {
   const payload = JSON.parse(row.payload || '{}');
   const userId = row.user_id;
   if (row.change_type === 'avatar_preset') {
     if (!isValidPreset(payload.avatarPreset)) throw new Error('Geçersiz avatar');
     const color = payload.avatarColor && isValidColor(payload.avatarColor) ? payload.avatarColor : null;
-    const existing = authModel.findById(userId);
-    authModel.updateAvatarPreset(userId, payload.avatarPreset, color || existing?.avatar_color || '#0ea5e9');
+    const existing = await authModel.findById(userId);
+    await authModel.updateAvatarPreset(userId, payload.avatarPreset, color || existing?.avatar_color || '#0ea5e9');
   } else if (row.change_type === 'avatar_photo') {
     if (!payload.avatarUrl) throw new Error('Görsel URL eksik');
-    const existing = authModel.findById(userId);
+    const existing = await authModel.findById(userId);
     if (existing?.avatar_url && existing.avatar_url !== payload.avatarUrl) {
       const oldPath = path.join(__dirname, '..', '..', existing.avatar_url.replace(/^\//, ''));
       try { unlinkImageAndVariants(oldPath); } catch { /* ignore */ }
     }
-    authModel.updateAvatarUrl(userId, payload.avatarUrl);
+    await authModel.updateAvatarUrl(userId, payload.avatarUrl);
   } else if (row.change_type === 'display_name') {
     const name = sanitizeName(payload.name);
     if (!name) throw new Error('Geçersiz ad');
-    db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, userId);
+    await db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, userId);
   }
 }
 
-function approve(id, reviewerId) {
-  const row = db.prepare('SELECT * FROM profile_change_requests WHERE id = ?').get(id);
+async function approve(id, reviewerId) {
+  const row = await db.prepare('SELECT * FROM profile_change_requests WHERE id = ?').get(id);
   if (!row) return { ok: false, error: 'Talep bulunamadı' };
   if (row.status !== 'pending') return { ok: false, error: 'Talep zaten işlendi' };
   try {
@@ -97,7 +97,7 @@ function approve(id, reviewerId) {
   } catch (err) {
     return { ok: false, error: err.message };
   }
-  db.prepare(`
+  await db.prepare(`
     UPDATE profile_change_requests
     SET status = 'approved', reviewed_by = ?, reviewed_at = datetime('now')
     WHERE id = ?
@@ -105,12 +105,12 @@ function approve(id, reviewerId) {
   return { ok: true };
 }
 
-function reject(id, reviewerId, reason) {
-  const row = db.prepare('SELECT * FROM profile_change_requests WHERE id = ?').get(id);
+async function reject(id, reviewerId, reason) {
+  const row = await db.prepare('SELECT * FROM profile_change_requests WHERE id = ?').get(id);
   if (!row) return { ok: false, error: 'Talep bulunamadı' };
   if (row.status !== 'pending') return { ok: false, error: 'Talep zaten işlendi' };
   const rejectionReason = sanitizeText(reason, 500) || 'Reddedildi';
-  db.prepare(`
+  await db.prepare(`
     UPDATE profile_change_requests
     SET status = 'rejected', rejection_reason = ?, reviewed_by = ?, reviewed_at = datetime('now')
     WHERE id = ?

@@ -24,15 +24,15 @@ function parsePositiveInt(val) {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
 }
 
-function targetExists(type, id) {
+async function targetExists(type, id) {
   if (type === 'profile') {
-    return db.prepare('SELECT id, name FROM users WHERE id = ?').get(id);
+    return await db.prepare('SELECT id, name FROM users WHERE id = ?').get(id);
   }
   if (type === 'tiola') {
-    return db.prepare('SELECT id, user_id, text FROM tiolas WHERE id = ?').get(id);
+    return await db.prepare('SELECT id, user_id, text FROM tiolas WHERE id = ?').get(id);
   }
   if (type === 'blog') {
-    return db.prepare('SELECT id, user_id, title FROM blogs WHERE id = ?').get(id);
+    return await db.prepare('SELECT id, user_id, title FROM blogs WHERE id = ?').get(id);
   }
   return null;
 }
@@ -63,7 +63,7 @@ function mapReport(row) {
   };
 }
 
-router.post('/', authRequired, reportLimiter, (req, res) => {
+router.post('/', authRequired, reportLimiter, async (req, res) => {
   const targetType = String(req.body?.targetType || '').trim();
   const targetId = parsePositiveInt(req.body?.targetId);
   const reason = String(req.body?.reason || '').trim();
@@ -91,13 +91,13 @@ router.post('/', authRequired, reportLimiter, (req, res) => {
     return fail(res, 'Kendi içeriğinizi şikayet edemezsiniz', 400);
   }
 
-  const dup = db.prepare(`
+  const dup = await db.prepare(`
     SELECT id FROM reports
     WHERE reporter_id = ? AND target_type = ? AND target_id = ? AND status = 'pending'
   `).get(req.user.id, targetType, targetId);
   if (dup) return fail(res, 'Bu içerik için zaten bekleyen bir şikayetiniz var', 409);
 
-  const info = db.prepare(`
+  const info = await db.prepare(`
     INSERT INTO reports (reporter_id, target_type, target_id, reason, note, status)
     VALUES (?, ?, ?, ?, ?, 'pending')
   `).run(req.user.id, targetType, targetId, reason, note);

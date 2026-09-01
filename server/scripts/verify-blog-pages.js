@@ -152,7 +152,7 @@ async function checkLive(base) {
   if (blogs.some((b) => b.isPublished === false)) fail('public list isPublished=false');
   else if (blogs.length) ok('public list isPublished=true');
 
-  const sample = blogs[0] || db.prepare(`
+  const sample = blogs[0] || await db.prepare(`
     SELECT slug, title FROM blogs WHERE status = 'approved' AND slug IS NOT NULL AND slug != '' LIMIT 1
   `).get();
 
@@ -184,11 +184,11 @@ async function checkLive(base) {
 
   let pendingSlug = null;
   try {
-    const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get()
-      || db.prepare('SELECT id FROM users LIMIT 1').get();
+    const admin = await db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get()
+      || await db.prepare('SELECT id FROM users LIMIT 1').get();
     if (admin) {
       pendingSlug = `orta6-pending-${Date.now()}`;
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO blogs (user_id, category, title, slug, excerpt, body, status)
         VALUES (?, 'guide', 'ORTA-6 Pending', ?, 'hidden excerpt', 'hidden body', 'pending')
       `).run(admin.id, pendingSlug);
@@ -207,7 +207,7 @@ async function checkLive(base) {
     }
   } finally {
     if (pendingSlug) {
-      try { db.prepare('DELETE FROM blogs WHERE slug = ?').run(pendingSlug); } catch { /* ignore */ }
+      try { await db.prepare('DELETE FROM blogs WHERE slug = ?').run(pendingSlug); } catch { /* ignore */ }
     }
   }
 }

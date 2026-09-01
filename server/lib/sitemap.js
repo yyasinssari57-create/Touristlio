@@ -43,9 +43,9 @@ function staticUrls(base) {
   ];
 }
 
-function loadPlaceUrls(base) {
+async function loadPlaceUrls(base) {
   try {
-    const rows = db.prepare(`
+    const rows = await db.prepare(`
       SELECT id, slug FROM places
       WHERE COALESCE(status, 'published') != 'archived'
       ORDER BY id
@@ -60,9 +60,9 @@ function loadPlaceUrls(base) {
   }
 }
 
-function loadBlogUrls(base) {
+async function loadBlogUrls(base) {
   try {
-    const rows = db.prepare(`
+    const rows = await db.prepare(`
       SELECT slug, published_at, created_at FROM blogs
       WHERE status = 'approved' AND slug IS NOT NULL AND slug != ''
       ORDER BY id
@@ -78,10 +78,10 @@ function loadBlogUrls(base) {
   }
 }
 
-function buildSitemapXml() {
+async function buildSitemapXml() {
   const base = siteBaseUrl();
   const today = isoDate();
-  const urls = [...staticUrls(base), ...loadPlaceUrls(base), ...loadBlogUrls(base)];
+  const urls = [...staticUrls(base), ...(await loadPlaceUrls(base)), ...(await loadBlogUrls(base))];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url>

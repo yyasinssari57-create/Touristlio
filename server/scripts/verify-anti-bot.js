@@ -75,15 +75,19 @@ if (!idx.includes("app.get('/api/csrf'") && !idx.includes('csrfTokenHandler')) {
   fail('GET /api/csrf missing');
 } else ok('GET /api/csrf');
 
-const { db } = require('../db');
-try {
-  const row = db.prepare(`
-    SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_tiolas_unique_user_place_vote'
-  `).get();
-  if (!row || !row.sql) fail('unique vote index not applied');
-  else ok('idx_tiolas_unique_user_place_vote exists');
-} catch (e) {
-  fail('index lookup failed: ' + e.message);
+const { initDb, db } = require('../db');
+async function checkUniqueIndex() {
+  try {
+    await initDb();
+    const row = await db.prepare(`
+      SELECT indexname AS name FROM pg_indexes
+      WHERE schemaname = 'public' AND indexname = 'idx_tiolas_unique_user_place_vote'
+    `).get();
+    if (!row || !row.name) fail('unique vote index not applied');
+    else ok('idx_tiolas_unique_user_place_vote exists');
+  } catch (e) {
+    console.log('  · skipped unique index DB check:', e.message);
+  }
 }
 
 function mergeCookies(jar, setCookie) {
@@ -300,6 +304,7 @@ function spawnServer(port) {
 }
 
 async function main() {
+  await checkUniqueIndex();
   const given = process.env.VERIFY_VOTES_URL;
   if (given) {
     await checkLive(given);

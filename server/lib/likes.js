@@ -1,64 +1,64 @@
 const { db } = require('../db');
 
-function getTiolaLikeCount(tiolaId) {
-  return db.prepare('SELECT COUNT(*) AS c FROM tiola_likes WHERE tiola_id = ?').get(tiolaId).c;
+async function getTiolaLikeCount(tiolaId) {
+  return (await db.prepare('SELECT COUNT(*) AS c FROM tiola_likes WHERE tiola_id = ?').get(tiolaId)).c;
 }
 
-function getBlogLikeCount(blogId) {
-  return db.prepare('SELECT COUNT(*) AS c FROM blog_likes WHERE blog_id = ?').get(blogId).c;
+async function getBlogLikeCount(blogId) {
+  return (await db.prepare('SELECT COUNT(*) AS c FROM blog_likes WHERE blog_id = ?').get(blogId)).c;
 }
 
-function userLikedTiola(userId, tiolaId) {
+async function userLikedTiola(userId, tiolaId) {
   if (!userId) return false;
-  return !!db.prepare('SELECT 1 FROM tiola_likes WHERE user_id = ? AND tiola_id = ?').get(userId, tiolaId);
+  return !!await db.prepare('SELECT 1 FROM tiola_likes WHERE user_id = ? AND tiola_id = ?').get(userId, tiolaId);
 }
 
-function userLikedBlog(userId, blogId) {
+async function userLikedBlog(userId, blogId) {
   if (!userId) return false;
-  return !!db.prepare('SELECT 1 FROM blog_likes WHERE user_id = ? AND blog_id = ?').get(userId, blogId);
+  return !!await db.prepare('SELECT 1 FROM blog_likes WHERE user_id = ? AND blog_id = ?').get(userId, blogId);
 }
 
-function toggleTiolaLike(userId, tiolaId) {
-  const existing = db.prepare('SELECT 1 FROM tiola_likes WHERE user_id = ? AND tiola_id = ?').get(userId, tiolaId);
+async function toggleTiolaLike(userId, tiolaId) {
+  const existing = await db.prepare('SELECT 1 FROM tiola_likes WHERE user_id = ? AND tiola_id = ?').get(userId, tiolaId);
   if (existing) {
-    db.prepare('DELETE FROM tiola_likes WHERE user_id = ? AND tiola_id = ?').run(userId, tiolaId);
-    return { liked: false, count: getTiolaLikeCount(tiolaId) };
+    await db.prepare('DELETE FROM tiola_likes WHERE user_id = ? AND tiola_id = ?').run(userId, tiolaId);
+    return { liked: false, count: await getTiolaLikeCount(tiolaId) };
   }
-  db.prepare('INSERT INTO tiola_likes (user_id, tiola_id) VALUES (?, ?)').run(userId, tiolaId);
-  return { liked: true, count: getTiolaLikeCount(tiolaId) };
+  await db.prepare('INSERT INTO tiola_likes (user_id, tiola_id) VALUES (?, ?)').run(userId, tiolaId);
+  return { liked: true, count: await getTiolaLikeCount(tiolaId) };
 }
 
-function toggleBlogLike(userId, blogId) {
-  const existing = db.prepare('SELECT 1 FROM blog_likes WHERE user_id = ? AND blog_id = ?').get(userId, blogId);
+async function toggleBlogLike(userId, blogId) {
+  const existing = await db.prepare('SELECT 1 FROM blog_likes WHERE user_id = ? AND blog_id = ?').get(userId, blogId);
   if (existing) {
-    db.prepare('DELETE FROM blog_likes WHERE user_id = ? AND blog_id = ?').run(userId, blogId);
-    return { liked: false, count: getBlogLikeCount(blogId) };
+    await db.prepare('DELETE FROM blog_likes WHERE user_id = ? AND blog_id = ?').run(userId, blogId);
+    return { liked: false, count: await getBlogLikeCount(blogId) };
   }
-  db.prepare('INSERT INTO blog_likes (user_id, blog_id) VALUES (?, ?)').run(userId, blogId);
-  return { liked: true, count: getBlogLikeCount(blogId) };
+  await db.prepare('INSERT INTO blog_likes (user_id, blog_id) VALUES (?, ?)').run(userId, blogId);
+  return { liked: true, count: await getBlogLikeCount(blogId) };
 }
 
-function getUserTiolaLikeCount(userId) {
-  return db.prepare(`
+async function getUserTiolaLikeCount(userId) {
+  return (await db.prepare(`
     SELECT COUNT(*) AS c FROM tiola_likes tl
     JOIN tiolas t ON t.id = tl.tiola_id
     WHERE t.user_id = ? AND t.status = 'approved'
-  `).get(userId).c;
+  `).get(userId)).c;
 }
 
-function enrichTiolaLikes(row, userId) {
-  const likeCount = getTiolaLikeCount(row.id);
+async function enrichTiolaLikes(row, userId) {
+  const likeCount = await getTiolaLikeCount(row.id);
   return {
     likeCount,
-    likedByMe: userLikedTiola(userId, row.id),
+    likedByMe: await userLikedTiola(userId, row.id),
   };
 }
 
-function enrichBlogLikes(row, userId) {
-  const likeCount = getBlogLikeCount(row.id);
+async function enrichBlogLikes(row, userId) {
+  const likeCount = await getBlogLikeCount(row.id);
   return {
     likeCount,
-    likedByMe: userLikedBlog(userId, row.id),
+    likedByMe: await userLikedBlog(userId, row.id),
   };
 }
 
