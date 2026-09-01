@@ -63,7 +63,7 @@ if (museumPlaces.length && museumMarkers.length === 0) {
 console.log('  ✓ OK');
 
 const osmSrc = require('fs').readFileSync(require('path').join(__dirname, '..', 'routes', 'osm.js'), 'utf8');
-if (osmSrc.includes('501')) {
+if (/status\(501\)/.test(osmSrc) || /['"]501['"]/.test(osmSrc)) {
   console.error('  ✗ /api/osm/search still returns 501');
   process.exit(1);
 }

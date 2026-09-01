@@ -4,7 +4,7 @@ const router = express.Router();
 
 /**
  * OSM / Nominatim — VPS sonrası proxy buraya bağlanacak.
- * Şimdilik: rate limit + ToS uyarısı; canlı arama kapalı (boş sonuç, 501 değil).
+ * Şimdilik: canlı Nominatim araması kapalı; boş sonuç listesi döner.
  *
  * @see https://operations.osmfoundation.org/policies/nominatim/
  */
