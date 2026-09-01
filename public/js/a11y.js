@@ -110,6 +110,7 @@
     const scope = root && root.querySelectorAll ? root : document;
     const add = (el) => {
       if (!el || !el.matches) return;
+      if (el.classList.contains('sk') || el.closest('.skeleton')) return;
       if (el.matches('a, button, input, select, textarea, summary')) return;
       if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
       if (!el.getAttribute('role')) el.setAttribute('role', 'button');

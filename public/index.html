@@ -186,7 +186,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         </div>
       </div>
       <p class="browse-hint" id="browseHint" data-i18n="browseHint">Kategori seçin veya arama yapın — destinasyonlar burada listelenir.</p>
-      <div class="pgrid" id="pgrid"></div>
+      <div class="pgrid" id="pgrid" aria-live="polite" aria-busy="false"></div>
       <div class="load-more-wrap" id="explorePager" style="display:none">
         <nav class="explore-pagination" id="explorePagination" data-i18n-aria="paginationAria" aria-label="Sayfalama" hidden>
           <button type="button" class="btn bo bsm" id="explorePagePrev" data-i18n="searchPrev">← Önceki</button>
@@ -608,7 +608,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <select class="w-sel" id="blogCat" aria-label="Blog kategorisi"></select>
           <label class="sr-only" for="blogBody" data-i18n="blogBodyPh">Uzun rehber yazınız...</label>
           <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..." style="min-height:140px"></textarea>
-          <button class="btn bp bsm" type="button" onclick="submitBlog()" data-i18n="submitBlog">Blog Gönder</button>
+          <button class="btn bp bsm" id="blogSendBtn" type="button" onclick="submitBlog()" data-i18n="submitBlog">Blog Gönder</button>
         </div>
       </div>
       <div class="ptab-c" id="ptab-pending">
@@ -651,7 +651,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <textarea class="rft" id="arcTxt" data-i18n-placeholder="shareExperience" placeholder="Deneyiminizi paylaşın..."></textarea>
             <div class="write-submit-row">
               <div class="write-rating-note" data-i18n="oneRatingPer">🛡️ Kişi başı bir yıldız</div>
-              <button class="btn bp bsm" type="button" onclick="submitArc()" data-i18n="sendTiola">Tiola Gönder</button>
+              <button class="btn bp bsm" id="arcSendBtn" type="button" onclick="submitArc()" data-i18n="sendTiola">Tiola Gönder</button>
             </div>
           </div>
         </div>
@@ -698,7 +698,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
               <input class="ain settings-inp" id="emailNew" type="email" autocomplete="email" data-i18n-placeholder="settingsNewEmail" placeholder="Yeni e-posta"/>
               <label class="sr-only" for="emailPass" data-i18n="settingsConfirmPassword">Onay için mevcut şifre</label>
               <input class="ain settings-inp" id="emailPass" type="password" autocomplete="current-password" data-i18n-placeholder="settingsConfirmPassword" placeholder="Onay için mevcut şifre"/>
-              <button type="button" class="btn bp bsm" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
+              <button type="button" class="btn bp bsm" id="btnSaveEmail" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
             </div>
           </section>
           <section class="settings-section">
@@ -709,7 +709,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
               <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
               <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">Yeni şifre (min 12 karakter)</label>
               <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 12 karakter)"/>
-              <button type="button" class="btn bp bsm" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
+              <button type="button" class="btn bp bsm" id="btnSavePassword" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
             </div>
             <p class="settings-note" data-i18n="settingsNote">Şifre en az 12 karakter, bir büyük harf ve bir rakam içermelidir.</p>
           </section>

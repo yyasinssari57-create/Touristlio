@@ -922,15 +922,22 @@ function renderTiolaRatingLine(p) {
 function showGridSkeleton() {
   const grid = document.getElementById('pgrid');
   if (!grid) return;
-  grid.classList.add('skeleton');
-  grid.innerHTML = window.TL_SKELETON ? window.TL_SKELETON.card(8) : Array(8).fill(0).map(() => `
-    <div class="pc sk"><div class="pc-img" style="background:var(--l2);min-height:160px"></div>
+  if (window.TL_SKELETON?.fillCards) window.TL_SKELETON.fillCards(grid, 8);
+  else {
+    grid.classList.add('skeleton');
+    grid.setAttribute('aria-busy', 'true');
+    grid.innerHTML = Array(8).fill(0).map(() => `
+    <div class="pc sk"><div class="pc-img" style="background:var(--l2);min-height:165px"></div>
     <div class="pc-body"><div style="height:12px;background:var(--l2);border-radius:4px;width:70%;margin-bottom:8px"></div></div></div>`).join('');
+  }
 }
 
 function renderGrid(list, append = false) {
   const grid = document.getElementById('pgrid');
-  if (grid) grid.classList.remove('skeleton');
+  if (grid) {
+    if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
+    else grid.classList.remove('skeleton');
+  }
   updatePlacesFoundCount(placesTotal || list.length);
   const browseHint = document.getElementById('browseHint');
   if (browseHint) browseHint.style.display = cardsLoaded ? 'none' : 'block';
@@ -1225,12 +1232,15 @@ async function applyFilters() {
 async function loadMorePlaces() {
   if (placesLoading || places.length >= placesTotal) return;
   placesLoading = true;
+  const moreBtn = document.getElementById('loadMoreBtn');
+  window.TL_SKELETON?.button(moreBtn, true);
   renderExplorePagination();
   try {
     await loadPlaces(currentFilterParams, true);
     renderGrid(places, true);
   } finally {
     placesLoading = false;
+    window.TL_SKELETON?.button(moreBtn, false);
     renderExplorePagination();
   }
 }
@@ -1243,7 +1253,7 @@ async function goToPlacesPage(n) {
   placesLoading = true;
   placesPage = page;
   exploreUrlPage = page;
-  if (!places.length) showGridSkeleton();
+  showGridSkeleton();
   currentFilterParams = buildFilterParams();
   try {
     await loadPlaces({ ...currentFilterParams, page }, false, reqId);
@@ -1265,6 +1275,11 @@ function onSearch(val) {
   searchTimer = setTimeout(async () => {
     applyFilters();
     if (!q) return;
+    if (window.TL_SKELETON?.searchDrop) {
+      drop.innerHTML = window.TL_SKELETON.searchDrop(5);
+      drop.classList.add('show');
+      drop.setAttribute('aria-busy', 'true');
+    }
     try {
       const data = await api('/places/search?q=' + encodeURIComponent(q) + '&limit=7');
       const res = data.places;
@@ -1282,9 +1297,11 @@ function onSearch(val) {
         }).join('');
       }
       drop.classList.add('show');
+      drop.removeAttribute('aria-busy');
     } catch (e) {
       drop.innerHTML = `<div class="sd-empty">${escapeHtml(e.message)}</div>`;
       drop.classList.add('show');
+      drop.removeAttribute('aria-busy');
     }
   }, SEARCH_DEBOUNCE_MS);
 }
@@ -1311,7 +1328,9 @@ function pickSearch(id) {
 
 function doSearch() {
   document.getElementById('srchDrop').classList.remove('show');
-  applyFilters();
+  const btn = document.querySelector('.srch-bar button[type="submit"]');
+  window.TL_SKELETON?.button(btn, true);
+  Promise.resolve(applyFilters()).finally(() => window.TL_SKELETON?.button(btn, false));
   showExploreTab('discover', document.getElementById('et-discover'));
   document.getElementById('es-discover').scrollIntoView({ behavior: 'smooth' });
 }
@@ -2213,6 +2232,8 @@ async function postTiola() {
   if (!txt) { window.TL_TOAST?.warning(t('writeSomething')); return; }
   if (!user) { openAuth(); return; }
   if (!activePlace) return;
+  const sendBtn = document.getElementById('rfSendBtn');
+  window.TL_SKELETON?.button(sendBtn, true);
   const fd = new FormData();
   fd.append('text', txt);
   if (rating) fd.append('stars', rating);
@@ -2232,6 +2253,8 @@ async function postTiola() {
     updateRevForm();
   } catch (e) {
     if (!e.status) window.TL_ERROR_BOUNDARY?.capture('form', e);
+  } finally {
+    window.TL_SKELETON?.button(sendBtn, false);
   }
 }
 
@@ -2459,6 +2482,10 @@ async function updateProfilePage() {
   }
   if (loginNotice) loginNotice.style.display = 'none';
   if (pContent) pContent.style.display = 'block';
+  const savedGridEl = document.getElementById('savedGrid');
+  const savedEmptyEl = document.getElementById('savedEmpty');
+  if (savedEmptyEl) savedEmptyEl.style.display = 'none';
+  if (savedGridEl && window.TL_SKELETON?.fillCards) window.TL_SKELETON.fillCards(savedGridEl, 4);
   document.querySelector('.prof-name').textContent = user.name;
   window.TL_AVATARS?.applyToElement(document.querySelector('.prof-av'), user);
   renderProfileMeta(user);
@@ -2574,6 +2601,7 @@ async function updateProfilePage() {
 
   const sg = document.getElementById('savedGrid');
   const se = document.getElementById('savedEmpty');
+  if (sg && window.TL_SKELETON?.clear) window.TL_SKELETON.clear(sg);
   if (!saved.places.length) { sg.innerHTML = ''; se.style.display = 'block'; }
   else {
     se.style.display = 'none';
@@ -2655,18 +2683,23 @@ async function submitChangePassword() {
   const currentPassword = document.getElementById('pwdCurrent')?.value;
   const password = document.getElementById('pwdNew')?.value;
   if (!currentPassword || !password) return;
+  const btn = document.getElementById('btnSavePassword');
+  window.TL_SKELETON?.button(btn, true);
   try {
     await api('/auth/change-password', { method: 'POST', body: { currentPassword, password } });
     document.getElementById('pwdCurrent').value = '';
     document.getElementById('pwdNew').value = '';
     window.TL_TOAST?.success(t('settingsPasswordUpdated'));
   } catch { /* toast from api */ }
+  finally { window.TL_SKELETON?.button(btn, false); }
 }
 
 async function submitChangeEmail() {
   const email = document.getElementById('emailNew')?.value;
   const password = document.getElementById('emailPass')?.value;
   if (!email || !password) return;
+  const btn = document.getElementById('btnSaveEmail');
+  window.TL_SKELETON?.button(btn, true);
   try {
     const data = await api('/auth/change-email', { method: 'POST', body: { email, password } });
     if (data.user) setAuth(data.user);
@@ -2675,13 +2708,17 @@ async function submitChangeEmail() {
     document.getElementById('emailPass').value = '';
     window.TL_TOAST?.success(t('settingsEmailUpdated'));
   } catch { /* toast from api */ }
+  finally { window.TL_SKELETON?.button(btn, false); }
 }
 
 async function resendVerificationEmail() {
+  const btn = document.getElementById('btnResendVerify');
+  window.TL_SKELETON?.button(btn, true);
   try {
     await api('/auth/resend-verification', { method: 'POST', body: {} });
     window.TL_TOAST?.success(t('settingsVerifySent'));
   } catch { /* toast from api */ }
+  finally { window.TL_SKELETON?.button(btn, false); }
 }
 
 let avatarPick = { preset: 'traveler', color: '#0ea5e9' };
@@ -2717,6 +2754,8 @@ function initAvatarSettings(u) {
 
 async function saveAvatarPreset() {
   if (!user) { window.TL_TOAST?.warning(t('login')); return; }
+  const btn = document.getElementById('btnSaveAvatar');
+  window.TL_SKELETON?.button(btn, true);
   try {
     const data = await api('/auth/avatar', { method: 'PATCH', body: { avatarPreset: avatarPick.preset, avatarColor: avatarPick.color } });
     if (data.user) {
@@ -2729,6 +2768,7 @@ async function saveAvatarPreset() {
       window.TL_TOAST?.error(t('avatarSaveFailed'));
     }
   } catch { /* toast from api */ }
+  finally { window.TL_SKELETON?.button(btn, false); }
 }
 
 async function uploadAvatarFile(file) {
@@ -2762,27 +2802,28 @@ async function uploadAvatarFile(file) {
 
 async function toggleSave(id, btn) {
   if (!user) { openAuth(); return; }
+  if (btn?.dataset.tlBusy === '1') return;
+  window.TL_SKELETON?.button(btn, true, { replace: true });
   try {
     if (savedIds.has(id)) {
       await api('/places/' + id + '/save', { method: 'DELETE' });
       savedIds.delete(id);
-      if (btn) {
-        btn.textContent = '🤍';
-        btn.setAttribute('aria-label', t('saveAria'));
-        btn.setAttribute('aria-pressed', 'false');
-      }
       window.TL_TOAST?.info(t('removedFromSaved'));
     } else {
       await api('/places/' + id + '/save', { method: 'POST' });
       savedIds.add(id);
-      if (btn) {
-        btn.textContent = '❤️';
-        btn.setAttribute('aria-label', t('unsaveAria'));
-        btn.setAttribute('aria-pressed', 'true');
-      }
       window.TL_TOAST?.success(t('addedToSaved'));
     }
   } catch { /* toast from api */ }
+  finally {
+    window.TL_SKELETON?.button(btn, false);
+    if (btn) {
+      const on = savedIds.has(id);
+      btn.textContent = on ? '❤️' : '🤍';
+      btn.setAttribute('aria-label', on ? t('unsaveAria') : t('saveAria'));
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
   syncDetailSaveBtn();
 }
 
@@ -2815,6 +2856,8 @@ async function submitArc() {
   if (cat) fd.append('category', cat);
   const photo = document.getElementById('arcPhoto')?.files?.[0];
   if (photo) fd.append('photo', photo);
+  const sendBtn = document.getElementById('arcSendBtn');
+  window.TL_SKELETON?.button(sendBtn, true);
   try {
     const body = await (window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.attach(fd, 'tiola') : fd);
     const data = await api('/tiolas', { method: 'POST', body });
@@ -2824,6 +2867,7 @@ async function submitArc() {
     arcRating = 0;
     updateProfilePage();
   } catch (e) { alert(e.message); }
+  finally { window.TL_SKELETON?.button(sendBtn, false); }
 }
 
 async function submitBlog() {
@@ -2835,6 +2879,8 @@ async function submitBlog() {
   const title = document.getElementById('blogTitle').value.trim();
   const body = document.getElementById('blogBody').value.trim();
   if (!title || !body) { window.TL_TOAST?.warning(t('titleRequired')); return; }
+  const sendBtn = document.getElementById('blogSendBtn');
+  window.TL_SKELETON?.button(sendBtn, true);
   try {
     const payload = await (window.TL_FORM_SECURITY
       ? window.TL_FORM_SECURITY.attach({
@@ -2850,6 +2896,7 @@ async function submitBlog() {
     document.getElementById('blogBody').value = '';
     updateProfilePage();
   } catch { /* toast from api */ }
+  finally { window.TL_SKELETON?.button(sendBtn, false); }
 }
 
 function openAuth(mode) {
@@ -2883,7 +2930,7 @@ function buildAuthForm(m) {
        <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}" autocomplete="current-password"/>
        <p id="authFormError" class="auth-inline-error" hidden></p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
-       <button class="btn bp" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
+       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
        <p class="auth-page-link" style="margin-top:10px"><a href="#" onclick="doForgotPassword();return false">${t('forgotPassword')}</a></p>`
     : `<label class="sr-only" for="regName">${t('authName')}</label>
        <input class="ain" id="regName" type="text" placeholder="${t('authName')}" autocomplete="name"/>
@@ -2897,7 +2944,7 @@ function buildAuthForm(m) {
          <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${lang === 'en' ? 'I accept' : 'kabul ediyorum'}</label>
        </div>
        <p id="authFormError" class="auth-inline-error" hidden></p>
-       <button class="btn bp" style="width:100%;padding:11px" onclick="doRegSubmit()">${t('authCreate')}</button>`;
+       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px" onclick="doRegSubmit()">${t('authCreate')}</button>`;
   } catch (e) {
     window.TL_ERROR_BOUNDARY?.capture('form', e);
   }
@@ -2964,6 +3011,8 @@ async function doLoginSubmit() {
     showAuthFormError(t('authPassRequired'));
     return;
   }
+  const btn = document.getElementById('authSubmitBtn');
+  window.TL_SKELETON?.button(btn, true);
   try {
     const body = await (window.TL_FORM_SECURITY
       ? window.TL_FORM_SECURITY.attach({
@@ -2984,6 +3033,8 @@ async function doLoginSubmit() {
     if (document.getElementById('page-profile').classList.contains('active')) updateProfilePage();
   } catch (e) {
     showAuthFormError(e.message || t('requestFailed'));
+  } finally {
+    window.TL_SKELETON?.button(btn, false);
   }
 }
 
@@ -2999,6 +3050,8 @@ async function doRegSubmit() {
   }
   if (!password) { showAuthFormError(t('authPassRequired')); return; }
   if (!document.getElementById('gC')?.checked) { showAuthFormError(t('kvkkRequired')); return; }
+  const btn = document.getElementById('authSubmitBtn');
+  window.TL_SKELETON?.button(btn, true);
   try {
     const body = await (window.TL_FORM_SECURITY
       ? window.TL_FORM_SECURITY.attach({
@@ -3027,6 +3080,8 @@ async function doRegSubmit() {
     closeAuth();
   } catch (e) {
     showAuthFormError(e.message || t('requestFailed'));
+  } finally {
+    window.TL_SKELETON?.button(btn, false);
   }
 }
 

@@ -318,9 +318,21 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Admin tablolarında bazı dinamik hücre görselleri jenerik alt kullanır.
 - Skip link odaklandığında navbar'ın üstünde; ilk Tab'da görünür.
 - Canlı ekran okuyucu testi Yasin'de doğrulanmalı.
-- [DÜŞÜK-3] henüz başlamadı.
 
-- [DÜŞÜK-3] Loading States — Skeleton Loader
+## DÜŞÜK-3 (skeleton loader)
+
+- Tamamlandı: Express + statik CSS/JS (Next.js yok). Google puanı yok.
+  - API süresince mekân kartı skeleton: keşfet `#pgrid`, arama `#searchGrid` (ilk yükleme + sayfa), arama dropdown, discover listesi, profil favori grid.
+  - Buton spinner: form gönder (giriş, kayıt, iletişim, şifre sıfırla, Tiola, blog, arama, ayarlar) ve favori (`toggleSave` / `pc-save` / `pd-save`).
+  - Skeleton paleti `--l2` / `--l` / brand-accent `#6EC6FF`; `prefers-reduced-motion` shimmer'ı kapatır.
+  - `npm run verify:skeleton`
+
+### Leftover
+- Admin panel kendi `setBtnLoading` metnini kullanır; kamu skeleton.js'e bağlanmadı.
+- Harita pin listesi skeleton değil (kart grid değil).
+- Canlı yavaş ağda Yasin tarayıcıda shimmer/spinner'ı doğrulamalı.
+- [DÜŞÜK-4] henüz başlamadı.
+
 - [DÜŞÜK-4] Kırık Linkleri Düzelt
 - [DÜŞÜK-5] Kod Temizliği
 - [DÜŞÜK-6] Analitik ve İzleme

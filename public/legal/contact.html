@@ -38,6 +38,7 @@
 </article>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
+<script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script src="/js/form-security.js?v=__APP_VERSION__"></script>
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';
@@ -70,8 +71,7 @@ form.addEventListener('submit', async (e) => {
     showMsg(t('contactMessageShort'), false);
     return;
   }
-  submitBtn.disabled = true;
-  submitBtn.textContent = t('contactSending');
+  window.TL_SKELETON?.button(submitBtn, true);
   try {
     const payload = await window.TL_FORM_SECURITY.attach({ name, email, subject, message }, 'contact');
     const res = await fetch('/api/contact', {
@@ -89,8 +89,7 @@ form.addEventListener('submit', async (e) => {
     if (crash && window.TL_ERROR_BOUNDARY?.capture('form', err)) return;
     showMsg(err.message || t('contactError'), false);
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = t('contactSend');
+    window.TL_SKELETON?.button(submitBtn, false);
   }
 });
 </script>

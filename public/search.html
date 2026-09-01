@@ -46,11 +46,11 @@
       <option value="rating" data-i18n="sortTiola">En Yüksek Tiola</option>
       <option value="az" data-i18n="sortAz">A → Z</option>
     </select>
-    <button type="submit" class="btn bp" data-i18n="searchBtn">🔍 Keşfet</button>
+    <button type="submit" class="btn bp" id="searchSubmit" data-i18n="searchBtn">🔍 Keşfet</button>
     <button type="button" class="btn bo" id="searchClear" data-i18n="filterClear">Filtreler Temizle</button>
   </form>
   <p class="search-meta" id="searchMeta" aria-live="polite"></p>
-  <div class="pgrid" id="searchGrid"></div>
+  <div class="pgrid" id="searchGrid" aria-live="polite" aria-busy="false"></div>
   <div class="search-pagination" id="searchPager">
     <button type="button" class="btn bo bsm" id="searchPrev" disabled data-i18n="searchPrev">← Önceki</button>
     <div class="search-page-nums" id="searchPageNums"></div>
@@ -137,10 +137,11 @@ function renderSearchPager() {
 
 async function runSearch(resetPage) {
   const grid = document.getElementById('searchGrid');
-  if (resetPage) {
-    page = 1;
-    grid.innerHTML = window.TL_SKELETON.card(6);
-  }
+  const submitBtn = document.getElementById('searchSubmit');
+  if (resetPage) page = 1;
+  if (window.TL_SKELETON?.fillCards) window.TL_SKELETON.fillCards(grid, 6);
+  else grid.innerHTML = window.TL_SKELETON ? window.TL_SKELETON.card(6) : '';
+  window.TL_SKELETON?.button(submitBtn, true);
   const p = paramsFromForm();
   const qs = new URLSearchParams({
     q: p.q,
@@ -158,6 +159,7 @@ async function runSearch(resetPage) {
     page = payload.page || page;
     totalPages = payload.totalPages || Math.max(1, Math.ceil(total / LIMIT) || 1);
     document.getElementById('searchMeta').textContent = `${total} ${t('placesFound')}${p.q ? ': ' + p.q : ''}`;
+    if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     const html = (payload.places || []).map(pl => `
       <a class="pc" href="/?place=${pl.id}">
         <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(pl.imageUrl, { alt: pl.name, kind: 'card' }) : `<img src="${pl.imageUrl}" alt="${pl.name}" loading="lazy"/>`}</div>
@@ -167,8 +169,11 @@ async function runSearch(resetPage) {
     renderSearchPager();
     updateUrl();
   } catch (e) {
+    if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     grid.innerHTML = '';
     window.TL_TOAST.error(e.message);
+  } finally {
+    window.TL_SKELETON?.button(submitBtn, false);
   }
 }
 

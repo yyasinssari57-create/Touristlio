@@ -131,12 +131,14 @@ window.TL_DISCOVER = (function () {
     const grid = document.getElementById('discoverCityGrid');
     if (!grid) return;
     showView('cities');
-    grid.innerHTML = window.TL_SKELETON?.card(8) || '<div class="discover-skeleton">...</div>';
+    if (window.TL_SKELETON?.fill && window.TL_SKELETON.card) window.TL_SKELETON.fill(grid, window.TL_SKELETON.card(8));
+    else grid.innerHTML = '<div class="discover-skeleton">...</div>';
     try {
       const data = await fetchJson('/places/cities?country=Turkey');
       cities = data.cities || [];
       renderCityGrid();
     } catch (e) {
+      if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
       grid.innerHTML = `<div class="discover-empty"><p>${escapeHtml(e.message)}</p></div>`;
     }
   }
@@ -144,6 +146,7 @@ window.TL_DISCOVER = (function () {
   function renderCityGrid() {
     const grid = document.getElementById('discoverCityGrid');
     if (!grid) return;
+    if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     grid.innerHTML = cities.map((c) => `
       <button type="button" class="city-card" data-slug="${c.slug}" aria-label="${escapeHtml(c.name)}">
         ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { alt: c.name, kind: 'card' }) : `<img src="${cityImg(c)}" alt="${escapeHtml(c.name)}" loading="lazy"/>`}
@@ -211,7 +214,10 @@ window.TL_DISCOVER = (function () {
     const list = document.getElementById('discoverPlaceList');
     const empty = document.getElementById('discoverEmpty');
     const count = document.getElementById('discoverPlaceCount');
-    if (list) list.innerHTML = window.TL_SKELETON?.card(4) || '';
+    if (list) {
+      if (window.TL_SKELETON?.fill) window.TL_SKELETON.fill(list, window.TL_SKELETON.list(4));
+      else list.innerHTML = window.TL_SKELETON?.card(4) || '';
+    }
     try {
       const data = await fetchJson('/places?' + buildQuery());
       places = data.places || data.items || [];
@@ -219,11 +225,15 @@ window.TL_DISCOVER = (function () {
       if (count) count.textContent = String(total);
       updateHeader();
       if (!places.length) {
-        if (list) list.innerHTML = '';
+        if (list) {
+          if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(list);
+          list.innerHTML = '';
+        }
         empty?.style.setProperty('display', 'block');
       } else {
         empty?.style.setProperty('display', 'none');
         if (list) {
+          if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(list);
           list.innerHTML = places.map((p) => {
             const name = p.name || p.title;
             return `

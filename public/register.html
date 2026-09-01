@@ -28,12 +28,13 @@
   </div>
   <label class="kvkk-check"><input type="checkbox" id="gC"/> <span data-i18n-html="authKvkkLabel">KVKK ve Kullanım Şartları kabul ediyorum</span></label>
   <p id="authFormError" class="auth-inline-error" hidden></p>
-  <button class="btn bp" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
+  <button class="btn bp" id="regSubmit" type="button" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
   <p class="auth-page-link"><span data-i18n="hasAccount">Zaten hesabınız var mı?</span> <a href="/login" data-i18n="login">Giriş Yap</a></p>
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
+<script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
@@ -56,6 +57,8 @@ async function doReg(){
   if(!EMAIL_RE.test(email)){ showErr(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
   if(!password){ showErr(t('authPassRequired')); return; }
   if(!gC.checked){ showErr(t('kvkkRequired')); return; }
+  const btn = document.getElementById('regSubmit');
+  window.TL_SKELETON?.button(btn, true);
   try {
     const body = await window.TL_FORM_SECURITY.attach({
       name, email, password, kvkkAccepted: true,
@@ -75,6 +78,7 @@ async function doReg(){
     window.TL_TOAST?.success(verifyMsg);
     setTimeout(() => { location.href = '/profile'; }, 2000);
   } catch(e){ showErr(e.message || t('requestFailed')); }
+  finally { window.TL_SKELETON?.button(btn, false); }
 }
 </script>
 </body>

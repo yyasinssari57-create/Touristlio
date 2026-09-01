@@ -144,7 +144,7 @@
           <input class="ain settings-inp" id="emailNew" type="email" autocomplete="email" data-i18n-placeholder="settingsNewEmail" placeholder="Yeni e-posta"/>
           <label class="sr-only" for="emailPass" data-i18n="settingsConfirmPassword">Onay için mevcut şifre</label>
           <input class="ain settings-inp" id="emailPass" type="password" autocomplete="current-password" data-i18n-placeholder="settingsConfirmPassword" placeholder="Onay için mevcut şifre"/>
-          <button type="button" class="btn bp bsm" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
+          <button type="button" class="btn bp bsm" id="btnSaveEmail" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
         </div>
       </section>
 
@@ -156,7 +156,7 @@
           <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
           <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">Yeni şifre (min 12 karakter)</label>
           <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 12 karakter)"/>
-          <button type="button" class="btn bp bsm" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
+          <button type="button" class="btn bp bsm" id="btnSavePassword" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
         </div>
         <p class="settings-note" data-i18n="settingsNote">Şifre en az 12 karakter, bir büyük harf ve bir rakam içermelidir.</p>
       </section>
@@ -173,6 +173,7 @@
 
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
+<script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
@@ -345,6 +346,8 @@ function renderProfileSettings(u) {
 
 async function submitChangePassword() {
 
+  const btn = document.getElementById('btnSavePassword');
+  window.TL_SKELETON?.button(btn, true);
   try {
 
     await api('/auth/change-password', { method:'POST', body: { currentPassword: pwdCurrent.value, password: pwdNew.value } });
@@ -354,11 +357,14 @@ async function submitChangePassword() {
     alert(t('settingsPasswordUpdated'));
 
   } catch (e) { alert(e.message); }
+  finally { window.TL_SKELETON?.button(btn, false); }
 
 }
 
 async function submitChangeEmail() {
 
+  const btn = document.getElementById('btnSaveEmail');
+  window.TL_SKELETON?.button(btn, true);
   try {
 
     const data = await api('/auth/change-email', { method:'POST', body: { email: emailNew.value, password: emailPass.value } });
@@ -370,6 +376,7 @@ async function submitChangeEmail() {
     alert(t('settingsEmailUpdated'));
 
   } catch (e) { alert(e.message); }
+  finally { window.TL_SKELETON?.button(btn, false); }
 
 }
 
@@ -395,6 +402,11 @@ async function init(){
     document.getElementById('pLoginNotice').style.display='none';
 
     document.getElementById('pContent').style.display='block';
+
+    const sgEarly = document.getElementById('savedGrid');
+    const seEarly = document.getElementById('savedEmpty');
+    if (seEarly) seEarly.style.display = 'none';
+    if (sgEarly && window.TL_SKELETON?.fillCards) window.TL_SKELETON.fillCards(sgEarly, 4);
 
     document.getElementById('profName').textContent = me.user.name;
 
@@ -429,6 +441,8 @@ async function init(){
     const sg = document.getElementById('savedGrid');
 
     const se = document.getElementById('savedEmpty');
+
+    if (sg && window.TL_SKELETON?.clear) window.TL_SKELETON.clear(sg);
 
     if(!savedPlaces.length){ sg.innerHTML=''; se.style.display='block'; }
 
@@ -475,6 +489,8 @@ function initAvatarSettings(u) {
 }
 
 async function saveAvatarPreset() {
+  const btn = document.getElementById('btnSaveAvatar');
+  window.TL_SKELETON?.button(btn, true);
   try {
     const data = await api('/auth/avatar', { method: 'PATCH', body: { avatarPreset: avatarPick.preset, avatarColor: avatarPick.color } });
     if (data.user) {
@@ -485,6 +501,7 @@ async function saveAvatarPreset() {
       window.TL_TOAST?.error(t('avatarSaveFailed'));
     }
   } catch { /* toast from api */ }
+  finally { window.TL_SKELETON?.button(btn, false); }
 }
 
 async function uploadAvatarFile(file) {

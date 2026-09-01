@@ -25,13 +25,14 @@
   <div class="tl-hp" aria-hidden="true">
     <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"/></label>
   </div>
-  <button class="btn bp" onclick="doLogin()" data-i18n="login">Giriş Yap</button>
+  <button class="btn bp" id="loginSubmit" type="button" onclick="doLogin()" data-i18n="login">Giriş Yap</button>
   <p class="auth-page-link"><a href="#" onclick="forgotPass();return false" data-i18n="forgotPassword">Şifremi unuttum</a></p>
   <p class="auth-page-link"><span data-i18n="noAccount">Hesabınız yok mu?</span> <a href="/register" data-i18n="authTabReg">Kayıt Ol</a></p>
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
+<script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
@@ -50,6 +51,8 @@ async function doLogin(){
   const password = loginPass.value;
   if(!EMAIL_RE.test(email)){ showErr(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
   if(!password){ showErr(t('authPassRequired')); return; }
+  const btn = document.getElementById('loginSubmit');
+  window.TL_SKELETON?.button(btn, true);
   try {
     const body = await window.TL_FORM_SECURITY.attach({
       email, password,
@@ -65,6 +68,7 @@ async function doLogin(){
     localStorage.setItem('tl_user', JSON.stringify(result.user));
     location.href = '/profile';
   } catch(e){ showErr(e.message || t('requestFailed')); }
+  finally { window.TL_SKELETON?.button(btn, false); }
 }
 async function forgotPass(){
   hideErr();
