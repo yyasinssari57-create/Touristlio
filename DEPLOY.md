@@ -173,7 +173,7 @@ npm run seed
 pm2 start deploy/hetzner/ecosystem.config.js
 ```
 
-Kalıcı veritabanı: `/var/lib/touristlio/data/touristlio.db` (bkz. `deploy/hetzner/.env.hetzner.example`).
+Kalıcı veritabanı: Supabase `DATABASE_URL` (SQLite `touristlio.db` kullanılmaz).
 
 ---
 
