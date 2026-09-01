@@ -1,149 +1,83 @@
 const moderationModel = require('./moderation.model');
-
 const { computeUserRiskScore } = require('../../middleware/rbac');
-
 const { db } = require('../../db');
 const { refreshPlaceStatsForTiola } = require('../../lib/tiola-stats');
 
-
-
 function mapPendingTiola(row) {
-
   return {
-
     id: row.id,
-
     userName: row.user_name,
-
     placeName: row.place_name || '(Genel Tiola)',
-
     stars: row.stars,
-
     text: row.text,
-
     photoUrl: row.photo_path ? `/uploads/${row.photo_path}` : null,
-
     cityTag: row.city_tag,
-
     status: row.status,
-
     createdAt: row.created_at,
-
   };
-
 }
 
-
-
-function listPendingTiolas() {
-
-  return moderationModel.pendingTiolas().map(mapPendingTiola);
-
+async function listPendingTiolas() {
+  const rows = await moderationModel.pendingTiolas();
+  return rows.map(mapPendingTiola);
 }
 
-
-
-function listPendingBlogs() {
-
-  return moderationModel.pendingBlogs().map((r) => ({
-
+async function listPendingBlogs() {
+  const rows = await moderationModel.pendingBlogs();
+  return rows.map((r) => ({
     id: r.id,
-
     userName: r.user_name,
-
     title: r.title,
-
     excerpt: r.excerpt,
-
     createdAt: r.created_at,
-
   }));
-
 }
 
-
-
-function approveTiola(id, moderatorId) {
-
-  moderationModel.approveTiola(id, moderatorId);
-  refreshPlaceStatsForTiola(id);
-
+async function approveTiola(id, moderatorId) {
+  await moderationModel.approveTiola(id, moderatorId);
+  await refreshPlaceStatsForTiola(id);
   return { ok: true };
-
 }
 
-
-
-function rejectTiola(id, moderatorId) {
-
-  moderationModel.rejectTiola(id, moderatorId);
-  refreshPlaceStatsForTiola(id);
-
+async function rejectTiola(id, moderatorId) {
+  await moderationModel.rejectTiola(id, moderatorId);
+  await refreshPlaceStatsForTiola(id);
   return { ok: true };
-
 }
 
-
-
-function approveBlog(id, moderatorId) {
-
-  moderationModel.approveBlog(id, moderatorId);
-
+async function approveBlog(id, moderatorId) {
+  await moderationModel.approveBlog(id, moderatorId);
   return { ok: true };
-
 }
 
-
-
-function rejectBlog(id, moderatorId) {
-
-  moderationModel.rejectBlog(id, moderatorId);
-
+async function rejectBlog(id, moderatorId) {
+  await moderationModel.rejectBlog(id, moderatorId);
   return { ok: true };
-
 }
 
-
-
-function riskQueue() {
-
-  const pendingUsers = db.prepare(`
-
+async function riskQueue() {
+  const pendingUsers = await db.prepare(`
     SELECT DISTINCT u.id, u.name, u.email, u.created_at, u.risk_score
-
     FROM users u JOIN tiolas t ON t.user_id = u.id WHERE t.status = 'pending'
-
     LIMIT 50
-
   `).all();
-
-  return pendingUsers.map((u) => ({
-
-    ...u,
-
-    riskScore: computeUserRiskScore(u.id),
-
-  })).sort((a, b) => b.riskScore - a.riskScore);
-
+  const scored = [];
+  for (const u of pendingUsers) {
+    scored.push({
+      ...u,
+      riskScore: await computeUserRiskScore(u.id),
+    });
+  }
+  scored.sort((a, b) => b.riskScore - a.riskScore);
+  return scored;
 }
-
-
 
 module.exports = {
-
   listPendingTiolas,
-
   listPendingBlogs,
-
   approveTiola,
-
   rejectTiola,
-
   approveBlog,
-
   rejectBlog,
-
   riskQueue,
-
 };
-

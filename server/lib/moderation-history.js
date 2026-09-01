@@ -1,9 +1,9 @@
 const { db } = require('../db');
 const { sanitizeText } = require('./sanitize');
 
-function log({ contentType, contentId, action, adminId, adminName, reason }) {
+async function log({ contentType, contentId, action, adminId, adminName, reason }) {
   if (!contentType || !contentId || !action || !adminId) return;
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO moderation_history (content_type, content_id, action, admin_id, admin_name, reason)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(
@@ -16,8 +16,8 @@ function log({ contentType, contentId, action, adminId, adminName, reason }) {
   );
 }
 
-function listForContent(contentType, contentId, limit = 30) {
-  const rows = db.prepare(`
+async function listForContent(contentType, contentId, limit = 30) {
+  const rows = await db.prepare(`
     SELECT mh.*, u.name AS admin_display_name
     FROM moderation_history mh
     LEFT JOIN users u ON u.id = mh.admin_id

@@ -39,23 +39,23 @@ function mapBlogCategory(row) {
   };
 }
 
-function seedBlogCategoriesIfEmpty(database) {
+async function seedBlogCategoriesIfEmpty(database) {
   const db = getDb(database);
-  const count = db.prepare('SELECT COUNT(*) AS c FROM blog_categories').get().c;
+  const count = (await db.prepare('SELECT COUNT(*) AS c FROM blog_categories').get()).c;
   if (count > 0) return;
-  const ins = db.prepare(`
+  const ins = await db.prepare(`
     INSERT INTO blog_categories (slug, name_tr, name_en, icon, sort_order, is_active)
     VALUES (?, ?, ?, ?, ?, 1)
   `);
   for (const c of DEFAULT_BLOG_CATEGORIES) {
-    ins.run(c.slug, c.name_tr, c.name_en, c.icon, c.sort_order);
+    await ins.run(c.slug, c.name_tr, c.name_en, c.icon, c.sort_order);
   }
 }
 
-function listBlogCategories({ includeInactive = false } = {}) {
+async function listBlogCategories({ includeInactive = false } = {}) {
   const db = getDb();
   const where = includeInactive ? '' : ' WHERE bc.is_active = 1';
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT bc.*, (
       SELECT COUNT(*) FROM blogs b
       WHERE b.category = bc.slug AND b.status = 'approved'
@@ -66,27 +66,27 @@ function listBlogCategories({ includeInactive = false } = {}) {
   return rows.map(mapBlogCategory);
 }
 
-function getBlogCategoryBySlug(slug) {
+async function getBlogCategoryBySlug(slug) {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM blog_categories WHERE slug = ?').get(slug);
+  const row = await db.prepare('SELECT * FROM blog_categories WHERE slug = ?').get(slug);
   return row ? mapBlogCategory({ ...row, post_count: 0 }) : null;
 }
 
-function createBlogCategory(body = {}) {
+async function createBlogCategory(body = {}) {
   const db = getDb();
   const slug = normalizeBlogCategorySlug(body.slug);
   const nameTr = sanitizeText(body.nameTr || body.name_tr, 80);
   if (!nameTr) throw new Error('Türkçe ad gerekli');
   const nameEn = sanitizeText(body.nameEn || body.name_en || nameTr, 80);
   const icon = sanitizeText(body.icon, 8);
-  const maxOrder = db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM blog_categories').get().m;
+  const maxOrder = (await db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM blog_categories').get()).m;
   const sortOrder = body.sortOrder != null ? Number(body.sortOrder) : maxOrder + 1;
   try {
-    const info = db.prepare(`
+    const info = await db.prepare(`
       INSERT INTO blog_categories (slug, name_tr, name_en, icon, sort_order, is_active)
       VALUES (?, ?, ?, ?, ?, 1)
     `).run(slug, nameTr, nameEn, icon, sortOrder);
-    const row = db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(info.lastInsertRowid);
+    const row = await db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(info.lastInsertRowid);
     return mapBlogCategory({ ...row, post_count: 0 });
   } catch (err) {
     if (String(err.message).includes('UNIQUE constraint failed: blog_categories.slug')) {
@@ -96,55 +96,55 @@ function createBlogCategory(body = {}) {
   }
 }
 
-function updateBlogCategory(id, body = {}) {
+async function updateBlogCategory(id, body = {}) {
   const db = getDb();
-  const existing = db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(id);
   if (!existing) return null;
   const nameTr = body.nameTr != null ? sanitizeText(body.nameTr, 80) : existing.name_tr;
   const nameEn = body.nameEn != null ? sanitizeText(body.nameEn, 80) : existing.name_en;
   const icon = body.icon != null ? sanitizeText(body.icon, 8) : existing.icon;
   const sortOrder = body.sortOrder != null ? Number(body.sortOrder) : existing.sort_order;
   const isActive = body.isActive != null ? (body.isActive ? 1 : 0) : existing.is_active;
-  db.prepare(`
+  await db.prepare(`
     UPDATE blog_categories SET name_tr = ?, name_en = ?, icon = ?, sort_order = ?, is_active = ?
     WHERE id = ?
   `).run(nameTr, nameEn, icon, sortOrder, isActive, id);
-  const row = db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(id);
-  const postCount = db.prepare(`
+  const row = await db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(id);
+  const postCount = (await db.prepare(`
     SELECT COUNT(*) AS c FROM blogs WHERE category = ? AND status = 'approved'
-  `).get(existing.slug).c;
+  `).get(existing.slug)).c;
   return mapBlogCategory({ ...row, post_count: postCount });
 }
 
-function deleteBlogCategory(id, { reassignTo } = {}) {
+async function deleteBlogCategory(id, { reassignTo } = {}) {
   const db = getDb();
-  const cat = db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(id);
+  const cat = await db.prepare('SELECT * FROM blog_categories WHERE id = ?').get(id);
   if (!cat) return { ok: false, error: 'Kategori bulunamadı' };
-  const used = db.prepare('SELECT COUNT(*) AS c FROM blogs WHERE category = ?').get(cat.slug).c;
+  const used = (await db.prepare('SELECT COUNT(*) AS c FROM blogs WHERE category = ?').get(cat.slug)).c;
   if (used > 0) {
     if (!reassignTo) {
       return { ok: false, error: `${used} blog yazısı bu kategoride — önce başka kategoriye taşıyın`, postCount: used };
     }
-    const target = db.prepare('SELECT * FROM blog_categories WHERE slug = ?').get(reassignTo);
+    const target = await db.prepare('SELECT * FROM blog_categories WHERE slug = ?').get(reassignTo);
     if (!target || !target.is_active) {
       return { ok: false, error: 'Hedef kategori bulunamadı veya pasif' };
     }
     if (target.slug === cat.slug) {
       return { ok: false, error: 'Hedef kategori mevcut kategoriyle aynı olamaz' };
     }
-    db.prepare('UPDATE blogs SET category = ? WHERE category = ?').run(target.slug, cat.slug);
+    await db.prepare('UPDATE blogs SET category = ? WHERE category = ?').run(target.slug, cat.slug);
   }
-  db.prepare('DELETE FROM blog_categories WHERE id = ?').run(id);
+  await db.prepare('DELETE FROM blog_categories WHERE id = ?').run(id);
   return { ok: true, deleted: true, reassigned: used > 0 ? used : 0 };
 }
 
-function uniqueBlogSlug(db, base, excludeId) {
+async function uniqueBlogSlug(db, base, excludeId) {
   let slug = base;
   let n = 2;
   while (true) {
     const row = excludeId
-      ? db.prepare('SELECT id FROM blogs WHERE slug = ? AND id != ?').get(slug, excludeId)
-      : db.prepare('SELECT id FROM blogs WHERE slug = ?').get(slug);
+      ? await db.prepare('SELECT id FROM blogs WHERE slug = ? AND id != ?').get(slug, excludeId)
+      : await db.prepare('SELECT id FROM blogs WHERE slug = ?').get(slug);
     if (!row) return slug;
     slug = `${base}-${n++}`;
   }
@@ -180,12 +180,12 @@ function parseTagsStored(value) {
   }
 }
 
-function backfillBlogSlugs(database) {
+async function backfillBlogSlugs(database) {
   const db = getDb(database);
-  const rows = db.prepare("SELECT id, title, slug FROM blogs WHERE slug IS NULL OR slug = ''").all();
+  const rows = await db.prepare("SELECT id, title, slug FROM blogs WHERE slug IS NULL OR slug = ''").all();
   for (const row of rows) {
     const base = uniqueBlogSlug(db, slugify(sanitizeText(row.title, 200)) || `blog-${row.id}`, row.id);
-    db.prepare('UPDATE blogs SET slug = ? WHERE id = ?').run(base, row.id);
+    await db.prepare('UPDATE blogs SET slug = ? WHERE id = ?').run(base, row.id);
   }
 }
 

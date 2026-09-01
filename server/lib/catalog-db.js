@@ -23,13 +23,13 @@ function normalizeCategorySlug(value) {
 
 function mapDbError(err, fallback) {
   const msg = String(err?.message || '');
-  if (msg.includes('UNIQUE constraint failed: cities')) {
+  if (msg.includes('UNIQUE constraint failed: cities') || msg.includes('cities_country_slug_key') || msg.includes('cities_country_slug')) {
     return 'Bu şehir zaten kayıtlı (aynı ülke ve slug)';
   }
-  if (msg.includes('UNIQUE constraint failed: place_categories')) {
+  if (msg.includes('UNIQUE constraint failed: place_categories') || msg.includes('place_categories_slug')) {
     return 'Bu kategori kodu zaten kayıtlı';
   }
-  if (msg.includes('no such table: cities') || msg.includes('no such table: place_categories')) {
+  if (msg.includes('no such table: cities') || msg.includes('no such table: place_categories') || msg.includes('does not exist')) {
     return 'Veritabanı güncel değil — sunucuyu yeniden başlatın (npm start)';
   }
   return fallback || msg || 'Kayıt başarısız';
@@ -49,30 +49,30 @@ const DEFAULT_CATEGORIES = [
   { slug: 'entertainment', name_tr: 'Eğlence', name_en: 'Entertainment', icon: '🎭', sort_order: 10 },
 ];
 
-function seedCategoriesIfEmpty(database) {
+async function seedCategoriesIfEmpty(database) {
   const db = getDb(database);
-  const count = db.prepare('SELECT COUNT(*) AS c FROM place_categories').get().c;
+  const count = (await db.prepare('SELECT COUNT(*) AS c FROM place_categories').get()).c;
   if (count > 0) return;
-  const ins = db.prepare(`
+  const ins = await db.prepare(`
     INSERT INTO place_categories (slug, name_tr, name_en, icon, sort_order, is_active)
     VALUES (?, ?, ?, ?, ?, 1)
   `);
   for (const c of DEFAULT_CATEGORIES) {
-    ins.run(c.slug, c.name_tr, c.name_en, c.icon, c.sort_order);
+    await ins.run(c.slug, c.name_tr, c.name_en, c.icon, c.sort_order);
   }
 }
 
-function seedCitiesFromPlaces(database) {
+async function seedCitiesFromPlaces(database) {
   const db = getDb(database);
-  const count = db.prepare('SELECT COUNT(*) AS c FROM cities').get().c;
+  const count = (await db.prepare('SELECT COUNT(*) AS c FROM cities').get()).c;
   if (count > 0) return;
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT DISTINCT TRIM(city) AS city, TRIM(country) AS country
     FROM places
     WHERE city IS NOT NULL AND city != '' AND country IS NOT NULL AND country != ''
     ORDER BY country, city
   `).all();
-  const ins = db.prepare(`
+  const ins = await db.prepare(`
     INSERT OR IGNORE INTO cities (name, name_en, slug, country, sort_order, is_active, image_url)
     VALUES (?, ?, ?, ?, ?, 1, ?)
   `);
@@ -80,15 +80,15 @@ function seedCitiesFromPlaces(database) {
   for (const r of rows) {
     const name = r.city;
     const slug = slugify(name);
-    ins.run(name, name, slug, r.country, order++, getCityImage(slug));
+    await ins.run(name, name, slug, r.country, order++, getCityImage(slug));
   }
 }
 
-function listCities({ includeInactive = false } = {}) {
+async function listCities({ includeInactive = false } = {}) {
   const db = getDb();
   const where = includeInactive ? '' : ' WHERE is_active = 1';
-  const rows = db.prepare(`SELECT * FROM cities${where} ORDER BY country, sort_order, name`).all();
-  const counts = db.prepare(`
+  const rows = await db.prepare(`SELECT * FROM cities${where} ORDER BY country, sort_order, name`).all();
+  const counts = await db.prepare(`
     SELECT TRIM(city) AS city, TRIM(country) AS country, COUNT(*) AS c
     FROM places
     WHERE COALESCE(status, 'published') != 'archived'
@@ -109,7 +109,7 @@ function listCities({ includeInactive = false } = {}) {
   }));
 }
 
-function createCity(body) {
+async function createCity(body) {
   const db = getDb();
   const name = sanitizeName(body.name);
   const country = sanitizeName(body.country, 120);
@@ -119,24 +119,24 @@ function createCity(body) {
   const sortOrder = Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0;
   const imageUrl = sanitizeText(body.imageUrl || body.image_url || '', 500) || getCityImage(slug);
   try {
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO cities (name, name_en, slug, country, sort_order, is_active, image_url)
       VALUES (?, ?, ?, ?, ?, 1, ?)
     `).run(name, nameEn, slug, country, sortOrder, imageUrl);
-    return getCityById(result.lastInsertRowid);
+    return await getCityById(result.lastInsertRowid);
   } catch (err) {
     throw new Error(mapDbError(err, 'Şehir eklenemedi'));
   }
 }
 
-function getCityById(id) {
+async function getCityById(id) {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM cities WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM cities WHERE id = ?').get(id);
   if (!row) return null;
-  const placeCount = db.prepare(`
+  const placeCount = (await db.prepare(`
     SELECT COUNT(*) AS c FROM places
     WHERE TRIM(city) = ? AND TRIM(country) = ? AND COALESCE(status, 'published') != 'archived'
-  `).get(row.name, row.country).c;
+  `).get(row.name, row.country)).c;
   return {
     id: row.id,
     name: row.name,
@@ -151,9 +151,9 @@ function getCityById(id) {
   };
 }
 
-function updateCity(id, body) {
+async function updateCity(id, body) {
   const db = getDb();
-  const existing = db.prepare('SELECT * FROM cities WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM cities WHERE id = ?').get(id);
   if (!existing) return null;
   const name = body.name != null ? sanitizeName(body.name) : existing.name;
   const country = body.country != null ? sanitizeName(body.country, 120) : existing.country;
@@ -170,46 +170,46 @@ function updateCity(id, body) {
   if (!name || !country) throw new Error('Şehir adı ve ülke zorunlu');
 
   const renameCity = name !== existing.name || country !== existing.country;
-  db.prepare(`
+  await db.prepare(`
     UPDATE cities SET name = ?, name_en = ?, slug = ?, country = ?, sort_order = ?, is_active = ?, image_url = ?
     WHERE id = ?
   `).run(name, nameEn, slug || slugify(name), country, sortOrder, isActive, imageUrl, id);
 
   if (renameCity) {
-    db.prepare(`
+    await db.prepare(`
       UPDATE places SET city = ?, country = ?
       WHERE TRIM(city) = ? AND TRIM(country) = ?
     `).run(name, country, existing.name, existing.country);
   }
-  return getCityById(id);
+  return await getCityById(id);
 }
 
-function deleteCity(id, { hard = false } = {}) {
+async function deleteCity(id, { hard = false } = {}) {
   const db = getDb();
-  const city = db.prepare('SELECT * FROM cities WHERE id = ?').get(id);
+  const city = await db.prepare('SELECT * FROM cities WHERE id = ?').get(id);
   if (!city) return { ok: false, error: 'Şehir bulunamadı' };
-  const used = db.prepare(`
+  const used = (await db.prepare(`
     SELECT COUNT(*) AS c FROM places
     WHERE TRIM(city) = ? AND TRIM(country) = ? AND COALESCE(status, 'published') != 'archived'
-  `).get(city.name, city.country).c;
+  `).get(city.name, city.country)).c;
   if (used > 0 && hard) {
     return { ok: false, error: `Bu şehirde ${used} yer kayıtlı; önce yerleri taşıyın veya arşivleyin` };
   }
   if (hard) {
-    db.prepare('DELETE FROM cities WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM cities WHERE id = ?').run(id);
     return { ok: true, deleted: true };
   }
-  db.prepare('UPDATE cities SET is_active = 0 WHERE id = ?').run(id);
+  await db.prepare('UPDATE cities SET is_active = 0 WHERE id = ?').run(id);
   return { ok: true, deleted: false };
 }
 
-function countCategoryUsage(slug) {
+async function countCategoryUsage(slug) {
   const db = getDb();
-  const direct = db.prepare(`
+  const direct = (await db.prepare(`
     SELECT COUNT(*) AS c FROM places
     WHERE category = ? AND COALESCE(status, 'published') != 'archived'
-  `).get(slug).c;
-  const rows = db.prepare(`
+  `).get(slug)).c;
+  const rows = await db.prepare(`
     SELECT categories FROM places
     WHERE category != ? AND COALESCE(status, 'published') != 'archived'
       AND categories IS NOT NULL AND categories != '' AND categories != '[]'
@@ -224,50 +224,54 @@ function countCategoryUsage(slug) {
   return direct + extra;
 }
 
-function listCategories({ includeInactive = false } = {}) {
+async function listCategories({ includeInactive = false } = {}) {
   const db = getDb();
   const where = includeInactive ? '' : ' WHERE is_active = 1';
-  const rows = db.prepare(`SELECT * FROM place_categories${where} ORDER BY sort_order, name_tr`).all();
-  return rows.map((r) => ({
-    id: r.id,
-    slug: r.slug,
-    nameTr: r.name_tr,
-    nameEn: r.name_en || r.slug,
-    icon: r.icon || '',
-    imageUrl: r.image_url || null,
-    sortOrder: r.sort_order,
-    isActive: !!r.is_active,
-    placeCount: countCategoryUsage(r.slug),
-  }));
+  const rows = await db.prepare(`SELECT * FROM place_categories${where} ORDER BY sort_order, name_tr`).all();
+  const out = [];
+  for (const r of rows) {
+    out.push({
+      id: r.id,
+      slug: r.slug,
+      nameTr: r.name_tr,
+      nameEn: r.name_en || r.slug,
+      icon: r.icon || '',
+      imageUrl: r.image_url || null,
+      sortOrder: r.sort_order,
+      isActive: !!r.is_active,
+      placeCount: await countCategoryUsage(r.slug),
+    });
+  }
+  return out;
 }
 
-function createCategory(body) {
+async function createCategory(body) {
   const db = getDb();
   const nameTr = sanitizeName(body.nameTr || body.name);
   if (!nameTr) throw new Error('Kategori kodu ve Türkçe ad zorunlu');
   const slug = normalizeCategorySlug(body.slug || body.nameTr || body.name);
   if (!slug) throw new Error('Geçerli bir kategori kodu (slug) girin — örn. dance, museum');
-  const exists = db.prepare('SELECT id FROM place_categories WHERE slug = ?').get(slug);
+  const exists = await db.prepare('SELECT id FROM place_categories WHERE slug = ?').get(slug);
   if (exists) throw new Error('Bu kategori kodu zaten var');
   const nameEn = sanitizeName(body.nameEn || body.name_en || nameTr, 120);
   const icon = sanitizeText(body.icon || '', 8);
   const imageUrl = sanitizeText(body.imageUrl || body.image_url || '', 500) || null;
-  const maxSort = db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM place_categories').get().m;
+  const maxSort = (await db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM place_categories').get()).m;
   const sortOrder = Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : maxSort + 1;
   try {
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO place_categories (slug, name_tr, name_en, icon, image_url, sort_order, is_active)
       VALUES (?, ?, ?, ?, ?, ?, 1)
     `).run(slug, nameTr, nameEn, icon, imageUrl, sortOrder);
-    return listCategories({ includeInactive: true }).find((c) => c.id === result.lastInsertRowid);
+    return (await listCategories({ includeInactive: true })).find((c) => c.id === result.lastInsertRowid);
   } catch (err) {
     throw new Error(mapDbError(err, 'Kategori eklenemedi'));
   }
 }
 
-function updateCategory(id, body) {
+async function updateCategory(id, body) {
   const db = getDb();
-  const existing = db.prepare('SELECT * FROM place_categories WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM place_categories WHERE id = ?').get(id);
   if (!existing) return null;
   const nameTr = body.nameTr != null ? sanitizeName(body.nameTr) : existing.name_tr;
   const nameEn = body.nameEn != null || body.name_en != null
@@ -282,37 +286,39 @@ function updateCategory(id, body) {
   let slug = existing.slug;
   if (body.slug && body.slug !== existing.slug) {
     const newSlug = normalizeCategorySlug(body.slug);
-    const taken = db.prepare('SELECT id FROM place_categories WHERE slug = ? AND id != ?').get(newSlug, id);
+    const taken = await db.prepare('SELECT id FROM place_categories WHERE slug = ? AND id != ?').get(newSlug, id);
     if (taken) throw new Error('Bu kategori kodu kullanılıyor');
-    db.prepare('UPDATE places SET category = ? WHERE category = ?').run(newSlug, existing.slug);
+    await db.prepare('UPDATE places SET category = ? WHERE category = ?').run(newSlug, existing.slug);
     slug = newSlug;
   }
-  db.prepare(`
+  await db.prepare(`
     UPDATE place_categories SET slug = ?, name_tr = ?, name_en = ?, icon = ?, image_url = ?, sort_order = ?, is_active = ?
     WHERE id = ?
   `).run(slug, nameTr, nameEn, icon, imageUrl, sortOrder, isActive, id);
-  return listCategories({ includeInactive: true }).find((c) => c.id === id);
+  return (await listCategories({ includeInactive: true })).find((c) => c.id === id);
 }
 
-function reorderCategories(orderedIds) {
+async function reorderCategories(orderedIds) {
   const db = getDb();
   if (!Array.isArray(orderedIds) || !orderedIds.length) throw new Error('Sıralama listesi gerekli');
-  const stmt = db.prepare('UPDATE place_categories SET sort_order = ? WHERE id = ?');
-  const tx = db.transaction((ids) => {
-    ids.forEach((id, idx) => stmt.run(idx, id));
+  const stmt = await db.prepare('UPDATE place_categories SET sort_order = ? WHERE id = ?');
+  const tx = db.transaction(async (ids) => {
+    for (let idx = 0; idx < ids.length; idx += 1) {
+      await stmt.run(idx, ids[idx]);
+    }
   });
-  tx(orderedIds.map((id) => Number(id)).filter((n) => n > 0));
-  return listCategories({ includeInactive: true });
+  await tx(orderedIds.map((id) => Number(id)).filter((n) => n > 0));
+  return await listCategories({ includeInactive: true });
 }
 
-function reassignPlacesFromCategory(fromSlug, toSlug) {
+async function reassignPlacesFromCategory(fromSlug, toSlug) {
   const db = getDb();
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT id, category, categories FROM places
     WHERE COALESCE(status, 'published') != 'archived'
       AND (category = ? OR (categories IS NOT NULL AND categories LIKE ?))
   `).all(fromSlug, `%${fromSlug}%`);
-  const upd = db.prepare('UPDATE places SET category = ?, categories = ? WHERE id = ?');
+  const upd = await db.prepare('UPDATE places SET category = ?, categories = ? WHERE id = ?');
   let count = 0;
   for (const row of rows) {
     let cats = [];
@@ -324,21 +330,21 @@ function reassignPlacesFromCategory(fromSlug, toSlug) {
     }
     const nextCats = [...new Set(cats.filter((c) => c !== fromSlug).concat(toSlug))];
     const nextCategory = row.category === fromSlug ? toSlug : row.category;
-    upd.run(nextCategory, JSON.stringify(nextCats.length ? nextCats : [toSlug]), row.id);
+    await upd.run(nextCategory, JSON.stringify(nextCats.length ? nextCats : [toSlug]), row.id);
     count += 1;
   }
   return count;
 }
 
-function deleteCategory(id, { reassignTo } = {}) {
+async function deleteCategory(id, { reassignTo } = {}) {
   const db = getDb();
-  const cat = db.prepare('SELECT * FROM place_categories WHERE id = ?').get(id);
+  const cat = await db.prepare('SELECT * FROM place_categories WHERE id = ?').get(id);
   if (!cat) return { ok: false, error: 'Kategori bulunamadı' };
-  const used = countCategoryUsage(cat.slug);
+  const used = await countCategoryUsage(cat.slug);
   if (used > 0) {
     let target = reassignTo ? sanitizeText(reassignTo, 60) : null;
     if (!target) {
-      const fallback = db.prepare(`
+      const fallback = await db.prepare(`
         SELECT slug FROM place_categories
         WHERE is_active = 1 AND slug != ?
         ORDER BY sort_order, name_tr LIMIT 1
@@ -352,16 +358,16 @@ function deleteCategory(id, { reassignTo } = {}) {
       }
       target = fallback.slug;
     }
-    const targetCat = db.prepare('SELECT slug FROM place_categories WHERE slug = ? AND is_active = 1').get(target);
+    const targetCat = await db.prepare('SELECT slug FROM place_categories WHERE slug = ? AND is_active = 1').get(target);
     if (!targetCat) {
       return { ok: false, error: 'Hedef kategori bulunamadı veya pasif' };
     }
     if (targetCat.slug === cat.slug) {
       return { ok: false, error: 'Hedef kategori mevcut kategoriyle aynı olamaz' };
     }
-    reassignPlacesFromCategory(cat.slug, targetCat.slug);
+    await reassignPlacesFromCategory(cat.slug, targetCat.slug);
   }
-  db.prepare('DELETE FROM place_categories WHERE id = ?').run(id);
+  await db.prepare('DELETE FROM place_categories WHERE id = ?').run(id);
   return { ok: true, deleted: true, reassigned: used > 0 ? used : 0 };
 }
 

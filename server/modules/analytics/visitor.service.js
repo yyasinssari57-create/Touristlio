@@ -31,20 +31,20 @@ function ensureSessionId(req, res) {
   return sid;
 }
 
-function upsertSession(sessionId, userId) {
-  const existing = db.prepare(
+async function upsertSession(sessionId, userId) {
+  const existing = await db.prepare(
     'SELECT id FROM analytics_sessions WHERE session_id = ?',
   ).get(sessionId);
 
   if (!existing) {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
       VALUES (?, ?, datetime('now'), datetime('now'))
     `).run(sessionId, userId);
     return;
   }
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE analytics_sessions
     SET last_seen_at = datetime('now'),
         user_id = COALESCE(?, user_id)
@@ -52,8 +52,8 @@ function upsertSession(sessionId, userId) {
   `).run(userId, sessionId);
 }
 
-function updateSessionDuration(sessionId, endSession) {
-  const row = db.prepare(
+async function updateSessionDuration(sessionId, endSession) {
+  const row = await db.prepare(
     'SELECT started_at FROM analytics_sessions WHERE session_id = ?',
   ).get(sessionId);
   if (!row) return;
@@ -66,7 +66,7 @@ function updateSessionDuration(sessionId, endSession) {
     : Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
 
   if (endSession) {
-    db.prepare(`
+    await db.prepare(`
       UPDATE analytics_sessions
       SET duration_sec = ?, last_seen_at = datetime('now'), ended_at = datetime('now')
       WHERE session_id = ?
@@ -74,7 +74,7 @@ function updateSessionDuration(sessionId, endSession) {
     return;
   }
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE analytics_sessions
     SET duration_sec = ?, last_seen_at = datetime('now')
     WHERE session_id = ?
@@ -85,7 +85,7 @@ function hasAnalyticsConsent(req) {
   return req.cookies?.tl_cookie_ok === '1';
 }
 
-function trackEvent(req, res, payload) {
+async function trackEvent(req, res, payload) {
   if (!hasAnalyticsConsent(req)) {
     return { ok: true, stored: false };
   }
@@ -121,13 +121,13 @@ function trackEvent(req, res, payload) {
   }
 
   if (type === 'page_view' || type === 'tab_click') {
-    db.prepare(
+    await db.prepare(
       'UPDATE analytics_sessions SET page_views = page_views + 1 WHERE session_id = ?',
     ).run(sessionId);
   }
 
   if (type !== 'heartbeat') {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO analytics_events (session_id, user_id, event_type, tab, path)
       VALUES (?, ?, ?, ?, ?)
     `).run(sessionId, userId, type, tab, path);
@@ -136,17 +136,18 @@ function trackEvent(req, res, payload) {
   return { ok: true, stored: true };
 }
 
-function analyticsTablesReady() {
-  const count = db.prepare(
-    "SELECT COUNT(*) AS c FROM sqlite_master WHERE type='table' AND name IN ('analytics_sessions', 'analytics_events')",
-  ).get().c;
+async function analyticsTablesReady() {
+  const count = (await db.prepare(
+    `SELECT COUNT(*) AS c FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name IN ('analytics_sessions', 'analytics_events')`,
+  ).get()).c;
   return count === 2;
 }
 
-function emptyVisitorDashboard() {
+async function emptyVisitorDashboard() {
   const days = [];
   for (let i = 6; i >= 0; i -= 1) {
-    days.push(db.prepare(`SELECT date('now', '-' || ? || ' days') AS day`).get(i).day);
+    days.push((await db.prepare(`SELECT date('now', '-' || ? || ' days') AS day`).get(i)).day);
   }
   return {
     onlineNow: 0,
@@ -175,33 +176,33 @@ function formatDuration(sec) {
   return rm ? `${h} sa ${rm} dk` : `${h} sa`;
 }
 
-function visitorDashboard() {
+async function visitorDashboard() {
   if (!analyticsTablesReady()) return emptyVisitorDashboard();
 
-  const onlineNow = db.prepare(`
+  const onlineNow = await db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_sessions
     WHERE datetime(last_seen_at) >= datetime('now', '-5 minutes')
       AND (ended_at IS NULL OR datetime(ended_at) >= datetime('now', '-5 minutes'))
   `).get().c;
 
-  const todayPageViews = db.prepare(`
+  const todayPageViews = (await db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_events
     WHERE event_type IN ('page_view', 'tab_click')
       AND date(created_at) = date('now')
-  `).get().c;
+  `).get()).c;
 
-  const todayUniqueVisitors = db.prepare(`
+  const todayUniqueVisitors = (await db.prepare(`
     SELECT COUNT(DISTINCT session_id) AS c FROM analytics_events
     WHERE date(created_at) = date('now')
-  `).get().c;
+  `).get()).c;
 
-  const avgRow = db.prepare(`
+  const avgRow = await db.prepare(`
     SELECT AVG(duration_sec) AS avgSec FROM analytics_sessions
     WHERE date(started_at) = date('now') AND duration_sec > 0
   `).get();
   const todayAvgDurationSec = Math.round(avgRow?.avgSec || 0);
 
-  const memberGuest = db.prepare(`
+  const memberGuest = await db.prepare(`
     SELECT
       SUM(CASE WHEN user_id IS NOT NULL THEN 1 ELSE 0 END) AS members,
       SUM(CASE WHEN user_id IS NULL THEN 1 ELSE 0 END) AS guests
@@ -213,7 +214,7 @@ function visitorDashboard() {
   const guests = memberGuest?.guests || 0;
   const memberGuestTotal = members + guests;
 
-  const topTabsRaw = db.prepare(`
+  const topTabsRaw = await db.prepare(`
     SELECT tab, COUNT(*) AS c FROM analytics_events
     WHERE event_type = 'tab_click'
       AND tab IS NOT NULL
@@ -231,16 +232,16 @@ function visitorDashboard() {
 
   const days = [];
   for (let i = 6; i >= 0; i -= 1) {
-    days.push(db.prepare(`SELECT date('now', '-' || ? || ' days') AS day`).get(i).day);
+    days.push((await db.prepare(`SELECT date('now', '-' || ? || ' days') AS day`).get(i)).day);
   }
 
-  const visitsByDay = db.prepare(`
+  const visitsByDay = await db.prepare(`
     SELECT date(created_at) AS day, COUNT(*) AS c FROM analytics_events
     WHERE event_type IN ('page_view', 'tab_click')
       AND date(created_at) >= date('now', '-6 days')
     GROUP BY date(created_at)
   `).all();
-  const visitorsByDay = db.prepare(`
+  const visitorsByDay = await db.prepare(`
     SELECT date(created_at) AS day, COUNT(DISTINCT session_id) AS c FROM analytics_events
     WHERE date(created_at) >= date('now', '-6 days')
     GROUP BY date(created_at)

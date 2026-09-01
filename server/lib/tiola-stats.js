@@ -19,10 +19,10 @@ function roundAvg(avg) {
   return Math.round(Number(avg) * 10) / 10;
 }
 
-function computePlaceTiolaStats(placeId) {
+async function computePlaceTiolaStats(placeId) {
   const pid = Number(placeId);
   if (!Number.isFinite(pid)) return { tiolaCount: 0, tiolaRating: null };
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
     FROM tiolas
     WHERE place_id = ? AND ${RATED_WHERE}
@@ -33,20 +33,20 @@ function computePlaceTiolaStats(placeId) {
   };
 }
 
-function persistPlaceTiolaStats(placeId, stats) {
+async function persistPlaceTiolaStats(placeId, stats) {
   const pid = Number(placeId);
   if (!Number.isFinite(pid)) return stats;
-  db.prepare(`
+  await db.prepare(`
     UPDATE places SET tiola_count = ?, tiola_rating = ? WHERE id = ?
   `).run(stats.tiolaCount || 0, stats.tiolaRating, pid);
   return stats;
 }
 
-function readStoredPlaceTiolaStats(placeId) {
+async function readStoredPlaceTiolaStats(placeId) {
   const pid = Number(placeId);
   if (!Number.isFinite(pid)) return { tiolaCount: 0, tiolaRating: null };
   try {
-    const row = db.prepare(`
+    const row = await db.prepare(`
       SELECT tiola_count AS tiolaCount, tiola_rating AS tiolaRating FROM places WHERE id = ?
     `).get(pid);
     if (!row) return { tiolaCount: 0, tiolaRating: null };
@@ -55,7 +55,7 @@ function readStoredPlaceTiolaStats(placeId) {
       tiolaRating: row.tiolaRating != null ? roundAvg(row.tiolaRating) : null,
     };
   } catch {
-    return computePlaceTiolaStats(pid);
+    return await computePlaceTiolaStats(pid);
   }
 }
 
@@ -68,34 +68,34 @@ function invalidatePlaceListCaches() {
   clear('search');
 }
 
-function recomputePlaceTiolaStats(placeId) {
+async function recomputePlaceTiolaStats(placeId) {
   const pid = Number(placeId);
   if (!Number.isFinite(pid) || pid < 1) {
     invalidatePlaceListCaches();
     return { tiolaCount: 0, tiolaRating: null };
   }
-  const stats = persistPlaceTiolaStats(pid, computePlaceTiolaStats(pid));
+  const stats = await persistPlaceTiolaStats(pid, await computePlaceTiolaStats(pid));
   invalidatePlaceListCaches();
   return stats;
 }
 
-function refreshPlaceStatsForTiola(tiolaId) {
+async function refreshPlaceStatsForTiola(tiolaId) {
   const id = Number(tiolaId);
   if (!Number.isFinite(id)) {
     invalidatePlaceListCaches();
     return null;
   }
-  const row = db.prepare('SELECT place_id AS placeId FROM tiolas WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT place_id AS placeId FROM tiolas WHERE id = ?').get(id);
   if (!row?.placeId) {
     invalidatePlaceListCaches();
     return null;
   }
-  return recomputePlaceTiolaStats(row.placeId);
+  return await recomputePlaceTiolaStats(row.placeId);
 }
 
-function allStoredPlaceStats() {
+async function allStoredPlaceStats() {
   try {
-    const rows = db.prepare(`
+    const rows = await db.prepare(`
       SELECT id AS placeId, tiola_count AS count, tiola_rating AS avg
       FROM places
       WHERE COALESCE(tiola_count, 0) > 0
@@ -113,21 +113,21 @@ function allStoredPlaceStats() {
   }
 }
 
-function backfillAllPlaceTiolaStats() {
-  db.exec('UPDATE places SET tiola_count = 0, tiola_rating = NULL');
-  const rows = db.prepare(`
+async function backfillAllPlaceTiolaStats() {
+  await db.exec('UPDATE places SET tiola_count = 0, tiola_rating = NULL');
+  const rows = await db.prepare(`
     SELECT place_id AS placeId, COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
     FROM tiolas
     WHERE ${RATED_WHERE}
     GROUP BY place_id
   `).all();
-  const update = db.prepare('UPDATE places SET tiola_count = ?, tiola_rating = ? WHERE id = ?');
-  const tx = db.transaction((list) => {
+  const update = await db.prepare('UPDATE places SET tiola_count = ?, tiola_rating = ? WHERE id = ?');
+  const tx = db.transaction(async (list) => {
     for (const row of list) {
-      update.run(row.count || 0, row.avg ?? null, row.placeId);
+      await update.run(row.count || 0, row.avg ?? null, row.placeId);
     }
   });
-  tx(rows);
+  await tx(rows);
   invalidatePlaceListCaches();
   return rows.length;
 }

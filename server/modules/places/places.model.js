@@ -1,15 +1,15 @@
 const { db } = require('../../db');
 const { findPlaceRow } = require('../../lib/place-lookup');
 
-function findAll() {
-  return db.prepare('SELECT * FROM places').all();
+async function findAll() {
+  return await db.prepare('SELECT * FROM places').all();
 }
 
-function findById(id) {
-  return db.prepare('SELECT * FROM places WHERE id = ?').get(id);
+async function findById(id) {
+  return await db.prepare('SELECT * FROM places WHERE id = ?').get(id);
 }
 
-function findByIdOrSlug(idOrSlug) {
+async function findByIdOrSlug(idOrSlug) {
   return findPlaceRow(idOrSlug, db);
 }
 

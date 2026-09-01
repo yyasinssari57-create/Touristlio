@@ -44,7 +44,7 @@ router.post('/', contactLimiter, recaptchaGuard('contact'), honeypotGuard(CONTAC
   }
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO contact_messages (name, email, subject, message, ip)
       VALUES (?, ?, ?, ?, ?)
     `).run(name, email, subject, message, req.ip || null);

@@ -22,7 +22,7 @@ const apiLimiter = rateLimit({
   max: Number(process.env.RATE_LIMIT_MAX) || 300,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => isReportRequest(req) || isAdminAnalyticsRead(req),
+  skip: async (req) => isReportRequest(req) || isAdminAnalyticsRead(req),
   message: { error: 'Çok fazla istek. Lütfen bir süre sonra tekrar deneyin.' },
 });
 
@@ -31,7 +31,7 @@ const adminAnalyticsLimiter = rateLimit({
   max: Number(process.env.ADMIN_ANALYTICS_RATE_LIMIT_MAX) || 600,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => (req.user?.id ? `analytics:user:${req.user.id}` : `analytics:ip:${req.ip}`),
+  keyGenerator: async (req) => (req.user?.id ? `analytics:user:${req.user.id}` : `analytics:ip:${req.ip}`),
   message: { error: 'Analitik istek limiti aşıldı. Lütfen kısa süre sonra tekrar deneyin.' },
 });
 
@@ -40,7 +40,7 @@ const reportLimiter = rateLimit({
   max: Number(process.env.REPORT_RATE_LIMIT_MAX) || (isDev ? 30 : 10),
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => (req.user?.id ? `report:user:${req.user.id}` : `report:ip:${req.ip}`),
+  keyGenerator: async (req) => (req.user?.id ? `report:user:${req.user.id}` : `report:ip:${req.ip}`),
   message: { error: 'Çok fazla şikayet gönderdiniz. Lütfen bir süre sonra tekrar deneyin.' },
 });
 
@@ -73,7 +73,7 @@ const adminLimiter = rateLimit({
   max: Number(process.env.ADMIN_RATE_LIMIT_MAX) || 150,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => (req.user?.id ? `admin:user:${req.user.id}` : `admin:ip:${req.ip}`),
+  keyGenerator: async (req) => (req.user?.id ? `admin:user:${req.user.id}` : `admin:ip:${req.ip}`),
   message: { error: 'Admin istek limiti aşıldı. Lütfen kısa süre sonra tekrar deneyin.' },
 });
 
@@ -91,7 +91,7 @@ const formLimiter = rateLimit({
   max: Number(process.env.FORM_RATE_LIMIT_MAX) || 3,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => `form:ip:${req.ip}`,
+  keyGenerator: async (req) => `form:ip:${req.ip}`,
   message: { error: 'Çok fazla gönderim. 5 dakika sonra tekrar deneyin.' },
 });
 

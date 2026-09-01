@@ -2,9 +2,9 @@ const { db } = require('../../db');
 
 
 
-function pendingTiolas() {
+async function pendingTiolas() {
 
-  return db.prepare(`
+  return await db.prepare(`
 
     SELECT t.*, u.name AS user_name, p.name AS place_name
 
@@ -24,9 +24,9 @@ function pendingTiolas() {
 
 
 
-function pendingBlogs() {
+async function pendingBlogs() {
 
-  return db.prepare(`
+  return await db.prepare(`
 
     SELECT b.*, u.name AS user_name FROM blogs b
 
@@ -42,9 +42,9 @@ function pendingBlogs() {
 
 
 
-function approveTiola(id, moderatorId) {
+async function approveTiola(id, moderatorId) {
 
-  return db.prepare(`
+  return await db.prepare(`
 
     UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
 
@@ -56,9 +56,9 @@ function approveTiola(id, moderatorId) {
 
 
 
-function rejectTiola(id, moderatorId) {
+async function rejectTiola(id, moderatorId) {
 
-  return db.prepare(`
+  return await db.prepare(`
 
     UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
 
@@ -70,9 +70,9 @@ function rejectTiola(id, moderatorId) {
 
 
 
-function approveBlog(id, moderatorId) {
+async function approveBlog(id, moderatorId) {
 
-  return db.prepare(`
+  return await db.prepare(`
 
     UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
 
@@ -84,9 +84,9 @@ function approveBlog(id, moderatorId) {
 
 
 
-function rejectBlog(id, moderatorId) {
+async function rejectBlog(id, moderatorId) {
 
-  return db.prepare(`
+  return await db.prepare(`
 
     UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
 

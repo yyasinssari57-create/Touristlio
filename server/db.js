@@ -1,291 +1,34 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+require('dotenv').config();
 const logger = require('./lib/logger');
+const { createPool, db, closePool, getPool } = require('./lib/pg-db');
+const { PG_SCHEMA } = require('./lib/pg-schema');
 
-const projectRoot = path.join(__dirname, '..');
-
-function resolveDbCandidates() {
-  if (process.env.DATABASE_PATH) {
-    return [path.resolve(process.env.DATABASE_PATH)];
+function resolveDatabaseUrl() {
+  const url = String(process.env.DATABASE_URL || '').trim();
+  if (!url) {
+    throw new Error(
+      'DATABASE_URL is required. Set postgresql://... in .env (Supabase). SQLite is no longer used.',
+    );
   }
-  return [
-    path.join(projectRoot, 'data', 'touristlio.db'),
-    path.join('/tmp', 'touristlio', 'touristlio.db'),
-  ];
-}
-
-function ensureDataDir(dbPath) {
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-}
-
-function openDatabase() {
-  const candidates = resolveDbCandidates();
-  let lastErr;
-
-  for (const dbPath of candidates) {
-    try {
-      ensureDataDir(dbPath);
-      const db = new Database(dbPath);
-      try {
-        db.pragma('journal_mode = WAL');
-      } catch (walErr) {
-        logger.warn({ msg: 'WAL mode unavailable, using default journal', err: walErr.message });
-      }
-      db.pragma('foreign_keys = ON');
-
-      if (!process.env.DATABASE_PATH && dbPath !== candidates[0]) {
-        logger.warn({
-          msg: 'Using fallback database path — data is ephemeral (Render Free plan has no persistent disk)',
-          dbPath,
-        });
-      } else {
-        logger.info({ msg: 'Database opened', dbPath });
-      }
-
-      return { db, dbPath };
-    } catch (err) {
-      lastErr = err;
-      logger.error({
-        msg: 'Database open failed',
-        dbPath,
-        code: err.code,
-        err: err.message,
-      });
-    }
+  if (/şifreni buraya yaz|YOUR_PASSWORD|\[.*\]/i.test(url)) {
+    throw new Error(
+      'DATABASE_URL still has a password placeholder. Paste the real Supabase database password.',
+    );
   }
-
-  const detail = lastErr
-    ? `${lastErr.code || 'SQLITE_ERROR'} — ${lastErr.message}`
-    : 'unknown error';
-  throw new Error(`Failed to open SQLite database: ${detail}`);
+  return url;
 }
-
-const { db, dbPath } = openDatabase();
 
 function isEphemeralStorage() {
+  if (process.env.DATABASE_URL) return false;
   if (process.env.STORAGE_PERSISTENT === 'true') return false;
   if (process.env.STORAGE_PERSISTENT === 'false') return true;
-  // Render Free has no persistent disk — data/ and /tmp are wiped on redeploy.
   return process.env.RENDER === 'true';
 }
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'member',
-    avatar_color TEXT DEFAULT '#0ea5e9',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
+let dbPath = null;
+let initialized = false;
 
-  CREATE TABLE IF NOT EXISTS places (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    location TEXT,
-    country TEXT,
-    city TEXT,
-    district TEXT,
-    category TEXT,
-    image_url TEXT,
-    is_local INTEGER DEFAULT 0,
-    entry_fee TEXT,
-    best_time TEXT,
-    description TEXT,
-    history TEXT,
-    tips TEXT,
-    tags TEXT,
-    search_aliases TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS tiolas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    place_id INTEGER,
-    stars INTEGER,
-    category TEXT,
-    text TEXT NOT NULL,
-    photo_path TEXT,
-    city_tag TEXT,
-    country_tag TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    moderated_by INTEGER,
-    moderated_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (place_id) REFERENCES places(id),
-    FOREIGN KEY (moderated_by) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS blogs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    category TEXT,
-    title TEXT NOT NULL,
-    excerpt TEXT,
-    body TEXT,
-    image_url TEXT,
-    place_id INTEGER,
-    status TEXT NOT NULL DEFAULT 'pending',
-    moderated_by INTEGER,
-    moderated_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (place_id) REFERENCES places(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS saved_places (
-    user_id INTEGER NOT NULL,
-    place_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (user_id, place_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (place_id) REFERENCES places(id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_tiolas_place ON tiolas(place_id, status);
-  CREATE INDEX IF NOT EXISTS idx_tiolas_status ON tiolas(status, created_at);
-  CREATE INDEX IF NOT EXISTS idx_blogs_status ON blogs(status, created_at);
-`);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS password_reset_tokens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    token TEXT NOT NULL UNIQUE,
-    expires_at TEXT NOT NULL,
-    used INTEGER DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS travel_lists (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    is_public INTEGER DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS travel_list_items (
-    list_id INTEGER NOT NULL,
-    place_id INTEGER NOT NULL,
-    note TEXT,
-    sort_order INTEGER DEFAULT 0,
-    added_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (list_id, place_id),
-    FOREIGN KEY (list_id) REFERENCES travel_lists(id) ON DELETE CASCADE,
-    FOREIGN KEY (place_id) REFERENCES places(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS visited_places (
-    user_id INTEGER NOT NULL,
-    place_id INTEGER NOT NULL,
-    visited_at TEXT,
-    note TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (user_id, place_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (place_id) REFERENCES places(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS trip_plans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    country TEXT,
-    city TEXT,
-    start_date TEXT,
-    end_date TEXT,
-    travelers INTEGER DEFAULT 1,
-    trip_type TEXT,
-    budget TEXT,
-    transport TEXT,
-    visibility TEXT NOT NULL DEFAULT 'private',
-    share_token TEXT UNIQUE,
-    status TEXT NOT NULL DEFAULT 'draft',
-    meta TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS trip_plan_days (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    trip_id INTEGER NOT NULL,
-    day_number INTEGER NOT NULL,
-    title TEXT,
-    date TEXT,
-    FOREIGN KEY (trip_id) REFERENCES trip_plans(id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS trip_plan_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    day_id INTEGER NOT NULL,
-    place_id INTEGER,
-    sort_order INTEGER DEFAULT 0,
-    start_time TEXT,
-    note TEXT,
-    FOREIGN KEY (day_id) REFERENCES trip_plan_days(id) ON DELETE CASCADE,
-    FOREIGN KEY (place_id) REFERENCES places(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS place_live_data (
-    place_id INTEGER PRIMARY KEY,
-    payload TEXT,
-    crowd_level TEXT,
-    source TEXT,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (place_id) REFERENCES places(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS roles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS permissions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS role_permissions (
-    role_slug TEXT NOT NULL,
-    permission_slug TEXT NOT NULL,
-    PRIMARY KEY (role_slug, permission_slug)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_trip_plans_user ON trip_plans(user_id);
-  CREATE INDEX IF NOT EXISTS idx_travel_lists_user ON travel_lists(user_id);
-  CREATE INDEX IF NOT EXISTS idx_visited_user ON visited_places(user_id);
-
-  CREATE TABLE IF NOT EXISTS contact_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    subject TEXT NOT NULL,
-    message TEXT NOT NULL,
-    ip TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC);
-
-  CREATE TABLE IF NOT EXISTS site_settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`);
-
-function seedRbac() {
+async function seedRbac() {
   const roles = [
     ['admin', 'Administrator'],
     ['moderator', 'Moderator'],
@@ -319,39 +62,43 @@ function seedRbac() {
     member: [],
   };
   for (const [slug, name] of roles) {
-    db.prepare('INSERT OR IGNORE INTO roles (slug, name) VALUES (?, ?)').run(slug, name);
+    await db.prepare('INSERT OR IGNORE INTO roles (slug, name) VALUES (?, ?)').run(slug, name);
   }
   for (const [slug, name] of perms) {
-    db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
+    await db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
   }
   for (const [role, ps] of Object.entries(rolePerms)) {
     for (const p of ps) {
-      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run(role, p);
+      await db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run(role, p);
     }
   }
 }
-seedRbac();
 
-const { runMigrations } = require('./lib/migrations');
-try {
+async function initDb() {
+  if (initialized) return { db, dbPath };
+  const url = resolveDatabaseUrl();
+  createPool(url);
+  try {
+    const u = new URL(url.replace(/^postgresql:/, 'http:'));
+    dbPath = `${u.hostname}:${u.port || 5432}${u.pathname}`;
+  } catch {
+    dbPath = 'postgresql';
+  }
+  logger.info({ msg: 'Connecting to PostgreSQL', dbPath });
+  await db.exec(PG_SCHEMA);
+  await seedRbac();
+  const { runMigrations } = require('./lib/migrations');
   logger.info({ msg: 'Running database migrations' });
-  runMigrations(db);
+  await runMigrations(db);
   logger.info({ msg: 'Database migrations complete' });
-} catch (err) {
-  const detail = `${err.code || 'SQLITE_ERROR'} — ${err.message}`;
-  logger.error({
-    msg: 'Database migrations failed on startup',
-    code: err.code,
-    err: err.message,
-    stack: err.stack,
-  });
-  throw new Error(`Database migration failed: ${detail}`);
+  initialized = true;
+  return { db, dbPath };
 }
 
-function placeStats(placeId) {
+async function placeStats(placeId) {
   try {
-    const row = db.prepare(`
-      SELECT tiola_count AS tiolaCount, tiola_rating AS tiolaRating FROM places WHERE id = ?
+    const row = await db.prepare(`
+      SELECT tiola_count AS "tiolaCount", tiola_rating AS "tiolaRating" FROM places WHERE id = ?
     `).get(placeId);
     if (row) {
       return { tiolaCount: row.tiolaCount || 0, tiolaRating: row.tiolaRating ?? null };
@@ -359,12 +106,13 @@ function placeStats(placeId) {
   } catch {
     /* columns not migrated yet */
   }
-  return allPlaceStats().get(placeId) || { tiolaCount: 0, tiolaRating: null };
+  const map = await allPlaceStats();
+  return map.get(placeId) || { tiolaCount: 0, tiolaRating: null };
 }
 
-function aggregatePlaceStats() {
-  const rows = db.prepare(`
-    SELECT place_id AS placeId, COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
+async function aggregatePlaceStats() {
+  const rows = await db.prepare(`
+    SELECT place_id AS "placeId", COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
     FROM tiolas
     WHERE status = 'approved' AND parent_id IS NULL
       AND stars IS NOT NULL AND stars > 0 AND place_id IS NOT NULL
@@ -372,21 +120,21 @@ function aggregatePlaceStats() {
   `).all();
   const map = new Map();
   for (const row of rows) {
-    map.set(row.placeId, { tiolaCount: row.count || 0, tiolaRating: row.avg || null });
+    map.set(row.placeId, { tiolaCount: Number(row.count) || 0, tiolaRating: row.avg || null });
   }
   return map;
 }
 
-function allPlaceStats() {
+async function allPlaceStats() {
   try {
-    const rows = db.prepare(`
-      SELECT id AS placeId, tiola_count AS count, tiola_rating AS avg
+    const rows = await db.prepare(`
+      SELECT id AS "placeId", tiola_count AS count, tiola_rating AS avg
       FROM places
       WHERE COALESCE(tiola_count, 0) > 0
     `).all();
     const map = new Map();
     for (const row of rows) {
-      map.set(row.placeId, { tiolaCount: row.count || 0, tiolaRating: row.avg ?? null });
+      map.set(row.placeId, { tiolaCount: Number(row.count) || 0, tiolaRating: row.avg ?? null });
     }
     return map;
   } catch {
@@ -394,4 +142,13 @@ function allPlaceStats() {
   }
 }
 
-module.exports = { db, dbPath, isEphemeralStorage, placeStats, allPlaceStats };
+module.exports = {
+  db,
+  get dbPath() { return dbPath; },
+  isEphemeralStorage,
+  placeStats,
+  allPlaceStats,
+  initDb,
+  closePool,
+  getPool,
+};

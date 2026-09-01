@@ -17,9 +17,9 @@ function estimateBudget(place) {
   };
 }
 
-function getLiveData(placeId, placeRow, mapPlace) {
-  const row = db.prepare('SELECT * FROM place_live_data WHERE place_id = ?').get(placeId);
-  const place = placeRow ? mapPlace(placeRow) : null;
+async function getLiveData(placeId, placeRow, mapPlace) {
+  const row = await db.prepare('SELECT * FROM place_live_data WHERE place_id = ?').get(placeId);
+  const place = placeRow ? await Promise.resolve(mapPlace(placeRow)) : null;
   const estimated = estimateBudget(place || {});
 
   if (row) {
@@ -59,13 +59,13 @@ function parsePayload(row) {
   try { return JSON.parse(row.payload); } catch { return {}; }
 }
 
-function getAdminPayload(placeId) {
-  const row = db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(placeId);
+async function getAdminPayload(placeId) {
+  const row = await db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(placeId);
   return parsePayload(row);
 }
 
-function upsertLiveData(placeId, payload) {
-  db.prepare(`
+async function upsertLiveData(placeId, payload) {
+  await db.prepare(`
     INSERT INTO place_live_data (place_id, payload, crowd_level, source, updated_at)
     VALUES (?, ?, ?, ?, datetime('now'))
     ON CONFLICT(place_id) DO UPDATE SET
@@ -240,8 +240,8 @@ function applyInfoBoxUpdates(existingPayload, body) {
   return payload;
 }
 
-function refreshAllPlaces() {
-  const rows = db.prepare('SELECT id, entry_fee, category, country FROM places').all();
+async function refreshAllPlaces() {
+  const rows = await db.prepare('SELECT id, entry_fee, category, country FROM places').all();
   let n = 0;
   for (const r of rows) {
     const est = estimateBudget({ entryFee: r.entry_fee, category: r.category, country: r.country });

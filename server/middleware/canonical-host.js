@@ -71,7 +71,7 @@ function canonicalTarget(originalUrl) {
 }
 
 function canonicalHostMiddleware() {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const host = hostnameFromReq(req);
     if (!shouldRedirectApexToWww(host)) return next();
     return res.redirect(301, canonicalTarget(req.originalUrl));

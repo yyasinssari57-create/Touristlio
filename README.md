@@ -12,7 +12,7 @@ npm install
 copy .env.example .env
 npm run places:merge    # places.json — 800+ destinasyon
 npm run places:enrich   # TR/EN içerik alanları
-npm run seed            # SQLite
+npm run seed            # Supabase PostgreSQL (DATABASE_URL)
 npm run places:validate # doğrulama
 npm run sitemap         # public/sitemap.xml
 npm start
@@ -23,19 +23,33 @@ npm start
 - **Giriş/Kayıt:** `/login` · `/register` · `/profile` · `/reset-password`  
 - **Derin link:** `/?place=1`
 
-## Veritabanı yedeği
+## Veritabanı (PostgreSQL / Supabase)
 
-SQLite dosyası `data/touristlio.db` içindedir (VPS’te `DATABASE_PATH` ile değiştirilebilir).
+SQLite kaldırıldı — Render diski geçicidir. Uygulama **`DATABASE_URL`** ile Supabase PostgreSQL kullanır.
 
-**Admin paneli (yalnızca `admin` rolü):** `/admin` → **Özet** sekmesi → “Veritabanı yedeği” kartı — tam `.db` indir veya acil durumda geri yükle. Geri yükleme mevcut veritabanını otomatik yedekler; sunucu ardından yeniden başlar (Render/PM2 otomatik kaldırır).
+`.env` örneği (şifreyi Supabase → Project Settings → Database’den yapıştırın; `@` karakterini `%40` yapın):
 
-**Komut satırı** — manuel veya günlük yedek:
+```
+DATABASE_URL=postgresql://postgres:GERÇEK_ŞİFRE@db.fmfjvogppeypqrozwrak.supabase.co:5432/postgres
+```
+
+IPv6/5432 bağlanmazsa Session pooler (port 5432, Transaction 6543 değil):
+
+```
+DATABASE_URL=postgresql://postgres.fmfjvogppeypqrozwrak:GERÇEK_ŞİFRE@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+```
+
+Aynı değeri Render → Environment → `DATABASE_URL` olarak ekleyin (`sync: false`). `.env` commit etmeyin.
+
+**Yedek:** Admin paneli `pg_dump` ile `.sql` indirir. Geri yükleme Supabase Dashboard → Database → Backups / SQL Editor üzerinden yapılır.
+
+**Komut satırı:**
 
 ```powershell
 npm run backup:db
 ```
 
-Yedekler `backups/touristlio-YYYY-MM-DD_HH-mm-ss.db` olarak kaydedilir (git’e eklenmez). Windows Görev Zamanlayıcı veya cron ile günde bir kez çalıştırabilirsiniz. Üretimde yedekleri harici depolamaya (Drive/S3) kopyalayın.
+Yedekler `backups/touristlio-*.sql` (git’e eklenmez).
 
 ## Admin (.env)
 
@@ -43,6 +57,7 @@ Yedekler `backups/touristlio-YYYY-MM-DD_HH-mm-ss.db` olarak kaydedilir (git’e 
 |----------|----------|
 | `ADMIN_EMAIL` | Admin e-postası |
 | `ADMIN_PASSWORD` | Güçlü şifre |
+| `DATABASE_URL` | Supabase PostgreSQL bağlantı dizesi (zorunlu) |
 | `JWT_SECRET` | Uzun rastgele dize |
 | `CORS_ORIGIN` | İzin verilen origin(ler) |
 | `UNSPLASH_ACCESS_KEY` | İsteğe bağlı fotoğraf fetch |
@@ -62,7 +77,7 @@ touristlio/
 │   ├── js/app.js             # lazy load, Load More, Map tab
 │   ├── login.html register.html profile.html
 │   └── legal/                # about, contact, privacy, kvkk, terms
-└── data/touristlio.db
+└── (PostgreSQL via DATABASE_URL — SQLite yok)
 ```
 
 ## Özellikler (v1.2)

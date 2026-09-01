@@ -61,12 +61,12 @@ async function register(req) {
   const { password } = req.body;
   if (!name || name.length < 2) return { error: 'Ad en az 2 karakter olmalı', status: 400 };
   if (!isValidEmail(email)) return { error: 'Geçerli e-posta girin', status: 400 };
-  if (authModel.findByEmail(email)) {
+  if (await authModel.findByEmail(email)) {
     return { error: 'Bu e-posta zaten kayıtlı', status: 409 };
   }
   const verifyToken = crypto.randomBytes(24).toString('hex');
-  const user = createUser({ name, email, password, role: 'member' });
-  authModel.updateVerification(user.id, verifyToken);
+  const user = await createUser({ name, email, password, role: 'member' });
+  await authModel.updateVerification(user.id, verifyToken);
   const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
   let emailVerificationSent = false;
   try {
@@ -84,16 +84,16 @@ async function register(req) {
     status: 201,
     token,
     cookie: token,
-    user: sanitizeUser(user),
+    user: await sanitizeUser(user),
     emailVerificationSent,
   };
 }
 
-function login(req) {
+async function login(req) {
   const err = validationError(req);
   if (err) return { error: err, status: 400 };
   const { email, password } = req.body;
-  const row = authModel.findByEmail(email);
+  const row = await authModel.findByEmail(email);
   if (!row) {
     comparePassword(password, null);
     return { error: 'E-posta veya şifre hatalı', status: 401 };
@@ -102,11 +102,11 @@ function login(req) {
     return { error: 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin.', status: 423 };
   }
   if (!comparePassword(password, row.password_hash)) {
-    authModel.recordFailedLogin(row, MAX_FAILED, LOCK_MINUTES);
+    await authModel.recordFailedLogin(row, MAX_FAILED, LOCK_MINUTES);
     return { error: 'E-posta veya şifre hatalı', status: 401 };
   }
   if (needsRehash(row.password_hash)) {
-    authModel.upgradePasswordHash(row.id, hashPassword(password));
+    await authModel.upgradePasswordHash(row.id, hashPassword(password));
   }
   if (row.is_blocked) {
     return { error: 'Hesabınız engellenmiştir', status: 403 };
@@ -118,19 +118,19 @@ function login(req) {
   ) {
     return { error: 'Lütfen önce e-posta adresinizi doğrulayın.', status: 403 };
   }
-  authModel.clearFailedLogin(row.id);
+  await authModel.clearFailedLogin(row.id);
   const token = signToken(row);
-  return { status: 200, token, cookie: token, user: sanitizeUser(row) };
+  return { status: 200, token, cookie: token, user: await sanitizeUser(row) };
 }
 
 async function forgotPassword(req) {
   const err = validationError(req);
   if (err) return { error: err, status: 400 };
-  const row = authModel.findByEmail(req.body.email);
+  const row = await authModel.findByEmail(req.body.email);
   if (row) {
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 3600000).toISOString().slice(0, 19).replace('T', ' ');
-    authModel.insertPasswordReset(row.id, token, expires);
+    await authModel.insertPasswordReset(row.id, token, expires);
     const resetUrl = `${siteBase()}/reset-password?token=${token}`;
     try {
       await mailer.sendPasswordResetEmail(row.email, resetUrl);
@@ -142,23 +142,23 @@ async function forgotPassword(req) {
   return { status: 200, message: 'E-posta kayıtlıysa sıfırlama bağlantısı gönderildi.' };
 }
 
-function resetPassword(req) {
+async function resetPassword(req) {
   const err = validationError(req);
   if (err) return { error: err, status: 400 };
   const { token, password } = req.body;
-  const row = authModel.findPasswordReset(token);
+  const row = await authModel.findPasswordReset(token);
   if (!row) return { error: 'Geçersiz veya süresi dolmuş token', status: 400 };
-  authModel.usePasswordReset(row.id, row.user_id, hashPassword(password));
-  authModel.clearFailedLogin(row.user_id);
+  await authModel.usePasswordReset(row.id, row.user_id, hashPassword(password));
+  await authModel.clearFailedLogin(row.user_id);
   return { status: 200, message: 'Şifre güncellendi' };
 }
 
-function verifyEmail(req) {
+async function verifyEmail(req) {
   const err = validationError(req);
   if (err) return { error: err, status: 400 };
-  const user = authModel.verifyEmailToken(req.body.token);
+  const user = await authModel.verifyEmailToken(req.body.token);
   if (!user) return { error: 'Geçersiz token', status: 400 };
-  authModel.markEmailVerified(user.id);
+  await authModel.markEmailVerified(user.id);
   return { status: 200, message: 'E-posta doğrulandı' };
 }
 
@@ -166,20 +166,20 @@ async function changePassword(req, userId) {
   const err = validationError(req);
   if (err) return { error: err, status: 400 };
   const { currentPassword, password } = req.body;
-  const row = authModel.findById(userId);
+  const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
   if (!comparePassword(currentPassword, row.password_hash)) {
     return { error: 'Mevcut şifre hatalı', status: 401 };
   }
-  authModel.updatePasswordHash(userId, hashPassword(password));
-  authModel.clearFailedLogin(userId);
-  const updated = authModel.findById(userId);
+  await authModel.updatePasswordHash(userId, hashPassword(password));
+  await authModel.clearFailedLogin(userId);
+  const updated = await authModel.findById(userId);
   const token = signToken(updated);
   return {
     status: 200,
     message: 'Şifre güncellendi',
     cookie: token,
-    user: sanitizeUser(updated),
+    user: await sanitizeUser(updated),
   };
 }
 
@@ -187,41 +187,41 @@ async function changeEmail(req, userId) {
   const err = validationError(req);
   if (err) return { error: err, status: 400 };
   const { email, password } = req.body;
-  const row = authModel.findById(userId);
+  const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
   if (!comparePassword(password, row.password_hash)) {
     return { error: 'Şifre hatalı', status: 401 };
   }
   const normalized = email.toLowerCase().trim();
-  const existing = authModel.findByEmail(normalized);
+  const existing = await authModel.findByEmail(normalized);
   if (existing && existing.id !== userId) {
     return { error: 'Bu e-posta zaten kayıtlı', status: 409 };
   }
-  authModel.updateEmailAddress(userId, normalized);
+  await authModel.updateEmailAddress(userId, normalized);
   const verifyToken = crypto.randomBytes(24).toString('hex');
-  authModel.updateVerification(userId, verifyToken);
+  await authModel.updateVerification(userId, verifyToken);
   const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
   try {
     await mailer.sendVerificationEmail(normalized, verifyUrl);
   } catch (e) {
     logger.warn({ msg: 'Verification email failed after email change', email: normalized, err: e.message });
   }
-  const updated = authModel.findById(userId);
-  return { status: 200, message: 'E-posta güncellendi. Lütfen yeni adresinizi doğrulayın.', user: sanitizeUser(updated) };
+  const updated = await authModel.findById(userId);
+  return { status: 200, message: 'E-posta güncellendi. Lütfen yeni adresinizi doğrulayın.', user: await sanitizeUser(updated) };
 }
 
 function getAvatarOptions() {
   return { presets: AVATAR_PRESETS, colors: AVATAR_COLORS };
 }
 
-function updateAvatarPreset(userId, { avatarPreset, avatarColor }) {
+async function updateAvatarPreset(userId, { avatarPreset, avatarColor }) {
   if (!isValidPreset(avatarPreset)) {
     return { error: 'Geçersiz avatar karakteri', status: 400 };
   }
   const color = avatarColor && isValidColor(avatarColor) ? avatarColor : null;
-  const row = authModel.findById(userId);
+  const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
-  authModel.updateAvatarPreset(
+  await authModel.updateAvatarPreset(
     userId,
     avatarPreset,
     color || row.avatar_color || '#0ea5e9',
@@ -230,13 +230,13 @@ function updateAvatarPreset(userId, { avatarPreset, avatarColor }) {
     status: 200,
     message: 'Avatar güncellendi.',
     pending: false,
-    user: sanitizeUser(findUserById(userId)),
+    user: await sanitizeUser(await findUserById(userId)),
   };
 }
 
-function updateAvatarPhoto(userId, file) {
+async function updateAvatarPhoto(userId, file) {
   if (!file) return { error: 'Fotoğraf gerekli', status: 400 };
-  const row = authModel.findById(userId);
+  const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
 
   const url = `/uploads/${path.basename(file.filename || file.path)}`;
@@ -244,21 +244,21 @@ function updateAvatarPhoto(userId, file) {
     const oldPath = path.join(__dirname, '..', '..', '..', row.avatar_url.replace(/^\//, ''));
     try { unlinkImageAndVariants(oldPath); } catch { /* ignore */ }
   }
-  authModel.updateAvatarUrl(userId, url);
+  await authModel.updateAvatarUrl(userId, url);
   return {
     status: 200,
     message: 'Profil fotoğrafı güncellendi.',
     pending: false,
-    user: sanitizeUser(findUserById(userId)),
+    user: await sanitizeUser(await findUserById(userId)),
   };
 }
 
 async function resendVerification(userId) {
-  const row = authModel.findById(userId);
+  const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
   if (row.email_verified) return { error: 'E-posta zaten doğrulanmış', status: 400 };
   const verifyToken = crypto.randomBytes(24).toString('hex');
-  authModel.updateVerification(userId, verifyToken);
+  await authModel.updateVerification(userId, verifyToken);
   const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
   try {
     await mailer.sendVerificationEmail(row.email, verifyUrl);
@@ -269,18 +269,18 @@ async function resendVerification(userId) {
   return { status: 200, message: 'Doğrulama e-postası gönderildi' };
 }
 
-function getDashboard(userId, lang = 'tr') {
-  const row = authModel.findById(userId);
+async function getDashboard(userId, lang = 'tr') {
+  const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
   const { db } = require('../../db');
   const { badgesForUser } = require('../../lib/tiola-badges');
   const placesService = require('../places/places.service');
   const { getStatsMap } = require('../../lib/stats-cache');
 
-  const badgePayload = badgesForUser(userId, lang === 'en' ? 'en' : 'tr');
-  const statsMap = getStatsMap();
+  const badgePayload = await badgesForUser(userId, lang === 'en' ? 'en' : 'tr');
+  const statsMap = await getStatsMap();
 
-  const tiolaRows = db.prepare(`
+  const tiolaRows = await db.prepare(`
     SELECT t.id, t.text, t.stars, t.place_id, t.created_at, t.status,
            p.name AS place_name, p.country AS place_country
     FROM tiolas t
@@ -290,14 +290,14 @@ function getDashboard(userId, lang = 'tr') {
     LIMIT 50
   `).all(userId);
 
-  const savedRows = db.prepare(`
+  const savedRows = await db.prepare(`
     SELECT p.* FROM saved_places sp
     JOIN places p ON p.id = sp.place_id
     WHERE sp.user_id = ?
     ORDER BY sp.created_at DESC
   `).all(userId);
 
-  const visitedRows = db.prepare(`
+  const visitedRows = await db.prepare(`
     SELECT p.*, vp.visited_at FROM visited_places vp
     JOIN places p ON p.id = vp.place_id
     WHERE vp.user_id = ?
@@ -315,7 +315,7 @@ function getDashboard(userId, lang = 'tr') {
 
   return {
     status: 200,
-    user: sanitizeUser(row),
+    user: await sanitizeUser(row),
     tiolas: tiolaRows.map((t) => ({
       id: t.id,
       text: t.text,

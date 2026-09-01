@@ -22,26 +22,28 @@ const USER_COLUMNS = [
   ['avatar_preset', 'TEXT'],
 ];
 
-function tableExists(db, table) {
-  const row = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table);
+async function tableExists(db, table) {
+  const row = await db.prepare(
+    `SELECT 1 AS ok FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name = ?`,
+  ).get(table);
   return !!row;
 }
 
-function columnExists(db, table, col) {
-  if (!tableExists(db, table)) return false;
-  try {
-    db.prepare(`SELECT ${col} FROM ${table} LIMIT 1`).get();
-    return true;
-  } catch {
-    return false;
-  }
+async function columnExists(db, table, col) {
+  if (!(await tableExists(db, table))) return false;
+  const row = await db.prepare(
+    `SELECT 1 AS ok FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = ? AND column_name = ?`,
+  ).get(table, col);
+  return !!row;
 }
 
-function addColumnIfMissing(db, table, col, type) {
-  if (!tableExists(db, table)) return;
-  if (columnExists(db, table, col)) return;
+async function addColumnIfMissing(db, table, col, type) {
+  if (!(await tableExists(db, table))) return;
+  if (await columnExists(db, table, col)) return;
   try {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${col} ${type}`);
     logger.info({ msg: 'Migration: column added', table, col });
   } catch (err) {
     logger.error({
@@ -55,12 +57,14 @@ function addColumnIfMissing(db, table, col, type) {
   }
 }
 
-function ensureIndex(db, indexName, table, columns) {
-  if (!tableExists(db, table)) return;
+async function ensureIndex(db, indexName, table, columns) {
+  if (!(await tableExists(db, table))) return;
   const cols = Array.isArray(columns) ? columns : [columns];
-  if (!cols.every((col) => columnExists(db, table, col))) return;
+  for (const col of cols) {
+    if (typeof col === 'string' && !/[()]/.test(col) && !(await columnExists(db, table, col))) return;
+  }
   try {
-    db.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${table}(${cols.join(', ')})`);
+    await db.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${table}(${cols.join(', ')})`);
   } catch (err) {
     logger.warn({
       msg: 'Migration: index skipped',
@@ -72,9 +76,9 @@ function ensureIndex(db, indexName, table, columns) {
   }
 }
 
-function runOptional(label, fn) {
+async function runOptional(label, fn) {
   try {
-    fn();
+    await fn();
   } catch (err) {
     logger.warn({
       msg: 'Migration: optional step skipped',
@@ -85,93 +89,92 @@ function runOptional(label, fn) {
   }
 }
 
-function runMigrations(db) {
+async function runMigrations(db) {
   try {
-    addColumnIfMissing(db, 'places', 'search_aliases', 'TEXT');
-    addColumnIfMissing(db, 'places', 'slug', 'TEXT');
+    await addColumnIfMissing(db, 'places', 'search_aliases', 'TEXT');
+    await addColumnIfMissing(db, 'places', 'slug', 'TEXT');
 
     for (const col of PLACE_COLUMNS) {
-      const type = ['lat', 'lng', 'popularity'].includes(col) ? 'REAL' : 'TEXT';
-      addColumnIfMissing(db, 'places', col, type);
+      const type = ['lat', 'lng', 'popularity'].includes(col) ? 'DOUBLE PRECISION' : 'TEXT';
+      await addColumnIfMissing(db, 'places', col, type);
     }
 
     for (const [col, def] of USER_COLUMNS) {
-      addColumnIfMissing(db, 'users', col, def);
+      await addColumnIfMissing(db, 'users', col, def);
     }
 
-    addColumnIfMissing(db, 'travel_lists', 'share_token', 'TEXT');
-    addColumnIfMissing(db, 'places', 'status', "TEXT DEFAULT 'published'");
-    addColumnIfMissing(db, 'tiolas', 'rejection_reason', 'TEXT');
-    addColumnIfMissing(db, 'tiolas', 'parent_id', 'INTEGER');
-    addColumnIfMissing(db, 'blogs', 'rejection_reason', 'TEXT');
+    await addColumnIfMissing(db, 'travel_lists', 'share_token', 'TEXT');
+    await addColumnIfMissing(db, 'places', 'status', "TEXT DEFAULT 'published'");
+    await addColumnIfMissing(db, 'tiolas', 'rejection_reason', 'TEXT');
+    await addColumnIfMissing(db, 'tiolas', 'parent_id', 'INTEGER');
+    await addColumnIfMissing(db, 'blogs', 'rejection_reason', 'TEXT');
 
     try {
-      db.prepare("UPDATE reports SET status = 'resolved_dismissed' WHERE status = 'dismissed'").run();
-      db.prepare("UPDATE reports SET status = 'resolved_removed' WHERE status = 'actioned'").run();
+      await db.prepare("UPDATE reports SET status = 'resolved_dismissed' WHERE status = 'dismissed'").run();
+      await db.prepare("UPDATE reports SET status = 'resolved_removed' WHERE status = 'actioned'").run();
     } catch {
       /* reports tablosu henüz yok */
     }
 
-    addColumnIfMissing(db, 'blogs', 'slug', 'TEXT');
-    addColumnIfMissing(db, 'blogs', 'tags', 'TEXT');
-    addColumnIfMissing(db, 'blogs', 'featured', 'INTEGER DEFAULT 0');
-    addColumnIfMissing(db, 'blogs', 'author_name', 'TEXT');
-    addColumnIfMissing(db, 'blogs', 'published_at', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'slug', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'tags', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'featured', 'INTEGER DEFAULT 0');
+    await addColumnIfMissing(db, 'blogs', 'author_name', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'published_at', 'TEXT');
 
-    db.exec(`
+    await db.exec(`
     CREATE TABLE IF NOT EXISTS cities (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       name_en TEXT,
       slug TEXT NOT NULL,
       country TEXT NOT NULL,
       sort_order INTEGER DEFAULT 0,
       is_active INTEGER DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')),
       UNIQUE(country, slug)
     );
 
     CREATE TABLE IF NOT EXISTS place_categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       slug TEXT NOT NULL UNIQUE,
       name_tr TEXT NOT NULL,
       name_en TEXT,
       icon TEXT,
       sort_order INTEGER DEFAULT 0,
       is_active INTEGER DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_cities_country ON cities(country, is_active);
 
     CREATE TABLE IF NOT EXISTS user_notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
       type TEXT NOT NULL,
       title TEXT NOT NULL,
       body TEXT NOT NULL,
       link TEXT,
       read_at TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id)
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON user_notifications(user_id, read_at);
 
     CREATE TABLE IF NOT EXISTS blog_categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       slug TEXT NOT NULL UNIQUE,
       name_tr TEXT NOT NULL,
       name_en TEXT,
       icon TEXT,
       sort_order INTEGER DEFAULT 0,
       is_active INTEGER DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE TABLE IF NOT EXISTS reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      reporter_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      reporter_id INTEGER NOT NULL REFERENCES users(id),
       target_type TEXT NOT NULL,
       target_id INTEGER NOT NULL,
       reason TEXT NOT NULL,
@@ -180,50 +183,42 @@ function runMigrations(db) {
       resolution_reason TEXT,
       action_taken TEXT,
       content_prev_status TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      resolved_by INTEGER,
-      resolved_at TEXT,
-      FOREIGN KEY (reporter_id) REFERENCES users(id),
-      FOREIGN KEY (resolved_by) REFERENCES users(id)
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')),
+      resolved_by INTEGER REFERENCES users(id),
+      resolved_at TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);
     CREATE INDEX IF NOT EXISTS idx_reports_target ON reports(target_type, target_id);
 
     CREATE TABLE IF NOT EXISTS tiola_likes (
-      user_id INTEGER NOT NULL,
-      tiola_id INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (user_id, tiola_id),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (tiola_id) REFERENCES tiolas(id) ON DELETE CASCADE
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tiola_id INTEGER NOT NULL REFERENCES tiolas(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')),
+      PRIMARY KEY (user_id, tiola_id)
     );
 
     CREATE INDEX IF NOT EXISTS idx_tiola_likes_tiola ON tiola_likes(tiola_id);
 
     CREATE TABLE IF NOT EXISTS blog_likes (
-      user_id INTEGER NOT NULL,
-      blog_id INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (user_id, blog_id),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (blog_id) REFERENCES blogs(id) ON DELETE CASCADE
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      blog_id INTEGER NOT NULL REFERENCES blogs(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')),
+      PRIMARY KEY (user_id, blog_id)
     );
 
     CREATE INDEX IF NOT EXISTS idx_blog_likes_blog ON blog_likes(blog_id);
 
     CREATE TABLE IF NOT EXISTS profile_change_requests (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       change_type TEXT NOT NULL,
       payload TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
       rejection_reason TEXT,
-      reviewed_by INTEGER,
+      reviewed_by INTEGER REFERENCES users(id),
       reviewed_at TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (reviewed_by) REFERENCES users(id)
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_profile_changes_status ON profile_change_requests(status, created_at);
@@ -232,15 +227,14 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_tiolas_user_place_month ON tiolas(user_id, place_id, created_at);
 
     CREATE TABLE IF NOT EXISTS admin_audit_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      admin_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER NOT NULL REFERENCES users(id),
       admin_name TEXT,
       action TEXT NOT NULL,
       target_type TEXT,
       target_id INTEGER,
       detail TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (admin_id) REFERENCES users(id)
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_audit_log_created ON admin_audit_log(created_at DESC);
@@ -248,42 +242,40 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_audit_log_admin ON admin_audit_log(admin_id, created_at);
 
     CREATE TABLE IF NOT EXISTS banned_words (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       word TEXT NOT NULL UNIQUE,
-      added_by INTEGER,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (added_by) REFERENCES users(id)
+      added_by INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_banned_words_word ON banned_words(word);
 
     CREATE TABLE IF NOT EXISTS moderation_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       content_type TEXT NOT NULL,
       content_id INTEGER NOT NULL,
       action TEXT NOT NULL,
-      admin_id INTEGER NOT NULL,
+      admin_id INTEGER NOT NULL REFERENCES users(id),
       admin_name TEXT,
       reason TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (admin_id) REFERENCES users(id)
+      created_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_mod_history_content ON moderation_history(content_type, content_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_mod_history_admin ON moderation_history(admin_id, created_at DESC);
   `);
 
-    addColumnIfMissing(db, 'place_categories', 'image_url', 'TEXT');
-    addColumnIfMissing(db, 'reports', 'resolution_reason', 'TEXT');
-    addColumnIfMissing(db, 'reports', 'action_taken', 'TEXT');
-    addColumnIfMissing(db, 'reports', 'content_prev_status', 'TEXT');
-    addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
+    await addColumnIfMissing(db, 'place_categories', 'image_url', 'TEXT');
+    await addColumnIfMissing(db, 'reports', 'resolution_reason', 'TEXT');
+    await addColumnIfMissing(db, 'reports', 'action_taken', 'TEXT');
+    await addColumnIfMissing(db, 'reports', 'content_prev_status', 'TEXT');
+    await addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
 
-    ensureIndex(db, 'idx_places_status', 'places', 'status');
-    ensureIndex(db, 'idx_places_slug', 'places', 'slug');
-    ensureIndex(db, 'idx_blogs_slug', 'blogs', 'slug');
-    ensureIndex(db, 'idx_blogs_featured', 'blogs', ['featured', 'created_at']);
-    ensureIndex(db, 'idx_tiolas_parent', 'tiolas', 'parent_id');
+    await ensureIndex(db, 'idx_places_status', 'places', 'status');
+    await ensureIndex(db, 'idx_places_slug', 'places', 'slug');
+    await ensureIndex(db, 'idx_blogs_slug', 'blogs', 'slug');
+    await ensureIndex(db, 'idx_blogs_featured', 'blogs', ['featured', 'created_at']);
+    await ensureIndex(db, 'idx_tiolas_parent', 'tiolas', 'parent_id');
 
     const catalogPerms = [
       ['admin.cities', 'Manage cities'],
@@ -291,38 +283,38 @@ function runMigrations(db) {
       ['admin.analytics', 'View analytics'],
     ];
     for (const [slug, name] of catalogPerms) {
-      db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
-      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('admin', slug);
-      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('moderator', slug);
-      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('editor', slug);
-      db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('staff', slug);
+      await db.prepare('INSERT OR IGNORE INTO permissions (slug, name) VALUES (?, ?)').run(slug, name);
+      await db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('admin', slug);
+      await db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('moderator', slug);
+      await db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('editor', slug);
+      await db.prepare('INSERT OR IGNORE INTO role_permissions (role_slug, permission_slug) VALUES (?, ?)').run('staff', slug);
     }
 
     const { seedCategoriesIfEmpty, seedCitiesFromPlaces } = require('./catalog-db');
     const { backfillCityImages } = require('./city-images');
     const { seedBlogCategoriesIfEmpty, backfillBlogSlugs } = require('./blog-db');
-    runOptional('seedCategoriesIfEmpty', () => seedCategoriesIfEmpty(db));
-    runOptional('seedCitiesFromPlaces', () => seedCitiesFromPlaces(db));
-    runOptional('backfillCityImages', () => {
-      const cityImagesFilled = backfillCityImages(db);
+    await runOptional('seedCategoriesIfEmpty', () => seedCategoriesIfEmpty(db));
+    await runOptional('seedCitiesFromPlaces', () => seedCitiesFromPlaces(db));
+    await runOptional('backfillCityImages', async () => {
+      const cityImagesFilled = await backfillCityImages(db);
       if (cityImagesFilled > 0) {
         logger.info(`Backfilled ${cityImagesFilled} city cover images`);
       }
     });
-    runOptional('seedBlogCategoriesIfEmpty', () => seedBlogCategoriesIfEmpty(db));
-    runOptional('backfillBlogSlugs', () => backfillBlogSlugs(db));
-    runOptional('backfillPlaceSlugs', () => {
+    await runOptional('seedBlogCategoriesIfEmpty', () => seedBlogCategoriesIfEmpty(db));
+    await runOptional('backfillBlogSlugs', () => backfillBlogSlugs(db));
+    await runOptional('backfillPlaceSlugs', async () => {
       const { backfillPlaceSlugs } = require('./place-lookup');
-      const filled = backfillPlaceSlugs(db);
+      const filled = await backfillPlaceSlugs(db);
       if (filled > 0) logger.info({ msg: 'Backfilled place slugs', count: filled });
     });
-    runOptional('backfillPlaceCoords', () => {
+    await runOptional('backfillPlaceCoords', async () => {
       const { backfillMissingPlaceCoords } = require('./city-coords');
-      const filled = backfillMissingPlaceCoords(db);
+      const filled = await backfillMissingPlaceCoords(db);
       if (filled > 0) logger.info({ msg: 'Backfilled place lat/lng', count: filled });
     });
 
-    runFileMigrations(db);
+    await runFileMigrations(db);
   } catch (err) {
     logger.error({
       msg: 'runMigrations failed',
@@ -334,11 +326,11 @@ function runMigrations(db) {
   }
 }
 
-function runFileMigrations(db) {
-  db.exec(`
+async function runFileMigrations(db) {
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       id TEXT PRIMARY KEY,
-      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+      applied_at TEXT NOT NULL DEFAULT (to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS'))
     )
   `);
 
@@ -353,11 +345,11 @@ function runFileMigrations(db) {
   for (const file of files) {
     const mod = require(path.join(migrationsDir, file));
     const id = mod.id || file.replace(/\.js$/, '');
-    const applied = db.prepare('SELECT 1 FROM schema_migrations WHERE id = ?').get(id);
+    const applied = await db.prepare('SELECT 1 AS ok FROM schema_migrations WHERE id = ?').get(id);
     if (applied) continue;
     try {
-      mod.up(db, helpers);
-      db.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(id);
+      await mod.up(db, helpers);
+      await db.prepare('INSERT INTO schema_migrations (id) VALUES (?)').run(id);
       logger.info({ msg: 'Migration applied', id });
     } catch (err) {
       const optional = mod.optional === true || id === '002_places_fts';

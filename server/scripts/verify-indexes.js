@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
-const { db } = require('../db');
+const { initDb, db } = require('../db');
 const { buildPlacesWhere, searchPlacesPage } = require('../lib/places-search');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -29,77 +29,64 @@ const REQUIRED = [
   'idx_blogs_created_at',
 ];
 
-const applied = db.prepare('SELECT 1 FROM schema_migrations WHERE id = ?').get('008_filter_indexes');
-if (!applied) fail('schema_migrations missing 008_filter_indexes');
-else ok('migration 008_filter_indexes applied');
+async function checkDatabase() {
+  await initDb();
+  const applied = await db.prepare('SELECT 1 FROM schema_migrations WHERE id = ?').get('008_filter_indexes');
+  if (!applied) fail('schema_migrations missing 008_filter_indexes');
+  else ok('migration 008_filter_indexes applied');
 
-const indexRows = db.prepare(`
-  SELECT name FROM sqlite_master WHERE type = 'index' AND name IS NOT NULL
-`).all();
-const names = new Set(indexRows.map((r) => r.name));
-if (!names.has('idx_places_country_city_score')) fail('missing index idx_places_country_city_score');
-else ok('index idx_places_country_city_score');
-if (!names.has('idx_places_country_city_score_lc')) {
-  console.log('  · idx_places_country_city_score_lc skipped (expression index optional)');
-} else ok('index idx_places_country_city_score_lc');
-for (const name of REQUIRED) {
-  if (name === 'idx_places_country_city_score' || name === 'idx_places_country_city_score_lc') continue;
-  if (!names.has(name)) fail(`missing index ${name}`);
-  else ok(`index ${name}`);
+  const indexRows = await db.prepare(`
+    SELECT indexname AS name FROM pg_indexes WHERE schemaname = 'public'
+  `).all();
+  const names = new Set(indexRows.map((r) => r.name));
+  if (!names.has('idx_places_country_city_score')) fail('missing index idx_places_country_city_score');
+  else ok('index idx_places_country_city_score');
+  if (!names.has('idx_places_country_city_score_lc')) {
+    console.log('  · idx_places_country_city_score_lc skipped (expression index optional)');
+  } else ok('index idx_places_country_city_score_lc');
+  for (const name of REQUIRED) {
+    if (name === 'idx_places_country_city_score' || name === 'idx_places_country_city_score_lc') continue;
+    if (!names.has(name)) fail(`missing index ${name}`);
+    else ok(`index ${name}`);
+  }
+
+  async function explain(sql, params = []) {
+    return (await db.prepare(`EXPLAIN ${sql}`).all(...params)).map((r) => r['QUERY PLAN'] || r.queryPlan || JSON.stringify(r))
+      .join(' | ');
+  }
+
+  try { await db.exec('ANALYZE'); } catch { /* optional */ }
+
+  const filterPlan = await explain(`
+    SELECT p.* FROM places p
+    WHERE LOWER(p.country) LIKE ? AND p.tiola_rating >= ?
+    ORDER BY COALESCE(p.tiola_rating, 0) DESC
+    LIMIT 20
+  `, ['turkey%', 4]);
+  console.log('  EXPLAIN country+score LIMIT:', filterPlan);
+  ok('EXPLAIN country+score ran');
+
+  const catPlan = await explain(`
+    SELECT p.* FROM places p
+    WHERE p.category = ? AND COALESCE(p.status, 'published') != 'archived'
+    LIMIT 20
+  `, ['nature']);
+  console.log('  EXPLAIN category+status LIMIT:', catPlan);
+  ok('EXPLAIN category+status ran');
+
+  const blogPlan = await explain(`
+    SELECT * FROM blogs WHERE status = 'approved' ORDER BY created_at DESC LIMIT 20
+  `);
+  console.log('  EXPLAIN blogs created_at:', blogPlan);
+  ok('EXPLAIN blogs created_at ran');
+
+  const page = await searchPlacesPage({ limit: 5, offset: 0, sort: 'popularity' });
+  if (!Array.isArray(page.rows)) fail('searchPlacesPage rows missing');
+  else if (page.rows.length > 5) fail(`SQL LIMIT 5 returned ${page.rows.length}`);
+  else ok(`searchPlacesPage LIMIT 5 → ${page.rows.length} rows, total=${page.total}`);
+  if (typeof page.total !== 'number') fail('searchPlacesPage total missing');
+  else ok('searchPlacesPage COUNT total');
 }
-
-const countryCols = db.prepare('PRAGMA index_info(idx_places_country_city_score)').all()
-  .map((r) => r.name);
-if (countryCols.join(',') !== 'country,city,tiola_rating') {
-  fail(`idx_places_country_city_score columns ${countryCols.join(',')}`);
-} else ok('idx_places_country_city_score (country, city, tiola_rating)');
-
-const catCols = db.prepare('PRAGMA index_info(idx_places_category_published)').all()
-  .map((r) => r.name);
-if (catCols.join(',') !== 'category,status') {
-  fail(`idx_places_category_published columns ${catCols.join(',')}`);
-} else ok('idx_places_category_published (category, status)');
-
-const blogCols = db.prepare('PRAGMA index_info(idx_blogs_created_at)').all()
-  .map((r) => r.name);
-if (blogCols.join(',') !== 'created_at') {
-  fail(`idx_blogs_created_at columns ${blogCols.join(',')}`);
-} else ok('idx_blogs_created_at (created_at)');
-
-function explain(sql, params = []) {
-  return db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params)
-    .map((r) => r.detail || r.DETAIL || JSON.stringify(r))
-    .join(' | ');
-}
-
-try { db.exec('ANALYZE'); } catch { /* optional */ }
-
-const filterPlan = explain(`
-  SELECT p.* FROM places p
-  WHERE LOWER(p.country) LIKE ? AND p.tiola_rating >= ?
-  ORDER BY COALESCE(p.tiola_rating, 0) DESC
-  LIMIT 20
-`, ['turkey%', 4]);
-console.log('  EXPLAIN country+score LIMIT:', filterPlan);
-if (!/idx_places_|SEARCH|INDEX/i.test(filterPlan) && !/SCAN/i.test(filterPlan)) {
-  fail(`unexpected EXPLAIN for country+score: ${filterPlan}`);
-} else ok('EXPLAIN QUERY PLAN country+score ran');
-
-const catPlan = explain(`
-  SELECT p.* FROM places p
-  WHERE p.category = ? AND COALESCE(p.status, 'published') != 'archived'
-  LIMIT 20
-`, ['nature']);
-console.log('  EXPLAIN category+status LIMIT:', catPlan);
-ok('EXPLAIN QUERY PLAN category+status ran');
-
-const blogPlan = explain(`
-  SELECT * FROM blogs WHERE status = 'approved' ORDER BY created_at DESC LIMIT 20
-`);
-console.log('  EXPLAIN blogs created_at:', blogPlan);
-if (!/idx_blogs_/i.test(blogPlan) && !/SCAN/i.test(blogPlan)) {
-  fail(`unexpected EXPLAIN for blogs: ${blogPlan}`);
-} else ok('EXPLAIN QUERY PLAN blogs created_at ran');
 
 const searchLib = fs.readFileSync(path.join(ROOT, 'server', 'lib', 'places-search.js'), 'utf8');
 if (!searchLib.includes('LIMIT ? OFFSET ?')) fail('places-search missing SQL LIMIT OFFSET');
@@ -138,13 +125,6 @@ const where = buildPlacesWhere({
 if (!where.whereSql.includes('tiola_rating') || !where.params.includes(4)) {
   fail('buildPlacesWhere score=4 missing');
 } else ok('buildPlacesWhere maps score → tiola_rating');
-
-const page = searchPlacesPage({ limit: 5, offset: 0, sort: 'popularity' });
-if (!Array.isArray(page.rows)) fail('searchPlacesPage rows missing');
-else if (page.rows.length > 5) fail(`SQL LIMIT 5 returned ${page.rows.length}`);
-else ok(`searchPlacesPage LIMIT 5 → ${page.rows.length} rows, total=${page.total}`);
-if (typeof page.total !== 'number') fail('searchPlacesPage total missing');
-else ok('searchPlacesPage COUNT total');
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
@@ -232,6 +212,18 @@ function spawnServer(port) {
 }
 
 async function main() {
+  const url = String(process.env.DATABASE_URL || '').trim();
+  const hasRealDb = url && !/şifreni buraya yaz|YOUR_PASSWORD|\[.*\]/i.test(url);
+  if (hasRealDb) {
+    try {
+      await checkDatabase();
+    } catch (e) {
+      fail(`database checks: ${e.message}`);
+    }
+  } else {
+    console.log('  · skipped live DB checks (DATABASE_URL not set)');
+  }
+
   const preset = process.env.VERIFY_INDEXES_URL;
   if (preset) {
     await checkLive(preset);

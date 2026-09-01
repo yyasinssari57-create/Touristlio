@@ -122,7 +122,7 @@ function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
 /** Serve /admin, /login, etc. before static — avoids empty or wrong fallthrough. */
 function htmlPageRoutesMiddleware(publicDir) {
   const root = path.resolve(publicDir);
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
     const routePath = req.path.endsWith('/') && req.path.length > 1
@@ -151,7 +151,7 @@ function htmlPageRoutesMiddleware(publicDir) {
 /** Intercept direct *.html requests so asset placeholders are resolved before static. */
 function publicHtmlMiddleware(publicDir) {
   const root = path.resolve(publicDir);
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     if (!req.path.endsWith('.html')) return next();
 

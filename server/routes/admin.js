@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const multer = require('multer');
-const { db, dbPath } = require('../db');
+const { db } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
 const { createUser, findUserByEmail, sanitizeUser, passwordPolicyError } = require('../auth');
 const { clear: clearCache } = require('../lib/cache');
@@ -40,8 +40,8 @@ const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
 router.use(authRequired, requireRole(...PANEL_ROLES));
 
-function logAdmin(req, action, targetType, targetId, detail) {
-  auditLog.log({
+async function logAdmin(req, action, targetType, targetId, detail) {
+  await auditLog.log({
     adminId: req.user.id,
     adminName: req.user.name,
     action,
@@ -51,8 +51,8 @@ function logAdmin(req, action, targetType, targetId, detail) {
   });
 }
 
-function logModeration(req, contentType, contentId, action, reason) {
-  moderationHistory.log({
+async function logModeration(req, contentType, contentId, action, reason) {
+  await moderationHistory.log({
     contentType,
     contentId,
     action,
@@ -100,16 +100,16 @@ function mapPendingTiola(row) {
   };
 }
 
-function queryTiolaList(req, res, { approvedOnly, pendingOnly }) {
+async function queryTiolaList(req, res, { approvedOnly, pendingOnly }) {
   const { page, limit, offset } = parsePagination(req.query);
   const { where, params } = buildTiolaListFilters(req.query, { approvedOnly, pendingOnly });
-  const total = db.prepare(`
+  const total = (await db.prepare(`
     SELECT COUNT(*) AS c FROM tiolas t
     JOIN users u ON u.id = t.user_id
     LEFT JOIN places p ON p.id = t.place_id
     ${where}
-  `).get(...params).c;
-  const rows = db.prepare(`
+  `).get(...params)).c;
+  const rows = await db.prepare(`
     SELECT t.*, u.name AS user_name, p.name AS place_name
     FROM tiolas t
     JOIN users u ON u.id = t.user_id
@@ -121,15 +121,15 @@ function queryTiolaList(req, res, { approvedOnly, pendingOnly }) {
   return ok(res, { items: rows.map(mapPendingTiola), total, page, limit });
 }
 
-function queryBlogList(req, res, { approvedOnly, pendingOnly }) {
+async function queryBlogList(req, res, { approvedOnly, pendingOnly }) {
   const { page, limit, offset } = parsePagination(req.query);
   const { where, params } = buildBlogListFilters(req.query, { approvedOnly, pendingOnly });
-  const total = db.prepare(`
+  const total = (await db.prepare(`
     SELECT COUNT(*) AS c FROM blogs b
     JOIN users u ON u.id = b.user_id
     ${where}
-  `).get(...params).c;
-  const rows = db.prepare(`
+  `).get(...params)).c;
+  const rows = await db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id
     ${where}
@@ -154,13 +154,13 @@ function queryBlogList(req, res, { approvedOnly, pendingOnly }) {
   });
 }
 
-router.get('/pending/tiolas', checkPermission('admin.moderate'), (req, res) => {
-  return queryTiolaList(req, res, { pendingOnly: true });
+router.get('/pending/tiolas', checkPermission('admin.moderate'), async (req, res) => {
+  return await queryTiolaList(req, res, { pendingOnly: true });
 });
 
-router.get('/pending/blogs', checkPermission('admin.content'), (req, res) => {
-  blogScheduler.publishDueBlogs();
-  return queryBlogList(req, res, { pendingOnly: true });
+router.get('/pending/blogs', checkPermission('admin.content'), async (req, res) => {
+  await blogScheduler.publishDueBlogs();
+  return await queryBlogList(req, res, { pendingOnly: true });
 });
 
 function runAdminScript(scriptRel) {
@@ -174,21 +174,21 @@ function runAdminScript(scriptRel) {
   });
 }
 
-router.post('/tiolas/:id/approve', checkPermission('admin.moderate'), (req, res) => {
+router.post('/tiolas/:id/approve', checkPermission('admin.moderate'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  db.prepare(`
+  await db.prepare(`
     UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
-  refreshPlaceStatsForTiola(id);
+  await refreshPlaceStatsForTiola(id);
   logAdmin(req, 'tiola.approve', 'tiola', id, null);
   logModeration(req, 'tiola', id, 'approve', null);
   return ok(res, { approved: true });
 });
 
-router.get('/approved/tiolas', checkPermission('admin.moderate'), (req, res) => {
-  return queryTiolaList(req, res, { approvedOnly: true });
+router.get('/approved/tiolas', checkPermission('admin.moderate'), async (req, res) => {
+  return await queryTiolaList(req, res, { approvedOnly: true });
 });
 
 router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req, res) => {
@@ -197,7 +197,7 @@ router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req,
   const reason = sanitizeText(req.body?.reason, 1000);
   if (!reason) return fail(res, 'Kaldırma nedeni gerekli');
 
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
     FROM tiolas t
     JOIN users u ON u.id = t.user_id
@@ -207,14 +207,14 @@ router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req,
   if (!row) return fail(res, 'Tiola bulunamadı', 404);
   if (row.status !== 'approved') return fail(res, 'Yalnızca yayında olan Tiola kaldırılabilir', 409);
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
     WHERE id = ? AND status = 'approved'
   `).run(req.user.id, reason, id);
-  refreshPlaceStatsForTiola(id);
+  await refreshPlaceStatsForTiola(id);
 
   const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
-  notifications.createNotification({
+  await notifications.createNotification({
     userId: row.user_id,
     type: 'tiola_removed',
     title: 'Tiola kaldırıldı',
@@ -245,7 +245,7 @@ router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req,
   const reason = sanitizeText(req.body?.reason, 1000);
   if (!reason) return fail(res, 'Red nedeni gerekli');
 
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
     FROM tiolas t
     JOIN users u ON u.id = t.user_id
@@ -257,14 +257,14 @@ router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req,
     return fail(res, 'Bu Tiola zaten işlendi', 409);
   }
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, reason, id);
-  refreshPlaceStatsForTiola(id);
+  await refreshPlaceStatsForTiola(id);
 
   const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
-  notifications.createNotification({
+  await notifications.createNotification({
     userId: row.user_id,
     type: 'tiola_rejected',
     title: 'Tiola reddedildi',
@@ -310,17 +310,17 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
     }
     try {
       if (action === 'approve') {
-        const r = db.prepare(`
+        const r = await db.prepare(`
           UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
           WHERE id = ? AND status IN ('pending', 'spam')
         `).run(req.user.id, id);
         if (!r.changes) { errors.push({ id, error: 'Onaylanamadı' }); continue; }
-        refreshPlaceStatsForTiola(id);
+        await refreshPlaceStatsForTiola(id);
         logAdmin(req, 'tiola.approve', 'tiola', id, 'bulk');
         logModeration(req, 'tiola', id, 'approve', 'bulk');
         processed += 1;
       } else if (action === 'reject') {
-        const row = db.prepare(`
+        const row = await db.prepare(`
           SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
           FROM tiolas t JOIN users u ON u.id = t.user_id LEFT JOIN places p ON p.id = t.place_id
           WHERE t.id = ?
@@ -329,13 +329,13 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
           errors.push({ id, error: 'Reddedilemedi' });
           continue;
         }
-        db.prepare(`
+        await db.prepare(`
           UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
           WHERE id = ? AND status IN ('pending', 'spam')
         `).run(req.user.id, cleanReason, id);
-        refreshPlaceStatsForTiola(id);
+        await refreshPlaceStatsForTiola(id);
         const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
-        notifications.createNotification({
+        await notifications.createNotification({
           userId: row.user_id,
           type: 'tiola_rejected',
           title: 'Tiola reddedildi',
@@ -355,7 +355,7 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
         logModeration(req, 'tiola', id, 'reject', cleanReason);
         processed += 1;
       } else if (action === 'remove') {
-        const row = db.prepare(`
+        const row = await db.prepare(`
           SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
           FROM tiolas t JOIN users u ON u.id = t.user_id LEFT JOIN places p ON p.id = t.place_id
           WHERE t.id = ?
@@ -364,13 +364,13 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
           errors.push({ id, error: 'Kaldırılamadı' });
           continue;
         }
-        db.prepare(`
+        await db.prepare(`
           UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
           WHERE id = ? AND status = 'approved'
         `).run(req.user.id, cleanReason, id);
-        refreshPlaceStatsForTiola(id);
+        await refreshPlaceStatsForTiola(id);
         const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
-        notifications.createNotification({
+        await notifications.createNotification({
           userId: row.user_id,
           type: 'tiola_removed',
           title: 'Tiola kaldırıldı',
@@ -398,10 +398,10 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
   return ok(res, { processed, errors });
 });
 
-router.post('/blogs/:id/approve', checkPermission('admin.content'), (req, res) => {
+router.post('/blogs/:id/approve', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  db.prepare(`
+  await db.prepare(`
     UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
       published_at = COALESCE(published_at, datetime('now'))
     WHERE id = ? AND status IN ('pending', 'spam')
@@ -411,8 +411,8 @@ router.post('/blogs/:id/approve', checkPermission('admin.content'), (req, res) =
   return ok(res, { approved: true });
 });
 
-router.get('/approved/blogs', checkPermission('admin.content'), (req, res) => {
-  return queryBlogList(req, res, { approvedOnly: true });
+router.get('/approved/blogs', checkPermission('admin.content'), async (req, res) => {
+  return await queryBlogList(req, res, { approvedOnly: true });
 });
 
 router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, res) => {
@@ -421,7 +421,7 @@ router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, r
   const reason = sanitizeText(req.body?.reason, 1000);
   if (!reason) return fail(res, 'Kaldırma nedeni gerekli');
 
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT b.*, u.email AS user_email, u.name AS user_name
     FROM blogs b
     JOIN users u ON u.id = b.user_id
@@ -430,13 +430,13 @@ router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, r
   if (!row) return fail(res, 'Blog bulunamadı', 404);
   if (row.status !== 'approved') return fail(res, 'Yalnızca yayında olan blog kaldırılabilir', 409);
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
       rejection_reason = ?, published_at = NULL
     WHERE id = ? AND status = 'approved'
   `).run(req.user.id, reason, id);
 
-  notifications.createNotification({
+  await notifications.createNotification({
     userId: row.user_id,
     type: 'blog_removed',
     title: 'Blog kaldırıldı',
@@ -467,7 +467,7 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
   const reason = sanitizeText(req.body?.reason, 1000);
   if (!reason) return fail(res, 'Red nedeni gerekli');
 
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT b.*, u.email AS user_email, u.name AS user_name
     FROM blogs b
     JOIN users u ON u.id = b.user_id
@@ -476,12 +476,12 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
   if (!row) return fail(res, 'Blog bulunamadı', 404);
   if (!['pending', 'spam'].includes(row.status)) return fail(res, 'Bu blog zaten işlendi', 409);
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, reason, id);
 
-  notifications.createNotification({
+  await notifications.createNotification({
     userId: row.user_id,
     type: 'blog_rejected',
     title: 'Blog reddedildi',
@@ -527,7 +527,7 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
     }
     try {
       if (action === 'approve') {
-        const r = db.prepare(`
+        const r = await db.prepare(`
           UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
             published_at = COALESCE(published_at, datetime('now'))
           WHERE id = ? AND status IN ('pending', 'spam')
@@ -537,7 +537,7 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
         logModeration(req, 'blog', id, 'approve', 'bulk');
         processed += 1;
       } else if (action === 'reject') {
-        const row = db.prepare(`
+        const row = await db.prepare(`
           SELECT b.*, u.email AS user_email, u.name AS user_name
           FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ?
         `).get(id);
@@ -545,11 +545,11 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
           errors.push({ id, error: 'Reddedilemedi' });
           continue;
         }
-        db.prepare(`
+        await db.prepare(`
           UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
           WHERE id = ? AND status IN ('pending', 'spam')
         `).run(req.user.id, cleanReason, id);
-        notifications.createNotification({
+        await notifications.createNotification({
           userId: row.user_id,
           type: 'blog_rejected',
           title: 'Blog reddedildi',
@@ -569,7 +569,7 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
         logModeration(req, 'blog', id, 'reject', cleanReason);
         processed += 1;
       } else if (action === 'remove') {
-        const row = db.prepare(`
+        const row = await db.prepare(`
           SELECT b.*, u.email AS user_email, u.name AS user_name
           FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ?
         `).get(id);
@@ -577,12 +577,12 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
           errors.push({ id, error: 'Kaldırılamadı' });
           continue;
         }
-        db.prepare(`
+        await db.prepare(`
           UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
             rejection_reason = ?, published_at = NULL
           WHERE id = ? AND status = 'approved'
         `).run(req.user.id, cleanReason, id);
-        notifications.createNotification({
+        await notifications.createNotification({
           userId: row.user_id,
           type: 'blog_removed',
           title: 'Blog kaldırıldı',
@@ -610,7 +610,7 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
   return ok(res, { processed, errors });
 });
 
-router.post('/moderators', requireRole('admin'), (req, res) => {
+router.post('/moderators', requireRole('admin'), async (req, res) => {
   const { name, email, password } = req.body || {};
   if (!name || !email || !password) {
     return fail(res, 'Ad, e-posta ve şifre gerekli');
@@ -619,22 +619,22 @@ router.post('/moderators', requireRole('admin'), (req, res) => {
   if (pwErr) {
     return fail(res, pwErr);
   }
-  if (findUserByEmail(email)) {
+  if (await findUserByEmail(email)) {
     return fail(res, 'E-posta zaten kayıtlı', 409);
   }
-  const user = createUser({ name, email, password, role: 'moderator' });
+  const user = await createUser({ name, email, password, role: 'moderator' });
   logAdmin(req, 'moderator.create', 'user', user.id, `${name} (${email})`);
-  return ok(res, { user: sanitizeUser(user) }, 201);
+  return ok(res, { user: await sanitizeUser(user) }, 201);
 });
 
 /* ── Places CRUD ── */
-router.get('/places', checkPermission('admin.places'), (req, res) => {
+router.get('/places', checkPermission('admin.places'), async (req, res) => {
   try {
     const q = req.query.q || '';
     const limit = Number(req.query.limit) || 100;
     const offset = Number(req.query.offset) || 0;
     const issue = req.query.issue || null;
-    const data = adminPlace.listAdminPlaces({
+    const data = await adminPlace.listAdminPlaces({
       q, limit, offset, issue, includeArchived: req.query.all === '1',
     });
     return ok(res, data);
@@ -643,7 +643,7 @@ router.get('/places', checkPermission('admin.places'), (req, res) => {
   }
 });
 
-router.get('/places/export', checkPermission('admin.places'), (req, res) => {
+router.get('/places/export', checkPermission('admin.places'), async (req, res) => {
   const format = String(req.query.format || 'json').toLowerCase();
   if (format === 'csv') {
     const csv = placesImportExport.exportPlacesCsv();
@@ -662,7 +662,7 @@ const placesImportUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024, files: 1 },
 });
 
-router.post('/places/import', checkPermission('admin.places'), placesImportUpload.single('file'), (req, res) => {
+router.post('/places/import', checkPermission('admin.places'), placesImportUpload.single('file'), async (req, res) => {
   try {
     const items = placesImportExport.parseImportPayload(req.body, req.file);
     const result = placesImportExport.importPlaces(items, {
@@ -677,17 +677,17 @@ router.post('/places/import', checkPermission('admin.places'), placesImportUploa
   }
 });
 
-router.get('/places/:id', checkPermission('admin.places'), (req, res) => {
+router.get('/places/:id', checkPermission('admin.places'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const place = adminPlace.getAdminPlace(id);
+  const place = await adminPlace.getAdminPlace(id);
   if (!place) return fail(res, 'Yer bulunamadı', 404);
   return ok(res, { place });
 });
 
-router.post('/places', checkPermission('admin.places'), (req, res) => {
+router.post('/places', checkPermission('admin.places'), async (req, res) => {
   try {
-    const created = adminPlace.insertPlace(req.body || {});
+    const created = await adminPlace.insertPlace(req.body || {});
     logAdmin(req, 'place.create', 'place', created.id, created.name || null);
     clearCache('places-list');
     clearCache('search');
@@ -697,11 +697,11 @@ router.post('/places', checkPermission('admin.places'), (req, res) => {
   }
 });
 
-router.put('/places/:id', checkPermission('admin.places'), (req, res) => {
+router.put('/places/:id', checkPermission('admin.places'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   try {
-    const updated = adminPlace.updatePlace(id, req.body || {});
+    const updated = await adminPlace.updatePlace(id, req.body || {});
     if (!updated) return fail(res, 'Yer bulunamadı', 404);
     logAdmin(req, 'place.update', 'place', id, updated.name || null);
     clearCache('places-list');
@@ -712,12 +712,12 @@ router.put('/places/:id', checkPermission('admin.places'), (req, res) => {
   }
 });
 
-router.delete('/places/:id', checkPermission('admin.places'), (req, res) => {
+router.delete('/places/:id', checkPermission('admin.places'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const preview = adminPlace.getAdminPlace(id);
+  const preview = await adminPlace.getAdminPlace(id);
   if (!preview) return fail(res, 'Yer bulunamadı', 404);
-  const result = adminPlace.deletePlace(id);
+  const result = await adminPlace.deletePlace(id);
   logAdmin(req, 'place.delete', 'place', id, preview.name || null);
   clearCache('places-list');
   clearCache('search');
@@ -729,10 +729,10 @@ function isExternalPhotoUrl(url) {
   return /^https?:\/\//i.test(u) && !/\/uploads\//i.test(u);
 }
 
-router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), validateUploadedImage(), processImageUpload(), (req, res) => {
+router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), validateUploadedImage(), processImageUpload(), async (req, res) => {
   const placeId = parsePositiveInt(req.params.id, res);
   if (!placeId) return;
-  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
+  const row = await db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
   if (!row) return fail(res, 'Yer bulunamadı', 404);
   if (!req.files?.length) return fail(res, 'Görsel gerekli', 400);
 
@@ -753,7 +753,7 @@ router.post('/places/:id/photos', checkPermission('admin.places'), upload.array(
   });
 
   const imageUrl = newUrls[0];
-  db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
+  await db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
     JSON.stringify(photos),
     imageUrl,
     placeId,
@@ -778,33 +778,33 @@ const mediaUpload = multer({
   fileFilter: imageFileFilter,
 });
 
-router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), processImageUpload(), (req, res) => {
+router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), processImageUpload(), async (req, res) => {
   if (!req.file) return fail(res, 'Görsel gerekli', 400);
   const url = `/uploads/media/${req.file.filename}`;
   return ok(res, { url });
 });
 
 /* ── Cities CRUD ── */
-router.get('/cities', checkPermission('admin.cities'), (req, res) => {
+router.get('/cities', checkPermission('admin.cities'), async (req, res) => {
   try {
-    const cities = catalogDb.listCities({ includeInactive: req.query.all === '1' });
+    const cities = await catalogDb.listCities({ includeInactive: req.query.all === '1' });
     return ok(res, { cities });
   } catch (err) {
     return fail(res, err.message || 'Şehirler getirilemedi', 500);
   }
 });
 
-router.get('/cities/:id', checkPermission('admin.cities'), (req, res) => {
+router.get('/cities/:id', checkPermission('admin.cities'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const city = catalogDb.getCityById(id);
+  const city = await catalogDb.getCityById(id);
   if (!city) return fail(res, 'Şehir bulunamadı', 404);
   return ok(res, { city });
 });
 
-router.post('/cities', checkPermission('admin.cities'), (req, res) => {
+router.post('/cities', checkPermission('admin.cities'), async (req, res) => {
   try {
-    const city = catalogDb.createCity(req.body || {});
+    const city = await catalogDb.createCity(req.body || {});
     clearCache('places-list');
     logAdmin(req, 'city.create', 'city', city.id, city.name || city.slug || null);
     return ok(res, { city }, 201);
@@ -813,11 +813,11 @@ router.post('/cities', checkPermission('admin.cities'), (req, res) => {
   }
 });
 
-router.put('/cities/:id', checkPermission('admin.cities'), (req, res) => {
+router.put('/cities/:id', checkPermission('admin.cities'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   try {
-    const city = catalogDb.updateCity(id, req.body || {});
+    const city = await catalogDb.updateCity(id, req.body || {});
     if (!city) return fail(res, 'Şehir bulunamadı', 404);
     clearCache('places-list');
     clearCache('search');
@@ -828,11 +828,11 @@ router.put('/cities/:id', checkPermission('admin.cities'), (req, res) => {
   }
 });
 
-router.delete('/cities/:id', checkPermission('admin.cities'), (req, res) => {
+router.delete('/cities/:id', checkPermission('admin.cities'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const preview = catalogDb.getCityById(id);
-  const result = catalogDb.deleteCity(id, { hard: true });
+  const preview = await catalogDb.getCityById(id);
+  const result = await catalogDb.deleteCity(id, { hard: true });
   if (!result.ok) return fail(res, result.error, result.error?.includes('kayıtlı') ? 409 : 404);
   clearCache('places-list');
   logAdmin(req, 'city.delete', 'city', id, preview?.name || preview?.slug || null);
@@ -840,9 +840,9 @@ router.delete('/cities/:id', checkPermission('admin.cities'), (req, res) => {
 });
 
 /* ── Categories CRUD ── */
-router.get('/categories', checkPermission('admin.categories'), (req, res) => {
+router.get('/categories', checkPermission('admin.categories'), async (req, res) => {
   try {
-    const categories = catalogDb.listCategories({ includeInactive: req.query.all === '1' });
+    const categories = await catalogDb.listCategories({ includeInactive: req.query.all === '1' });
     return ok(res, { categories });
   } catch (err) {
     return fail(res, err.message || 'Kategoriler getirilemedi', 500);
@@ -855,9 +855,9 @@ function invalidateCategoryCaches() {
   clearCache('search');
 }
 
-router.post('/categories', checkPermission('admin.categories'), (req, res) => {
+router.post('/categories', checkPermission('admin.categories'), async (req, res) => {
   try {
-    const category = catalogDb.createCategory(req.body || {});
+    const category = await catalogDb.createCategory(req.body || {});
     invalidateCategoryCaches();
     logAdmin(req, 'category.create', 'category', category.id, category.nameTr || category.slug || null);
     return ok(res, { category }, 201);
@@ -866,9 +866,9 @@ router.post('/categories', checkPermission('admin.categories'), (req, res) => {
   }
 });
 
-router.put('/categories/reorder', checkPermission('admin.categories'), (req, res) => {
+router.put('/categories/reorder', checkPermission('admin.categories'), async (req, res) => {
   try {
-    const categories = catalogDb.reorderCategories(req.body?.orderedIds || req.body?.ids);
+    const categories = await catalogDb.reorderCategories(req.body?.orderedIds || req.body?.ids);
     invalidateCategoryCaches();
     logAdmin(req, 'category.reorder', 'category', null, `${categories.length} kategori`);
     return ok(res, { categories });
@@ -877,11 +877,11 @@ router.put('/categories/reorder', checkPermission('admin.categories'), (req, res
   }
 });
 
-router.put('/categories/:id', checkPermission('admin.categories'), (req, res) => {
+router.put('/categories/:id', checkPermission('admin.categories'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   try {
-    const category = catalogDb.updateCategory(id, req.body || {});
+    const category = await catalogDb.updateCategory(id, req.body || {});
     if (!category) return fail(res, 'Kategori bulunamadı', 404);
     invalidateCategoryCaches();
     logAdmin(req, 'category.update', 'category', id, category.nameTr || category.slug || null);
@@ -891,12 +891,12 @@ router.put('/categories/:id', checkPermission('admin.categories'), (req, res) =>
   }
 });
 
-router.delete('/categories/:id', checkPermission('admin.categories'), (req, res) => {
+router.delete('/categories/:id', checkPermission('admin.categories'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const reassignTo = req.body?.reassignTo || req.query.reassignTo;
-  const preview = catalogDb.listCategories({ includeInactive: true }).find((c) => c.id === id);
-  const result = catalogDb.deleteCategory(id, { reassignTo });
+  const preview = (await catalogDb.listCategories({ includeInactive: true })).find((c) => c.id === id);
+  const result = await catalogDb.deleteCategory(id, { reassignTo });
   if (!result.ok) return fail(res, result.error, result.placeCount ? 409 : 404);
   invalidateCategoryCaches();
   logAdmin(req, 'category.delete', 'category', id, preview?.nameTr || preview?.slug || null);
@@ -904,11 +904,11 @@ router.delete('/categories/:id', checkPermission('admin.categories'), (req, res)
 });
 
 /* ── Users & roles ── */
-router.get('/users', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
+router.get('/users', checkPermission('admin.moderate', 'admin.users'), async (req, res) => {
   const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
-  const total = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
-  const rows = db.prepare(`
+  const total = (await db.prepare('SELECT COUNT(*) AS c FROM users').get()).c;
+  const rows = await db.prepare(`
     SELECT id, name, email, role, email_verified, is_blocked, created_at FROM users
     ORDER BY created_at DESC LIMIT ? OFFSET ?
   `).all(limit, offset);
@@ -928,33 +928,33 @@ router.get('/users', checkPermission('admin.moderate', 'admin.users'), (req, res
   });
 });
 
-router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
+router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT id, name, email, role, email_verified, is_blocked, avatar_color, avatar_url, avatar_preset,
            risk_score, created_at, failed_login_count, locked_until
     FROM users WHERE id = ?
   `).get(id);
   if (!row) return fail(res, 'Kullanıcı bulunamadı', 404);
 
-  const tiolaCount = db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ?').get(id).c;
-  const tiolaApproved = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'approved'").get(id).c;
-  const tiolaPending = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'pending'").get(id).c;
-  const tiolaRejected = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'rejected'").get(id).c;
-  const tiolaSpam = db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'spam'").get(id).c;
-  const blogCount = db.prepare('SELECT COUNT(*) AS c FROM blogs WHERE user_id = ?').get(id).c;
-  const blogApproved = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'approved'").get(id).c;
-  const blogPending = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'pending'").get(id).c;
-  const blogRejected = db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'rejected'").get(id).c;
-  const reportCount = db.prepare('SELECT COUNT(*) AS c FROM reports WHERE reporter_id = ?').get(id).c;
-  const reportedCount = db.prepare(`
+  const tiolaCount = (await db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ?').get(id)).c;
+  const tiolaApproved = (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'approved'").get(id)).c;
+  const tiolaPending = (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'pending'").get(id)).c;
+  const tiolaRejected = (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'rejected'").get(id)).c;
+  const tiolaSpam = (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE user_id = ? AND status = 'spam'").get(id)).c;
+  const blogCount = (await db.prepare('SELECT COUNT(*) AS c FROM blogs WHERE user_id = ?').get(id)).c;
+  const blogApproved = (await db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'approved'").get(id)).c;
+  const blogPending = (await db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'pending'").get(id)).c;
+  const blogRejected = (await db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'rejected'").get(id)).c;
+  const reportCount = (await db.prepare('SELECT COUNT(*) AS c FROM reports WHERE reporter_id = ?').get(id)).c;
+  const reportedCount = await db.prepare(`
     SELECT COUNT(*) AS c FROM reports
     WHERE (target_type = 'profile' AND target_id = ?)
        OR (target_type = 'tiola' AND target_id IN (SELECT id FROM tiolas WHERE user_id = ?))
        OR (target_type = 'blog' AND target_id IN (SELECT id FROM blogs WHERE user_id = ?))
   `).get(id, id, id).c;
-  const recentTiolas = db.prepare(`
+  const recentTiolas = await db.prepare(`
     SELECT t.id, t.text, t.status, t.stars, t.place_id, t.created_at, t.moderated_at, t.rejection_reason,
            p.name AS place_name, m.name AS moderated_by_name
     FROM tiolas t
@@ -963,7 +963,7 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
     WHERE t.user_id = ? AND t.parent_id IS NULL
     ORDER BY t.created_at DESC LIMIT 15
   `).all(id);
-  const recentBlogs = db.prepare(`
+  const recentBlogs = await db.prepare(`
     SELECT b.id, b.title, b.status, b.created_at, b.published_at, b.moderated_at, b.rejection_reason,
            m.name AS moderated_by_name
     FROM blogs b
@@ -971,7 +971,7 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
     WHERE b.user_id = ?
     ORDER BY b.created_at DESC LIMIT 10
   `).all(id);
-  const reportsMade = db.prepare(`
+  const reportsMade = await db.prepare(`
     SELECT r.id, r.target_type, r.target_id, r.reason, r.note, r.status, r.created_at,
            r.action_taken, r.resolution_reason, r.resolved_at, res.name AS resolved_by_name
     FROM reports r
@@ -979,7 +979,7 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
     WHERE r.reporter_id = ?
     ORDER BY r.created_at DESC LIMIT 50
   `).all(id);
-  const reportsReceived = db.prepare(`
+  const reportsReceived = await db.prepare(`
     SELECT r.id, r.target_type, r.target_id, r.reason, r.note, r.status, r.created_at,
            r.action_taken, r.resolution_reason, r.resolved_at,
            rep.name AS reporter_name, res.name AS resolved_by_name
@@ -991,12 +991,12 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
        OR (r.target_type = 'blog' AND r.target_id IN (SELECT id FROM blogs WHERE user_id = ?))
     ORDER BY r.created_at DESC LIMIT 50
   `).all(id, id, id);
-  const pendingProfileChanges = db.prepare(`
+  const pendingProfileChanges = (await db.prepare(`
     SELECT id, change_type, payload, status, created_at, rejection_reason
     FROM profile_change_requests
     WHERE user_id = ? AND status = 'pending'
     ORDER BY created_at DESC
-  `).all(id).map((pcr) => {
+  `).all(id)).map((pcr) => {
     let payload = {};
     try { payload = JSON.parse(pcr.payload || '{}'); } catch { /* ignore */ }
     return {
@@ -1008,12 +1008,12 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
       rejectionReason: pcr.rejection_reason,
     };
   });
-  const profileChangeHistory = db.prepare(`
+  const profileChangeHistory = (await db.prepare(`
     SELECT id, change_type, payload, status, created_at, reviewed_at, rejection_reason
     FROM profile_change_requests
     WHERE user_id = ?
     ORDER BY created_at DESC LIMIT 10
-  `).all(id).map((pcr) => {
+  `).all(id)).map((pcr) => {
     let payload = {};
     try { payload = JSON.parse(pcr.payload || '{}'); } catch { /* ignore */ }
     return {
@@ -1026,7 +1026,7 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
       rejectionReason: pcr.rejection_reason,
     };
   });
-  const moderationHistory = db.prepare(`
+  const moderationHistory = await db.prepare(`
     SELECT 'tiola' AS kind, t.id AS content_id, t.status, t.rejection_reason, t.moderated_at,
            m.name AS moderator_name, COALESCE(p.name, t.city_tag, 'Genel Tiola') AS label
     FROM tiolas t
@@ -1042,8 +1042,8 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
     ORDER BY moderated_at DESC
     LIMIT 20
   `).all(id, id);
-  const savedPlacesCount = db.prepare('SELECT COUNT(*) AS c FROM saved_places WHERE user_id = ?').get(id).c;
-  const visitedCount = db.prepare('SELECT COUNT(*) AS c FROM visited_places WHERE user_id = ?').get(id).c;
+  const savedPlacesCount = (await db.prepare('SELECT COUNT(*) AS c FROM saved_places WHERE user_id = ?').get(id)).c;
+  const visitedCount = (await db.prepare('SELECT COUNT(*) AS c FROM visited_places WHERE user_id = ?').get(id)).c;
 
   const REASON_LABELS = {
     spam: 'Spam', uygunsuz: 'Uygunsuz içerik', taciz: 'Taciz',
@@ -1061,12 +1061,12 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
       avatarColor: row.avatar_color,
       avatarUrl: row.avatar_url || null,
       avatarPreset: row.avatar_preset || null,
-      riskScore: computeUserRiskScore(id),
-      riskScoreReasons: computeUserRiskReasons(id),
+      riskScore: await computeUserRiskScore(id),
+      riskScoreReasons: await computeUserRiskReasons(id),
       createdAt: row.created_at,
       failedLoginCount: row.failed_login_count || 0,
       lockedUntil: row.locked_until || null,
-      likeCount: getUserTiolaLikeCount(id),
+      likeCount: await getUserTiolaLikeCount(id),
       stats: {
         tiolaCount,
         tiolaApproved,
@@ -1148,20 +1148,20 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), (req,
   });
 });
 
-router.get('/profile-changes', requireRole('admin'), (_req, res) => {
-  return ok(res, { requests: profileChanges.listPending() });
+router.get('/profile-changes', requireRole('admin'), async (_req, res) => {
+  return ok(res, { requests: await profileChanges.listPending() });
 });
 
-router.post('/profile-changes/:id/approve', requireRole('admin'), (req, res) => {
+router.post('/profile-changes/:id/approve', requireRole('admin'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const pending = db.prepare('SELECT user_id, change_type FROM profile_change_requests WHERE id = ?').get(id);
-  const result = profileChanges.approve(id, req.user.id);
+  const pending = await db.prepare('SELECT user_id, change_type FROM profile_change_requests WHERE id = ?').get(id);
+  const result = await profileChanges.approve(id, req.user.id);
   if (!result.ok) return fail(res, result.error, result.error?.includes('bulunamadı') ? 404 : 409);
   logAdmin(req, 'profile.approve', 'profile_change', id, pending?.change_type || null);
-  const row = db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
   if (row) {
-    notifications.createNotification({
+    await notifications.createNotification({
       userId: row.user_id,
       type: 'profile_approved',
       title: 'Profil güncellemesi onaylandı',
@@ -1172,17 +1172,17 @@ router.post('/profile-changes/:id/approve', requireRole('admin'), (req, res) => 
   return ok(res, { approved: true });
 });
 
-router.post('/profile-changes/:id/reject', requireRole('admin'), (req, res) => {
+router.post('/profile-changes/:id/reject', requireRole('admin'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const reason = sanitizeText(req.body?.reason, 500) || 'Reddedildi';
-  const pending = db.prepare('SELECT user_id, change_type FROM profile_change_requests WHERE id = ?').get(id);
-  const result = profileChanges.reject(id, req.user.id, reason);
+  const pending = await db.prepare('SELECT user_id, change_type FROM profile_change_requests WHERE id = ?').get(id);
+  const result = await profileChanges.reject(id, req.user.id, reason);
   if (!result.ok) return fail(res, result.error, result.error?.includes('bulunamadı') ? 404 : 409);
   logAdmin(req, 'profile.reject', 'profile_change', id, `${pending?.change_type || 'profil'}: ${reason}`);
-  const row = db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT user_id FROM profile_change_requests WHERE id = ?').get(id);
   if (row) {
-    notifications.createNotification({
+    await notifications.createNotification({
       userId: row.user_id,
       type: 'profile_rejected',
       title: 'Profil güncellemesi reddedildi',
@@ -1193,13 +1193,13 @@ router.post('/profile-changes/:id/reject', requireRole('admin'), (req, res) => {
   return ok(res, { rejected: true, rejectionReason: reason });
 });
 
-router.put('/places/:id/info-boxes', checkPermission('admin.places'), (req, res) => {
+router.put('/places/:id/info-boxes', checkPermission('admin.places'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const place = db.prepare('SELECT id FROM places WHERE id = ?').get(id);
+  const place = await db.prepare('SELECT id FROM places WHERE id = ?').get(id);
   if (!place) return fail(res, 'Yer bulunamadı', 404);
 
-  const existing = db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(id);
+  const existing = await db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(id);
   let payload = {};
   try { payload = JSON.parse(existing?.payload || '{}'); } catch { /* ignore */ }
 
@@ -1208,21 +1208,21 @@ router.put('/places/:id/info-boxes', checkPermission('admin.places'), (req, res)
   return ok(res, { saved: true, infoBoxes: buildInfoBoxesResponse(payload) });
 });
 
-router.get('/places/:id/info-boxes', checkPermission('admin.places'), (req, res) => {
+router.get('/places/:id/info-boxes', checkPermission('admin.places'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const row = db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(id);
+  const row = await db.prepare('SELECT payload FROM place_live_data WHERE place_id = ?').get(id);
   let payload = {};
   try { payload = JSON.parse(row?.payload || '{}'); } catch { /* ignore */ }
   return ok(res, { infoBoxes: buildInfoBoxesResponse(payload) });
 });
 
-router.post('/users/:id/block', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
+router.post('/users/:id/block', checkPermission('admin.moderate', 'admin.users'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   if (id === req.user.id) return fail(res, 'Kendi hesabınızı engelleyemezsiniz', 400);
 
-  const target = db.prepare('SELECT id, is_blocked, role FROM users WHERE id = ?').get(id);
+  const target = await db.prepare('SELECT id, is_blocked, role FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
   if (!assertCanManageUser(req.user, target.role, res, fail)) return;
 
@@ -1230,7 +1230,7 @@ router.post('/users/:id/block', checkPermission('admin.moderate', 'admin.users')
   if (blocked && target.role === 'admin') {
     return fail(res, 'Yönetici hesabı engellenemez', 403);
   }
-  db.prepare('UPDATE users SET is_blocked = ? WHERE id = ?').run(blocked ? 1 : 0, id);
+  await db.prepare('UPDATE users SET is_blocked = ? WHERE id = ?').run(blocked ? 1 : 0, id);
   logAdmin(req, blocked ? 'user.block' : 'user.unblock', 'user', id, null);
   return ok(res, { id, blocked });
 });
@@ -1242,7 +1242,7 @@ router.post('/users/:id/send-message', checkPermission('admin.moderate', 'admin.
   const body = sanitizeText(req.body?.body, 5000);
   if (!subject || !body) return fail(res, 'Konu ve mesaj gerekli');
 
-  const target = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(id);
+  const target = await db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
   if (!assertCanManageUser(req.user, target.role, res, fail)) return;
 
@@ -1259,7 +1259,7 @@ router.post('/users/:id/send-message', checkPermission('admin.moderate', 'admin.
     return fail(res, err.message || 'E-posta gönderilemedi', 500);
   }
 
-  notifications.createNotification({
+  await notifications.createNotification({
     userId: target.id,
     type: 'admin_message',
     title: subject,
@@ -1271,21 +1271,21 @@ router.post('/users/:id/send-message', checkPermission('admin.moderate', 'admin.
   return ok(res, { sent: true, emailSent });
 });
 
-router.post('/users/:id/remove-avatar', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
+router.post('/users/:id/remove-avatar', checkPermission('admin.moderate', 'admin.users'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   if (id === req.user.id) return fail(res, 'Kendi profil fotoğrafınızı bu yolla kaldıramazsınız', 400);
 
-  const target = db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
+  const target = await db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
   if (!assertCanManageUser(req.user, target.role, res, fail)) return;
 
   const reason = sanitizeText(req.body?.reason, 500) || 'Moderasyon kararı';
-  const removal = reportMod.removeProfilePhoto(id);
+  const removal = await reportMod.removeProfilePhoto(id);
   if (!removal.ok) return fail(res, removal.error, 400);
 
   if (removal.hadPhoto) {
-    notifications.createNotification({
+    await notifications.createNotification({
       userId: id,
       type: 'profile_avatar_removed',
       title: 'Profil fotoğrafı kaldırıldı',
@@ -1299,22 +1299,22 @@ router.post('/users/:id/remove-avatar', checkPermission('admin.moderate', 'admin
   return ok(res, { id, removed: !!removal.hadPhoto, alreadyRemoved: !!removal.alreadyRemoved });
 });
 
-router.patch('/users/:id/name', checkPermission('admin.moderate', 'admin.users'), (req, res) => {
+router.patch('/users/:id/name', checkPermission('admin.moderate', 'admin.users'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
 
-  const target = db.prepare('SELECT id, role, name FROM users WHERE id = ?').get(id);
+  const target = await db.prepare('SELECT id, role, name FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
   if (!assertCanManageUser(req.user, target.role, res, fail)) return;
 
   const name = sanitizeName(req.body?.name);
   if (!name) return fail(res, 'Geçersiz görünen ad', 400);
 
-  db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, id);
+  await db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, id);
   const reason = sanitizeText(req.body?.reason, 500) || null;
   logAdmin(req, 'user.rename', 'user', id, reason || `${target.name} → ${name}`);
   if (reason) {
-    notifications.createNotification({
+    await notifications.createNotification({
       userId: id,
       type: 'profile_name_changed',
       title: 'Görünen adınız güncellendi',
@@ -1325,7 +1325,7 @@ router.patch('/users/:id/name', checkPermission('admin.moderate', 'admin.users')
   return ok(res, { id, name });
 });
 
-router.patch('/users/:id/role', requireRole('admin'), (req, res) => {
+router.patch('/users/:id/role', requireRole('admin'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   if (id === req.user.id) return fail(res, 'Kendi rolünüzü değiştiremezsiniz', 400);
@@ -1335,21 +1335,21 @@ router.patch('/users/:id/role', requireRole('admin'), (req, res) => {
     return fail(res, 'Geçersiz rol (member, editor, moderator, staff)', 400);
   }
 
-  const target = db.prepare('SELECT id, role, name FROM users WHERE id = ?').get(id);
+  const target = await db.prepare('SELECT id, role, name FROM users WHERE id = ?').get(id);
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
   if (!assertCanManageUser(req.user, target.role, res, fail)) return;
   if (target.role === 'admin') return fail(res, 'Yönetici rolü değiştirilemez', 403);
 
   const prevRole = target.role;
-  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+  await db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
   logAdmin(req, 'user.role_change', 'user', id, `${prevRole} → ${role}`);
   return ok(res, { id, role, previousRole: prevRole });
 });
 
-router.get('/roles', requireRole('admin'), (_req, res) => {
-  const roles = db.prepare('SELECT slug, name FROM roles ORDER BY slug').all();
-  const permissions = db.prepare('SELECT slug, name FROM permissions ORDER BY slug').all();
-  const rolePermissions = db.prepare('SELECT role_slug, permission_slug FROM role_permissions').all();
+router.get('/roles', requireRole('admin'), async (_req, res) => {
+  const roles = await db.prepare('SELECT slug, name FROM roles ORDER BY slug').all();
+  const permissions = await db.prepare('SELECT slug, name FROM permissions ORDER BY slug').all();
+  const rolePermissions = await db.prepare('SELECT role_slug, permission_slug FROM role_permissions').all();
   const byRole = {};
   for (const rp of rolePermissions) {
     if (!byRole[rp.role_slug]) byRole[rp.role_slug] = [];
@@ -1361,29 +1361,29 @@ router.get('/roles', requireRole('admin'), (_req, res) => {
   });
 });
 
-router.get('/stats', checkPermission('admin.dashboard'), (_req, res) => {
+router.get('/stats', checkPermission('admin.dashboard'), async (_req, res) => {
   const { isEphemeralStorage } = require('../db');
   const stats = {
     storageEphemeral: isEphemeralStorage(),
-    users: db.prepare('SELECT COUNT(*) AS c FROM users').get().c,
-    places: db.prepare('SELECT COUNT(*) AS c FROM places').get().c,
-    tiolasApproved: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'approved'").get().c,
-    tiolasPending: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get().c,
-    tiolasSpam: db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'spam'").get().c,
-    blogsPending: db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get().c,
-    travelLists: db.prepare('SELECT COUNT(*) AS c FROM travel_lists').get().c,
-    visitedRecords: db.prepare('SELECT COUNT(*) AS c FROM visited_places').get().c,
-    contactMessages: db.prepare('SELECT COUNT(*) AS c FROM contact_messages').get().c,
+    users: (await db.prepare('SELECT COUNT(*) AS c FROM users').get()).c,
+    places: (await db.prepare('SELECT COUNT(*) AS c FROM places').get()).c,
+    tiolasApproved: (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'approved'").get()).c,
+    tiolasPending: (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get()).c,
+    tiolasSpam: (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'spam'").get()).c,
+    blogsPending: (await db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE status = 'pending'").get()).c,
+    travelLists: (await db.prepare('SELECT COUNT(*) AS c FROM travel_lists').get()).c,
+    visitedRecords: (await db.prepare('SELECT COUNT(*) AS c FROM visited_places').get()).c,
+    contactMessages: (await db.prepare('SELECT COUNT(*) AS c FROM contact_messages').get()).c,
   };
   return ok(res, stats);
 });
 
-router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) => {
-  const total = db.prepare('SELECT COUNT(*) AS c FROM places').get().c;
-  const noPhoto = db.prepare("SELECT COUNT(*) AS c FROM places WHERE photos IS NULL OR photos = '[]' OR photos = ''").get().c;
-  const noFaq = db.prepare("SELECT COUNT(*) AS c FROM places WHERE faq_tr IS NULL OR faq_tr = '[]'").get().c;
-  const noCoords = db.prepare('SELECT COUNT(*) AS c FROM places WHERE lat IS NULL OR lng IS NULL').get().c;
-  const shortDesc = db.prepare('SELECT COUNT(*) AS c FROM places WHERE length(description) < 80').get().c;
+router.get('/content-quality', checkPermission('admin.dashboard'), async (_req, res) => {
+  const total = (await db.prepare('SELECT COUNT(*) AS c FROM places').get()).c;
+  const noPhoto = (await db.prepare("SELECT COUNT(*) AS c FROM places WHERE photos IS NULL OR photos = '[]' OR photos = ''").get()).c;
+  const noFaq = (await db.prepare("SELECT COUNT(*) AS c FROM places WHERE faq_tr IS NULL OR faq_tr = '[]'").get()).c;
+  const noCoords = (await db.prepare('SELECT COUNT(*) AS c FROM places WHERE lat IS NULL OR lng IS NULL').get()).c;
+  const shortDesc = (await db.prepare('SELECT COUNT(*) AS c FROM places WHERE length(description) < 80').get()).c;
   return ok(res, {
     total,
     issues: {
@@ -1396,10 +1396,10 @@ router.get('/content-quality', checkPermission('admin.dashboard'), (_req, res) =
   });
 });
 
-router.get('/contact-messages', checkPermission('admin.dashboard'), (req, res) => {
+router.get('/contact-messages', checkPermission('admin.dashboard'), async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query);
-  const total = db.prepare('SELECT COUNT(*) AS c FROM contact_messages').get().c;
-  const rows = db.prepare(`
+  const total = (await db.prepare('SELECT COUNT(*) AS c FROM contact_messages').get()).c;
+  const rows = await db.prepare(`
     SELECT id, name, email, subject, message, created_at AS createdAt
     FROM contact_messages
     ORDER BY datetime(created_at) DESC
@@ -1408,56 +1408,45 @@ router.get('/contact-messages', checkPermission('admin.dashboard'), (req, res) =
   return ok(res, { items: rows, total, page, limit });
 });
 
-router.get('/moderation-history/:contentType/:contentId', checkPermission('admin.moderate', 'admin.content'), (req, res) => {
+router.get('/moderation-history/:contentType/:contentId', checkPermission('admin.moderate', 'admin.content'), async (req, res) => {
   const contentType = String(req.params.contentType || '').trim();
   const contentId = parsePositiveInt(req.params.contentId, res);
   if (!contentId) return;
   if (!['tiola', 'blog'].includes(contentType)) {
     return fail(res, 'Geçersiz içerik türü', 400);
   }
-  const items = moderationHistory.listForContent(contentType, contentId);
+  const items = await moderationHistory.listForContent(contentType, contentId);
   return ok(res, { items });
 });
 
-const SQLITE_MAGIC = 'SQLite format 3';
 const DB_BACKUP_MAX_BYTES = 100 * 1024 * 1024;
 
 function backupFilename() {
   const date = new Date().toISOString().slice(0, 10);
-  return `touristlio-backup-${date}.db`;
+  return `touristlio-backup-${date}.sql`;
 }
 
-function backupsDir() {
-  const dir = path.join(path.dirname(dbPath), 'backups');
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
-function isSqliteBuffer(buf) {
-  return buf && buf.length >= 16 && buf.slice(0, 15).toString('utf8') === SQLITE_MAGIC;
-}
-
-function removeWalSidecars(filePath) {
-  for (const suffix of ['-wal', '-shm']) {
-    try {
-      fs.unlinkSync(`${filePath}${suffix}`);
-    } catch (err) {
-      if (err.code !== 'ENOENT') throw err;
-    }
+function writePgDump(destPath) {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL gerekli');
+  const result = spawnSync('pg_dump', [url, '-f', destPath], {
+    encoding: 'utf8',
+    timeout: SCRIPT_TIMEOUT_MS,
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error((result.stderr || 'pg_dump başarısız').slice(0, 500));
   }
-}
-
-async function writeDbBackupToPath(destPath) {
-  await db.backup(destPath);
 }
 
 router.get('/backup/download', requireRole('admin'), adminToolLimiter, async (req, res) => {
   const filename = backupFilename();
-  const tmpPath = path.join(os.tmpdir(), `touristlio-backup-${Date.now()}.db`);
+  const tmpPath = path.join(os.tmpdir(), `touristlio-backup-${Date.now()}.sql`);
   try {
-    await writeDbBackupToPath(tmpPath);
+    writePgDump(tmpPath);
     logAdmin(req, 'db.backup_download', 'database', null, filename);
-    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Type', 'application/sql');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     const stream = fs.createReadStream(tmpPath);
     stream.on('error', (err) => {
@@ -1470,66 +1459,29 @@ router.get('/backup/download', requireRole('admin'), adminToolLimiter, async (re
     stream.pipe(res);
   } catch (err) {
     try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-    return fail(res, err.message || 'Yedek indirilemedi', 500);
+    return fail(res, err.message || 'Yedek indirilemedi (pg_dump). Supabase Dashboard → Database → Backups kullanın.', 500);
   }
 });
 
 const dbRestoreUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: DB_BACKUP_MAX_BYTES, files: 1 },
-  fileFilter(_req, file, cb) {
-    const ext = path.extname(file.originalname || '').toLowerCase();
-    if (ext !== '.db') {
-      return cb(new Error('Yalnızca .db dosyası yüklenebilir'));
-    }
-    cb(null, true);
-  },
 });
 
-router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestoreUpload.single('file'), async (req, res) => {
-  if (!req.file?.buffer?.length) {
-    return fail(res, 'Dosya gerekli (.db)', 400);
-  }
-  if (!isSqliteBuffer(req.file.buffer)) {
-    return fail(res, 'Geçersiz SQLite dosyası', 400);
-  }
-
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  const preBackupPath = path.join(backupsDir(), `pre-restore-${stamp}.db`);
-
-  try {
-    await writeDbBackupToPath(preBackupPath);
-    logAdmin(
-      req,
-      'db.restore',
-      'database',
-      null,
-      `${req.file.originalname || 'upload.db'} → önceki: ${path.basename(preBackupPath)}`,
-    );
-    db.close();
-    removeWalSidecars(dbPath);
-    fs.writeFileSync(dbPath, req.file.buffer);
-    const payload = {
-      message: 'Veritabanı geri yüklendi. Sunucu otomatik yeniden başlatılıyor.',
-      needsRestart: true,
-      preBackup: path.basename(preBackupPath),
-    };
-    res.on('finish', () => {
-      logger.info({ msg: 'Database restore complete — restarting to reopen SQLite', preBackup: payload.preBackup });
-      setTimeout(() => process.exit(0), 300);
-    });
-    return ok(res, payload);
-  } catch (err) {
-    return fail(res, err.message || 'Geri yükleme başarısız', 500);
-  }
+router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestoreUpload.single('file'), async (_req, res) => {
+  return fail(
+    res,
+    'SQLite .db geri yükleme kaldırıldı. PostgreSQL için Supabase Dashboard → SQL Editor / Backups kullanın, veya sunucuda pg_restore çalıştırın.',
+    400,
+  );
 });
 
-router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, (_req, res) => {
+router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, async (_req, res) => {
   clearCache();
   return ok(res, { message: 'Cache temizlendi' });
 });
 
-router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, (_req, res) => {
+router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, async (_req, res) => {
   const result = runAdminScript('scripts/generate-sitemap.js');
   if (result.error) {
     return fail(res, result.error.message || 'Sitemap hatası', 500);
@@ -1540,7 +1492,7 @@ router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, (_req, res
   return ok(res, { message: 'Sitemap yenilendi' });
 });
 
-router.post('/tools/validate', requireRole('admin'), adminToolLimiter, (_req, res) => {
+router.post('/tools/validate', requireRole('admin'), adminToolLimiter, async (_req, res) => {
   const result = runAdminScript('scripts/validate-places.js');
   if (result.error) {
     return fail(res, result.error.message || 'Doğrulama hatası', 500);
@@ -1551,7 +1503,7 @@ router.post('/tools/validate', requireRole('admin'), adminToolLimiter, (_req, re
   return ok(res, { output: (result.stdout || '').slice(0, 2000) });
 });
 
-function mapAdminBlog(row) {
+async function mapAdminBlog(row) {
   return {
     id: row.id,
     userId: row.user_id,
@@ -1564,7 +1516,7 @@ function mapAdminBlog(row) {
     body: row.body,
     imageUrl: row.image_url,
     placeId: row.place_id,
-    tags: blogDb.parseTagsStored(row.tags),
+    tags: await blogDb.parseTagsStored(row.tags),
     featured: !!row.featured,
     status: row.status,
     publishedAt: row.published_at,
@@ -1573,24 +1525,24 @@ function mapAdminBlog(row) {
 }
 
 /* ── Blog page settings ── */
-router.get('/blog-page', checkPermission('admin.content'), (_req, res) => {
+router.get('/blog-page', checkPermission('admin.content'), async (_req, res) => {
   return ok(res, { page: settingsService.getBlogPageSettings() });
 });
 
-router.put('/blog-page', checkPermission('admin.content'), (req, res) => {
+router.put('/blog-page', checkPermission('admin.content'), async (req, res) => {
   const page = settingsService.setBlogPageSettings(req.body?.page || req.body || {});
   return ok(res, { page });
 });
 
 /* ── Blog categories ── */
-router.get('/blog-categories', checkPermission('admin.content'), (req, res) => {
-  const categories = blogDb.listBlogCategories({ includeInactive: req.query.all === '1' });
+router.get('/blog-categories', checkPermission('admin.content'), async (req, res) => {
+  const categories = await blogDb.listBlogCategories({ includeInactive: req.query.all === '1' });
   return ok(res, { categories });
 });
 
-router.post('/blog-categories', checkPermission('admin.content'), (req, res) => {
+router.post('/blog-categories', checkPermission('admin.content'), async (req, res) => {
   try {
-    const category = blogDb.createBlogCategory(req.body || {});
+    const category = await blogDb.createBlogCategory(req.body || {});
     logAdmin(req, 'blog_category.create', 'blog_category', category.id, category.nameTr || category.slug || null);
     return ok(res, { category }, 201);
   } catch (err) {
@@ -1598,11 +1550,11 @@ router.post('/blog-categories', checkPermission('admin.content'), (req, res) => 
   }
 });
 
-router.put('/blog-categories/:id', checkPermission('admin.content'), (req, res) => {
+router.put('/blog-categories/:id', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   try {
-    const category = blogDb.updateBlogCategory(id, req.body || {});
+    const category = await blogDb.updateBlogCategory(id, req.body || {});
     if (!category) return fail(res, 'Kategori bulunamadı', 404);
     logAdmin(req, 'blog_category.update', 'blog_category', id, category.nameTr || category.slug || null);
     return ok(res, { category });
@@ -1611,26 +1563,26 @@ router.put('/blog-categories/:id', checkPermission('admin.content'), (req, res) 
   }
 });
 
-router.delete('/blog-categories/:id', checkPermission('admin.content'), (req, res) => {
+router.delete('/blog-categories/:id', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const reassignTo = req.body?.reassignTo || req.query.reassignTo;
-  const preview = blogDb.listBlogCategories({ includeInactive: true }).find((c) => c.id === id);
-  const result = blogDb.deleteBlogCategory(id, { reassignTo });
+  const preview = (await blogDb.listBlogCategories({ includeInactive: true })).find((c) => c.id === id);
+  const result = await blogDb.deleteBlogCategory(id, { reassignTo });
   if (!result.ok) return fail(res, result.error, result.postCount ? 409 : 404);
   logAdmin(req, 'blog_category.delete', 'blog_category', id, preview?.nameTr || preview?.slug || null);
   return ok(res, result);
 });
 
 /* ── Blogs CRUD ── */
-router.get('/blogs/scheduled', checkPermission('admin.content'), (_req, res) => {
-  const published = blogScheduler.publishDueBlogs();
-  const blogs = blogScheduler.listScheduled();
+router.get('/blogs/scheduled', checkPermission('admin.content'), async (_req, res) => {
+  const published = await blogScheduler.publishDueBlogs();
+  const blogs = await blogScheduler.listScheduled();
   return ok(res, { blogs, published });
 });
 
-router.get('/blogs', checkPermission('admin.content'), (req, res) => {
-  blogScheduler.publishDueBlogs();
+router.get('/blogs', checkPermission('admin.content'), async (req, res) => {
+  await blogScheduler.publishDueBlogs();
   const { status, category, q } = req.query;
   const params = [];
   let where = 'WHERE 1=1';
@@ -1647,7 +1599,7 @@ router.get('/blogs', checkPermission('admin.content'), (req, res) => {
     const like = `%${sanitizeText(q, 80)}%`;
     params.push(like, like, like);
   }
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id
     ${where}
@@ -1656,7 +1608,7 @@ router.get('/blogs', checkPermission('admin.content'), (req, res) => {
   return ok(res, { blogs: rows.map(mapAdminBlog) });
 });
 
-router.post('/blogs', checkPermission('admin.content'), (req, res) => {
+router.post('/blogs', checkPermission('admin.content'), async (req, res) => {
   const {
     title, excerpt, body: bodyText, category, imageUrl, placeId,
     slug, tags, featured, authorName, status, userId, publishedAt: rawPublishedAt,
@@ -1665,8 +1617,8 @@ router.post('/blogs', checkPermission('admin.content'), (req, res) => {
   const cleanBody = sanitizeText(bodyText, 20000);
   if (!cleanTitle || !cleanBody) return fail(res, 'Başlık ve içerik zorunlu');
   const cleanExcerpt = sanitizeText(excerpt || cleanBody, 500);
-  const baseSlug = sanitizeText(slug, 120) || blogDb.slugify(cleanTitle) || `blog-${Date.now()}`;
-  const uniqueSlug = blogDb.uniqueBlogSlug(db, baseSlug);
+  const baseSlug = sanitizeText(slug, 120) || await blogDb.slugify(cleanTitle) || `blog-${Date.now()}`;
+  const uniqueSlug = await blogDb.uniqueBlogSlug(db, baseSlug);
   let nextStatus = ['pending', 'approved', 'rejected', 'draft'].includes(status) ? status : 'approved';
   const publishedAtInput = blogScheduler.normalizePublishedAt(rawPublishedAt);
   let publishedAt = null;
@@ -1678,7 +1630,7 @@ router.post('/blogs', checkPermission('admin.content'), (req, res) => {
   } else if (publishedAtInput) {
     publishedAt = publishedAtInput;
   }
-  const info = db.prepare(`
+  const info = await db.prepare(`
     INSERT INTO blogs (
       user_id, category, title, slug, excerpt, body, image_url, place_id,
       tags, featured, author_name, status, published_at
@@ -1692,13 +1644,13 @@ router.post('/blogs', checkPermission('admin.content'), (req, res) => {
     cleanBody,
     imageUrl || null,
     placeId ? Number(placeId) : null,
-    blogDb.serializeTags(tags),
+    await blogDb.serializeTags(tags),
     featured ? 1 : 0,
     authorName ? sanitizeText(authorName, 80) : null,
     nextStatus,
     publishedAt,
   );
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(info.lastInsertRowid);
@@ -1706,10 +1658,10 @@ router.post('/blogs', checkPermission('admin.content'), (req, res) => {
   return ok(res, { blog: mapAdminBlog(row) }, 201);
 });
 
-router.get('/blogs/:id', checkPermission('admin.content'), (req, res) => {
+router.get('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(id);
@@ -1717,10 +1669,10 @@ router.get('/blogs/:id', checkPermission('admin.content'), (req, res) => {
   return ok(res, { blog: mapAdminBlog(row) });
 });
 
-router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
+router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const existing = db.prepare('SELECT * FROM blogs WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM blogs WHERE id = ?').get(id);
   if (!existing) return fail(res, 'Blog bulunamadı', 404);
   const {
     title, excerpt, body: bodyText, category, imageUrl, status,
@@ -1735,10 +1687,10 @@ router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
     : existing.status;
   let nextSlug = existing.slug;
   if (slug != null) {
-    const base = sanitizeText(slug, 120) || blogDb.slugify(cleanTitle);
-    nextSlug = blogDb.uniqueBlogSlug(db, base, id);
+    const base = sanitizeText(slug, 120) || await blogDb.slugify(cleanTitle);
+    nextSlug = await blogDb.uniqueBlogSlug(db, base, id);
   } else if (!nextSlug) {
-    nextSlug = blogDb.uniqueBlogSlug(db, blogDb.slugify(cleanTitle) || `blog-${id}`, id);
+    nextSlug = await blogDb.uniqueBlogSlug(db, await blogDb.slugify(cleanTitle) || `blog-${id}`, id);
   }
   let publishedAt = existing.published_at;
   if (rawPublishedAt !== undefined) {
@@ -1754,7 +1706,7 @@ router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
   } else if (nextStatus !== 'approved' && rawPublishedAt === null) {
     publishedAt = null;
   }
-  db.prepare(`
+  await db.prepare(`
     UPDATE blogs SET
       category = ?, title = ?, slug = ?, excerpt = ?, body = ?, image_url = ?,
       place_id = ?, tags = ?, featured = ?, author_name = ?, status = ?, published_at = ?
@@ -1767,14 +1719,14 @@ router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
     cleanBody,
     imageUrl != null ? (imageUrl || null) : existing.image_url,
     placeId != null ? (placeId ? Number(placeId) : null) : existing.place_id,
-    tags != null ? blogDb.serializeTags(tags) : existing.tags,
+    tags != null ? await blogDb.serializeTags(tags) : existing.tags,
     featured != null ? (featured ? 1 : 0) : existing.featured,
     authorName != null ? (authorName ? sanitizeText(authorName, 80) : null) : existing.author_name,
     nextStatus,
     publishedAt,
     id,
   );
-  const row = db.prepare(`
+  const row = await db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(id);
@@ -1782,18 +1734,18 @@ router.put('/blogs/:id', checkPermission('admin.content'), (req, res) => {
   return ok(res, { blog: mapAdminBlog(row) });
 });
 
-router.delete('/blogs/:id', checkPermission('admin.content'), (req, res) => {
+router.delete('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const existing = db.prepare('SELECT id FROM blogs WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT id FROM blogs WHERE id = ?').get(id);
   if (!existing) return fail(res, 'Blog bulunamadı', 404);
-  db.prepare('DELETE FROM blogs WHERE id = ?').run(id);
+  await db.prepare('DELETE FROM blogs WHERE id = ?').run(id);
   logAdmin(req, 'blog.delete', 'blog', id, null);
   return ok(res, { deleted: true });
 });
 
-function enrichReportRow(row) {
-  const content = reportMod.getTargetContent(row.target_type, row.target_id);
+async function enrichReportRow(row) {
+  const content = await reportMod.getTargetContent(row.target_type, row.target_id);
   return mapReport({
     ...row,
     target_label: content?.label || `#${row.target_id}`,
@@ -1804,8 +1756,8 @@ function enrichReportRow(row) {
   });
 }
 
-function fetchReportRow(id) {
-  return db.prepare(`
+async function fetchReportRow(id) {
+  return await db.prepare(`
     SELECT r.*,
            COALESCE(rep.name, 'Silinmiş kullanıcı') AS reporter_name,
            res.name AS resolved_by_name
@@ -1816,7 +1768,7 @@ function fetchReportRow(id) {
   `).get(id);
 }
 
-router.get('/reports', checkPermission('admin.moderate'), (req, res) => {
+router.get('/reports', checkPermission('admin.moderate'), async (req, res) => {
   const status = String(req.query.status || 'all');
   const params = [];
   let where = 'WHERE 1=1';
@@ -1825,7 +1777,7 @@ router.get('/reports', checkPermission('admin.moderate'), (req, res) => {
   } else if (status === 'resolved') {
     where += " AND r.status IN ('resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned')";
   }
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT r.*,
            COALESCE(rep.name, 'Silinmiş kullanıcı') AS reporter_name,
            res.name AS resolved_by_name
@@ -1839,7 +1791,7 @@ router.get('/reports', checkPermission('admin.moderate'), (req, res) => {
   return ok(res, { reports: rows.map(enrichReportRow) });
 });
 
-router.get('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
+router.get('/reports/:id', checkPermission('admin.moderate'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const row = fetchReportRow(id);
@@ -1853,70 +1805,70 @@ router.post('/reports/:id/resolve-remove', checkPermission('admin.moderate'), as
   const reason = sanitizeText(req.body?.reason, 1000);
   if (!reason) return fail(res, 'Kaldırma nedeni gerekli', 400);
 
-  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
   if (!row) return fail(res, 'Şikayet bulunamadı', 404);
 
-  const content = reportMod.getTargetContent(row.target_type, row.target_id);
+  const content = await reportMod.getTargetContent(row.target_type, row.target_id);
   if (!content) return fail(res, 'Şikayet edilen içerik bulunamadı', 404);
 
-  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'content_removed') {
+  if (await reportMod.isResolvedStatus(row.status) && row.action_taken === 'content_removed') {
     return fail(res, 'Bu şikayet zaten içerik kaldırılarak çözüldü', 409);
   }
 
-  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'dismissed') {
-    reportMod.restoreReportedContent(row);
+  if (await reportMod.isResolvedStatus(row.status) && row.action_taken === 'dismissed') {
+    await reportMod.restoreReportedContent(row);
   }
 
-  const removal = reportMod.removeReportedContent(content, req.user.id, reason);
+  const removal = await reportMod.removeReportedContent(content, req.user.id, reason);
   if (!removal.ok) return fail(res, removal.error, 400);
 
   if (!removal.alreadyRemoved) {
     await reportMod.notifyContentOwnerRemoved(content, reason);
   }
 
-  reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
+  await reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
   logAdmin(req, 'report.resolve_remove', 'report', id, reason);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
 });
 
-router.post('/reports/:id/dismiss', checkPermission('admin.moderate'), (req, res) => {
+router.post('/reports/:id/dismiss', checkPermission('admin.moderate'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const note = sanitizeText(req.body?.note, 1000) || null;
 
-  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
   if (!row) return fail(res, 'Şikayet bulunamadı', 404);
 
-  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'dismissed') {
+  if (await reportMod.isResolvedStatus(row.status) && row.action_taken === 'dismissed') {
     return fail(res, 'Bu şikayet zaten göz ardı edildi', 409);
   }
 
-  if (reportMod.isResolvedStatus(row.status) && row.action_taken === 'content_removed') {
-    reportMod.restoreReportedContent(row);
+  if (await reportMod.isResolvedStatus(row.status) && row.action_taken === 'content_removed') {
+    await reportMod.restoreReportedContent(row);
   }
 
-  reportMod.setReportDismissed(id, req.user.id, note);
+  await reportMod.setReportDismissed(id, req.user.id, note);
   logAdmin(req, 'report.dismiss', 'report', id, note);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
 });
 
-router.post('/reports/:id/reopen', checkPermission('admin.moderate'), (req, res) => {
+router.post('/reports/:id/reopen', checkPermission('admin.moderate'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
 
-  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
   if (!row) return fail(res, 'Şikayet bulunamadı', 404);
-  if (!reportMod.isResolvedStatus(row.status) && row.status !== reportMod.REPORT_STATUSES.REVIEWED) {
+  if (!await reportMod.isResolvedStatus(row.status) && row.status !== reportMod.REPORT_STATUSES.REVIEWED) {
     return fail(res, 'Yalnızca çözülmüş şikayetler yeniden açılabilir', 409);
   }
 
   if (row.action_taken === 'content_removed') {
-    reportMod.restoreReportedContent(row);
+    await reportMod.restoreReportedContent(row);
   }
 
-  reportMod.clearReportResolution(id);
+  await reportMod.clearReportResolution(id);
   logAdmin(req, 'report.reopen', 'report', id, null);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
@@ -1933,17 +1885,17 @@ router.post('/reports/:id/change-decision', checkPermission('admin.moderate'), a
     return fail(res, 'Geçersiz karar (dismiss veya remove)', 400);
   }
 
-  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
   if (!row) return fail(res, 'Şikayet bulunamadı', 404);
-  if (!reportMod.isResolvedStatus(row.status)) {
+  if (!await reportMod.isResolvedStatus(row.status)) {
     return fail(res, 'Karar değişikliği yalnızca çözülmüş şikayetlerde yapılabilir', 409);
   }
 
   if (decision === 'dismiss') {
     if (row.action_taken === 'content_removed') {
-      reportMod.restoreReportedContent(row);
+      await reportMod.restoreReportedContent(row);
     }
-    reportMod.setReportDismissed(id, req.user.id, note || row.resolution_reason);
+    await reportMod.setReportDismissed(id, req.user.id, note || row.resolution_reason);
     logAdmin(req, 'report.change_decision', 'report', id, 'dismiss');
     const updated = fetchReportRow(id);
     return ok(res, { report: enrichReportRow(updated) });
@@ -1951,34 +1903,34 @@ router.post('/reports/:id/change-decision', checkPermission('admin.moderate'), a
 
   if (!reason) return fail(res, 'İçerik kaldırma nedeni gerekli', 400);
 
-  const content = reportMod.getTargetContent(row.target_type, row.target_id);
+  const content = await reportMod.getTargetContent(row.target_type, row.target_id);
   if (!content) return fail(res, 'Şikayet edilen içerik bulunamadı', 404);
 
-  const removal = reportMod.removeReportedContent(content, req.user.id, reason);
+  const removal = await reportMod.removeReportedContent(content, req.user.id, reason);
   if (!removal.ok) return fail(res, removal.error, 400);
 
   if (!removal.alreadyRemoved) {
     await reportMod.notifyContentOwnerRemoved(content, reason);
   }
 
-  reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
+  await reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
   logAdmin(req, 'report.change_decision', 'report', id, `remove: ${reason}`);
   const updated = fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
 });
 
-router.patch('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
+router.patch('/reports/:id', checkPermission('admin.moderate'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
   if (!row) return fail(res, 'Şikayet bulunamadı', 404);
 
   const status = String(req.body?.status || '').trim();
   const allowed = ['reviewed', 'resolved_dismissed', 'resolved_removed', 'dismissed', 'actioned'];
   if (!allowed.includes(status)) return fail(res, 'Geçersiz durum', 400);
 
-  const normalized = reportMod.normalizeReportStatus(status);
-  db.prepare(`
+  const normalized = await reportMod.normalizeReportStatus(status);
+  await db.prepare(`
     UPDATE reports SET status = ?, resolved_by = ?, resolved_at = datetime('now')
     WHERE id = ?
   `).run(normalized === 'reviewed' ? 'reviewed' : normalized, req.user.id, id);
@@ -1988,7 +1940,7 @@ router.patch('/reports/:id', checkPermission('admin.moderate'), (req, res) => {
   return ok(res, { report: enrichReportRow(updated) });
 });
 
-router.get('/audit-log', (req, res) => {
+router.get('/audit-log', async (req, res) => {
   const isAdmin = req.user.role === 'admin';
   const isStaffViewer = ['moderator', 'staff', 'editor'].includes(req.user.role);
   if (!isAdmin && !isStaffViewer) {
@@ -1998,7 +1950,7 @@ router.get('/audit-log', (req, res) => {
   if (!isAdmin) {
     adminId = String(req.user.id);
   }
-  const data = auditLog.list({
+  const data = await auditLog.list({
     page: req.query.page,
     limit: req.query.limit,
     action: req.query.action,
@@ -2010,8 +1962,8 @@ router.get('/audit-log', (req, res) => {
   return ok(res, { ...data, scope: isAdmin ? 'all' : 'self' });
 });
 
-router.get('/banned-words', requireRole('admin'), (_req, res) => {
-  const rows = db.prepare(`
+router.get('/banned-words', requireRole('admin'), async (_req, res) => {
+  const rows = await db.prepare(`
     SELECT bw.id, bw.word, bw.created_at, u.name AS added_by_name
     FROM banned_words bw
     LEFT JOIN users u ON u.id = bw.added_by
@@ -2027,11 +1979,11 @@ router.get('/banned-words', requireRole('admin'), (_req, res) => {
   });
 });
 
-router.post('/banned-words', requireRole('admin'), (req, res) => {
+router.post('/banned-words', requireRole('admin'), async (req, res) => {
   const word = sanitizeText(req.body?.word, 80)?.toLowerCase().trim();
   if (!word || word.length < 2) return fail(res, 'Kelime en az 2 karakter olmalı');
   try {
-    const info = db.prepare('INSERT INTO banned_words (word, added_by) VALUES (?, ?)').run(word, req.user.id);
+    const info = await db.prepare('INSERT INTO banned_words (word, added_by) VALUES (?, ?)').run(word, req.user.id);
     contentFilter.invalidateCache();
     logAdmin(req, 'banned_word.add', 'banned_word', info.lastInsertRowid, word);
     return ok(res, { id: info.lastInsertRowid, word }, 201);
@@ -2041,12 +1993,12 @@ router.post('/banned-words', requireRole('admin'), (req, res) => {
   }
 });
 
-router.delete('/banned-words/:id', requireRole('admin'), (req, res) => {
+router.delete('/banned-words/:id', requireRole('admin'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const row = db.prepare('SELECT word FROM banned_words WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT word FROM banned_words WHERE id = ?').get(id);
   if (!row) return fail(res, 'Kelime bulunamadı', 404);
-  db.prepare('DELETE FROM banned_words WHERE id = ?').run(id);
+  await db.prepare('DELETE FROM banned_words WHERE id = ?').run(id);
   contentFilter.invalidateCache();
   logAdmin(req, 'banned_word.delete', 'banned_word', id, row.word);
   return ok(res, { deleted: true });
@@ -2092,7 +2044,7 @@ function scanUploadsDir(dir, baseRel, placeIdFilter, q, acc) {
   }
 }
 
-router.get('/media', checkPermission('admin.places', 'admin.content'), (req, res) => {
+router.get('/media', checkPermission('admin.places', 'admin.content'), async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query, 24);
   const q = sanitizeText(req.query.q, 80);
   const placeId = Number(req.query.placeId);
@@ -2108,7 +2060,7 @@ router.get('/media', checkPermission('admin.places', 'admin.content'), (req, res
   return ok(res, { items, total, page, limit, totalBytes });
 });
 
-router.delete('/media', checkPermission('admin.places', 'admin.content'), (req, res) => {
+router.delete('/media', checkPermission('admin.places', 'admin.content'), async (req, res) => {
   const relPath = String(req.body?.path || '').trim().replace(/\\/g, '/');
   if (!relPath || relPath.includes('..') || relPath.startsWith('/')) {
     return fail(res, 'Geçersiz dosya yolu', 400);
@@ -2131,14 +2083,14 @@ router.delete('/media', checkPermission('admin.places', 'admin.content'), (req, 
   const placeMatch = normalized.match(/^(\d+)\//);
   if (placeMatch) {
     const placeId = Number(placeMatch[1]);
-    const row = db.prepare('SELECT id, photos, image_url FROM places WHERE id = ?').get(placeId);
+    const row = await db.prepare('SELECT id, photos, image_url FROM places WHERE id = ?').get(placeId);
     if (row) {
       let photos = [];
       try { photos = JSON.parse(row.photos || '[]'); } catch { photos = []; }
       const nextPhotos = photos.filter((u) => u !== urlPath);
       let nextImage = row.image_url;
       if (nextImage === urlPath) nextImage = nextPhotos[0] || null;
-      db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
+      await db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
         JSON.stringify(nextPhotos),
         nextImage,
         placeId,
@@ -2153,16 +2105,20 @@ router.delete('/media', checkPermission('admin.places', 'admin.content'), (req, 
   return ok(res, { deleted: true, path: normalized });
 });
 
-router.get('/moderation/risk', checkPermission('admin.moderate'), (_req, res) => {
-  const pendingUsers = db.prepare(`
+router.get('/moderation/risk', checkPermission('admin.moderate'), async (_req, res) => {
+  const pendingUsers = await db.prepare(`
     SELECT DISTINCT u.id, u.name, u.email, u.created_at, u.risk_score
     FROM users u JOIN tiolas t ON t.user_id = u.id WHERE t.status = 'pending'
     LIMIT 50
   `).all();
-  const scored = pendingUsers.map((u) => ({
-    ...u,
-    riskScore: computeUserRiskScore(u.id),
-  })).sort((a, b) => b.riskScore - a.riskScore);
+  const scored = [];
+  for (const u of pendingUsers) {
+    scored.push({
+      ...u,
+      riskScore: await computeUserRiskScore(u.id),
+    });
+  }
+  scored.sort((a, b) => b.riskScore - a.riskScore);
   return ok(res, { users: scored });
 });
 

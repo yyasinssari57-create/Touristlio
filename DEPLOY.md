@@ -12,7 +12,8 @@ Uygulama geliştirmesi büyük ölçüde tamamlandı; `render.yaml`, production 
 
 - **`package-lock.json` repoda olmalı** — Render build komutu `npm ci` kullanır; lock dosyası yoksa veya `package.json` ile uyumsuzsa build düşer (`Run npm help ci for more info`). Lock dosyasını `.gitignore`’a eklemeyin; her `package.json` bağımlılık değişikliğinden sonra yerelde `npm install` çalıştırıp lock’u commit + push edin.
 - GitHub repo: https://github.com/yyasinssari57-create/Touristlio
-- [Render](https://render.com) hesabı (kalıcı SQLite için **Starter** plan + disk gerekir; ücretsiz web servisinde disk **kalıcı değildir**)
+- [Render](https://render.com) hesabı (veritabanı **Supabase PostgreSQL**; Render Free disk kalıcı değildir)
+- **`DATABASE_URL`** — Supabase connection string (Render Environment’a yapıştırın)
 - SMTP (Brevo önerilir) — `REQUIRE_EMAIL_VERIFICATION=true` iken zorunlu
 - Alan adı (isteğe bağlı): `touristlio.com`
 
@@ -34,8 +35,8 @@ Blueprint şunları oluşturur:
 | Start | `npm run start:prod` |
 | Node.js | **22.16.0** (`.node-version` + `NODE_VERSION` env) |
 | Health check | `GET /api/health` |
-| Disk | 1 GB → `/opt/render/project/src/data` (SQLite) |
-| Plan | `starter` (disk için gerekli) |
+| Disk | 1 GB → uploads (veritabanı Supabase’de) |
+| Plan | `starter` |
 
 ### 2. Ortam değişkenlerini doldur
 
@@ -46,6 +47,7 @@ Deploy başlamadan veya ilk deploy sonrası **Environment** sekmesinde aşağıd
 | Değişken | Örnek | Açıklama |
 |----------|-------|----------|
 | `SITE_URL` | `https://www.touristlio.com` (veya geçici `https://touristlio.onrender.com`) | CSRF, e-posta ve sitemap. **Tarayıcıdaki canlı origin ile aynı** (sonda `/` yok). Canonical host **www**. |
+| `DATABASE_URL` | `postgresql://postgres:ŞİFRE@db.PROJECT.supabase.co:5432/postgres` | **Zorunlu.** Supabase Database şifresi. Render diski geçici olduğu için SQLite kullanılmaz. `@` → `%40`. |
 | `CORS_ORIGIN` | `https://www.touristlio.com` | Tarayıcı CORS; kod apex eşini otomatik kabul eder. |
 | `ADMIN_EMAIL` | `admin@touristlio.com` | İlk admin hesabı |
 | `ADMIN_PASSWORD` | güçlü şifre | Seed/ensure-admin ile kullanılır |
@@ -72,10 +74,10 @@ Tam liste ve isteğe bağlı değişkenler: `.env.production.example`
 
 ### 3. İlk deploy’u bekle
 
-- Build: `npm ci` — `better-sqlite3` için **Node 22.16.0** kullanılır (prebuilt binary; kaynak derleme gerekmez)
-- Start: `npm run start:prod` → `JWT_SECRET` yoksa veya zayıfsa **sunucu başlamaz** (kasıtlı güvenlik)
+- Build: `npm ci` — native `better-sqlite3` yok; `pg` (JavaScript) kullanılır
+- Start: `npm run start:prod` → `JWT_SECRET` yoksa veya zayıfsa **sunucu başlamaz** (kasıtlı güvenlik). `DATABASE_URL` yoksa veya şifre yer tutucusu ise **sunucu başlamaz**.
 
-**Render build notu (`better-sqlite3`):** Eski servislerde Node **20.3.x** gibi sürümler `gyp ERR!` ile build’i düşürebilir — prebuilt binary yok, kaynak derleme başarısız olur. Repoda `.node-version`, `package.json` `engines` ve `render.yaml` içindeki `NODE_VERSION=22.16.0` + `npm_config_build_from_source=false` bunu önler (`better-sqlite3@11.10.0` lock’ta). `file-type@16` ve diğer bağımlılıklar native modül içermez; tek native paket `better-sqlite3`. Blueprint güncellemesinden sonra **Manual Deploy** yapın. Dashboard’da eski `NODE_VERSION` tanımlıysa silin veya `22.16.0` yapın.
+`better-sqlite3` kaldırıldı; Node 22.16.0 hâlâ önerilir. Blueprint güncellemesinden sonra **Manual Deploy** yapın.
 
 Sağlık kontrolü: `https://<servis-adı>.onrender.com/api/health` → `{"ok":true,...}`
 
@@ -87,7 +89,7 @@ Render → servis → **Shell**:
 npm run seed
 ```
 
-Bu komut `server/data/places.json` → SQLite (`data/touristlio.db`) yükler ve admin kullanıcıyı oluşturur.
+Bu komut `server/data/places.json` içeriğini **Supabase PostgreSQL** tablosuna yükler ve admin kullanıcıyı oluşturur. `DATABASE_URL` Render Environment’ta tanımlı olmalıdır.
 
 İsteğe bağlı:
 
@@ -124,18 +126,18 @@ npm run verify:smtp
 
 ---
 
-## SQLite ve dosya kalıcılığı
+## PostgreSQL (Supabase) ve dosya kalıcılığı
 
 | Yol | Kalıcı mı? | Not |
 |-----|------------|-----|
-| `data/touristlio.db` | **Evet** (Starter + disk mount) | `render.yaml` → `/opt/render/project/src/data` |
-| `uploads/` (Tiola foto, admin medya) | **Hayır** | Ephemeral disk; redeploy’da silinebilir |
-| `backups/` | **Hayır** | `npm run backup:db` çıktısı; harici depolamaya kopyalayın |
+| PostgreSQL (`DATABASE_URL`) | **Evet** (Supabase) | Render diski kullanılmaz; şifreyi Dashboard’a yapıştırın |
+| `uploads/` (Tiola foto, admin medya) | Disk varsa evet | `render.yaml` 1 GB mount; yine de S3 önerilir |
+| `backups/` | **Hayır** | `npm run backup:db` → `.sql`; harici depolamaya kopyalayın |
 | `public/sitemap.xml` | Kısmen | `SITEMAP_ON_START=true` ile yeniden üretilir |
 
-**Ücretsiz plan uyarısı:** Disk mount yoksa her redeploy’da veritabanı sıfırlanır. Production için Starter + disk kullanın veya VPS/PostgreSQL planlayın.
+**Render Free uyarısı:** Disk yoksa yüklenen fotoğraflar kaybolur. Kullanıcı/yer verisi artık SQLite dosyasında değil, Supabase’dedir — `DATABASE_URL` doğruysa redeploy veri silmez.
 
-**Yedekleme:** Render Shell’de periyodik `npm run backup:db` çalıştırıp `backups/*.db` dosyasını S3/Drive’a indirin.
+**Yedekleme:** Render Shell’de `npm run backup:db` → `backups/*.sql`. Tercihen Supabase Dashboard → Database → Backups.
 
 ---
 
@@ -144,21 +146,20 @@ npm run verify:smtp
 | Belirti | Olası neden | Çözüm |
 |---------|-------------|--------|
 | Build `npm ci` → `Run npm help ci` / usage hatası | `package-lock.json` repoda yok veya `package.json` ile uyumsuz | Lock dosyasını commit + push edin; yerelde `npm install` ile senkronlayın; `npm ci` build komutunu koruyun |
-| Build `npm ci` → `gyp ERR!` / `better-sqlite3` | Eski Node (ör. 20.3.0), prebuild yok | Repoyu çekin; `NODE_VERSION` / `.node-version` = `22.16.0`; Manual Deploy |
-| Sunucu hemen kapanıyor | `JWT_SECRET` eksik/zayıf | Environment’ta 32+ karakter secret; Blueprint `generateValue` kullanıyorsa redeploy |
+| Sunucu hemen kapanıyor | `DATABASE_URL` veya `JWT_SECRET` eksik | Supabase şifresini `DATABASE_URL`’e yapıştırın (yer tutucu bırakmayın); JWT 32+ karakter |
 | Giriş/kayıt 403 CSRF | `SITE_URL` yanlış | Tarayıcıdaki URL ile `SITE_URL` origin’i eşleştir |
 | Boş sayfa / `ERR_TOO_MANY_REDIRECTS` | Cloudflare www→apex **ve** Express apex→www | Cloudflare’da yalnızca apex→www (veya CF yönlendirmesini kapatıp uygulamaya bırakın); SSL **Full**; `DISABLE_WWW_REDIRECT=true` ile uygulama 301’ini kapatın |
 | Admin/API 500, `www` ile açılıyor | `CORS_ORIGIN` eski apex | `SITE_URL`/`CORS_ORIGIN` = `https://www.touristlio.com`; kod apex+www’yi otomatik kabul eder |
 | E-posta gitmiyor | SMTP eksik/yanlış | Brevo SMTP anahtarı + doğrulanmış `SMTP_FROM`; `verify:smtp` |
-| Boş site / yer yok | Seed çalışmadı | Shell: `npm run seed` |
-| Kayıtlı kullanıcı admin’de yok / “sıfırlanmış” gibi | **Ücretsiz plan** — SQLite kalıcı değil; redeploy veya servis yeniden başlatınca `data/touristlio.db` silinir. `SEED_ON_START` sadece yerleri/admin’i doldurur, kullanıcı silmez. | Starter plan + disk (`STORAGE_PERSISTENT=true`) veya VPS/PostgreSQL; admin Özet’te uyarı görünür |
+| Boş site / yer yok | Seed çalışmadı | Shell: `npm run seed` (`DATABASE_URL` gerekli) |
+| Kayıtlı kullanıcı admin’de yok / “sıfırlanmış” gibi | Yanlış veya eski `DATABASE_URL` | Supabase projesini kontrol edin; `SEED_ON_START` kullanıcı silmez |
 | Yüklenen foto kayboldu | `uploads/` ephemeral | İleride ikinci disk veya S3; şimdilik redeploy sonrası kayıp normal |
 
 ---
 
 ## VPS alternatifi (Hetzner)
 
-Tam rehber: **[DEPLOY_HETZNER.md](./DEPLOY_HETZNER.md)** — CX22/CPX11, Nginx, Certbot, Cloudflare DNS, PM2, SQLite yedekleme ve Render maliyet karşılaştırması.
+Tam rehber: **[DEPLOY_HETZNER.md](./DEPLOY_HETZNER.md)** — CX22/CPX11, Nginx, Certbot, Cloudflare DNS, PM2. Veritabanı artık **Supabase `DATABASE_URL`**.
 
 Kısa özet:
 
@@ -166,13 +167,13 @@ Kısa özet:
 git clone https://github.com/yyasinssari57-create/Touristlio.git
 cd Touristlio
 cp deploy/hetzner/.env.hetzner.example .env
-# .env düzenle — DATABASE_PATH=/var/lib/touristlio/data/touristlio.db
+# .env düzenle — DATABASE_URL=postgresql://postgres:ŞİFRE@db.PROJECT.supabase.co:5432/postgres
 npm ci
 npm run seed
 pm2 start deploy/hetzner/ecosystem.config.js
 ```
 
-Kalıcı veritabanı: `/var/lib/touristlio/data/touristlio.db` (bkz. `deploy/hetzner/.env.hetzner.example`).
+Kalıcı veritabanı: Supabase `DATABASE_URL` (SQLite `touristlio.db` kullanılmaz).
 
 ---
 

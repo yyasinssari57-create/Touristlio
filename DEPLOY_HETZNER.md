@@ -2,7 +2,7 @@
 
 Bu rehber, **sunucu bilgisi olmayan** biri için yazılmıştır. Her adımı sırayla yapın; bir adım bitmeden sonrakine geçmeyin.
 
-**Ne yapacağız?** Hetzner’da küçük bir Linux sunucu kiralayıp Touristlio sitesini orada çalıştıracağız. Render’daki eski barındırmayı site Hetzner’da düzgün çalışınca kapatacağız.
+**Ne yapacağız?** Hetzner’da küçük bir Linux sunucu kiralayıp Touristlio sitesini orada çalıştıracağız. Veritabanı **Supabase PostgreSQL** (`DATABASE_URL`); SQLite dosyası kullanılmaz. Render’daki eski barındırmayı site Hetzner’da düzgün çalışınca kapatacağız.
 
 **Tahmini süre:** İlk kez yapıyorsanız 1–2 saat.  
 **Tahmini maliyet:** Ayda yaklaşık €4–6 (sunucu tipine göre).

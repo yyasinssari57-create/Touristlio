@@ -2,8 +2,8 @@
 
 Bu rehber, **Türk kartıyla Render veya Hetzner ödemesi yapamayan** Touristlio sahipleri içindir. Tüm barındırma seçeneklerini karşılaştırır, **bugün hangi yolu seçmeniz gerektiğini** söyler ve Oracle Cloud ücretsiz kurulumu için adım adım komutlar verir.
 
-**Proje:** Touristlio — Node.js 22, Express, SQLite (`better-sqlite3`)  
-**Sorun:** Render Free’de site çalışıyor ama **veritabanı kalıcı değil** — redeploy veya yeniden başlatmada kullanıcılar ve içerik sıfırlanıyor.
+**Proje:** Touristlio — Node.js 22, Express, **Supabase PostgreSQL** (`DATABASE_URL`)  
+**Sorun (eski):** Render Free’de SQLite kalıcı değildi. Artık veritabanı Supabase’dedir; Render’a `DATABASE_URL` yapıştırmanız gerekir.
 
 **İlgili rehberler:**
 

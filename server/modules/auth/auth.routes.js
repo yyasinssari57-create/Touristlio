@@ -94,7 +94,7 @@ router.patch('/avatar', authRequired, [
   body('avatarPreset').notEmpty().withMessage('Avatar karakteri gerekli'),
   body('avatarColor').optional().matches(/^#[0-9a-fA-F]{6}$/).withMessage('Geçersiz renk'),
 ], controller.updateAvatarPreset);
-router.post('/avatar-upload', authRequired, (req, res, next) => {
+router.post('/avatar-upload', authRequired, async (req, res, next) => {
   avatarUpload.single('photo')(req, res, (err) => {
     if (err) {
       if (err.code === 'LIMIT_FILE_SIZE') return fail(res, 'Dosya en fazla 3 MB olabilir', 400);

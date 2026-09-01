@@ -323,7 +323,7 @@ async function checkLive(base) {
     fail(`POST save expected 200 saved:true, got ${save.status} ${save.body.slice(0, 180)}`);
   } else ok('POST /places/:id/save → saved');
 
-  const row = db.prepare('SELECT 1 AS ok FROM saved_places WHERE user_id = ? AND place_id = ?').get(meUser.id, placeId);
+  const row = await db.prepare('SELECT 1 AS ok FROM saved_places WHERE user_id = ? AND place_id = ?').get(meUser.id, placeId);
   if (!row) fail('favorite not persisted in saved_places');
   else ok('favorite row in saved_places');
 
@@ -340,7 +340,7 @@ async function checkLive(base) {
   if (unsave.status !== 200 || unwrap(unsave.json).saved !== false) {
     fail(`DELETE save expected saved:false, got ${unsave.status}`);
   } else ok('DELETE /places/:id/save removes favorite');
-  const gone = db.prepare('SELECT 1 AS ok FROM saved_places WHERE user_id = ? AND place_id = ?').get(meUser.id, placeId);
+  const gone = await db.prepare('SELECT 1 AS ok FROM saved_places WHERE user_id = ? AND place_id = ?').get(meUser.id, placeId);
   if (gone) fail('favorite still in DB after delete');
   else ok('favorite removed from DB');
 
@@ -350,7 +350,7 @@ async function checkLive(base) {
     headers: { Origin: origin },
   });
 
-  const userRow = db.prepare('SELECT verification_token FROM users WHERE id = ?').get(meUser.id);
+  const userRow = await db.prepare('SELECT verification_token FROM users WHERE id = ?').get(meUser.id);
   if (!userRow?.verification_token) fail('verification token missing after register');
   else {
     const verify = await request(`${root}/api/auth/verify-email`, {
@@ -360,7 +360,7 @@ async function checkLive(base) {
     });
     if (verify.status !== 200) fail(`verify-email HTTP ${verify.status}`);
     else ok('POST /auth/verify-email → 200');
-    const verified = db.prepare('SELECT email_verified FROM users WHERE id = ?').get(meUser.id);
+    const verified = await db.prepare('SELECT email_verified FROM users WHERE id = ?').get(meUser.id);
     if (!verified?.email_verified) fail('email_verified not set');
     else ok('email marked verified');
   }
@@ -372,7 +372,7 @@ async function checkLive(base) {
   });
   if (forgot.status !== 200) fail(`forgot-password HTTP ${forgot.status}`);
   else ok('forgot-password → 200 (generic message)');
-  const resetRow = db.prepare(`
+  const resetRow = await db.prepare(`
     SELECT token FROM password_reset_tokens
     WHERE user_id = ? AND used = 0
     ORDER BY id DESC LIMIT 1

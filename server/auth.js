@@ -97,9 +97,9 @@ function passwordPolicyError(password) {
   return null;
 }
 
-function sanitizeUser(row) {
+async function sanitizeUser(row) {
   if (!row) return null;
-  const permissions = row.role === 'admin' ? null : effectivePermissions(row.role);
+  const permissions = row.role === 'admin' ? null : await effectivePermissions(row.role);
   return {
     id: row.id,
     name: row.name,
@@ -115,23 +115,23 @@ function sanitizeUser(row) {
   };
 }
 
-function findUserByEmail(email) {
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+async function findUserByEmail(email) {
+  return await db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
 }
 
-function findUserById(id) {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+async function findUserById(id) {
+  return await db.prepare('SELECT * FROM users WHERE id = ?').get(id);
 }
 
-function createUser({ name, email, password, role = 'member' }) {
+async function createUser({ name, email, password, role = 'member' }) {
   const colors = ['#0ea5e9', '#0d9488', '#b45309', '#e8642a', '#7c3aed'];
   const hash = hashPassword(password);
   const cleanName = sanitizeName(name, 120) || 'Gezgin';
-  const info = db.prepare(`
+  const info = await db.prepare(`
     INSERT INTO users (name, email, password_hash, role, avatar_color)
     VALUES (?, ?, ?, ?, ?)
   `).run(cleanName, email.toLowerCase().trim(), hash, role, colors[Math.floor(Math.random() * colors.length)]);
-  return findUserById(info.lastInsertRowid);
+  return await findUserById(info.lastInsertRowid);
 }
 
 module.exports = {

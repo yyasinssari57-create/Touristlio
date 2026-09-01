@@ -241,11 +241,11 @@ function jsonLdForHomeWithTiolas(tiolas = []) {
   return [travelAgency(), ...reviews];
 }
 
-function loadApprovedTiolasForPlace(placeId) {
+async function loadApprovedTiolasForPlace(placeId) {
   if (!placeId) return [];
   try {
     const { db } = require('../db');
-    return db.prepare(`
+    return await db.prepare(`
       SELECT t.id, t.stars, t.text, t.created_at, t.parent_id, t.status,
              u.name AS user_name, p.name AS place_name
       FROM tiolas t
@@ -260,19 +260,19 @@ function loadApprovedTiolasForPlace(placeId) {
   }
 }
 
-function loadApprovedBlog(slug) {
+async function loadApprovedBlog(slug) {
   const raw = String(slug || '').trim();
   if (!raw) return null;
   try {
     const { db } = require('../db');
-    let row = db.prepare(`
+    let row = await db.prepare(`
       SELECT b.*, u.name AS author_name_user
       FROM blogs b
       JOIN users u ON u.id = b.user_id
       WHERE b.slug = ? AND b.status = 'approved'
     `).get(raw);
     if (!row && /^\d+$/.test(raw)) {
-      row = db.prepare(`
+      row = await db.prepare(`
         SELECT b.*, u.name AS author_name_user
         FROM blogs b
         JOIN users u ON u.id = b.user_id

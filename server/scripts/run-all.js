@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * logo:extract + places:merge + seed + rapor
  * node server/scripts/run-all.js
@@ -14,25 +15,32 @@ function run(cmd) {
   execSync(cmd, { cwd: root, stdio: 'inherit', shell: true });
 }
 
-try {
-  run('node server/scripts/extract-nav-logo.js');
-} catch (e) {
-  console.warn('logo:extract skipped:', e.message);
+async function main() {
+  try {
+    run('node server/scripts/extract-nav-logo.js');
+  } catch (e) {
+    console.warn('logo:extract skipped:', e.message);
+  }
+
+  run('node server/scripts/build-places-500.js');
+  run('node server/scripts/enrich-content.js');
+
+  const statsPath = path.join(root, 'server', 'data', 'merge-stats.json');
+  const stats = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
+  console.log('\n--- merge stats ---', stats);
+
+  run('node server/seed.js');
+
+  const { initDb, db } = require('../db');
+  await initDb();
+  const dbCount = (await db.prepare('SELECT COUNT(*) AS c FROM places').get()).c;
+  console.log('\n--- final ---');
+  console.log('DB places:', dbCount);
+  console.log('JSON places:', stats.count);
+  console.log('Duplicate imageUrls:', stats.duplicateUrls);
 }
 
-run('node server/scripts/build-places-500.js');
-run('node server/scripts/enrich-content.js');
-
-const statsPath = path.join(root, 'server', 'data', 'merge-stats.json');
-const stats = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
-console.log('\n--- merge stats ---', stats);
-
-run('node server/seed.js');
-
-const db = require('better-sqlite3')(path.join(root, 'data', 'touristlio.db'));
-const dbCount = db.prepare('SELECT COUNT(*) AS c FROM places').get().c;
-console.log('\n--- final ---');
-console.log('DB places:', dbCount);
-console.log('JSON places:', stats.count);
-console.log('Duplicate imageUrls:', stats.duplicateUrls);
-db.close();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -17,7 +17,7 @@ const blogsSeed = [
   { id: 6, category: 'guide', imageUrl: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=500&q=80', catLabel: 'Seyahat Rehberi', title: "Machu Picchu'ya Hazırlanmak", excerpt: 'Yükseklik hastalığından nasıl kaçınırsınız ve en az kalabalık hangi rota.', author: 'Roberto Lopez', placeId: 29, featured: false },
 ];
 
-function seedPlaces(options = {}) {
+async function seedPlaces(options = {}) {
   const { fatal = true } = options;
   if (!fs.existsSync(placesPath)) {
     const msg = 'places.json missing — run: npm run places:merge';
@@ -30,7 +30,7 @@ function seedPlaces(options = {}) {
   const raw = JSON.parse(fs.readFileSync(placesPath, 'utf8'));
   const places = raw.map((p) => enrichContentFields(p, p.id));
 
-  const insert = db.prepare(`
+  const insert = await db.prepare(`
     INSERT OR REPLACE INTO places
     (id, name, slug, location, country, city, district, category,
      image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en,
@@ -51,10 +51,10 @@ function seedPlaces(options = {}) {
   `);
 
   const usedSlugs = new Set();
-  const tx = db.transaction((rows) => {
+  const tx = db.transaction(async (rows) => {
     for (const p of rows) {
       const popularity = (p.tiolaCount || 0) * 2;
-      let slug = uniquePlaceSlug(db, p.slug || slugFromPlace(p), p.id);
+      let slug = await uniquePlaceSlug(db, p.slug || slugFromPlace(p), p.id);
       let n = 2;
       const root = slug;
       while (usedSlugs.has(slug)) {
@@ -62,7 +62,7 @@ function seedPlaces(options = {}) {
         n += 1;
       }
       usedSlugs.add(slug);
-      insert.run({
+      await insert.run({
         ...p,
         slug,
         isLocal: p.isLocal ? 1 : 0,
@@ -91,64 +91,64 @@ function seedPlaces(options = {}) {
       });
     }
   });
-  tx(places);
+  await tx(places);
   console.log('Seeded', places.length, 'places');
 }
 
-function markEmailVerified(userId) {
-  db.prepare('UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?').run(userId);
+async function markEmailVerified(userId) {
+  await db.prepare('UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?').run(userId);
 }
 
-function clearLockout(userId) {
-  db.prepare('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = ?').run(userId);
+async function clearLockout(userId) {
+  await db.prepare('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = ?').run(userId);
 }
 
-function seedAdmin() {
+async function seedAdmin() {
   const email = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase().trim();
   const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
   const name = process.env.ADMIN_NAME || 'Yasin';
-  const existing = findUserByEmail(email);
+  const existing = await findUserByEmail(email);
   if (existing) {
     const hash = hashPassword(password);
-    db.prepare('UPDATE users SET password_hash = ?, name = ?, role = ? WHERE id = ?').run(
+    await db.prepare('UPDATE users SET password_hash = ?, name = ?, role = ? WHERE id = ?').run(
       hash, name.trim(), 'admin', existing.id,
     );
-    markEmailVerified(existing.id);
-    clearLockout(existing.id);
+    await markEmailVerified(existing.id);
+    await clearLockout(existing.id);
     console.log('Admin updated from .env:', email);
     return;
   }
-  const user = createUser({ name, email, password, role: 'admin' });
-  markEmailVerified(user.id);
+  const user = await createUser({ name, email, password, role: 'admin' });
+  await markEmailVerified(user.id);
   console.log('Admin created:', email, '(password from .env or default ChangeMe123!)');
 }
 
-function syncLegacyAdminPassword(password) {
+async function syncLegacyAdminPassword(password) {
   const legacyEmail = 'yasin@touristlio.local';
   const envEmail = (process.env.ADMIN_EMAIL || legacyEmail).toLowerCase().trim();
   if (envEmail === legacyEmail) return;
-  const legacy = findUserByEmail(legacyEmail);
+  const legacy = await findUserByEmail(legacyEmail);
   if (!legacy || legacy.role !== 'admin') return;
   const hash = hashPassword(password);
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, legacy.id);
-  markEmailVerified(legacy.id);
-  clearLockout(legacy.id);
+  await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, legacy.id);
+  await markEmailVerified(legacy.id);
+  await clearLockout(legacy.id);
   console.log('Legacy admin password synced:', legacyEmail);
 }
 
-function seedDemoBlogs() {
-  const admin = findUserByEmail((process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase());
+async function seedDemoBlogs() {
+  const admin = await findUserByEmail((process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase());
   const userId = admin?.id || 1;
-  const count = db.prepare('SELECT COUNT(*) AS c FROM blogs').get().c;
+  const count = (await db.prepare('SELECT COUNT(*) AS c FROM blogs').get()).c;
   if (count > 0) return;
-  const insert = db.prepare(`
+  const insert = await db.prepare(`
     INSERT INTO blogs (
       user_id, category, title, slug, excerpt, body, image_url, place_id,
       tags, featured, author_name, status, published_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', datetime('now'))
   `);
   for (const b of blogsSeed) {
-    insert.run(
+    await insert.run(
       userId,
       b.category,
       b.title,
@@ -165,11 +165,13 @@ function seedDemoBlogs() {
   console.log('Seeded', blogsSeed.length, 'demo blogs');
 }
 
-function runFullSeed(options = {}) {
-  seedPlaces(options);
-  seedAdmin();
-  syncLegacyAdminPassword(process.env.ADMIN_PASSWORD || 'ChangeMe123!');
-  seedDemoBlogs();
+async function runFullSeed(options = {}) {
+  const { initDb } = require('./db');
+  await initDb();
+  await seedPlaces(options);
+  await seedAdmin();
+  await syncLegacyAdminPassword(process.env.ADMIN_PASSWORD || 'ChangeMe123!');
+  await seedDemoBlogs();
 }
 
 module.exports = {
@@ -181,6 +183,13 @@ module.exports = {
 };
 
 if (require.main === module) {
-  runFullSeed({ fatal: true });
-  console.log('Seed complete.');
+  runFullSeed({ fatal: true })
+    .then(() => {
+      console.log('Seed complete.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }

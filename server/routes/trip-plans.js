@@ -8,18 +8,19 @@ const { findNearbyPlaces } = require('../lib/geo');
 
 const router = express.Router();
 
-function loadTripFull(tripId) {
-  const trip = db.prepare('SELECT * FROM trip_plans WHERE id = ?').get(tripId);
+async function loadTripFull(tripId) {
+  const trip = await db.prepare('SELECT * FROM trip_plans WHERE id = ?').get(tripId);
   if (!trip) return null;
-  const days = db.prepare('SELECT * FROM trip_plan_days WHERE trip_id = ? ORDER BY day_number').all(tripId);
-  const daysFull = days.map((d) => {
-    const items = db.prepare(`
+  const days = await db.prepare('SELECT * FROM trip_plan_days WHERE trip_id = ? ORDER BY day_number').all(tripId);
+  const daysFull = [];
+  for (const d of days) {
+    const items = await db.prepare(`
       SELECT tpi.*, p.name, p.city, p.country, p.category, p.lat, p.lng, p.image_url
       FROM trip_plan_items tpi LEFT JOIN places p ON p.id = tpi.place_id
       WHERE tpi.day_id = ? ORDER BY tpi.sort_order
     `).all(d.id);
-    return { ...d, items };
-  });
+    daysFull.push({ ...d, items });
+  }
   let meta = {};
   try { meta = JSON.parse(trip.meta || '{}'); } catch { /* ignore */ }
   return { ...trip, meta, days: daysFull };
@@ -33,23 +34,23 @@ function canViewTrip(trip, user) {
   return false;
 }
 
-function mapPlace(row) {
-  return mapPlaceRow(row, placeStats(row.id));
+async function mapPlace(row) {
+  return mapPlaceRow(row, await placeStats(row.id));
 }
 
-router.get('/mine', authRequired, (req, res) => {
-  const rows = db.prepare(`
+router.get('/mine', authRequired, async (req, res) => {
+  const rows = await db.prepare(`
     SELECT id, name, city, country, start_date, end_date, status, visibility, updated_at
     FROM trip_plans WHERE user_id = ? ORDER BY updated_at DESC
   `).all(req.user.id);
   res.json({ trips: rows });
 });
 
-router.post('/', authRequired, (req, res) => {
+router.post('/', authRequired, async (req, res) => {
   const b = req.body || {};
   if (!b.name?.trim()) return res.status(400).json({ error: 'Plan adı gerekli' });
   const shareToken = crypto.randomBytes(16).toString('hex');
-  const info = db.prepare(`
+  const info = await db.prepare(`
     INSERT INTO trip_plans (user_id, name, country, city, start_date, end_date, travelers, trip_type, budget, transport, visibility, share_token, meta)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
@@ -60,26 +61,26 @@ router.post('/', authRequired, (req, res) => {
   );
   const dayCount = Math.max(1, Number(b.days) || 1);
   for (let i = 1; i <= dayCount; i++) {
-    db.prepare('INSERT INTO trip_plan_days (trip_id, day_number, title) VALUES (?, ?, ?)').run(info.lastInsertRowid, i, `Gün ${i}`);
+    await db.prepare('INSERT INTO trip_plan_days (trip_id, day_number, title) VALUES (?, ?, ?)').run(info.lastInsertRowid, i, `Gün ${i}`);
   }
   res.status(201).json({ id: info.lastInsertRowid, shareToken });
 });
 
-router.get('/suggest/nearby', authOptional, (req, res) => {
+router.get('/suggest/nearby', authOptional, async (req, res) => {
   const { placeId, city, limit } = req.query;
-  const all = db.prepare('SELECT * FROM places').all();
-  let origin = placeId ? db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) : null;
+  const all = await db.prepare('SELECT * FROM places').all();
+  let origin = placeId ? await db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) : null;
   if (!origin && city) origin = all.find((r) => r.city?.toLowerCase().includes(String(city).toLowerCase()));
   if (!origin) return res.json({ places: all.slice(0, Number(limit) || 6).map(mapPlace) });
   const nearby = findNearbyPlaces(all, origin, mapPlace, Number(limit) || 6);
   res.json({ places: nearby });
 });
 
-router.post('/auto-generate', authRequired, (req, res) => {
+router.post('/auto-generate', authRequired, async (req, res) => {
   const { city, days, budget, interest } = req.body || {};
   if (!city) return res.status(400).json({ error: 'Şehir gerekli' });
   const dayCount = Math.max(1, Math.min(14, Number(days) || 3));
-  const all = db.prepare('SELECT * FROM places').all();
+  const all = await db.prepare('SELECT * FROM places').all();
   const cityNorm = String(city).toLowerCase();
   let pool = all.filter((r) => r.city?.toLowerCase().includes(cityNorm));
   if (interest && interest !== 'all') {
@@ -99,27 +100,27 @@ router.post('/auto-generate', authRequired, (req, res) => {
   res.json({ city, days: daysArr, placeCount: idx });
 });
 
-router.get('/share/:token', authOptional, (req, res) => {
-  const trip = db.prepare('SELECT * FROM trip_plans WHERE share_token = ?').get(req.params.token);
+router.get('/share/:token', authOptional, async (req, res) => {
+  const trip = await db.prepare('SELECT * FROM trip_plans WHERE share_token = ?').get(req.params.token);
   if (!canViewTrip(trip, req.user)) return res.status(404).json({ error: 'Plan bulunamadı' });
   res.json({ trip: loadTripFull(trip.id) });
 });
 
-router.get('/:id', authOptional, (req, res) => {
+router.get('/:id', authOptional, async (req, res) => {
   const tripId = parsePositiveInt(req.params.id, res);
   if (!tripId) return;
-  const trip = db.prepare('SELECT * FROM trip_plans WHERE id = ?').get(tripId);
+  const trip = await db.prepare('SELECT * FROM trip_plans WHERE id = ?').get(tripId);
   if (!canViewTrip(trip, req.user)) return res.status(404).json({ error: 'Plan bulunamadı' });
   res.json({ trip: loadTripFull(trip.id) });
 });
 
-router.put('/:id', authRequired, (req, res) => {
+router.put('/:id', authRequired, async (req, res) => {
   const tripId = parsePositiveInt(req.params.id, res);
   if (!tripId) return;
-  const trip = db.prepare('SELECT * FROM trip_plans WHERE id = ? AND user_id = ?').get(tripId, req.user.id);
+  const trip = await db.prepare('SELECT * FROM trip_plans WHERE id = ? AND user_id = ?').get(tripId, req.user.id);
   if (!trip) return res.status(404).json({ error: 'Plan bulunamadı' });
   const b = req.body || {};
-  db.prepare(`
+  await db.prepare(`
     UPDATE trip_plans SET name=?, country=?, city=?, start_date=?, end_date=?, travelers=?, trip_type=?, budget=?, transport=?, visibility=?, meta=?, updated_at=datetime('now')
     WHERE id=?
   `).run(
@@ -131,30 +132,30 @@ router.put('/:id', authRequired, (req, res) => {
     trip.id,
   );
   if (Array.isArray(b.days)) {
-    db.prepare('DELETE FROM trip_plan_items WHERE day_id IN (SELECT id FROM trip_plan_days WHERE trip_id = ?)').run(trip.id);
-    db.prepare('DELETE FROM trip_plan_days WHERE trip_id = ?').run(trip.id);
-    b.days.forEach((day, idx) => {
-      const dInfo = db.prepare('INSERT INTO trip_plan_days (trip_id, day_number, title, date) VALUES (?, ?, ?, ?)').run(
+    await db.prepare('DELETE FROM trip_plan_items WHERE day_id IN (SELECT id FROM trip_plan_days WHERE trip_id = ?)').run(trip.id);
+    await db.prepare('DELETE FROM trip_plan_days WHERE trip_id = ?').run(trip.id);
+    for (const [idx, day] of b.days.entries()) {
+      const dInfo = await db.prepare('INSERT INTO trip_plan_days (trip_id, day_number, title, date) VALUES (?, ?, ?, ?)').run(
         trip.id, idx + 1, day.title || `Gün ${idx + 1}`, day.date || null,
       );
-      (day.items || []).forEach((item, si) => {
-        db.prepare('INSERT INTO trip_plan_items (day_id, place_id, sort_order, start_time, note) VALUES (?, ?, ?, ?, ?)').run(
+      for (const [si, item] of (day.items || []).entries()) {
+        await db.prepare('INSERT INTO trip_plan_items (day_id, place_id, sort_order, start_time, note) VALUES (?, ?, ?, ?, ?)').run(
           dInfo.lastInsertRowid, item.placeId || null, si, item.startTime || null, item.note || null,
         );
-      });
-    });
+      }
+    }
   }
-  res.json({ ok: true, trip: loadTripFull(trip.id) });
+  res.json({ ok: true, trip: await loadTripFull(trip.id) });
 });
 
-router.delete('/:id', authRequired, (req, res) => {
+router.delete('/:id', authRequired, async (req, res) => {
   const tripId = parsePositiveInt(req.params.id, res);
   if (!tripId) return;
-  const trip = db.prepare('SELECT id FROM trip_plans WHERE id = ? AND user_id = ?').get(tripId, req.user.id);
+  const trip = await db.prepare('SELECT id FROM trip_plans WHERE id = ? AND user_id = ?').get(tripId, req.user.id);
   if (!trip) return res.status(404).json({ error: 'Plan bulunamadı' });
-  db.prepare('DELETE FROM trip_plan_items WHERE day_id IN (SELECT id FROM trip_plan_days WHERE trip_id = ?)').run(trip.id);
-  db.prepare('DELETE FROM trip_plan_days WHERE trip_id = ?').run(trip.id);
-  db.prepare('DELETE FROM trip_plans WHERE id = ?').run(trip.id);
+  await db.prepare('DELETE FROM trip_plan_items WHERE day_id IN (SELECT id FROM trip_plan_days WHERE trip_id = ?)').run(trip.id);
+  await db.prepare('DELETE FROM trip_plan_days WHERE trip_id = ?').run(trip.id);
+  await db.prepare('DELETE FROM trip_plans WHERE id = ?').run(trip.id);
   res.json({ ok: true });
 });
 

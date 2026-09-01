@@ -6,21 +6,21 @@ const notifications = require('../lib/notifications');
 
 const router = express.Router();
 
-router.get('/', authRequired, (req, res) => {
+router.get('/', authRequired, async (req, res) => {
   const unreadOnly = req.query.unread === '1';
-  const items = notifications.listForUser(req.user.id, { unreadOnly });
+  const items = await notifications.listForUser(req.user.id, { unreadOnly });
   return ok(res, { notifications: items });
 });
 
-router.post('/read-all', authRequired, (req, res) => {
-  notifications.markAllRead(req.user.id);
+router.post('/read-all', authRequired, async (req, res) => {
+  await notifications.markAllRead(req.user.id);
   return ok(res, { read: true });
 });
 
-router.post('/:id/read', authRequired, (req, res) => {
+router.post('/:id/read', authRequired, async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  notifications.markRead(id, req.user.id);
+  await notifications.markRead(id, req.user.id);
   return ok(res, { read: true });
 });
 

@@ -38,7 +38,7 @@
     "verify:analytics": "node server/scripts/verify-analytics.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
-    "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",
+    "live-data:refresh": "node -e \"require('./server/db').initDb().then(() => require('./server/services/liveDataService').refreshAllPlaces()).then((n) => { console.log('done', n); process.exit(0); }).catch((e) => { console.error(e); process.exit(1); })\"",
     "backup:db": "node server/scripts/backup-db.js"
   },
   "engines": {
@@ -46,7 +46,6 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
-    "better-sqlite3": "^11.9.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -59,6 +58,7 @@
     "multer": "^2.0.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^7.0.11",
+    "pg": "^8.16.3",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "redis": "^4.7.1",

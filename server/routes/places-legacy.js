@@ -16,8 +16,8 @@ const placesService = require('../modules/places/places.service');
 const router = express.Router();
 const { mapPlace: mapPlaceFromService } = placesService;
 
-function mapPlace(row) {
-  return mapPlaceFromService(row, getStatsMap());
+function mapWithStats(row, statsMap) {
+  return mapPlaceFromService(row, statsMap);
 }
 
 function validationError(req, res) {
@@ -29,39 +29,42 @@ function validationError(req, res) {
   return false;
 }
 
-function searchHandler(req, res) {
+async function searchHandler(req, res) {
   const q = req.query.q.trim();
   const limit = Math.min(Number(req.query.limit) || 8, 20);
   const key = cacheKey('search', { q, limit });
-  const result = wrap(key, () => {
-    const rows = db.prepare('SELECT * FROM places').all();
+  const result = await wrap(key, async () => {
+    const rows = await db.prepare('SELECT * FROM places').all();
+    const statsMap = await getStatsMap();
+    const mapper = (row) => mapWithStats(row, statsMap);
     const qNorm = normalizeSearch(q);
     const matches = rows
-      .filter((row) => matchesQuery(mapPlace(row), qNorm))
+      .filter((row) => matchesQuery(mapper(row), qNorm))
       .slice(0, limit)
-      .map(mapPlace);
+      .map(mapper);
     return { places: matches, count: matches.length };
   });
   res.json(result);
 }
 
-router.get('/saved/all', authRequired, (req, res) => {
-  const rows = db.prepare(`
+router.get('/saved/all', authRequired, async (req, res) => {
+  const rows = await db.prepare(`
     SELECT p.* FROM saved_places sp
     JOIN places p ON p.id = sp.place_id
     WHERE sp.user_id = ?
     ORDER BY sp.created_at DESC
   `).all(req.user.id);
-  return ok(res, { places: rows.map(mapPlace) });
+  const statsMap = await getStatsMap();
+  return ok(res, { places: rows.map((r) => mapWithStats(r, statsMap)) });
 });
 
-function resolvePlaceRow(req, res) {
+async function resolvePlaceRow(req, res) {
   const key = req.params.id;
   if (PLACE_PARAM_RESERVED.has(String(key || '').toLowerCase())) {
     res.status(404).json({ error: 'Not found' });
     return null;
   }
-  const row = findPlaceRow(key);
+  const row = await findPlaceRow(key);
   if (!row) {
     res.status(404).json({ error: 'Yer bulunamadı' });
     return null;
@@ -70,12 +73,14 @@ function resolvePlaceRow(req, res) {
 }
 
 router.get('/:id', authOptional, async (req, res) => {
-  const row = resolvePlaceRow(req, res);
+  const row = await resolvePlaceRow(req, res);
   if (!row) return;
-  const place = mapPlace(row);
-  const allRows = db.prepare('SELECT * FROM places').all();
-  const nearby = findNearbyPlaces(allRows, row, mapPlace, 6);
-  const similar = findSimilarPlaces(allRows, row, mapPlace, 6);
+  const statsMap = await getStatsMap();
+  const mapper = (r) => mapWithStats(r, statsMap);
+  const place = mapper(row);
+  const allRows = await db.prepare('SELECT * FROM places').all();
+  const nearby = findNearbyPlaces(allRows, row, mapper, 6);
+  const similar = findSimilarPlaces(allRows, row, mapper, 6);
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
   let weather = null;
   try {
@@ -87,8 +92,8 @@ router.get('/:id', authOptional, async (req, res) => {
   const tz = place.timezone || timezoneForCountry(place.country);
   const entryTry = parseEntryFeeTry(place.entryFee);
   const affiliateEnabled = process.env.AFFILIATE_ENABLED === 'true';
-  const adminPayload = getAdminPayload(place.id);
-  const liveData = getLiveData(place.id, row, mapPlace);
+  const adminPayload = await getAdminPayload(place.id);
+  const liveData = await getLiveData(place.id, row, mapper);
   let mergedPlace = mergeInfoPanel(place, adminPayload, lang);
   const mergedWeather = mergeWeather(weather, adminPayload);
   const mergedLocalInfo = mergeLocalInfo({
@@ -112,35 +117,35 @@ router.get('/:id', authOptional, async (req, res) => {
 });
 
 router.get('/:id/weather', authOptional, async (req, res) => {
-  const row = resolvePlaceRow(req, res);
+  const row = await resolvePlaceRow(req, res);
   if (!row) return;
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
   const weather = await getWeather(row.lat, row.lng, lang);
   res.json(weather);
 });
 
-router.get('/:id/saved', authRequired, (req, res) => {
-  const row = resolvePlaceRow(req, res);
+router.get('/:id/saved', authRequired, async (req, res) => {
+  const row = await resolvePlaceRow(req, res);
   if (!row) return;
-  const saved = db.prepare(`
+  const saved = await db.prepare(`
     SELECT 1 FROM saved_places WHERE user_id = ? AND place_id = ?
   `).get(req.user.id, row.id);
   return ok(res, { saved: !!saved });
 });
 
-router.post('/:id/save', authRequired, (req, res) => {
-  const row = resolvePlaceRow(req, res);
+router.post('/:id/save', authRequired, async (req, res) => {
+  const row = await resolvePlaceRow(req, res);
   if (!row) return;
-  db.prepare(`
+  await db.prepare(`
     INSERT OR IGNORE INTO saved_places (user_id, place_id) VALUES (?, ?)
   `).run(req.user.id, row.id);
   return ok(res, { saved: true, placeId: row.id });
 });
 
-router.delete('/:id/save', authRequired, (req, res) => {
-  const row = resolvePlaceRow(req, res);
+router.delete('/:id/save', authRequired, async (req, res) => {
+  const row = await resolvePlaceRow(req, res);
   if (!row) return;
-  db.prepare('DELETE FROM saved_places WHERE user_id = ? AND place_id = ?').run(req.user.id, row.id);
+  await db.prepare('DELETE FROM saved_places WHERE user_id = ? AND place_id = ?').run(req.user.id, row.id);
   return ok(res, { saved: false, placeId: row.id });
 });
 

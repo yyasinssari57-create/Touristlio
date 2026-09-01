@@ -1,18 +1,18 @@
 const { db } = require('../db');
 
-function createNotification({ userId, type, title, body, link }) {
-  const info = db.prepare(`
+async function createNotification({ userId, type, title, body, link }) {
+  const info = await db.prepare(`
     INSERT INTO user_notifications (user_id, type, title, body, link)
     VALUES (?, ?, ?, ?, ?)
   `).run(userId, type, title, body, link || null);
   return info.lastInsertRowid;
 }
 
-function listForUser(userId, { unreadOnly = false, limit = 30 } = {}) {
+async function listForUser(userId, { unreadOnly = false, limit = 30 } = {}) {
   let sql = 'SELECT * FROM user_notifications WHERE user_id = ?';
   if (unreadOnly) sql += ' AND read_at IS NULL';
   sql += ' ORDER BY created_at DESC LIMIT ?';
-  return db.prepare(sql).all(userId, limit).map((row) => ({
+  return (await db.prepare(sql).all(userId, limit)).map((row) => ({
     id: row.id,
     type: row.type,
     title: row.title,
@@ -23,15 +23,15 @@ function listForUser(userId, { unreadOnly = false, limit = 30 } = {}) {
   }));
 }
 
-function markRead(id, userId) {
-  return db.prepare(`
+async function markRead(id, userId) {
+  return await db.prepare(`
     UPDATE user_notifications SET read_at = datetime('now')
     WHERE id = ? AND user_id = ?
   `).run(id, userId);
 }
 
-function markAllRead(userId) {
-  return db.prepare(`
+async function markAllRead(userId) {
+  return await db.prepare(`
     UPDATE user_notifications SET read_at = datetime('now')
     WHERE user_id = ? AND read_at IS NULL
   `).run(userId);

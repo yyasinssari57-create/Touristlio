@@ -5,7 +5,7 @@ const { parseCorsOrigins, isCorsOriginAllowed } = require('../lib/cors-origins')
  * Browsers reject preflight responses that are 3xx redirects.
  */
 function apiPreflightMiddleware(corsOrigins) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (req.method !== 'OPTIONS') return next();
     const path = req.path || req.originalUrl || '';
     if (!path.startsWith('/api')) return next();

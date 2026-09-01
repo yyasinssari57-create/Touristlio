@@ -114,20 +114,20 @@ function getCityImage(slugOrName, storedUrl) {
   return CITY_IMAGES[slug] || GENERIC_CITY_IMAGE;
 }
 
-function backfillCityImages(database) {
+async function backfillCityImages(database) {
   const db = database && typeof database.prepare === 'function'
     ? database
     : require('../db').db;
-  const rows = db.prepare(`
+  const rows = await db.prepare(`
     SELECT id, name, slug, image_url FROM cities
     WHERE image_url IS NULL OR trim(image_url) = ''
   `).all();
   if (!rows.length) return 0;
-  const stmt = db.prepare('UPDATE cities SET image_url = ? WHERE id = ?');
+  const stmt = await db.prepare('UPDATE cities SET image_url = ? WHERE id = ?');
   let count = 0;
   for (const row of rows) {
     const url = getCityImage(row.slug || row.name);
-    stmt.run(url, row.id);
+    await stmt.run(url, row.id);
     count += 1;
   }
   return count;

@@ -5,9 +5,9 @@ const { uniquePlaceSlug, slugFromPlace } = require('./place-lookup');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
-function persistPlaceSlug(id, placeLike) {
-  const slug = uniquePlaceSlug(db, slugFromPlace(placeLike), id);
-  db.prepare('UPDATE places SET slug = ? WHERE id = ?').run(slug, id);
+async function persistPlaceSlug(id, placeLike) {
+  const slug = await uniquePlaceSlug(db, slugFromPlace(placeLike), id);
+  await db.prepare('UPDATE places SET slug = ? WHERE id = ?').run(slug, id);
   return slug;
 }
 
@@ -43,7 +43,7 @@ const ISSUE_FILTERS = {
   shortDesc: 'length(description) < 80',
 };
 
-function listAdminPlaces({ q, limit = 100, offset = 0, status, issue, includeArchived = false } = {}) {
+async function listAdminPlaces({ q, limit = 100, offset = 0, status, issue, includeArchived = false } = {}) {
   let where = '1=1';
   const params = [];
   if (status && VALID_STATUS.has(status)) {
@@ -62,21 +62,21 @@ function listAdminPlaces({ q, limit = 100, offset = 0, status, issue, includeArc
   }
   const lim = Math.min(Math.max(limit, 1), 500);
   const off = Math.max(offset, 0);
-  const rows = db.prepare(`SELECT * FROM places WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...params, lim, off);
-  const total = db.prepare(`SELECT COUNT(*) AS c FROM places WHERE ${where}`).get(...params).c;
+  const rows = await db.prepare(`SELECT * FROM places WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...params, lim, off);
+  const total = (await db.prepare(`SELECT COUNT(*) AS c FROM places WHERE ${where}`).get(...params)).c;
   return { places: rows.map(mapAdminPlace), total };
 }
 
-function getAdminPlace(id) {
-  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(id);
+async function getAdminPlace(id) {
+  const row = await db.prepare('SELECT * FROM places WHERE id = ?').get(id);
   if (!row) return null;
   return {
     ...mapAdminPlace(row),
-    tiolaCount: countPlaceTiolas(id),
+    tiolaCount: await countPlaceTiolas(id),
   };
 }
 
-function buildPlacePayload(body, existingId) {
+async function buildPlacePayload(body, existingId) {
   const {
     name, location, country, city, district, category,
     imageUrl, entryFee, entryFeeEn, bestTime, bestTimeEn,
@@ -98,7 +98,7 @@ function buildPlacePayload(body, existingId) {
     throw new Error('Geçersiz durum (published, draft, archived)');
   }
 
-  const id = existingId || (db.prepare('SELECT MAX(id) AS m FROM places').get().m || 0) + 1;
+  const id = existingId || ((await db.prepare('SELECT MAX(id) AS m FROM places').get()).m || 0) + 1;
   const enriched = enrichContentFields({
     id,
     name: safeName,
@@ -141,10 +141,10 @@ function buildPlacePayload(body, existingId) {
   };
 }
 
-function insertPlace(body) {
-  const { enriched, status, photosJson } = buildPlacePayload(body);
+async function insertPlace(body) {
+  const { enriched, status, photosJson } = await buildPlacePayload(body);
   const id = enriched.id;
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO places
     (id, name, location, country, city, district, category,
      image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en,
@@ -193,12 +193,12 @@ function insertPlace(body) {
     0,
     status,
   );
-  persistPlaceSlug(id, enriched);
+  await persistPlaceSlug(id, enriched);
   return { id, name: enriched.name };
 }
 
-function updatePlace(id, body) {
-  const row = db.prepare('SELECT * FROM places WHERE id = ?').get(id);
+async function updatePlace(id, body) {
+  const row = await db.prepare('SELECT * FROM places WHERE id = ?').get(id);
   if (!row) return null;
   const merged = {
     name: body.name ?? row.name,
@@ -222,9 +222,9 @@ function updatePlace(id, body) {
     searchAliases: body.searchAliases ?? JSON.parse(row.search_aliases || '[]'),
     photos: body.photos ?? JSON.parse(row.photos || '[]'),
   };
-  const { enriched, status, photosJson } = buildPlacePayload(merged, id);
+  const { enriched, status, photosJson } = await buildPlacePayload(merged, id);
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE places SET
       name = ?, location = ?, country = ?, city = ?, district = ?, category = ?,
       image_url = ?, is_local = ?, entry_fee = ?, best_time = ?,
@@ -255,37 +255,37 @@ function updatePlace(id, body) {
     status,
     id,
   );
-  persistPlaceSlug(id, enriched);
-  return getAdminPlace(id);
+  await persistPlaceSlug(id, enriched);
+  return await getAdminPlace(id);
 }
 
-function archivePlace(id) {
-  const row = db.prepare('SELECT id FROM places WHERE id = ?').get(id);
+async function archivePlace(id) {
+  const row = await db.prepare('SELECT id FROM places WHERE id = ?').get(id);
   if (!row) return null;
-  db.prepare("UPDATE places SET status = 'archived' WHERE id = ?").run(id);
+  await db.prepare("UPDATE places SET status = 'archived' WHERE id = ?").run(id);
   return { id, status: 'archived' };
 }
 
-function countPlaceTiolas(id) {
-  return db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE place_id = ?').get(id).c;
+async function countPlaceTiolas(id) {
+  return (await db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE place_id = ?').get(id)).c;
 }
 
-function deletePlace(id) {
-  const row = db.prepare('SELECT id, name FROM places WHERE id = ?').get(id);
+async function deletePlace(id) {
+  const row = await db.prepare('SELECT id, name FROM places WHERE id = ?').get(id);
   if (!row) return null;
-  const tiolaCount = countPlaceTiolas(id);
+  const tiolaCount = await countPlaceTiolas(id);
 
-  const tx = db.transaction(() => {
-    db.prepare('DELETE FROM place_live_data WHERE place_id = ?').run(id);
-    db.prepare('DELETE FROM saved_places WHERE place_id = ?').run(id);
-    db.prepare('DELETE FROM visited_places WHERE place_id = ?').run(id);
-    db.prepare('DELETE FROM travel_list_items WHERE place_id = ?').run(id);
-    db.prepare('DELETE FROM trip_plan_items WHERE place_id = ?').run(id);
-    db.prepare('DELETE FROM tiolas WHERE place_id = ?').run(id);
-    db.prepare('UPDATE blogs SET place_id = NULL WHERE place_id = ?').run(id);
-    db.prepare('DELETE FROM places WHERE id = ?').run(id);
+  const tx = db.transaction(async () => {
+    await db.prepare('DELETE FROM place_live_data WHERE place_id = ?').run(id);
+    await db.prepare('DELETE FROM saved_places WHERE place_id = ?').run(id);
+    await db.prepare('DELETE FROM visited_places WHERE place_id = ?').run(id);
+    await db.prepare('DELETE FROM travel_list_items WHERE place_id = ?').run(id);
+    await db.prepare('DELETE FROM trip_plan_items WHERE place_id = ?').run(id);
+    await db.prepare('DELETE FROM tiolas WHERE place_id = ?').run(id);
+    await db.prepare('UPDATE blogs SET place_id = NULL WHERE place_id = ?').run(id);
+    await db.prepare('DELETE FROM places WHERE id = ?').run(id);
   });
-  tx();
+  await tx();
 
   return {
     id,
