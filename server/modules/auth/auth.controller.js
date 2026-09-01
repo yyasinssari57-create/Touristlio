@@ -12,11 +12,11 @@ async function register(req, res) {
   }, result.status);
 }
 
-function login(req, res) {
-  const result = authService.login(req);
+async function login(req, res) {
+  const result = await authService.login(req);
   if (result.error) return fail(res, result.error, result.status);
   authService.setAuthCookie(res, result.cookie);
-  return ok(res, { user: result.user });
+  return ok(res, { user: result.user || null });
 }
 
 function logout(_req, res) {
@@ -24,8 +24,8 @@ function logout(_req, res) {
   return ok(res, { loggedOut: true });
 }
 
-function me(req, res) {
-  const loaded = loadUserFromToken(req);
+async function me(req, res) {
+  const loaded = await loadUserFromToken(req);
   if (loaded.blocked) {
     authService.clearAuthCookie(res);
     return fail(res, 'Hesabınız engellenmiştir', 403);
@@ -37,12 +37,12 @@ function me(req, res) {
   return ok(res, { user: loaded.user || null });
 }
 
-function profile(req, res) {
+async function profile(req, res) {
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
-  const result = authService.getDashboard(req.user.id, lang);
+  const result = await authService.getDashboard(req.user.id, lang);
   if (result.error) return fail(res, result.error, result.status);
   return ok(res, {
-    user: result.user,
+    user: result.user || null,
     tiolas: result.tiolas,
     favorites: result.favorites,
     visited: result.visited,
@@ -60,15 +60,15 @@ async function forgotPassword(req, res) {
   return ok(res, { message: result.message });
 }
 
-function resetPassword(req, res) {
-  const result = authService.resetPassword(req);
+async function resetPassword(req, res) {
+  const result = await authService.resetPassword(req);
   if (result.error) return fail(res, result.error, result.status);
   authService.clearAuthCookie(res);
   return ok(res, { message: result.message });
 }
 
-function verifyEmail(req, res) {
-  const result = authService.verifyEmail(req);
+async function verifyEmail(req, res) {
+  const result = await authService.verifyEmail(req);
   if (result.error) return fail(res, result.error, result.status);
   return ok(res, { message: result.message });
 }
@@ -96,23 +96,23 @@ function avatarOptions(_req, res) {
   return ok(res, authService.getAvatarOptions());
 }
 
-function updateAvatarPreset(req, res) {
+async function updateAvatarPreset(req, res) {
   const err = authService.validationError(req);
   if (err) return fail(res, err, 400);
-  const result = authService.updateAvatarPreset(req.user.id, req.body || {});
+  const result = await authService.updateAvatarPreset(req.user.id, req.body || {});
   if (result.error) return fail(res, result.error, result.status);
   return res.status(result.status || 200).json({
-    user: result.user,
+    user: result.user || null,
     message: result.message,
     pending: result.pending || false,
   });
 }
 
-function updateAvatarPhoto(req, res) {
-  const result = authService.updateAvatarPhoto(req.user.id, req.file);
+async function updateAvatarPhoto(req, res) {
+  const result = await authService.updateAvatarPhoto(req.user.id, req.file);
   if (result.error) return fail(res, result.error, result.status);
   return res.status(result.status || 200).json({
-    user: result.user,
+    user: result.user || null,
     message: result.message,
     pending: result.pending || false,
   });

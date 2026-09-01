@@ -68,7 +68,7 @@ async function authRequired(req, res, next) {
 
 function requireRole(...roles) {
   return async (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user || !roles.includes(req.user?.role)) {
       return fail(res, 'Yetki yok', 403);
     }
     next();

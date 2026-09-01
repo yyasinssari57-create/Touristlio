@@ -3100,13 +3100,15 @@ async function adminLogin() {
         password: document.getElementById('admPass').value,
       },
     });
-    if (!PANEL_ROLES.includes(data.user.role)) {
+    const user = data?.user;
+    if (!user || !PANEL_ROLES.includes(user.role)) {
       showErr('Admin paneline giriş yetkisi gerekli', 'loginErr');
+      showLoginScreen();
       return;
     }
-    currentUser = data.user;
-    localStorage.setItem('tl_user', JSON.stringify(data.user));
-    showPanel(data.user);
+    currentUser = user;
+    localStorage.setItem('tl_user', JSON.stringify(user));
+    await showPanel(user);
   } catch (e) { showErr(e.message, 'loginErr'); }
   finally { setBtnLoading(btn, false); }
 }
@@ -3126,7 +3128,7 @@ function adminLogout() {
 async function restoreAdminSession() {
   try {
     const me = await api('/auth/me');
-    if (me?.user && PANEL_ROLES.includes(me.user.role)) {
+    if (me?.user && PANEL_ROLES.includes(me.user?.role)) {
       currentUser = me.user;
       localStorage.setItem('tl_user', JSON.stringify(me.user));
       await showPanel(me.user);
@@ -3139,6 +3141,10 @@ async function restoreAdminSession() {
 }
 
 async function showPanel(user) {
+  if (!user || !PANEL_ROLES.includes(user.role)) {
+    showLoginScreen();
+    return;
+  }
   currentUser = user;
   document.body.classList.add('admin-session');
   closeUserDetailPanel();
@@ -4858,7 +4864,7 @@ document.getElementById('adminPanel')?.addEventListener('keydown', (e) => {
 });
 
 syncAdminSectionVisibility();
-restoreAdminSession();
+restoreAdminSession().catch(() => showLoginScreen());
 </script>
 </body>
 </html>
