@@ -11,6 +11,7 @@
   --fd:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;
   --fn:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;
   --brand-accent:#6EC6FF;
+  --nav-h:68px;
 }
 html{scroll-behavior:smooth;scroll-padding-top:var(--nav-h,64px);-webkit-font-smoothing:subpixel-antialiased;-moz-osx-font-smoothing:auto;text-rendering:auto;}
 body{background:var(--l);color:var(--t);font-family:var(--fn);font-size:15px;overflow-x:clip;-webkit-font-smoothing:inherit;-moz-osx-font-smoothing:inherit;}
@@ -53,7 +54,6 @@ button.hpl{font-family:inherit;}
 .bsm{padding:7px 14px;font-size:.76rem;}
 
 /* NAV — siyah tam genişlik şerit */
-:root{--nav-h:68px;}
 nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500;background:#0a0a0a;border-bottom:1px solid rgba(255,255,255,.08);}
 .nav-inner{position:relative;height:var(--nav-h);min-height:64px;max-height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(16px,4vw,40px);gap:16px;}
 .nav-brand-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;justify-content:center;text-decoration:none;line-height:0;pointer-events:auto;}
@@ -75,9 +75,8 @@ nav.tl-nav .brand-mark.brand-mark-white{filter:invert(1)!important;-webkit-filte
 .brand-logo{display:flex;align-items:center;flex-shrink:0;text-decoration:none;}
 .logo-img{height:36px;max-height:40px;width:auto;max-width:200px;object-fit:contain;object-position:left center;display:block;}
 .auth-logo-img{height:40px;max-height:44px;width:auto;max-width:220px;object-fit:contain;display:block;margin:0 auto 10px;}
-.footer-logo{height:32px;max-height:36px;}
+.footer-logo{height:32px;max-height:36px;margin-bottom:6px;opacity:.9;}
 .site-footer{align-items:flex-start;gap:16px;}
-.footer-logo{margin-bottom:6px;opacity:.9;}
 .footer-legal{font-size:.78rem;margin-top:6px;}
 .footer-legal a{color:var(--b);text-decoration:none;}
 .osm-attrib{font-size:.72rem;color:var(--t3);margin-top:8px;max-width:320px;line-height:1.5;}
@@ -266,9 +265,9 @@ a.bcard{text-decoration:none;color:inherit;display:flex;flex-direction:column;}
 .ic-row:last-child{border-bottom:none;}
 .ic-lbl{color:var(--t3);}
 .ic-val{font-weight:500;}
-.dual-rat{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;}
+.dual-rat{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
 .dr{background:var(--l);border-radius:9px;padding:10px;text-align:center;}
-.dr.t{background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.18);}
+.dr.t{background:rgba(56,189,248,.12);border:2px solid rgba(56,189,248,.35);order:-1;}
 .dr-lbl{font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:3px;}
 .dr-lbl.t{color:var(--star2);}
 .dr-num{font-family:var(--fd);font-size:1.1rem;font-weight:700;color:var(--navy);}
@@ -447,7 +446,6 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
   .map-controls{flex-direction:column;align-items:stretch;}
   .map-search-inp{width:100%;min-width:0;}
   .map-controls .btn{width:100%;}
-  .tiola-grid{grid-template-columns:1fr;}
 }
 @media(max-width:480px){
   .srch-bar{flex-direction:column;align-items:stretch;border-radius:16px;padding:10px 12px;}
@@ -457,8 +455,8 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
   .filter-grid{grid-template-columns:1fr;}
 }
 
-/* Tiola extras */
-.tiola-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+/* Tiola cards + admin card surface */
+.tiola-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:14px;}
 .tiola-card{background:var(--w);border:1.5px solid var(--l2);border-radius:var(--r2);overflow:hidden;box-shadow:var(--sh);cursor:pointer;transition:transform .2s;}
 .tiola-card:hover{transform:translateY(-2px);}
 .tiola-card img{width:100%;height:180px;object-fit:cover;transform:translateZ(0);}
@@ -466,13 +464,6 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .tiola-meta{font-size:.68rem;color:var(--t3);margin-bottom:6px;}
 .tiola-stars{color:var(--star);font-size:.8rem;}
 .tiola-txt{font-size:.82rem;color:var(--t2);line-height:1.6;margin-top:6px;}
-.status-pending{color:#b45309;font-size:.65rem;font-weight:600;}
-.status-approved{color:var(--ok);font-size:.65rem;font-weight:600;}
-.status-rejected{color:#ef4444;font-size:.65rem;font-weight:600;}
-.photo-preview{max-width:120px;max-height:80px;border-radius:8px;margin-top:8px;object-fit:cover;}
-.dual-rat{display:flex;flex-direction:column;gap:7px;}
-.dr.t{background:rgba(56,189,248,.12);border:2px solid rgba(56,189,248,.35);order:-1;}
-.admin-wrap{max-width:900px;margin:80px auto 40px;padding:0 20px;}
 .admin-card{background:var(--w);border:1.5px solid var(--l2);border-radius:var(--r2);padding:16px;margin-bottom:12px;}
 
 /* Tur planlayıcı */
@@ -756,7 +747,6 @@ body.admin-session #loginScreen{display:none;}
 html{overflow-x:clip;}
 img,picture,video{max-width:100%;}
 img,video{height:auto;}
-.tiola-grid{grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));}
 .discover-city-grid{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr));}
 html.nav-open,body.nav-open{overflow:hidden;overscroll-behavior:none;}
 

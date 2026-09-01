@@ -11,7 +11,6 @@ const { validateJwtSecret } = require('./auth');
 const { validateProductionEnv } = require('./lib/production-env');
 const { apiLimiter, adminLimiter } = require('./middleware/rateLimit');
 const { clear: clearCache } = require('./lib/cache');
-const { authRequired, requireRole } = require('./middleware/auth');
 const { csrfProtection, csrfTokenHandler, issueCsrfCookie } = require('./middleware/csrf');
 const { uploadsStaticHeaders } = require('./middleware/uploads-static');
 const { uploadsSrcsetFallback } = require('./middleware/uploads-srcset');
@@ -188,25 +187,6 @@ app.get('/api/config/public', (req, res) => {
     ...publicRecaptchaConfig(),
   });
 });
-
-/** Dev-only: write processed navbar logo PNG from base64 payload (agent). */
-if (!isProd) {
-  app.post('/api/dev/write-logo-transparent', express.json({ limit: '5mb' }), (req, res) => {
-    const b64 = req.body?.b64;
-    if (!b64 || typeof b64 !== 'string') {
-      return res.status(400).json({ error: 'missing b64' });
-    }
-    const out = path.join(__dirname, '..', 'public', 'images', 'logo-transparent.png');
-    const buf = Buffer.from(b64, 'base64');
-    fs.mkdirSync(path.dirname(out), { recursive: true });
-    fs.writeFileSync(out, buf);
-    res.json({ ok: true, size: buf.length, path: 'public/images/logo-transparent.png' });
-  });
-} else {
-  app.post('/api/dev/write-logo-transparent', authRequired, requireRole('admin'), (_req, res) => {
-    res.status(404).json({ error: 'Not found' });
-  });
-}
 
 app.get('/', (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'index.html');

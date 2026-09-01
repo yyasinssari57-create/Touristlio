@@ -55,6 +55,19 @@
     return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '[::1]' || host === '::1';
   }
 
+  function silenceProdConsole() {
+    if (isDev()) return;
+    try {
+      var c = window.console;
+      if (!c) return;
+      var noop = function () {};
+      c.log = noop;
+      c.debug = noop;
+      c.info = noop;
+    } catch { /* ignore */ }
+  }
+  silenceProdConsole();
+
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;')

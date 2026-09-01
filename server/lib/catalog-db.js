@@ -1,5 +1,6 @@
 const { sanitizeName, sanitizeText } = require('./sanitize');
 const { getCityImage } = require('./city-images');
+const { slugify } = require('./slugify');
 
 /** Lazy db access — avoids circular require with db.js → migrations → catalog-db */
 function getDb(externalDb) {
@@ -9,23 +10,6 @@ function getDb(externalDb) {
     throw new Error('Veritabanı henüz hazır değil');
   }
   return db;
-}
-
-function slugify(value) {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ı/g, 'i')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'item';
-}
-
-function normalizeCategorySlug(value) {
-  const raw = sanitizeText(value, 60);
-  if (!raw) return '';
-  const fromSlugify = slugify(raw);
-  return (fromSlugify || raw.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_|_$/g, ''));
 }
 
 /** Category codes: English lowercase slug (historical, museum) — not the Turkish display name. */

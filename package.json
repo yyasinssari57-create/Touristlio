@@ -34,6 +34,7 @@
     "verify:a11y": "node server/scripts/verify-accessibility.js",
     "verify:skeleton": "node server/scripts/verify-skeleton.js",
     "verify:links": "node server/scripts/verify-broken-links.js",
+    "verify:cleanup": "node server/scripts/verify-code-cleanup.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",

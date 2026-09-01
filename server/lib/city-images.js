@@ -1,12 +1,4 @@
-function slugify(value) {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ı/g, 'i')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'item';
-}
+const { slugify } = require('./slugify');
 
 const GENERIC_CITY_IMAGE = 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=600&q=80';
 

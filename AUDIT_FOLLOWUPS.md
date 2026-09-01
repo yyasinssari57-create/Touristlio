@@ -347,9 +347,26 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `/?place=id` yer imleri hâlâ açılır (geriye dönük); yeni link üretilmez.
 - Admin kılavuz `#guide-*` çapaları aynı sayfada; ayrı 404 değil.
 - Canlıda eski Google taramalı URL'ler 404'e düşer — Search Console'da yeniden gönder.
-- [DÜŞÜK-5] henüz başlamadı.
+- [DÜŞÜK-5] tamamlandı (bu PR).
 
-- [DÜŞÜK-5] Kod Temizliği
+## DÜŞÜK-5 (kod temizliği)
+
+- Tamamlandı: Express + statik HTML/JS (Next.js yok). Google puanı yok.
+  - Production'da `console.log` / `debug` / `info` no-op (`error-boundary.js` `silenceProdConsole`; `data-tl-dev=0`). `console.error` duruyor.
+  - Kullanılmayan tek-seferlik dosyalar silindi: `server/extract-css.js`, `server/extract-places.js`, `server/build-html.js`, `_audit_git_out.js`, `public/images/_make-transparent.html` + `/api/dev/write-logo-transparent`.
+  - CSS: tek `:root` (`--nav-h` birleşti), tek `.dual-rat` / `.dr.t`, ölü `.admin-wrap` / `.status-*` / `.photo-preview` kalktı; Inter font tek `@import`.
+  - Ölü `normalizeCategorySlug` kopyası silindi; `slugify` `server/lib/slugify.js`.
+  - `package.json` bağımlılıklarının hepsi kullanılıyor — silinecek paket yok.
+  - `npm run verify:cleanup`
+
+### Leftover
+- İstemci `escapeHtml` hâlâ birden fazla dosyada (ekstra script etiketi istemedik).
+- `console.warn` production'da açık (harita / kategori meta).
+- CLI `verify:*` / seed script'leri `console.log` kullanmaya devam eder (tarayıcı değil).
+- `inline-overrides.css` büyük; yalnızca `style.css` içindeki tekrarlar birleştirildi.
+- `pino-pretty` yalnızca development transport.
+- [DÜŞÜK-6] henüz başlamadı.
+
 - [DÜŞÜK-6] Analitik ve İzleme
 
 ## Genel
