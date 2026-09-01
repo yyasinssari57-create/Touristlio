@@ -21,6 +21,16 @@ const HTML_PAGE_ROUTES = {
   '/blog': 'index.html',
   '/gezilecek-yerler': 'index.html',
   '/404': '404.html',
+  '/about': 'legal/about.html',
+  '/contact': 'legal/contact.html',
+  '/privacy': 'legal/privacy.html',
+  '/terms': 'legal/terms.html',
+  '/kvkk': 'legal/kvkk.html',
+  '/legal/about': 'legal/about.html',
+  '/legal/contact': 'legal/contact.html',
+  '/legal/privacy': 'legal/privacy.html',
+  '/legal/kvkk': 'legal/kvkk.html',
+  '/legal/terms': 'legal/terms.html',
 };
 
 function injectAppVersion(html) {

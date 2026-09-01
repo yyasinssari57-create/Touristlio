@@ -969,6 +969,10 @@ body.admin-body:not(.admin-session) {
   justify-content: center;
   margin-top: 16px;
 }
+.error-legal {
+  margin-top: 18px;
+  text-align: center;
+}
 .tl-error-detail {
   display: block;
   text-align: left;

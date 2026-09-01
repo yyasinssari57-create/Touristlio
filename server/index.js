@@ -244,7 +244,7 @@ app.get('/gezilecek-yerler', (_req, res) => {
   sendPublicHtml(res, PUBLIC_DIR, 'index.html');
 });
 
-app.get('/places', (_req, res) => {
+app.get(['/places', '/places/'], (_req, res) => {
   res.redirect(302, '/gezilecek-yerler');
 });
 
@@ -312,11 +312,8 @@ if (!isProd) {
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
-  if (req.path.match(/\.(html|xml|txt|css|js|png|jpg|svg|webp|ico)$/)) {
-    res.status(404);
-    return sendPublicHtml(res, PUBLIC_DIR, '404.html');
-  }
-  sendPublicHtml(res, PUBLIC_DIR, 'index.html');
+  res.status(404);
+  return sendPublicHtml(res, PUBLIC_DIR, '404.html');
 });
 
 app.use((err, req, res, _next) => {

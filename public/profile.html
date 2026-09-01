@@ -210,6 +210,12 @@ function safeUrl(url) {
 
 }
 
+function placeHref(p) {
+  const key = (p && (p.slug || p.placeSlug)) || (p && (p.placeId || p.id));
+  if (!key) return '/gezilecek-yerler';
+  return '/places/' + encodeURIComponent(key);
+}
+
 function apiErrorMessage(data) {
   return window.TL_AUTH.parseError(data, t('requestFailed'));
 }
@@ -292,13 +298,13 @@ function renderTiolas(tiolas) {
   list.innerHTML = items.map((ti) => {
     const place = ti.placeName ? escapeHtml(ti.placeName) : '';
     const stars = ti.stars ? '★'.repeat(Number(ti.stars) || 0) : '';
-    return `<div class="pc" ${ti.placeId ? `onclick="location.href='/?place=${ti.placeId}'"` : ''}>
+    return `<a class="pc" ${ti.placeId ? `href="${placeHref(ti)}"` : ''}>
       <div class="pc-body">
         <div class="pc-name">${place || 'Tiola'}</div>
         <div style="font-size:.72rem;color:var(--gold)">${stars}</div>
         <div style="font-size:.78rem;color:var(--t2);margin-top:4px">${escapeHtml((ti.text || '').slice(0, 160))}</div>
       </div>
-    </div>`;
+    </a>`;
   }).join('');
 }
 
@@ -320,10 +326,10 @@ function renderVisited(places, countries) {
     return;
   }
   if (empty) empty.style.display = 'none';
-  grid.innerHTML = list.map((p) => `<div class="pc" onclick="location.href='/?place=${p.id}'">
+  grid.innerHTML = list.map((p) => `<a class="pc" href="${placeHref(p)}">
     <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div>
     <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${escapeHtml(p.visitedAt || p.country || '')}</div></div>
-  </div>`).join('');
+  </a>`).join('');
 }
 
 function renderProfileSettings(u) {
@@ -450,7 +456,7 @@ async function init(){
 
       se.style.display='none';
 
-      sg.innerHTML = savedPlaces.map(p=>`<div class="pc" onclick="location.href='/?place=${p.id}'"><div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></div>`).join('');
+      sg.innerHTML = savedPlaces.map(p=>`<a class="pc" href="${placeHref(p)}"><div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></a>`).join('');
 
     }
 

@@ -161,11 +161,11 @@ async function runSearch(resetPage) {
     document.getElementById('searchMeta').textContent = `${total} ${t('placesFound')}${p.q ? ': ' + p.q : ''}`;
     if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     const html = (payload.places || []).map(pl => `
-      <a class="pc" href="/?place=${pl.id}">
+      <a class="pc" href="/places/${encodeURIComponent(pl.slug || pl.id)}">
         <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(pl.imageUrl, { alt: pl.name, kind: 'card' }) : `<img src="${pl.imageUrl}" alt="${pl.name}" loading="lazy"/>`}</div>
         <div class="pc-body"><div class="pc-loc">📍 ${pl.location}</div><div class="pc-name">${pl.name}</div></div>
       </a>`).join('');
-    grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/#explore/map" class="btn bo bsm" style="margin-top:12px;display:inline-flex">${t('mapExploreBtn')}</a></div>`;
+    grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/explore#explore/map" class="btn bo bsm" style="margin-top:12px;display:inline-flex">${t('mapExploreBtn')}</a></div>`;
     renderSearchPager();
     updateUrl();
   } catch (e) {

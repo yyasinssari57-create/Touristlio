@@ -51,7 +51,7 @@ function loadPlaceUrls(base) {
       ORDER BY id
     `).all();
     return rows.map((p) => ({
-      loc: p.slug ? `${base}/places/${encodeURIComponent(p.slug)}` : `${base}/?place=${p.id}`,
+      loc: p.slug ? `${base}/places/${encodeURIComponent(p.slug)}` : `${base}/places/${p.id}`,
       priority: '0.7',
       changefreq: 'weekly',
     }));

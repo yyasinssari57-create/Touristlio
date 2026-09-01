@@ -331,9 +331,24 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Admin panel kendi `setBtnLoading` metnini kullanır; kamu skeleton.js'e bağlanmadı.
 - Harita pin listesi skeleton değil (kart grid değil).
 - Canlı yavaş ağda Yasin tarayıcıda shimmer/spinner'ı doğrulamalı.
-- [DÜŞÜK-4] henüz başlamadı.
+- [DÜŞÜK-4] tamamlandı (bu PR).
 
-- [DÜŞÜK-4] Kırık Linkleri Düzelt
+## DÜŞÜK-4 (kırık linkler)
+
+- Tamamlandı: Express + statik HTML/JS (Next.js yok). Google puanı yok.
+  - Footer yasal linkleri tüm SPA sekmelerinde görünür (Keşfet dışına alındı).
+  - Eski `/?place=id` kart linkleri `/places/:slug` (veya id). `/?place=` okuma hâlâ çalışır.
+  - `href="#"` ölü çapa kaldırıldı (şifremi unuttum buton; Tiola giriş `/login`).
+  - Eski kısa yollar: `/about` `/contact` `/privacy` `/terms` `/kvkk` ve `/legal/about` (uzantısız).
+  - Bilinmeyen path artık yumuşak 200 SPA değil, özel **404** + "Ana sayfaya dön".
+  - `npm run verify:links`
+
+### Leftover
+- `/?place=id` yer imleri hâlâ açılır (geriye dönük); yeni link üretilmez.
+- Admin kılavuz `#guide-*` çapaları aynı sayfada; ayrı 404 değil.
+- Canlıda eski Google taramalı URL'ler 404'e düşer — Search Console'da yeniden gönder.
+- [DÜŞÜK-5] henüz başlamadı.
+
 - [DÜŞÜK-5] Kod Temizliği
 - [DÜŞÜK-6] Analitik ve İzleme
 

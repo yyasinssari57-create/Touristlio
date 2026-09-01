@@ -2206,7 +2206,7 @@ function updateRevForm() {
     if (!user) {
       av.textContent = '?'; nm.textContent = t('notLoggedIn'); tp.textContent = '';
       if (me) me.style.display = 'none';
-      nt.innerHTML = `<a href="#" onclick="openAuth();return false;">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
+      nt.innerHTML = `<a href="/login" onclick="openAuth();return false;">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
       setTiolaFormActive(false);
     } else {
       window.TL_AVATARS?.applyToElement(av, user);
@@ -2931,7 +2931,7 @@ function buildAuthForm(m) {
        <p id="authFormError" class="auth-inline-error" hidden></p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
-       <p class="auth-page-link" style="margin-top:10px"><a href="#" onclick="doForgotPassword();return false">${t('forgotPassword')}</a></p>`
+       <p class="auth-page-link" style="margin-top:10px"><button type="button" class="link-btn" onclick="doForgotPassword()">${t('forgotPassword')}</button></p>`
     : `<label class="sr-only" for="regName">${t('authName')}</label>
        <input class="ain" id="regName" type="text" placeholder="${t('authName')}" autocomplete="name"/>
        <label class="sr-only" for="regEmail">${t('authEmail')}</label>
