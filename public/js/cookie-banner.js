@@ -55,6 +55,7 @@ window.TL_COOKIE = (function () {
     bar.id = 'cookieBanner';
     bar.className = 'cookie-banner';
     bar.setAttribute('role', 'dialog');
+    bar.setAttribute('aria-label', t(lang, 'cookieMsg'));
     bar.setAttribute('aria-live', 'polite');
     bar.innerHTML = `
         <p>${t(lang, 'cookieMsg')}</p>

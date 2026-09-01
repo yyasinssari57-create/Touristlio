@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/css/inline-overrides.css?v=__APP_VERSION__"/>
 </head>
 <body>
+<a href="#main-content" class="skip-link" data-i18n="skipLink">İçeriğe geç</a>
 <nav class="tl-nav">
   <div class="nav-inner">
     <div class="nav-spacer" aria-hidden="true"></div>
@@ -17,19 +18,21 @@
       <h1 class="brand-name">Tourist<span class="brand-accent">lio</span></h1>
     </a>
     <a href="/" class="nav-brand-center" aria-label="Touristlio">
-      <img src="/images/logo-round.webp?v=6" alt="" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" />
+      <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" />
     </a>
     <div class="nav-r">
-      <div class="lsw"><div class="lb" onclick="setSearchLang('en',this)">EN</div><div class="lb on" onclick="setSearchLang('tr',this)">TR</div></div>
+      <div class="lsw" role="group" data-i18n-aria="langSwitchAria" aria-label="Dil"><button type="button" class="lb" onclick="setSearchLang('en',this)" data-i18n-aria="langEnAria" aria-label="English" aria-pressed="false">EN</button><button type="button" class="lb on" onclick="setSearchLang('tr',this)" data-i18n-aria="langTrAria" aria-label="Türkçe" aria-pressed="true">TR</button></div>
       <a href="/" class="btn nav-btn-ghost" data-i18n="explore">Keşfet</a>
     </div>
   </div>
 </nav>
 
-<main class="search-page">
+<main class="search-page" id="main-content" tabindex="-1">
   <h1 class="search-page-title" data-i18n="searchPageTitle">Destinasyon Ara</h1>
   <form class="search-page-form" id="searchForm" role="search" autocomplete="off" data-error-boundary="form">
+    <label class="sr-only" for="searchQ" data-i18n="searchAria">Destinasyon ara</label>
     <input type="search" id="searchQ" name="q" data-i18n-placeholder="searchPh" placeholder="İstanbul, Paris..." autocomplete="one-time-code" autocapitalize="off" spellcheck="false" aria-label="Arama"/>
+    <label class="sr-only" for="searchCat" data-i18n="searchCatAria">Kategori</label>
     <select id="searchCat" aria-label="Kategori">
       <option value="all" data-i18n="all">Tümü</option>
       <option value="landmark">🏛️ Tarihi</option>
@@ -37,6 +40,7 @@
       <option value="nature">⛰️ Doğa</option>
       <option value="restaurant">🍽️ Restoran</option>
     </select>
+    <label class="sr-only" for="searchSort" data-i18n="sortAria">Sıralama</label>
     <select id="searchSort" aria-label="Sıralama">
       <option value="popularity" data-i18n="sortPopularity">En Popüler</option>
       <option value="rating" data-i18n="sortTiola">En Yüksek Tiola</option>
@@ -56,6 +60,7 @@
 </main>
 
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/explore-query.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
@@ -74,8 +79,12 @@ function t(k) { return window.TL_I18N.t(lang, k); }
 function setSearchLang(l, btn) {
   lang = l;
   localStorage.setItem('tl_lang', l);
-  document.querySelectorAll('.lb').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.lb').forEach(b => {
+    b.classList.remove('on');
+    b.setAttribute('aria-pressed', 'false');
+  });
   btn.classList.add('on');
+  btn.setAttribute('aria-pressed', 'true');
   window.TL_I18N.apply(l);
   runSearch(false);
 }

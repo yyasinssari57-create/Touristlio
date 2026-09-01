@@ -9,7 +9,8 @@
 <link rel="stylesheet" href="/css/inline-overrides.css?v=__APP_VERSION__"/>
 </head>
 <body class="error-page">
-<div class="error-box">
+<a href="#main-content" class="skip-link" data-i18n="skipLink">İçeriğe geç</a>
+<div class="error-box" id="main-content" tabindex="-1">
   <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="brand-mark" loading="lazy" decoding="async" />
   <h1>404</h1>
   <p data-i18n="err404">Aradığınız sayfa bulunamadı.</p>
@@ -19,6 +20,7 @@
   </div>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script>window.TL_I18N.apply(localStorage.getItem('tl_lang')||'tr');</script>
 </body>
 </html>

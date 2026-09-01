@@ -300,9 +300,26 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Chip’lerde 48px isabet komşu pill’lerle örtüşebilir (görsel boyut bilinçli korunuyor).
 - Admin hamburger yok; topnav yatay kaydırılır.
 - Canlı 320px cihaz testi Yasin’in telefonunda doğrulanmalı.
-- [DÜŞÜK-2] henüz başlamadı.
+- [DÜŞÜK-2] tamamlandı (bu PR).
 
-- [DÜŞÜK-2] Erişilebilirlik (Accessibility)
+## DÜŞÜK-2 (erişilebilirlik)
+
+- Tamamlandı: Express + statik HTML/JS (Next.js yok). Google puanı yok.
+  - Tüm kamu HTML görsellerinde açıklayıcı `alt` (logo Touristlio; kart/harita/keşfet mekân adı; avatar ad).
+  - Form input'larına `<label>` (`for` veya saran label). Görünür tasarımı bozmamak için çoğu `.sr-only`; iletişim ve filtre etiketleri zaten görünür. Eksik kalanlar `a11y.js` ile eklenir.
+  - İkon butonları `aria-label`: kapat, menü, favori, yıldız, dil.
+  - Skip link "İçeriğe geç" / "Skip to content"; Tab ile görünür `:focus-visible` outline.
+  - Tıklanabilir sekmeler/chip/pill'ler `<button>`; kalan `onclick` div'ler klavye (Enter/Space).
+  - `--t3` `#8ba8c0` → `#5a7894` (küçük metin AA ~4.6:1).
+- `npm run verify:a11y`
+
+### Leftover
+- Leaflet vendor PNG alt'ları dokunulmadı (harita kontrol ikonları).
+- Admin tablolarında bazı dinamik hücre görselleri jenerik alt kullanır.
+- Skip link odaklandığında navbar'ın üstünde; ilk Tab'da görünür.
+- Canlı ekran okuyucu testi Yasin'de doğrulanmalı.
+- [DÜŞÜK-3] henüz başlamadı.
+
 - [DÜŞÜK-3] Loading States — Skeleton Loader
 - [DÜŞÜK-4] Kırık Linkleri Düzelt
 - [DÜŞÜK-5] Kod Temizliği

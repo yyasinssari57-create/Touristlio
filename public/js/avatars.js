@@ -228,7 +228,7 @@
     const d = userAvatarData(user);
     const cls = ['tl-avatar', extraClass].filter(Boolean).join(' ');
     if (d.type === 'photo') {
-      return `<div class="${cls}" style="background:${d.color}">${window.TL_IMG?.tag ? window.TL_IMG.tag(d.url, { className: 'tl-avatar-img', kind: 'avatar' }) : `<img src="${escapeHtml(d.url)}" alt="" class="tl-avatar-img" loading="lazy" decoding="async"/>`}</div>`;
+      return `<div class="${cls}" style="background:${d.color}">${window.TL_IMG?.tag ? window.TL_IMG.tag(d.url, { alt: user && user.name ? user.name : 'Avatar', className: 'tl-avatar-img', kind: 'avatar' }) : `<img src="${escapeHtml(d.url)}" alt="${escapeHtml((user && user.name) || 'Avatar')}" class="tl-avatar-img" loading="lazy" decoding="async"/>`}</div>`;
     }
     if (d.type === 'preset') {
       const animalCls = d.isAnimal ? ' tl-avatar-animal-preset' : '';

@@ -78,6 +78,7 @@
     const o = opts || {};
     const src = safeUrl(url);
     el.src = src;
+    if (o.alt != null) el.alt = o.alt;
     el.loading = o.eager ? 'eager' : 'lazy';
     el.decoding = 'async';
     const ss = o.srcset === false ? '' : srcset(src);

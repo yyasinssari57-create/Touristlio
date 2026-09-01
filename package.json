@@ -31,6 +31,7 @@
     "verify:blog": "node server/scripts/verify-blog-pages.js",
     "verify:user-system": "node server/scripts/verify-user-system.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",
+    "verify:a11y": "node server/scripts/verify-accessibility.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",

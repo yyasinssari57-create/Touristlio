@@ -10,9 +10,10 @@
 <link rel="stylesheet" href="/css/inline-overrides.css?v=__APP_VERSION__"/>
 </head>
 <body class="admin-body">
-<div id="loginScreen" class="admin-login" role="main" aria-labelledby="loginTitle">
+<a href="#loginScreen" class="skip-link">İçeriğe geç</a>
+<div id="loginScreen" class="admin-login" role="main" aria-labelledby="loginTitle" tabindex="-1">
   <header class="admin-login-header">
-    <img src="/images/logo-round.webp?v=6" alt="" class="admin-login-logo" width="56" height="56" onerror="this.onerror=null;this.src='/images/icon.svg'" loading="lazy" decoding="async" />
+    <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="admin-login-logo" width="56" height="56" onerror="this.onerror=null;this.src='/images/icon.svg'" loading="lazy" decoding="async" />
     <p class="admin-login-brand" aria-hidden="true">Tourist<span class="brand-accent">lio</span></p>
     <h1 id="loginTitle" class="admin-login-subtitle">Admin</h1>
   </header>
@@ -28,7 +29,7 @@
 <div id="adminPanel">
   <nav class="tl-nav" aria-label="Üst menü"><div class="nav-inner">
     <a href="/admin" class="brand admin-nav-stay"><span class="brand-text">Tourist<span class="brand-accent">lio</span> Admin</span></a>
-    <a href="/admin" class="nav-brand-center admin-nav-stay" aria-label="Touristlio admin"><img src="/images/icon-white.svg" alt="" class="brand-mark brand-mark-white" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon.svg'" loading="lazy" decoding="async" /></a>
+    <a href="/admin" class="nav-brand-center admin-nav-stay" aria-label="Touristlio admin"><img src="/images/icon-white.svg" alt="Touristlio" class="brand-mark brand-mark-white" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon.svg'" loading="lazy" decoding="async" /></a>
     <div class="nav-r"><span id="admUser"></span>
     <a href="/" class="btn nav-btn-ghost nav-link-plain">Site</a>
     <button class="btn nav-btn-ghost" onclick="adminLogout()" aria-label="Çıkış yap">Çıkış</button></div>
@@ -121,6 +122,7 @@
         <div class="admin-card" id="placesQualityBar" style="margin-bottom:12px;display:none" aria-live="polite"></div>
         <div class="admin-card">
           <div class="admin-form" style="margin-bottom:12px">
+            <label class="sr-only" for="placeSearch">Yer ara</label>
             <label class="sr-only" for="placeSearch">Yer ara</label>
             <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" oninput="debounceLoadPlaces()"/>
             <button class="btn bo bsm" type="button" onclick="exportPlaces('json')">Dışa aktar (JSON)</button>
@@ -1055,6 +1057,7 @@
   <img id="adminLightboxImg" src="" alt="Tiola fotoğrafı" loading="lazy" decoding="async" />
 </div>
 
+<script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/avatars.js?v=__APP_VERSION__"></script>
 <script src="/js/place-crop.js?v=__APP_VERSION__"></script>
@@ -2198,7 +2201,7 @@ function userDetailAvatar(u) {
 function profileChangePreview(c) {
   const p = c.payload || {};
   if (c.changeType === 'avatar_photo' && p.avatarUrl) {
-    return `<img src="${escapeHtml(p.avatarUrl)}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover" loading="lazy" decoding="async" />`;
+    return `<img src="${escapeHtml(p.avatarUrl)}" alt="${escapeHtml(p.name || 'Avatar')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" loading="lazy" decoding="async" />`;
   }
   if (c.changeType === 'avatar_preset') {
     return `<span style="font-size:.82rem;color:var(--t2)">${escapeHtml(p.avatarPreset || '')}</span>`;
@@ -2522,7 +2525,7 @@ async function loadProfilePendingList() {
     }
     el.innerHTML = rows.map((r) => {
       const preview = r.changeType === 'avatar_photo' && r.payload?.avatarUrl
-        ? `<img src="${escapeHtml(r.payload.avatarUrl)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:50%" loading="lazy" decoding="async" />`
+        ? `<img src="${escapeHtml(r.payload.avatarUrl)}" alt="Avatar" style="width:48px;height:48px;object-fit:cover;border-radius:50%" loading="lazy" decoding="async" />`
         : r.changeType === 'avatar_preset'
           ? `<span style="font-size:1.4rem">${escapeHtml(r.payload?.avatarPreset || '')}</span>`
           : escapeHtml(JSON.stringify(r.payload || {}));
@@ -3550,7 +3553,7 @@ async function loadCitiesList() {
     wrap.innerHTML = `<table class="admin-table" aria-label="Şehir listesi">
       <thead><tr><th>Görsel</th><th>ID</th><th>Şehir</th><th>Ülke</th><th>Yer sayısı</th><th>Durum</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((c) => `<tr>
-        <td>${c.imageUrl ? `<img src="${escapeHtml(c.imageUrl)}" alt="" style="width:56px;height:32px;object-fit:cover;border-radius:4px" loading="lazy" decoding="async" />` : '—'}</td>
+        <td>${c.imageUrl ? `<img src="${escapeHtml(c.imageUrl)}" alt="${escapeHtml(c.name || 'Şehir')}" style="width:56px;height:32px;object-fit:cover;border-radius:4px" loading="lazy" decoding="async" />` : '—'}</td>
         <td>${c.id}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.country)}</td>
         <td>${c.placeCount}</td><td>${c.isActive ? 'Aktif' : 'Pasif'}</td>
         <td class="admin-actions">
@@ -3677,7 +3680,7 @@ async function loadCategoriesList() {
     wrap.innerHTML = `<table class="admin-table" aria-label="Kategori listesi">
       <thead><tr><th>Görsel</th><th>Kod</th><th>TR</th><th>EN</th><th>Durum</th><th>Yer</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((c) => `<tr${c.isActive ? '' : ' style="opacity:.65"'}>
-        <td>${c.imageUrl ? `<img src="${escapeHtml(c.imageUrl)}" alt="" style="width:56px;height:32px;object-fit:cover;border-radius:4px" loading="lazy" decoding="async" />` : '—'}</td>
+        <td>${c.imageUrl ? `<img src="${escapeHtml(c.imageUrl)}" alt="${escapeHtml(c.nameTr || c.slug || 'Kategori')}" style="width:56px;height:32px;object-fit:cover;border-radius:4px" loading="lazy" decoding="async" />` : '—'}</td>
         <td>${escapeHtml(c.icon)} ${escapeHtml(c.slug)}</td>
         <td>${escapeHtml(c.nameTr)}</td><td>${escapeHtml(c.nameEn)}</td>
         <td>${c.isActive ? '<span style="color:#15803d">Aktif</span>' : '<span style="color:#b45309">Pasif</span>'}</td>
@@ -4501,7 +4504,7 @@ function renderTiolaItem(item, showBulk) {
     <div class="admin-card admin-item">
       ${showBulk ? `<input type="checkbox" class="adm-mod-check" ${checked ? 'checked' : ''} onchange="toggleModSelect(${item.id}, this.checked)" aria-label="Seç"/>` : ''}
       <div class="adm-tiola-main">
-        ${item.photoUrl ? `<img src="${escapeHtml(item.photoUrl)}" alt="" class="adm-tiola-thumb" role="button" tabindex="0" onclick="openAdminLightbox('${escapeHtml(item.photoUrl)}')" loading="lazy" decoding="async" />` : ''}
+        ${item.photoUrl ? `<img src="${escapeHtml(item.photoUrl)}" alt="Tiola fotoğrafı" class="adm-tiola-thumb" role="button" tabindex="0" onclick="openAdminLightbox('${escapeHtml(item.photoUrl)}')" loading="lazy" decoding="async" />` : ''}
         <div class="adm-tiola-body">
           <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}${item.status === 'spam' ? ' · <span class="adm-spam-badge">Spam</span>' : ''}</div>
           ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}

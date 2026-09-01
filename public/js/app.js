@@ -443,17 +443,17 @@ async function loadCategoryMeta() {
 
 function buildExploreFiltersHtml() {
   const allOn = activeFilterGroup === 'all' && activeCat === 'all';
-  let html = `<div class="fpill${allOn ? ' on' : ''}" data-kind="all" data-filter="all" onclick="setExploreFilter('all',this)">${t('all')}</div>`;
+  let html = `<button type="button" class="fpill${allOn ? ' on' : ''}" data-kind="all" data-filter="all" onclick="setExploreFilter('all',this)">${t('all')}</button>`;
   (categoryMeta.groups || []).forEach((g) => {
     const label = t(GROUP_I18N[g] || g);
     const on = activeFilterGroup === g ? ' on' : '';
-    html += `<div class="fpill fpill-group${on}" data-kind="group" data-filter="${escapeHtml(g)}" onclick="setExploreFilter('group:${escapeHtml(g)}',this)">${escapeHtml(label)}</div>`;
+    html += `<button type="button" class="fpill fpill-group${on}" data-kind="group" data-filter="${escapeHtml(g)}" onclick="setExploreFilter('group:${escapeHtml(g)}',this)">${escapeHtml(label)}</button>`;
   });
   (categoryMeta.categories || []).forEach((c) => {
     const label = lang === 'en' ? c.nameEn : c.nameTr;
     const icon = c.icon ? `${c.icon} ` : '';
     const on = activeFilterGroup === 'all' && activeCat === c.slug ? ' on' : '';
-    html += `<div class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" onclick="setExploreFilter('cat:${escapeHtml(c.slug)}',this)">${icon}${escapeHtml(label)}</div>`;
+    html += `<button type="button" class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" onclick="setExploreFilter('cat:${escapeHtml(c.slug)}',this)">${icon}${escapeHtml(label)}</button>`;
   });
   return html;
 }
@@ -946,12 +946,12 @@ function renderGrid(list, append = false) {
     }
   }
   const html = list.map((p) => `
-    <div class="pc" onclick="openDetail(${p.id})">
+    <div class="pc" tabindex="0" role="link" onclick="openDetail(${p.id})">
       <div class="pc-img">
         ${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
         <div class="pc-badge">${catLabel(p.category)}</div>
         ${p.isLocal ? `<div class="pc-local">${t('localPick')}</div>` : ''}
-        <div class="pc-save" onclick="event.stopPropagation();toggleSave(${p.id},this)">${savedIds.has(p.id) ? '❤️' : '🤍'}</div>
+        <button type="button" class="pc-save" aria-label="${savedIds.has(p.id) ? t('unsaveAria') : t('saveAria')}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" onclick="event.stopPropagation();toggleSave(${p.id},this)">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
       </div>
       <div class="pc-body">
         <div class="pc-loc">📍 ${escapeHtml(p.location)}</div>
@@ -1274,8 +1274,8 @@ function onSearch(val) {
         drop.innerHTML = res.map((p) => {
           const s = formatTiolaScore(p);
           return `
-          <div class="sd-item" onmousedown="pickSearch(${p.id})">
-            ${responsiveImg(placeImg(p), { className: 'sd-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
+          <div class="sd-item" tabindex="0" role="option" onmousedown="pickSearch(${p.id})" onclick="pickSearch(${p.id})">
+            ${responsiveImg(placeImg(p), { alt: p.name, className: 'sd-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
             <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(p.location)}</div>
             <div class="sd-rat">${s.stars} ${s.num} (${s.count} ${t('tiolaCount')})</div></div>
           </div>`;
@@ -1567,9 +1567,14 @@ async function showMainTab(tab, skipRoute) {
   if (!skipRoute) window.TL_LOADER?.show();
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
-  document.querySelectorAll('.ntab').forEach((n) => n.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach((n) => {
+    n.classList.remove('on');
+    n.setAttribute('aria-selected', 'false');
+  });
   const navTab = tab === 'detail' ? prevTab : tab;
-  document.getElementById('nt-' + navTab)?.classList.add('on');
+  const navEl = document.getElementById('nt-' + navTab);
+  navEl?.classList.add('on');
+  navEl?.setAttribute('aria-selected', 'true');
   if (tab !== 'detail') prevTab = tab;
   if (tab !== 'detail') window.TL_ANALYTICS?.trackTab(tab);
   if (tab === 'places') setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
@@ -1610,8 +1615,14 @@ async function showExploreTab(name, el, skipRoute) {
   if (!skipRoute) window.TL_LOADER?.show();
   document.querySelectorAll('.explore-section').forEach((s) => s.classList.remove('active'));
   document.getElementById('es-' + name).classList.add('active');
-  document.querySelectorAll('.etab').forEach((e) => e.classList.remove('on'));
-  el.classList.add('on');
+  document.querySelectorAll('.etab').forEach((e) => {
+    e.classList.remove('on');
+    e.setAttribute('aria-selected', 'false');
+  });
+  if (el) {
+    el.classList.add('on');
+    el.setAttribute('aria-selected', 'true');
+  }
   const tasks = [];
   if (name === 'tiolas') tasks.push(loadTiolaFeed());
   if (name === 'categories') tasks.push(loadCategoryStats());
@@ -1689,6 +1700,7 @@ function renderTiolaCard(ti) {
             <button type="button" class="tiola-reply-toggle" onclick="toggleReplyForm(${ti.id})">${t('replyBtn')}</button>
           </div>
           <div class="tiola-reply-form" id="reply-form-${ti.id}" style="display:none" onclick="event.stopPropagation()">
+            <label class="sr-only" for="reply-txt-${ti.id}">${t('replyPlaceholder')}</label>
             <textarea class="rft tiola-reply-inp" id="reply-txt-${ti.id}" rows="2" placeholder="${t('replyPlaceholder')}"></textarea>
             <button type="button" class="btn bp bsm" onclick="submitTiolaReply(${ti.id},${ti.placeId || 'null'})">${t('sendReply')}</button>
           </div>
@@ -1995,7 +2007,7 @@ function renderDetailGallery(p) {
   }
   gal.style.display = 'flex';
   gal.innerHTML = imgs.map((src, i) =>
-    responsiveImg(src, { kind: 'thumb', className: i === 0 ? 'active' : '', extra: `data-idx="${i}"` })).join('');
+    responsiveImg(src, { alt: `${p.name || t('placePhotoAria')} ${i + 1}`, kind: 'thumb', className: i === 0 ? 'active' : '', extra: `data-idx="${i}"` })).join('');
   gal.querySelectorAll('img').forEach((thumb) => {
     thumb.onclick = () => {
       const src = imgs[Number(thumb.dataset.idx)] || thumb.getAttribute('src');
@@ -2009,8 +2021,14 @@ function renderDetailGallery(p) {
 }
 
 function showDetailTab(name, el, skipRoute) {
-  document.querySelectorAll('.dtab').forEach((t) => t.classList.remove('on'));
-  if (el) el.classList.add('on');
+  document.querySelectorAll('.dtab').forEach((t) => {
+    t.classList.remove('on');
+    t.setAttribute('aria-selected', 'false');
+  });
+  if (el) {
+    el.classList.add('on');
+    el.setAttribute('aria-selected', 'true');
+  }
   document.querySelectorAll('.dtab-panel').forEach((p) => p.classList.remove('active'));
   document.getElementById('dtab-' + name)?.classList.add('active');
   if (!skipRoute) syncRoute(true);
@@ -2029,12 +2047,12 @@ async function openDetail(id, skipRoute) {
     activePlace = p;
     updateSeoForPlace(p);
     const imgEl = document.getElementById('pdImg');
-    if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(imgEl, placeImg(p), { kind: 'detail' });
+    if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(imgEl, placeImg(p), { kind: 'detail', alt: p.name });
     else {
       imgEl.src = placeImg(p);
       imgEl.loading = 'lazy';
     }
-    imgEl.onerror = function () { imgFallback(this, p.category, p.id); };
+    imgEl.alt = p.name || t('placePhotoAria');
     renderDetailGallery(p);
     document.getElementById('pdCat').textContent = catLabel(p.category);
     document.getElementById('pdTitle').textContent = p.name;
@@ -2130,6 +2148,7 @@ async function renderRevList() {
         <button type="button" class="tiola-reply-toggle" onclick="toggleReplyForm(${r.id})">${t('replyBtn')}</button>
       </div>
       <div class="tiola-reply-form" id="reply-form-${r.id}" style="display:none" onclick="event.stopPropagation()">
+        <label class="sr-only" for="reply-txt-${r.id}">${t('replyPlaceholder')}</label>
         <textarea class="rft tiola-reply-inp" id="reply-txt-${r.id}" rows="2" placeholder="${t('replyPlaceholder')}"></textarea>
         <button type="button" class="btn bp bsm" onclick="submitTiolaReply(${r.id},${activePlace.id})">${t('sendReply')}</button>
       </div>
@@ -2186,7 +2205,7 @@ function updateRevForm() {
 function rate(n) {
   if (!user) return;
   rating = n;
-  document.querySelectorAll('#rfStars span').forEach((s, i) => s.classList.toggle('lit', i < n));
+  document.querySelectorAll('#rfStars .star-btn, #rfStars span').forEach((s, i) => s.classList.toggle('lit', i < n));
 }
 
 async function postTiola() {
@@ -2209,7 +2228,7 @@ async function postTiola() {
     document.getElementById('rfTxt').value = '';
     document.getElementById('rfPhoto').value = '';
     rating = 0;
-    document.querySelectorAll('#rfStars span').forEach((s) => s.classList.remove('lit'));
+    document.querySelectorAll('#rfStars .star-btn, #rfStars span').forEach((s) => s.classList.remove('lit'));
     updateRevForm();
   } catch (e) {
     if (!e.status) window.TL_ERROR_BOUNDARY?.capture('form', e);
@@ -2249,8 +2268,8 @@ async function loadBlogPage() {
     if (chips) {
       const allLabel = page.catAll || t('blogCatAll');
       const cats = blogMeta.categories || [];
-      chips.innerHTML = `<div class="bcat-chip ${blogCat === 'all' ? 'on' : ''}" onclick="setBlogCat('all',this)">${escapeHtml(allLabel)}</div>`
-        + cats.map((c) => `<div class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" onclick="setBlogCat('${escapeHtml(c.slug)}',this)">${escapeHtml(c.label || c.nameTr)}</div>`).join('');
+      chips.innerHTML = `<button type="button" class="bcat-chip ${blogCat === 'all' ? 'on' : ''}" onclick="setBlogCat('all',this)">${escapeHtml(allLabel)}</button>`
+        + cats.map((c) => `<button type="button" class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" onclick="setBlogCat('${escapeHtml(c.slug)}',this)">${escapeHtml(c.label || c.nameTr)}</button>`).join('');
     }
     const writeCat = document.getElementById('blogCat');
     if (writeCat && blogMeta.categories?.length) {
@@ -2403,8 +2422,12 @@ function closeBlogDetail(skipRoute) {
 }
 
 function showPTab(name, el, skipRoute) {
-  document.querySelectorAll('#pContent > .ptabs .ptab').forEach((t) => t.classList.remove('on'));
+  document.querySelectorAll('#pContent > .ptabs .ptab').forEach((t) => {
+    t.classList.remove('on');
+    t.setAttribute('aria-selected', 'false');
+  });
   el.classList.add('on');
+  el.setAttribute('aria-selected', 'true');
   document.querySelectorAll('.ptab-c').forEach((t) => t.classList.remove('active'));
   document.getElementById('ptab-' + name).classList.add('active');
   if (name === 'blogs') loadBlogPage().catch(() => {});
@@ -2509,8 +2532,8 @@ async function updateProfilePage() {
       else {
         if (ve) ve.style.display = 'none';
         vg.innerHTML = visited.places.map((p) => `
-          <div class="pc" onclick="openDetail(${p.id})">
-            <div class="pc-img">${responsiveImg(placeImg(p), { kind: 'card' })}</div>
+          <div class="pc" tabindex="0" role="link" onclick="openDetail(${p.id})">
+            <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card' })}</div>
             <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${p.visitedAt || ''}</div></div>
           </div>`).join('');
       }
@@ -2555,8 +2578,8 @@ async function updateProfilePage() {
   else {
     se.style.display = 'none';
     sg.innerHTML = saved.places.map((p) => `
-      <div class="pc" onclick="openDetail(${p.id})">
-        <div class="pc-img">${responsiveImg(placeImg(p), { kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}<div class="pc-save" onclick="event.stopPropagation();toggleSave(${p.id},this)">❤️</div></div>
+      <div class="pc" tabindex="0" role="link" onclick="openDetail(${p.id})">
+        <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}<button type="button" class="pc-save" aria-label="${t('unsaveAria')}" aria-pressed="true" onclick="event.stopPropagation();toggleSave(${p.id},this)">❤️</button></div>
         <div class="pc-body"><div class="pc-name">${p.name}</div></div>
       </div>`).join('');
   }
@@ -2743,12 +2766,20 @@ async function toggleSave(id, btn) {
     if (savedIds.has(id)) {
       await api('/places/' + id + '/save', { method: 'DELETE' });
       savedIds.delete(id);
-      if (btn) btn.textContent = '🤍';
+      if (btn) {
+        btn.textContent = '🤍';
+        btn.setAttribute('aria-label', t('saveAria'));
+        btn.setAttribute('aria-pressed', 'false');
+      }
       window.TL_TOAST?.info(t('removedFromSaved'));
     } else {
       await api('/places/' + id + '/save', { method: 'POST' });
       savedIds.add(id);
-      if (btn) btn.textContent = '❤️';
+      if (btn) {
+        btn.textContent = '❤️';
+        btn.setAttribute('aria-label', t('unsaveAria'));
+        btn.setAttribute('aria-pressed', 'true');
+      }
       window.TL_TOAST?.success(t('addedToSaved'));
     }
   } catch { /* toast from api */ }
@@ -2761,11 +2792,12 @@ function syncDetailSaveBtn() {
   const on = savedIds.has(activePlace.id);
   btn.textContent = on ? '❤️' : '🤍';
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.setAttribute('aria-label', on ? t('unsaveAria') : t('saveAria'));
 }
 
 function arcRate(n) {
   arcRating = n;
-  document.querySelectorAll('#arcStars span').forEach((s, i) => s.classList.toggle('lit', i < n));
+  document.querySelectorAll('#arcStars .star-btn, #arcStars span').forEach((s, i) => s.classList.toggle('lit', i < n));
 }
 
 async function submitArc() {
@@ -2832,8 +2864,12 @@ function closeAuth() {
 }
 
 function swTab(m, el) {
-  el.parentElement.querySelectorAll('.atab').forEach((x) => x.classList.remove('on'));
+  el.parentElement.querySelectorAll('.atab').forEach((x) => {
+    x.classList.remove('on');
+    x.setAttribute('aria-selected', 'false');
+  });
   el.classList.add('on');
+  el.setAttribute('aria-selected', 'true');
   buildAuthForm(m);
 }
 
@@ -2841,15 +2877,20 @@ function buildAuthForm(m) {
   try {
     authMode = m;
     document.getElementById('authForm').innerHTML = m === 'login'
-    ? `<input class="ain" id="loginEmail" type="email" placeholder="${t('authEmail')}"/>
-       <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}"/>
+    ? `<label class="sr-only" for="loginEmail">${t('authEmail')}</label>
+       <input class="ain" id="loginEmail" type="email" placeholder="${t('authEmail')}" autocomplete="username"/>
+       <label class="sr-only" for="loginPass">${t('authPass')}</label>
+       <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}" autocomplete="current-password"/>
        <p id="authFormError" class="auth-inline-error" hidden></p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <button class="btn bp" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
        <p class="auth-page-link" style="margin-top:10px"><a href="#" onclick="doForgotPassword();return false">${t('forgotPassword')}</a></p>`
-    : `<input class="ain" id="regName" type="text" placeholder="${t('authName')}"/>
-       <input class="ain" id="regEmail" type="email" placeholder="${t('authEmail')}"/>
-       <input class="ain" id="regPass" type="password" placeholder="${t('authPassMin')}"/>
+    : `<label class="sr-only" for="regName">${t('authName')}</label>
+       <input class="ain" id="regName" type="text" placeholder="${t('authName')}" autocomplete="name"/>
+       <label class="sr-only" for="regEmail">${t('authEmail')}</label>
+       <input class="ain" id="regEmail" type="email" placeholder="${t('authEmail')}" autocomplete="email"/>
+       <label class="sr-only" for="regPass">${t('authPassMin')}</label>
+       <input class="ain" id="regPass" type="password" placeholder="${t('authPassMin')}" autocomplete="new-password"/>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <div style="display:flex;gap:6px;align-items:flex-start;font-size:.68rem;color:var(--t2);margin-bottom:8px">
          <input type="checkbox" id="gC" style="accent-color:var(--b);margin-top:2px"/>
@@ -3072,8 +3113,12 @@ function refreshAfterLang() {
 function setLang(l, btn) {
   lang = l;
   localStorage.setItem('tl_lang', l);
-  document.querySelectorAll('.lb').forEach((b) => b.classList.remove('on'));
+  document.querySelectorAll('.lb').forEach((b) => {
+    b.classList.remove('on');
+    b.setAttribute('aria-pressed', 'false');
+  });
   btn.classList.add('on');
+  btn.setAttribute('aria-pressed', 'true');
   window.TL_I18N.apply(l);
   refreshAfterLang();
   syncRoute(true);

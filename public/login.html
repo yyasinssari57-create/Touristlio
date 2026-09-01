@@ -9,15 +9,18 @@
 <link rel="stylesheet" href="/css/inline-overrides.css?v=__APP_VERSION__"/>
 </head>
 <body class="auth-page">
+<a href="#main-content" class="skip-link" data-i18n="skipLink">İçeriğe geç</a>
 <nav class="tl-nav"><div class="nav-inner">
   <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span></span></a>
-  <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.webp?v=6" alt="" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" /></a>
+  <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.webp?v=6" alt="Touristlio" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" /></a>
 </div></nav>
-<div class="auth-page-box">
+<div class="auth-page-box" id="main-content" tabindex="-1">
   <h1 data-i18n="login">Giriş Yap</h1>
   <p class="auth-page-sub" data-i18n="authSub">Seyahatini yıldızla, kaydet ve paylaş</p>
-  <input class="ain" id="loginEmail" type="email" data-i18n-placeholder="authEmail" placeholder="E-posta"/>
-  <input class="ain" id="loginPass" type="password" data-i18n-placeholder="authPass" placeholder="Şifre"/>
+  <label class="sr-only" for="loginEmail" data-i18n="authEmail">E-posta</label>
+  <input class="ain" id="loginEmail" type="email" data-i18n-placeholder="authEmail" placeholder="E-posta" autocomplete="username"/>
+  <label class="sr-only" for="loginPass" data-i18n="authPass">Şifre</label>
+  <input class="ain" id="loginPass" type="password" data-i18n-placeholder="authPass" placeholder="Şifre" autocomplete="current-password"/>
   <p id="authFormError" class="auth-inline-error" hidden></p>
   <div class="tl-hp" aria-hidden="true">
     <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"/></label>
@@ -28,6 +31,7 @@
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script src="/js/analytics.js?v=__APP_VERSION__"></script>
 <script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>

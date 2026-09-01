@@ -9,17 +9,19 @@
 <link rel="stylesheet" href="/css/inline-overrides.css?v=__APP_VERSION__"/>
 </head>
 <body class="auth-page">
+<a href="#main-content" class="skip-link" data-i18n="skipLink">İçeriğe geç</a>
 <nav class="tl-nav"><div class="nav-inner">
   <a href="/" class="brand"><span class="brand-text">Tourist<span class="brand-accent">lio</span></span></a>
-  <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.webp?v=6" alt="" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" /></a>
+  <a href="/" class="nav-brand-center" aria-label="Touristlio"><img src="/images/logo-round.webp?v=6" alt="Touristlio" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" /></a>
 </div></nav>
-<div class="auth-page-box">
+<div class="auth-page-box" id="main-content" tabindex="-1">
   <h1 data-i18n="verifyEmailTitle">E-posta doğrulama</h1>
   <p id="verifyStatus" class="auth-page-sub" data-i18n="verifyEmailWorking">E-posta adresiniz doğrulanıyor…</p>
   <p class="auth-page-link"><a href="/login" data-i18n="login">Giriş Yap</a></p>
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script>
 const lang = localStorage.getItem('tl_lang') || 'tr';

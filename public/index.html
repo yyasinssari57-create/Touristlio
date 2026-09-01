@@ -37,6 +37,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <script src="/js/error-boundary.js?v=__APP_VERSION__"></script>
 </head>
 <body>
+<a href="#main-content" class="skip-link" data-i18n="skipLink">İçeriğe geç</a>
 
 <!-- PAGE LOADER -->
 <div id="pageLoader" class="page-loader" aria-live="polite" aria-busy="false">
@@ -51,12 +52,12 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <!-- AUTH MODAL -->
 <div class="auth-ov" id="authOv">
   <div class="auth-box">
-    <button class="aclose" onclick="closeAuth()">✕</button>
+    <button type="button" class="aclose" onclick="closeAuth()" data-i18n-aria="closeAria" aria-label="Kapat">✕</button>
     <img src="/images/logo.webp" alt="Touristlio" class="auth-logo-img" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/icon.svg'"/>
     <div class="asub" data-i18n="authSub">Seyahatini yıldızla, kaydet ve paylaş</div>
-    <div class="atabs">
-      <div class="atab on" id="tabA" onclick="swTab('login',this)" data-i18n="authTabLogin">Giriş Yap</div>
-      <div class="atab" id="tabB" onclick="swTab('reg',this)" data-i18n="authTabReg">Kayıt Ol</div>
+    <div class="atabs" role="tablist">
+      <button type="button" class="atab on" id="tabA" role="tab" aria-selected="true" onclick="swTab('login',this)" data-i18n="authTabLogin">Giriş Yap</button>
+      <button type="button" class="atab" id="tabB" role="tab" aria-selected="false" onclick="swTab('reg',this)" data-i18n="authTabReg">Kayıt Ol</button>
     </div>
     <div id="authForm" data-error-boundary="form"></div>
     <div class="asec" data-i18n="authSecure">🔒 Güvenli şifreleme · KVKK & GDPR uyumlu</div>
@@ -78,19 +79,19 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <p class="brand-slogan" data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></p>
     </div>
     <a href="/" class="nav-brand-center" onclick="showMainTab('explore');return false" aria-label="Touristlio">
-      <img src="/images/logo-round.webp?v=6" alt="" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/icon-white.svg'"/>
+      <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/icon-white.svg'"/>
     </a>
     <div class="nav-spacer" aria-hidden="true"></div>
     <div class="nav-menu" id="navMenu">
-      <div class="nav-tabs">
-        <div class="ntab on" id="nt-explore" onclick="showMainTab('explore')" data-i18n="explore">Keşfet</div>
-        <div class="ntab" id="nt-places" onclick="showMainTab('places')" data-i18n="discoverPlaces">Gezilecek Yerler</div>
-        <div class="ntab" id="nt-blog" onclick="showMainTab('blog')" data-i18n="blog">Blog</div>
+      <div class="nav-tabs" role="tablist" aria-label="Ana menü">
+        <button type="button" class="ntab on" id="nt-explore" role="tab" aria-selected="true" onclick="showMainTab('explore')" data-i18n="explore">Keşfet</button>
+        <button type="button" class="ntab" id="nt-places" role="tab" aria-selected="false" onclick="showMainTab('places')" data-i18n="discoverPlaces">Gezilecek Yerler</button>
+        <button type="button" class="ntab" id="nt-blog" role="tab" aria-selected="false" onclick="showMainTab('blog')" data-i18n="blog">Blog</button>
       </div>
       <div class="nav-r">
-        <div class="lsw">
-          <div class="lb" onclick="setLang('en',this)">EN</div>
-          <div class="lb on" onclick="setLang('tr',this)">TR</div>
+        <div class="lsw" role="group" data-i18n-aria="langSwitchAria" aria-label="Dil">
+          <button type="button" class="lb" onclick="setLang('en',this)" data-i18n-aria="langEnAria" aria-label="English" aria-pressed="false">EN</button>
+          <button type="button" class="lb on" onclick="setLang('tr',this)" data-i18n-aria="langTrAria" aria-label="Türkçe" aria-pressed="true">TR</button>
         </div>
         <button class="btn nav-btn-ghost" id="authBtn" onclick="openAuth()">Giriş Yap</button>
         <button class="btn nav-btn-primary" id="joinBtn" onclick="openAuth('register')" data-i18n="join">Katıl</button>
@@ -99,6 +100,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </div>
 </nav>
 
+<main id="main-content" tabindex="-1">
 <!-- ══════════════ EXPLORE PAGE ══════════════ -->
 <div class="page active" id="page-explore">
   <!-- HERO -->
@@ -113,31 +115,32 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <input type="text" name="email" autocomplete="username" tabindex="-1"/>
             <input type="password" name="password" autocomplete="current-password" tabindex="-1"/>
           </div>
+          <label class="sr-only" for="heroSearch" data-i18n="searchAria">Destinasyon ara</label>
           <input type="search" id="heroSearch" name="place-query" data-i18n-placeholder="searchPh" placeholder="İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu..." oninput="onSearch(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly aria-label="Destinasyon ara"/>
           <button type="submit" class="btn bp bsm" data-i18n="searchBtn">🔍 Keşfet</button>
         </form>
         <div class="srch-drop" id="srchDrop"></div>
       </div>
       <div class="hpills">
-        <div class="hpl" onclick="quickSearch('İstanbul')">🕌 İstanbul</div>
-        <div class="hpl" onclick="quickSearch('Paris')">🗼 Paris</div>
-        <div class="hpl" onclick="quickSearch('Tokyo')">⛩️ Tokyo</div>
-        <div class="hpl" onclick="quickSearch('Bali')">🌴 Bali</div>
-        <div class="hpl" onclick="quickSearch('Roma')">🏛️ Roma</div>
-        <div class="hpl" onclick="quickSearch('Santorini')">🌊 Santorini</div>
-        <div class="hpl" onclick="quickSearch('Kyoto')">🍂 Kyoto</div>
+        <button type="button" class="hpl" onclick="quickSearch('İstanbul')">🕌 İstanbul</button>
+        <button type="button" class="hpl" onclick="quickSearch('Paris')">🗼 Paris</button>
+        <button type="button" class="hpl" onclick="quickSearch('Tokyo')">⛩️ Tokyo</button>
+        <button type="button" class="hpl" onclick="quickSearch('Bali')">🌴 Bali</button>
+        <button type="button" class="hpl" onclick="quickSearch('Roma')">🏛️ Roma</button>
+        <button type="button" class="hpl" onclick="quickSearch('Santorini')">🌊 Santorini</button>
+        <button type="button" class="hpl" onclick="quickSearch('Kyoto')">🍂 Kyoto</button>
       </div>
     </div>
   </section>
 
   <!-- EXPLORE SUB-NAV -->
   <div class="explore-nav">
-    <div class="explore-nav-inner">
-      <div class="etab on" id="et-discover" onclick="showExploreTab('discover',this)" data-i18n="tabDiscover">🗺️ Destinasyonlar</div>
-      <div class="etab" id="et-map" onclick="showExploreTab('map',this)" data-i18n="tabMap">🗺️ Harita</div>
-      <div class="etab" id="et-filter" onclick="showExploreTab('filter',this)" data-i18n="tabFilter">⚙️ Gelişmiş Filtrele</div>
-      <div class="etab" id="et-tiolas" onclick="showExploreTab('tiolas',this)" data-i18n="tabTiolas">✨ Tiola'lar</div>
-      <div class="etab" id="et-categories" onclick="showExploreTab('categories',this)" data-i18n="tabCategories">📂 Kategoriler</div>
+    <div class="explore-nav-inner" role="tablist" aria-label="Keşfet sekmeleri">
+      <button type="button" class="etab on" id="et-discover" role="tab" aria-selected="true" onclick="showExploreTab('discover',this)" data-i18n="tabDiscover">🗺️ Destinasyonlar</button>
+      <button type="button" class="etab" id="et-map" role="tab" aria-selected="false" onclick="showExploreTab('map',this)" data-i18n="tabMap">🗺️ Harita</button>
+      <button type="button" class="etab" id="et-filter" role="tab" aria-selected="false" onclick="showExploreTab('filter',this)" data-i18n="tabFilter">⚙️ Gelişmiş Filtrele</button>
+      <button type="button" class="etab" id="et-tiolas" role="tab" aria-selected="false" onclick="showExploreTab('tiolas',this)" data-i18n="tabTiolas">✨ Tiola'lar</button>
+      <button type="button" class="etab" id="et-categories" role="tab" aria-selected="false" onclick="showExploreTab('categories',this)" data-i18n="tabCategories">📂 Kategoriler</button>
     </div>
   </div>
 
@@ -149,6 +152,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <span class="map-sub" data-i18n="mapSub">OpenStreetMap · kategoriye göre işaretler</span>
       </div>
       <div class="map-controls">
+        <label class="sr-only" for="mapSearchInput" data-i18n="mapSearchAria">Harita arama</label>
         <input type="search" id="mapSearchInput" class="map-search-inp" data-i18n-placeholder="searchPh" placeholder="Haritada ara..." aria-label="Harita arama"/>
         <button type="button" class="btn bo bsm" id="mapLocateBtn" data-i18n="mapLocate">📍 Konumum</button>
       </div>
@@ -171,7 +175,8 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <h3 id="placesFoundLabel" aria-live="polite"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
         <div class="results-bar-actions">
           <button type="button" class="btn bo bsm" id="clearFiltersBtn" onclick="resetFilters()" data-i18n="filterClear" hidden>Filtreler Temizle</button>
-          <select class="sort-sel" onchange="sortChange(this.value)">
+          <label class="sr-only" for="sortSel" data-i18n="sortAria">Sıralama</label>
+          <select class="sort-sel" id="sortSel" onchange="sortChange(this.value)">
           <option value="popularity" data-i18n-sort="sortPopularity">En Popüler</option>
           <option value="tiola" data-i18n-sort="sortTiola">En Yüksek Tiola Puanı</option>
           <option value="reviewed" data-i18n-sort="sortReviewed">En Çok Tiola</option>
@@ -204,7 +209,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
       <div class="filter-grid">
         <div class="fg">
-          <div class="fg-lbl" data-i18n="filterContinent">Kıta</div>
+          <label class="fg-lbl" for="contSel" data-i18n="filterContinent">Kıta</label>
           <select class="fg-sel" onchange="onContinentChange(this.value)" id="contSel">
             <option value="" data-i18n="allContinents">Tüm Kıtalar</option>
             <option>Europe</option><option>Asia</option><option>Americas</option>
@@ -212,7 +217,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           </select>
         </div>
         <div class="fg">
-          <div class="fg-lbl" data-i18n="filterCountry">Ülke</div>
+          <label class="fg-lbl" for="cntSel" data-i18n="filterCountry">Ülke</label>
           <select class="fg-sel" id="cntSel" onchange="onCountryChange(this.value)">
             <option value="" data-i18n="allCountries">Tüm Ülkeler</option>
             <option>Turkey 🇹🇷</option><option>France 🇫🇷</option><option>Japan 🇯🇵</option>
@@ -232,13 +237,13 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           </select>
         </div>
         <div class="fg">
-          <div class="fg-lbl" data-i18n="filterCity">Şehir</div>
+          <label class="fg-lbl" for="citSel" data-i18n="filterCity">Şehir</label>
           <select class="fg-sel" id="citSel" onchange="onCityChange(this.value)">
             <option value="" data-i18n="allCities">Tüm Şehirler</option>
           </select>
         </div>
         <div class="fg">
-          <div class="fg-lbl" data-i18n="filterDistrict">İlçe / Bölge</div>
+          <label class="fg-lbl" for="disSel" data-i18n="filterDistrict">İlçe / Bölge</label>
           <select class="fg-sel" id="disSel" onchange="onDistrictChange()"><option value="" data-i18n="allDistricts">Tüm İlçeler</option></select>
         </div>
       </div>
@@ -246,48 +251,48 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterMinTiola">Minimum Tiola puanı</div>
         <div class="fchips">
-          <div class="fchip gold on" onclick="setStar(this,0)" data-score="0" data-i18n="all">Tümü</div>
-          <div class="fchip gold" onclick="setStar(this,3)" data-score="3">⭐ 3+</div>
-          <div class="fchip gold" onclick="setStar(this,4)" data-score="4">⭐ 4+</div>
-          <div class="fchip gold" onclick="setStar(this,4.5)" data-score="4.5">⭐ 4.5+</div>
+          <button type="button" class="fchip gold on" onclick="setStar(this,0)" data-score="0" data-i18n="all">Tümü</button>
+          <button type="button" class="fchip gold" onclick="setStar(this,3)" data-score="3">⭐ 3+</button>
+          <button type="button" class="fchip gold" onclick="setStar(this,4)" data-score="4">⭐ 4+</button>
+          <button type="button" class="fchip gold" onclick="setStar(this,4.5)" data-score="4.5">⭐ 4.5+</button>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterEntry">Giriş Ücreti</div>
         <div class="fchips">
-          <div class="fchip on" onclick="setEntryFilter(this,'all')" data-entry="all" data-i18n="all">Tümü</div>
-          <div class="fchip entry-chip" onclick="setEntryFilter(this,'free')" data-entry="free" data-i18n="entryFree">🆓 Ücretsiz</div>
-          <div class="fchip entry-chip" onclick="setEntryFilter(this,'paid')" data-entry="paid" data-i18n="entryPaid">💳 Ücretli</div>
+          <button type="button" class="fchip on" onclick="setEntryFilter(this,'all')" data-entry="all" data-i18n="all">Tümü</button>
+          <button type="button" class="fchip entry-chip" onclick="setEntryFilter(this,'free')" data-entry="free" data-i18n="entryFree">🆓 Ücretsiz</button>
+          <button type="button" class="fchip entry-chip" onclick="setEntryFilter(this,'paid')" data-entry="paid" data-i18n="entryPaid">💳 Ücretli</button>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterPlaces">Yerler</div>
         <div class="fchips">
-          <div class="fchip on" onclick="setLocalFilter(this,'all')" data-local="all" data-i18n="all">Tümü</div>
-          <div class="fchip teal local-chip" onclick="setLocalFilter(this,'local')" data-local="local" data-i18n="filterLocalPicks">👤 Yerel Seçimleri</div>
+          <button type="button" class="fchip on" onclick="setLocalFilter(this,'all')" data-local="all" data-i18n="all">Tümü</button>
+          <button type="button" class="fchip teal local-chip" onclick="setLocalFilter(this,'local')" data-local="local" data-i18n="filterLocalPicks">👤 Yerel Seçimleri</button>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterWeather">Hava Durumuna Göre</div>
         <div class="fchips">
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherOutdoor">☀️ Açık Hava</div>
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherIndoor">🌧️ Kapalı Mekan</div>
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherWinter">❄️ Kış Aktivitesi</div>
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherSunrise">🌅 Gün Doğumu/Batımı</div>
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherNight">🌙 Gece</div>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherOutdoor">☀️ Açık Hava</button>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherIndoor">🌧️ Kapalı Mekan</button>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherWinter">❄️ Kış Aktivitesi</button>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherSunrise">🌅 Gün Doğumu/Batımı</button>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="weatherNight">🌙 Gece</button>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterAccess">Erişilebilirlik</div>
         <div class="fchips">
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessWheel">♿ Engelli Erişimi</div>
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessFamily">👨‍👩‍👧 Aile Dostu</div>
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessPet">🐶 Evcil Hayvan</div>
-          <div class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessParking">🅿️ Otopark Var</div>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessWheel">♿ Engelli Erişimi</button>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessFamily">👨‍👩‍👧 Aile Dostu</button>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessPet">🐶 Evcil Hayvan</button>
+          <button type="button" class="fchip" data-ephemeral="1" onclick="this.classList.toggle('on')" data-i18n="accessParking">🅿️ Otopark Var</button>
         </div>
       </div>
 
@@ -328,7 +333,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
   <footer class="site-footer">
     <div>
-      <img src="/images/logo.webp" alt="" class="logo-img footer-logo" loading="lazy" decoding="async"/>
+      <img src="/images/logo.webp" alt="Touristlio" class="logo-img footer-logo" loading="lazy" decoding="async"/>
       <div class="ftag" data-i18n="footerTag">Sadece ziyaret etme. Hisset.</div>
       <div class="footer-legal">
         <a href="/legal/about.html" data-i18n="footerAbout">Hakkımızda</a> ·
@@ -391,6 +396,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <h1 id="blogHeroTitle">Seyahat <em>Hikayeleri</em></h1>
       <p id="blogHeroSub">Yerel yazarlardan özenle seçilmiş gezi rehberleri, gizli köşeler ve kültürel keşifler.</p>
       <div class="blog-search-row">
+        <label class="sr-only" for="blogSearch" data-i18n="blogSearchAria">Blog ara</label>
         <input class="blog-search-inp" id="blogSearch" type="search" placeholder="Blog ara…" aria-label="Blog ara" oninput="debounceBlogSearch()"/>
       </div>
       <div class="bcats" id="blogCatChips"></div>
@@ -409,7 +415,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <div class="page" id="page-detail">
   <div class="detail-page">
     <div class="pd-hero">
-      <img id="pdImg" src="" alt="" loading="lazy" decoding="async"/>
+      <img id="pdImg" src="" alt="Mekân görseli" data-i18n-alt="placePhotoAria" loading="lazy" decoding="async"/>
       <button type="button" class="pd-save" id="pdSaveBtn" onclick="activePlace && toggleSave(activePlace.id,this)" aria-label="Favori" aria-pressed="false">🤍</button>
       <div class="pd-hero-ov">
         <div class="pd-cat" id="pdCat"></div>
@@ -420,12 +426,12 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
     <div class="pd-body">
       <div class="detail-back-row"><button class="btn bo bsm" onclick="goBack()" data-i18n="back">← Geri Dön</button></div>
       <div class="pd-gallery" id="pdGallery" style="display:none"></div>
-      <div class="detail-tabs">
-        <div class="dtab on" onclick="showDetailTab('overview',this)" data-i18n="detailOverview">📍 Genel Bakış</div>
-        <div class="dtab" onclick="showDetailTab('history',this)" data-i18n="detailHistory">🏛️ Tarihçe</div>
-        <div class="dtab" onclick="showDetailTab('things',this)" data-i18n="detailThings">✅ Yapılacaklar</div>
-        <div class="dtab" onclick="showDetailTab('culture',this)" data-i18n="detailCulture">🍽️ Kültür</div>
-        <div class="dtab" onclick="showDetailTab('tips',this)" data-i18n="detailTips">💡 İpuçları</div>
+      <div class="detail-tabs" role="tablist" aria-label="Mekân bilgisi">
+        <button type="button" class="dtab on" role="tab" aria-selected="true" onclick="showDetailTab('overview',this)" data-i18n="detailOverview">📍 Genel Bakış</button>
+        <button type="button" class="dtab" role="tab" aria-selected="false" onclick="showDetailTab('history',this)" data-i18n="detailHistory">🏛️ Tarihçe</button>
+        <button type="button" class="dtab" role="tab" aria-selected="false" onclick="showDetailTab('things',this)" data-i18n="detailThings">✅ Yapılacaklar</button>
+        <button type="button" class="dtab" role="tab" aria-selected="false" onclick="showDetailTab('culture',this)" data-i18n="detailCulture">🍽️ Kültür</button>
+        <button type="button" class="dtab" role="tab" aria-selected="false" onclick="showDetailTab('tips',this)" data-i18n="detailTips">💡 İpuçları</button>
       </div>
       <div class="pd-layout">
         <div>
@@ -461,11 +467,17 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
               </div>
               <div class="member-ex" id="memberEx" style="display:none">
                 <div class="me-g">
-                  <div class="me-lbl" data-i18n="yourRating">Yıldızınız</div>
-                  <div class="rfstars" id="rfStars"><span onclick="rate(1)">★</span><span onclick="rate(2)">★</span><span onclick="rate(3)">★</span><span onclick="rate(4)">★</span><span onclick="rate(5)">★</span></div>
+                  <div class="me-lbl" id="yourRatingLbl" data-i18n="yourRating">Yıldızınız</div>
+                  <div class="rfstars" id="rfStars" role="radiogroup" aria-labelledby="yourRatingLbl">
+                    <button type="button" class="star-btn" data-star="1" onclick="rate(1)" data-i18n-aria="star1" aria-label="1 yıldız">★</button>
+                    <button type="button" class="star-btn" data-star="2" onclick="rate(2)" data-i18n-aria="star2" aria-label="2 yıldız">★</button>
+                    <button type="button" class="star-btn" data-star="3" onclick="rate(3)" data-i18n-aria="star3" aria-label="3 yıldız">★</button>
+                    <button type="button" class="star-btn" data-star="4" onclick="rate(4)" data-i18n-aria="star4" aria-label="4 yıldız">★</button>
+                    <button type="button" class="star-btn" data-star="5" onclick="rate(5)" data-i18n-aria="star5" aria-label="5 yıldız">★</button>
+                  </div>
                 </div>
                 <div class="me-g">
-                  <div class="me-lbl" data-i18n="category">Kategori</div>
+                  <label class="me-lbl" for="revCatSel" data-i18n="category">Kategori</label>
                   <select class="me-sel" id="revCatSel">
                     <option value="" data-i18n="selectCat">Seçin...</option>
                     <option>🏛️ Tarihi Yer</option><option>🏺 Müze</option><option>🍽️ Restoran</option>
@@ -476,8 +488,9 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
                   </select>
                 </div>
               </div>
+              <label class="sr-only" for="rfTxt" data-i18n="tiolaPlaceholder">Deneyimini yaz (Tiola)...</label>
               <textarea class="rft" id="rfTxt" data-i18n-placeholder="tiolaPlaceholder" placeholder="2. Deneyimini yaz (Tiola)..." disabled></textarea>
-              <div class="rf-photo-row"><label class="rf-photo-label" data-i18n="photoOptional">3. Fotoğraf (isteğe bağlı)</label><br/>
+              <div class="rf-photo-row"><label class="rf-photo-label" for="rfPhoto" data-i18n="photoOptional">3. Fotoğraf (isteğe bağlı)</label><br/>
               <input type="file" id="rfPhoto" accept="image/jpeg,image/png,image/webp" disabled/></div>
               <div class="rf-foot">
                 <div class="rnote" id="rfNote"></div>
@@ -564,14 +577,14 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <div class="prof-badges" id="profBadges" aria-label="Rozetler"></div>
       <div class="prof-activity-bar" id="profActivityBar" style="display:none" aria-live="polite"></div>
-      <div class="ptabs">
-        <div class="ptab on" data-ptab="tiolas" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</div>
-        <div class="ptab" data-ptab="visited" onclick="showPTab('visited',this)" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</div>
-        <div class="ptab" data-ptab="blogs" onclick="showPTab('blogs',this)" data-i18n="profileTabBlogs">✏️ Blog yaz</div>
-        <div class="ptab" data-ptab="pending" onclick="showPTab('pending',this)" data-i18n="profileTabPending">⏳ Bekleyenler</div>
-        <div class="ptab" data-ptab="saved" onclick="showPTab('saved',this)" data-i18n="profileTabSaved">❤️ Kaydedilenler</div>
-        <div class="ptab" data-ptab="write" onclick="showPTab('write',this)" data-i18n="profileTabWrite">✏️ Tiola Yaz</div>
-        <div class="ptab" data-ptab="settings" onclick="showPTab('settings',this)" data-i18n="profileTabSettings">⚙️ Ayarlar</div>
+      <div class="ptabs" role="tablist" aria-label="Profil sekmeleri">
+        <button type="button" class="ptab on" role="tab" aria-selected="true" data-ptab="tiolas" onclick="showPTab('tiolas',this)" data-i18n="profileTabTiolas">✨ Tiola'larım</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="visited" onclick="showPTab('visited',this)" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="blogs" onclick="showPTab('blogs',this)" data-i18n="profileTabBlogs">✏️ Blog yaz</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="pending" onclick="showPTab('pending',this)" data-i18n="profileTabPending">⏳ Bekleyenler</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="saved" onclick="showPTab('saved',this)" data-i18n="profileTabSaved">❤️ Kaydedilenler</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="write" onclick="showPTab('write',this)" data-i18n="profileTabWrite">✏️ Tiola Yaz</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="settings" onclick="showPTab('settings',this)" data-i18n="profileTabSettings">⚙️ Ayarlar</button>
       </div>
       <div class="ptab-c" id="ptab-visited">
         <div id="visitedGrid" class="pgrid"></div>
@@ -589,8 +602,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <div class="write-card-title" data-i18n="profileWriteBlogTitle">Blog yaz</div>
           <p id="blogVerifyNotice" class="blog-verify-notice" hidden></p>
           <p class="profile-tiola-sub" data-i18n="profileWriteBlogSub">Uzun rehber yazınız; onay sonrası ana sayfadaki Blog bölümünde yayınlanır.</p>
+          <label class="sr-only" for="blogTitle" data-i18n="blogTitlePh">Blog başlığı</label>
           <input class="w-sel" id="blogTitle" data-i18n-placeholder="blogTitlePh" placeholder="Blog başlığı"/>
+          <label class="sr-only" for="blogCat" data-i18n="searchCatAria">Kategori</label>
           <select class="w-sel" id="blogCat" aria-label="Blog kategorisi"></select>
+          <label class="sr-only" for="blogBody" data-i18n="blogBodyPh">Uzun rehber yazınız...</label>
           <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..." style="min-height:140px"></textarea>
           <button class="btn bp bsm" type="button" onclick="submitBlog()" data-i18n="submitBlog">Blog Gönder</button>
         </div>
@@ -611,17 +627,27 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <div class="write-card">
           <div class="write-card-title" data-i18n="writeNew">Yeni Tiola</div>
           <div id="writeTiolaForm">
+            <label class="sr-only" for="arcPlace" data-i18n="placeOptional">Mekân (isteğe bağlı)</label>
             <select class="w-sel" id="arcPlace"><option value="" data-i18n="placeOptional">Mekân (isteğe bağlı)</option></select>
+            <label class="sr-only" for="arcCity" data-i18n="cityTagPh">Şehir etiketi (genel Tiola için, isteğe bağlı)</label>
             <input class="w-sel" id="arcCity" data-i18n-placeholder="cityTagPh" placeholder="Şehir etiketi (genel Tiola için, isteğe bağlı)"/>
+            <label class="sr-only" for="arcPhoto" data-i18n="photoAria">Fotoğraf yükle</label>
             <input type="file" id="arcPhoto" accept="image/jpeg,image/png,image/webp"/>
             <div class="write-member-row">
-              <div class="me-g"><div class="me-lbl" data-i18n="memberRating">Yıldızınız</div>
-                <div class="rfstars" id="arcStars"><span onclick="arcRate(1)">★</span><span onclick="arcRate(2)">★</span><span onclick="arcRate(3)">★</span><span onclick="arcRate(4)">★</span><span onclick="arcRate(5)">★</span></div>
+              <div class="me-g"><div class="me-lbl" id="arcRatingLbl" data-i18n="memberRating">Yıldızınız</div>
+                <div class="rfstars" id="arcStars" role="radiogroup" aria-labelledby="arcRatingLbl">
+                  <button type="button" class="star-btn" data-star="1" onclick="arcRate(1)" data-i18n-aria="star1" aria-label="1 yıldız">★</button>
+                  <button type="button" class="star-btn" data-star="2" onclick="arcRate(2)" data-i18n-aria="star2" aria-label="2 yıldız">★</button>
+                  <button type="button" class="star-btn" data-star="3" onclick="arcRate(3)" data-i18n-aria="star3" aria-label="3 yıldız">★</button>
+                  <button type="button" class="star-btn" data-star="4" onclick="arcRate(4)" data-i18n-aria="star4" aria-label="4 yıldız">★</button>
+                  <button type="button" class="star-btn" data-star="5" onclick="arcRate(5)" data-i18n-aria="star5" aria-label="5 yıldız">★</button>
+                </div>
               </div>
-              <div class="me-g"><div class="me-lbl" data-i18n="memberCategory">Kategori (Üyeler)</div>
+              <div class="me-g"><label class="me-lbl" for="arcCat" data-i18n="memberCategory">Kategori (Üyeler)</label>
                 <select class="me-sel" id="arcCat"><option value="" data-i18n="selectCat">Seçin...</option><option>🏛️ Tarihi Yer</option><option>🍽️ Restoran</option><option>☕ Kafe</option><option>🏖️ Plaj</option><option>⛰️ Doğa</option><option>🌙 Gece Hayatı</option></select>
               </div>
             </div>
+            <label class="sr-only" for="arcTxt" data-i18n="shareExperience">Deneyiminizi paylaşın...</label>
             <textarea class="rft" id="arcTxt" data-i18n-placeholder="shareExperience" placeholder="Deneyiminizi paylaşın..."></textarea>
             <div class="write-submit-row">
               <div class="write-rating-note" data-i18n="oneRatingPer">🛡️ Kişi başı bir yıldız</div>
@@ -646,8 +672,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
                   <div class="avatar-color-label" data-i18n="avatarColorLabel">Arka plan rengi</div>
                   <div id="avatarColorRow" class="av-color-row"></div>
                   <div class="avatar-upload-row">
-                    <label class="btn bo bsm">
-                      <span data-i18n="avatarUpload">Fotoğraf yükle</span>
+                    <label class="btn bo bsm" for="avatarFile"><span data-i18n="avatarUpload">Fotoğraf yükle</span>
                       <input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp" hidden/>
                     </label>
                     <button type="button" class="btn bp bsm" id="btnSaveAvatar" onclick="saveAvatarPreset()" data-i18n="avatarSave">Kaydet</button>
@@ -669,7 +694,9 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             </div>
             <div class="settings-block">
               <h4 class="settings-subtitle" data-i18n="settingsChangeEmail">E-posta değiştir</h4>
+              <label class="sr-only" for="emailNew" data-i18n="settingsNewEmail">Yeni e-posta</label>
               <input class="ain settings-inp" id="emailNew" type="email" autocomplete="email" data-i18n-placeholder="settingsNewEmail" placeholder="Yeni e-posta"/>
+              <label class="sr-only" for="emailPass" data-i18n="settingsConfirmPassword">Onay için mevcut şifre</label>
               <input class="ain settings-inp" id="emailPass" type="password" autocomplete="current-password" data-i18n-placeholder="settingsConfirmPassword" placeholder="Onay için mevcut şifre"/>
               <button type="button" class="btn bp bsm" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
             </div>
@@ -678,7 +705,9 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <h4 class="settings-section-title" data-i18n="settingsSectionSecurity">Güvenlik</h4>
             <div class="settings-block">
               <h4 class="settings-subtitle" data-i18n="settingsChangePassword">Şifre değiştir</h4>
+              <label class="sr-only" for="pwdCurrent" data-i18n="settingsCurrentPassword">Mevcut şifre</label>
               <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
+              <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">Yeni şifre (min 12 karakter)</label>
               <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 12 karakter)"/>
               <button type="button" class="btn bp bsm" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
             </div>
@@ -692,10 +721,12 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
     </div>
   </div>
 </div>
+</main>
 
 <script src="/vendor/leaflet/leaflet.js?v=__APP_VERSION__"></script>
 <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js?v=__APP_VERSION__"></script>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/avatars.js?v=__APP_VERSION__"></script>
 <script src="/js/avatar-crop.js?v=__APP_VERSION__"></script>

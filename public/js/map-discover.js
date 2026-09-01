@@ -15,8 +15,8 @@ window.TL_MAP_DISCOVER = (function () {
   function popupHtml(m) {
     const img = m.imageUrl
       ? (window.TL_IMG?.tag
-        ? window.TL_IMG.tag(m.imageUrl, { kind: 'thumb', extra: 'style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px"' })
-        : `<img src="${m.imageUrl}" alt="" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`)
+        ? window.TL_IMG.tag(m.imageUrl, { alt: m.name, kind: 'thumb', extra: 'style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px"' })
+        : `<img src="${m.imageUrl}" alt="${m.name || ''}" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`)
       : '';
     return `<div class="map-popup">${img}<strong>${m.name}</strong>
       <div style="font-size:.72rem;color:#64748b;margin:4px 0">${m.shortDesc || ''}</div>

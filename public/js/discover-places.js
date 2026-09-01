@@ -146,7 +146,7 @@ window.TL_DISCOVER = (function () {
     if (!grid) return;
     grid.innerHTML = cities.map((c) => `
       <button type="button" class="city-card" data-slug="${c.slug}" aria-label="${escapeHtml(c.name)}">
-        ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { kind: 'card' }) : `<img src="${cityImg(c)}" alt="" loading="lazy"/>`}
+        ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { alt: c.name, kind: 'card' }) : `<img src="${cityImg(c)}" alt="${escapeHtml(c.name)}" loading="lazy"/>`}
         <div class="city-card-body">
           <h3>${escapeHtml(lang === 'en' ? c.nameEn : c.name)}</h3>
           <span>${c.placeCount || 0} ${t('placesFound')}</span>
@@ -229,8 +229,8 @@ window.TL_DISCOVER = (function () {
             return `
             <article class="discover-place-card" data-id="${p.id}" tabindex="0" role="button">
               ${window.TL_IMG?.tag
-                ? window.TL_IMG.tag(placeImg(p), { kind: 'card', extra: typeof imgFallback === 'function' ? `onerror="imgFallback(this,'${p.category}',${p.id})"` : '' })
-                : `<img src="${placeImg(p)}" alt="" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>`}
+                ? window.TL_IMG.tag(placeImg(p), { alt: name, kind: 'card', extra: typeof imgFallback === 'function' ? `onerror="imgFallback(this,'${p.category}',${p.id})"` : '' })
+                : `<img src="${placeImg(p)}" alt="${escapeHtml(name)}" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>`}
               <div>
                 <h4>${escapeHtml(name)}</h4>
                 <p>${escapeHtml(window.TL_I18N?.catLabel(lang, p.category) || catLabel(p.category))} · ${escapeHtml(p.district || p.city || '')}</p>
@@ -241,7 +241,7 @@ window.TL_DISCOVER = (function () {
           list.querySelectorAll('.discover-place-card').forEach((card) => {
             const open = () => { if (typeof openDetail === 'function') openDetail(Number(card.dataset.id)); };
             card.addEventListener('click', open);
-            card.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
+            card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
           });
         }
       }

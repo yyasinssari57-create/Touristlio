@@ -41,7 +41,7 @@
         <p class="adm-field-hint place-crop-hint">Sürükleyerek konumlandırın, yakınlaştırarak kırpma alanını ayarlayın.</p>
         <div class="place-crop-stage" id="placeCropStage" style="width:${VIEWPORT_W}px;height:${VIEWPORT_H}px">
           <div class="place-crop-viewport" id="placeCropViewport">
-            <img class="place-crop-img" id="placeCropImg" alt="" draggable="false" loading="lazy"/>
+            <img class="place-crop-img" id="placeCropImg" alt="Kırpılacak fotoğraf" draggable="false" loading="lazy"/>
           </div>
           <div class="place-crop-overlay" aria-hidden="true"></div>
         </div>

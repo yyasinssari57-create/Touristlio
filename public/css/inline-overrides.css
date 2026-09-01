@@ -78,7 +78,10 @@
 .contact-email-link:focus-visible {
   color: var(--b);
   text-decoration: underline;
-  outline: none;
+}
+.contact-email-link:focus-visible {
+  outline: 3px solid var(--b2);
+  outline-offset: 2px;
 }
 .contact-label {
   display: block;
@@ -793,11 +796,15 @@ body.admin-body:not(.admin-session) {
   color: #fff;
   font-size: .85rem;
 }
-.blog-search-inp::placeholder { color: rgba(255, 255, 255, .55); }
+.blog-search-inp::placeholder { color: rgba(255, 255, 255, .8); }
 .blog-search-inp:focus {
   outline: none;
   border-color: rgba(255, 255, 255, .5);
   background: rgba(255, 255, 255, .18);
+}
+.blog-search-inp:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
 }
 .bcard { position: relative; }
 .bfeat-badge {
@@ -2673,7 +2680,10 @@ body.admin-body:not(.admin-session) {
 .adm-guide-toc-list a:hover,
 .adm-guide-toc-list a:focus-visible {
   text-decoration: underline;
-  outline: none;
+}
+.adm-guide-toc-list a:focus-visible {
+  outline: 3px solid var(--b2);
+  outline-offset: 2px;
 }
 .adm-guide-block {
   margin-bottom: 16px;
