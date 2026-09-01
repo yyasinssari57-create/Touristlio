@@ -35,6 +35,7 @@
     "verify:skeleton": "node server/scripts/verify-skeleton.js",
     "verify:links": "node server/scripts/verify-broken-links.js",
     "verify:cleanup": "node server/scripts/verify-code-cleanup.js",
+    "verify:analytics": "node server/scripts/verify-analytics.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/services/liveDataService').refreshAllPlaces(); console.log('done')\"",
@@ -61,6 +62,7 @@
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "redis": "^4.7.1",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.4",
+    "web-vitals": "^4.2.4"
   }
 }

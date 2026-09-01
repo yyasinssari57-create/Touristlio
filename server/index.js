@@ -20,6 +20,7 @@ const { getAppVersion } = require('./lib/app-version');
 const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require('./lib/cors-origins');
 const { canonicalHostMiddleware } = require('./middleware/canonical-host');
 const { recaptchaConfig, publicRecaptchaConfig } = require('./middleware/recaptcha');
+const { publicAnalyticsConfig, gaCspSources } = require('./lib/analytics-config');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -60,6 +61,7 @@ const recaptchaOn = recaptchaConfig().enabled;
 const recaptchaSrc = recaptchaOn
   ? ['https://www.google.com', 'https://www.gstatic.com', 'https://www.recaptcha.net']
   : [];
+const gaSrc = gaCspSources();
 
 app.use(apiPreflightMiddleware(corsOrigins));
 
@@ -67,14 +69,14 @@ app.use(helmet({
   contentSecurityPolicy: isProd ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com', ...recaptchaSrc],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com', ...recaptchaSrc, ...gaSrc],
       scriptSrcAttr: ["'unsafe-inline'"],
       // unsafe-inline: index.html critical <style> + admin panel visibility toggles (style="" / el.style)
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
-      connectSrc: [...getConnectSrcOrigins(), ...recaptchaSrc],
+      connectSrc: [...getConnectSrcOrigins(), ...recaptchaSrc, ...gaSrc],
       frameSrc: recaptchaOn ? recaptchaSrc : ["'self'"],
       frameAncestors: ["'self'"],
     },
@@ -185,6 +187,7 @@ app.get('/api/config/public', (req, res) => {
     csrfToken,
     ...settingsService.getPublic(),
     ...publicRecaptchaConfig(),
+    ...publicAnalyticsConfig(),
   });
 });
 

@@ -34,6 +34,18 @@ function validateProductionEnv() {
       msg: 'Production: RECAPTCHA_SITE_KEY / RECAPTCHA_SECRET not set — forms work without reCAPTCHA v3. Set both in env to enable invisible v3.',
     });
   }
+
+  const { gaMeasurementId, googleSiteVerification } = require('./analytics-config');
+  if (!gaMeasurementId()) {
+    logger.warn({
+      msg: 'Production: GA_MEASUREMENT_ID not set — GA4 stays off. First-party visit analytics still run after cookie consent. Set GA_MEASUREMENT_ID (G-XXXXXXXX) to enable GA4.',
+    });
+  }
+  if (!googleSiteVerification()) {
+    logger.warn({
+      msg: 'Production: GOOGLE_SITE_VERIFICATION not set — Search Console HTML tag is not injected. Paste the token from Search Console → URL prefix verification.',
+    });
+  }
 }
 
 module.exports = { validateProductionEnv };

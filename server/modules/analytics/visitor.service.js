@@ -1,8 +1,9 @@
 const crypto = require('crypto');
 const { db } = require('../../db');
 
-const VALID_EVENTS = new Set(['page_view', 'tab_click', 'heartbeat', 'session_end']);
+const VALID_EVENTS = new Set(['page_view', 'tab_click', 'heartbeat', 'session_end', 'web_vital']);
 const VALID_TABS = new Set(['explore', 'places', 'blog', 'profile', 'detail']);
+const VALID_VITALS = new Set(['CLS', 'INP', 'LCP', 'FCP', 'TTFB']);
 
 const TAB_LABELS = {
   explore: 'Keşfet',
@@ -97,7 +98,13 @@ function trackEvent(req, res, payload) {
   }
 
   const tab = payload?.tab ? String(payload.tab).trim() : null;
-  if (tab && !VALID_TABS.has(tab)) {
+  if (type === 'web_vital') {
+    if (!tab || !VALID_VITALS.has(tab)) {
+      const err = new Error('Geçersiz web vital');
+      err.status = 400;
+      throw err;
+    }
+  } else if (tab && !VALID_TABS.has(tab)) {
     const err = new Error('Geçersiz sekme');
     err.status = 400;
     throw err;

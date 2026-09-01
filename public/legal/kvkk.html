@@ -18,7 +18,7 @@
   <h1>KVKK Aydınlatma Metni</h1>
   <p><strong>Veri sorumlusu:</strong> Touristlio (yasal unvan ve adres domain yayını sonrası güncellenecektir).</p>
   <h2>İşlenen veriler</h2>
-  <p>Üyelik: ad, e-posta, şifre (hash), profil rengi. Tiola: metin, isteğe bağlı yıldız ve fotoğraf. Teknik: oturum çerezi / JWT, IP ve tarayıcı bilgisi sunucu günlüklerinde.</p>
+  <p>Üyelik: ad, e-posta, şifre (hash), profil rengi. Tiola: metin, isteğe bağlı yıldız ve fotoğraf. Teknik: oturum çerezi / JWT, IP ve tarayıcı bilgisi sunucu günlüklerinde. Ziyaret analitiği (sayfa görüntüleme, olaylar, Core Web Vitals ve isteğe bağlı Google Analytics 4) yalnızca çerez onayından sonra işlenir.</p>
   <h2>Amaç ve hukuki sebep</h2>
   <p>Hesap yönetimi, içerik moderasyonu, platform güvenliği; açık rızanız (kayıt onayı) ve sözleşmenin ifası.</p>
   <h2>Saklama</h2>
@@ -29,6 +29,8 @@
 </article>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
+<script src="/js/analytics.js?v=__APP_VERSION__"></script>
+<script src="/js/cookie-banner.js?v=__APP_VERSION__"></script>
 <script>window.TL_I18N && window.TL_I18N.apply(localStorage.getItem('tl_lang')||'tr');</script>
 </body>
 </html>

@@ -79,9 +79,22 @@ function readPublicHtml(publicDir, relativePath) {
   return injectAppVersion(raw);
 }
 
+function injectAnalyticsScripts(html, relativePath) {
+  const rel = String(relativePath || '');
+  if (/admin\.html$/i.test(rel)) return html;
+  if (html.includes('/js/analytics.js')) return html;
+  const v = getAppVersion();
+  const tags = `<script src="/js/analytics.js?v=${v}"></script>\n<script src="/js/cookie-banner.js?v=${v}"></script>\n`;
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${tags}</body>`);
+  }
+  return html + tags;
+}
+
 function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   let html = readPublicHtml(publicDir, relativePath);
   html = injectClientErrorBoundary(html);
+  html = injectAnalyticsScripts(html, relativePath);
   html = injectErrorDetail(html, seo.errorDetail);
   const req = res.req;
   const pathname = (req && (req.originalUrl || req.url) || '/').split('?')[0];
@@ -167,6 +180,7 @@ module.exports = {
   NO_CACHE_HEADERS,
   injectAppVersion,
   injectClientErrorBoundary,
+  injectAnalyticsScripts,
   injectErrorDetail,
   HTML_PAGE_ROUTES,
   readPublicHtml,

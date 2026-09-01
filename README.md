@@ -142,6 +142,7 @@ NODE_ENV=production npm run start:prod
 
 - Production: `JWT_SECRET` zorunlu (32+ karakter), Helmet CSP, API hata maskeleme
 - Form güvenliği: sunucu XSS sanitization, honeypot, IP başına 5 dk / 3 gönderim; isteğe bağlı reCAPTCHA v3 (`RECAPTCHA_SITE_KEY` + `RECAPTCHA_SECRET`)
+- Analitik: birinci taraf sayfa/olay izleme ve `web-vitals` yalnızca çerez onayından sonra; isteğe bağlı GA4 (`GA_MEASUREMENT_ID`) ve Search Console doğrulama (`GOOGLE_SITE_VERIFICATION`)
 - Dev logo endpoint yalnızca `NODE_ENV !== production`
 - Dev logo endpoint yalnızca `NODE_ENV !== production`
 - Admin moderasyon: `escapeHtml`, Tiola spam filtresi (`spam` / `pending` ayrı sayaç)

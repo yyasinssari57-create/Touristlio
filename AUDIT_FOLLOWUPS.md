@@ -365,9 +365,22 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - CLI `verify:*` / seed script'leri `console.log` kullanmaya devam eder (tarayıcı değil).
 - `inline-overrides.css` büyük; yalnızca `style.css` içindeki tekrarlar birleştirildi.
 - `pino-pretty` yalnızca development transport.
-- [DÜŞÜK-6] henüz başlamadı.
 
-- [DÜŞÜK-6] Analitik ve İzleme
+## DÜŞÜK-6 (analitik ve izleme)
+
+- Tamamlandı: Express + statik HTML/JS (Next.js yok). Google puanı yok.
+  - Mevcut birinci taraf izleme duruyor: `tl_cookie_ok` + `POST /api/analytics/track` (page_view, tab_click, heartbeat, session_end). Onaysız `stored: false`.
+  - **GA4:** `GA_MEASUREMENT_ID` (`G-XXXXXXXX`) varsa, yalnızca çerez kabulünden sonra `gtag.js` yüklenir. Anahtar yoksa Google script’i hiç yüklenmez. CSP host’ları yalnızca ID tanımlıyken açılır.
+  - **Search Console:** `GOOGLE_SITE_VERIFICATION` doluysa HTML `google-site-verification` meta enjekte edilir (izleme çerezi değil; onay gerekmez). Token uydurulmadı.
+  - **web-vitals 4.2.4:** `package.json` + `public/vendor/web-vitals/web-vitals.iife.js`. Onay sonrası CLS / INP / LCP / FCP / TTFB; birinci taraf `web_vital` + GA4 event.
+  - Yasal / 404 / 500 / auth sayfalarına analytics + çerez bandı; admin paneli kamu izlemesine alınmadı.
+  - `npm run verify:analytics`
+
+### Leftover
+- Canlıda GA4 **yok** (env boş). Yasin Google Analytics 4’te Measurement ID üretip Render/Hetzner’e `GA_MEASUREMENT_ID` yazmalı; aksi halde yalnızca birinci taraf (onaylı) analitik çalışır.
+- Search Console HTML etiketi **yok**. Yasin Search Console’da URL-prefix (`https://www.touristlio.com`) doğrulama token’ını `GOOGLE_SITE_VERIFICATION` olarak yazmalı.
+- CrUX / Search Console hız raporu Chrome kullanıcılarından gelir; `web-vitals` RUM’u onaylı oturumlarla sınırlı.
+- Numaralı denetim maddeleri (KRİTİK → DÜŞÜK-6) bu maddeyle bitti. `AUDIT_FOLLOWUPS.md` leftover’ları Yasin onayı olmadan yapılmaz.
 
 ## Genel
 - Görevler bitince bu listedeki her maddeyi sırayla açıp kapat.

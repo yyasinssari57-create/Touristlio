@@ -1,4 +1,5 @@
 const { siteBaseUrl } = require('./sitemap');
+const { googleSiteVerification } = require('./analytics-config');
 
 const HOME_TR = {
   title: 'Touristlio — Sadece Ziyaret Etme. Hisset.',
@@ -119,10 +120,12 @@ function buildSeoHead({ pathname, lang, title, description, image, noindex }) {
   const canonical = canonicalFor(pathname, resolvedLang);
   const robots = noindex ? 'noindex, nofollow' : 'index,follow';
   const locale = resolvedLang === 'en' ? 'en_US' : 'tr_TR';
+  const gsc = googleSiteVerification();
   return [
     `<title>${escapeAttr(pageTitle)}</title>`,
     `<meta name="description" content="${escapeAttr(pageDesc)}"/>`,
     `<meta name="robots" content="${robots}"/>`,
+    gsc ? `<meta name="google-site-verification" content="${escapeAttr(gsc)}"/>` : '',
     `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
     hreflangLinks(pathname),
     `<meta property="og:type" content="website"/>`,
@@ -138,7 +141,7 @@ function buildSeoHead({ pathname, lang, title, description, image, noindex }) {
     `<meta name="twitter:title" content="${escapeAttr(pageTitle)}"/>`,
     `<meta name="twitter:description" content="${escapeAttr(pageDesc)}"/>`,
     `<meta name="twitter:image" content="${escapeAttr(img)}"/>`,
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function stripExistingSeo(html) {
@@ -148,6 +151,7 @@ function stripExistingSeo(html) {
     .replace(/<link\s+rel="alternate"\s+hreflang[^>]*>/gi, '')
     .replace(/<meta\s+name="description"[^>]*>/gi, '')
     .replace(/<meta\s+name="robots"[^>]*>/gi, '')
+    .replace(/<meta\s+name="google-site-verification"[^>]*>/gi, '')
     .replace(/<meta\s+property="og:[^"]+"[^>]*>/gi, '')
     .replace(/<meta\s+name="twitter:[^"]+"[^>]*>/gi, '');
 }

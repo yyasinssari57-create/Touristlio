@@ -72,3 +72,7 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      - key: GA_MEASUREMENT_ID
+        sync: false
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false
