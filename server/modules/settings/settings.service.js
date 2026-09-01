@@ -129,6 +129,4 @@ async function seedDefaults() {
   }
 }
 
-seedDefaults();
-
-module.exports = { getAll, getPublic, set, getBlogPageSettings, setBlogPageSettings, DEFAULTS };
+module.exports = { getAll, getPublic, set, getBlogPageSettings, setBlogPageSettings, seedDefaults, DEFAULTS };

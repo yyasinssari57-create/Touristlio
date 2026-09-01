@@ -360,6 +360,12 @@ function spawnSitemapIfStale() {
 async function boot() {
   const { initDb } = require('./db');
   await initDb();
+  try {
+    const { seedDefaults } = require('./modules/settings/settings.service');
+    await seedDefaults();
+  } catch (err) {
+    logger.warn({ msg: 'Settings defaults seed skipped', err: err.message });
+  }
   app.listen(PORT, async () => {
   logger.info(`Touristlio V2 → http://localhost:${PORT}`);
   logger.info(`Admin → http://localhost:${PORT}/admin`);
