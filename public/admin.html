@@ -47,6 +47,7 @@
       <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" onclick="showAdminSection('content',this)">İçerik</button>
       <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.analytics" onclick="showAdminSection('analytics',this)">Analitik</button>
       <button type="button" role="tab" aria-selected="false" data-section="media" data-permission="admin.places" onclick="showAdminSection('media',this)">Medya</button>
+      <button type="button" role="tab" aria-selected="false" data-section="appearance" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('appearance',this)">Görünüm</button>
       <button type="button" role="tab" aria-selected="false" data-section="settings" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('settings',this)">Ayarlar</button>
       <button type="button" role="tab" aria-selected="false" data-section="roles" data-role="admin" data-permission="admin.roles" onclick="showAdminSection('roles',this)">Roller</button>
       <button type="button" role="tab" aria-selected="false" data-section="audit-log" data-role="admin" onclick="showAdminSection('audit-log',this)">İşlem geçmişi</button>
@@ -562,6 +563,24 @@
         </div>
         <div id="mediaGrid" class="adm-media-grid" aria-live="polite"></div>
         <div id="mediaPagination" class="adm-pagination"></div>
+      </section>
+
+      <section id="adm-appearance" class="adm-section" hidden role="tabpanel" aria-label="Görünüm">
+        <div class="admin-card adm-settings">
+          <h2 class="adm-h2" style="margin-top:0">Hero görseli</h2>
+          <p class="adm-field-hint">Ana sayfa arka planı. JPEG, PNG veya WebP · en fazla 5 MB.</p>
+          <div id="heroImageErr" class="admin-form-err" role="alert" tabindex="-1"></div>
+          <div id="heroImagePreview" class="photo-preview-row" aria-live="polite"></div>
+          <div class="adm-photo-section">
+            <div class="adm-photo-drop">
+              <label class="adm-photo-btn">
+                <span id="heroImageBtnLabel">Görseli ayarla</span>
+                <input type="file" id="heroImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp" aria-label="Hero görseli yükle"/>
+              </label>
+            </div>
+            <p class="photo-upload-hint">Yüklenen görsel kaydedilir ve ana sayfada hemen görünür.</p>
+          </div>
+        </div>
       </section>
 
       <section id="adm-settings" class="adm-section" hidden role="tabpanel" aria-label="Ayarlar">
@@ -1411,6 +1430,47 @@ function bindCityImageInput(fileInputId, urlInputId, previewId, hintId) {
   });
 }
 
+async function loadHeroAppearance() {
+  try {
+    const data = await api('/settings');
+    const url = data.settings?.hero_image_url || '';
+    renderImagePreview('heroImagePreview', url);
+    const label = document.getElementById('heroImageBtnLabel');
+    if (label) label.textContent = url ? 'Görseli değiştir' : 'Görseli ayarla';
+  } catch (e) {
+    showErr(e.message, 'heroImageErr');
+  }
+}
+
+function bindHeroImageInput() {
+  const input = document.getElementById('heroImageFile');
+  if (!input || input.dataset.bound === '1') return;
+  input.dataset.bound = '1';
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    const apply = async (chosen) => {
+      const fd = new FormData();
+      fd.append('image', chosen);
+      try {
+        const data = await api('/admin/hero-image', { method: 'POST', body: fd });
+        renderImagePreview('heroImagePreview', data.url);
+        const label = document.getElementById('heroImageBtnLabel');
+        if (label) label.textContent = 'Görseli değiştir';
+        showToast('Hero görseli kaydedildi');
+      } catch (e) {
+        showErr(e.message, 'heroImageErr');
+      }
+    };
+    if (!window.TL_PLACE_CROP) {
+      await apply(file);
+      return;
+    }
+    window.TL_PLACE_CROP.open(file, (cropped) => { apply(cropped); }, () => {});
+  };
+}
+
 function syncCroppedFiles(inputId) {
   const input = document.getElementById(inputId);
   const files = croppedPhotoStore[inputId] || [];
@@ -1753,6 +1813,7 @@ function showAdminSection(id, btn) {
     loadAuditLog(1);
   }
   if (id === 'media' && hasAdminPerm('admin.places')) loadMediaLibrary(1);
+  if (id === 'appearance' && (currentUser?.role === 'admin' || hasAdminPerm('admin.settings'))) loadHeroAppearance();
   if (id === 'moderation' && hasAdminPerm('admin.moderate')) loadModTiolas();
   if (id === 'settings' && hasAdminPerm('admin.settings')) {
     loadSettingsForm();
@@ -3155,6 +3216,7 @@ async function showPanel(user) {
   bindPlacePhotoInput('plPhotos', 'plPhotoPreview', 'plPhotoCount');
   bindCityImageInput('ctImageFile', 'ctImage', 'ctImagePreview', 'ctImageHint');
   bindCityImageInput('catImageFile', 'catImage', 'catImagePreview', 'catImageHint');
+  bindHeroImageInput();
   document.getElementById('plImage')?.addEventListener('input', () => updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview'));
   updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview');
   await loadCategoryOptions();

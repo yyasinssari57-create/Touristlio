@@ -757,6 +757,19 @@ router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUplo
   return ok(res, { url });
 });
 
+router.post('/hero-image', requireRole('admin'), mediaUpload.single('image'), validateUploadedImage(), processImageUpload({ destRel: 'hero' }), async (req, res) => {
+  if (!req.file) return fail(res, 'Görsel gerekli', 400);
+  const url = req.file.publicUrl || publicImageUrl(req.file.storageKey);
+  if (!url) return fail(res, 'Görsel yüklenemedi', 500);
+  const prev = (await settingsService.getAll()).hero_image_url;
+  await settingsService.set('hero_image_url', url);
+  if (prev && prev !== url) {
+    try { await deleteStoredImage(prev); } catch { /* ignore */ }
+  }
+  logAdmin(req, 'settings.hero_image', 'setting', null, url);
+  return ok(res, { url });
+});
+
 /* ── Cities CRUD ── */
 router.get('/cities', checkPermission('admin.cities'), async (req, res) => {
   try {
