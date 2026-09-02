@@ -4,33 +4,23 @@ const { db } = require('../../db');
 
 
 
-function dashboard() {
-
+async function dashboard() {
   return {
-
-    users: analyticsModel.count('users'),
-
-    places: analyticsModel.count('places'),
-
-    tiolasApproved: analyticsModel.count('tiolas', "status = 'approved'"),
-
-    tiolasPending: analyticsModel.count('tiolas', "status = 'pending'"),
-
-    blogsPending: analyticsModel.count('blogs', "status = 'pending'"),
-
-    visitedRecords: analyticsModel.count('visited_places'),
-
-    travelLists: analyticsModel.count('travel_lists'),
-
+    users: await analyticsModel.count('users'),
+    places: await analyticsModel.count('places'),
+    tiolasApproved: await analyticsModel.count('tiolas', "status = 'approved'"),
+    tiolasPending: await analyticsModel.count('tiolas', "status = 'pending'"),
+    blogsPending: await analyticsModel.count('blogs', "status = 'pending'"),
+    visitedRecords: await analyticsModel.count('visited_places'),
+    travelLists: await analyticsModel.count('travel_lists'),
   };
-
 }
 
 
 
 async function contentQuality() {
 
-  const total = analyticsModel.count('places');
+  const total = await analyticsModel.count('places');
 
   const noPhoto = (await db.prepare("SELECT COUNT(*) AS c FROM places WHERE photos IS NULL OR photos = '[]' OR photos = ''").get()).c;
 

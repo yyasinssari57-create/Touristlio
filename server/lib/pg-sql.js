@@ -83,7 +83,7 @@ function convertDialect(sql) {
   s = s.replace(/\bGLOB\b/gi, 'LIKE');
   s = s.replace(
     /\bdate\s*\(\s*'now'\s*,\s*'-'\s*\|\|\s*\?\s*\|\|\s*'\s*days'\s*\)/gi,
-    "(CURRENT_DATE - CAST(? AS INTEGER) * INTERVAL '1 day')::text",
+    "(CURRENT_DATE - CAST(? AS integer) * INTERVAL '1 day')::text",
   );
   s = s.replace(
     /\bdate\s*\(\s*'now'\s*,\s*'-(\d+)\s+days'\s*\)/gi,
@@ -104,8 +104,10 @@ function convertDialect(sql) {
   });
   s = s.replace(/\bNOT\s+LIKE\b/gi, 'NOT ILIKE');
   s = s.replace(/\bLIKE\b/gi, 'ILIKE');
-  // pg lowercases unquoted aliases; keep previous camelCase column names
-  s = s.replace(/\bAS\s+([a-zA-Z_][a-zA-Z0-9_]*[A-Z][a-zA-Z0-9_]*)\b/g, 'AS "$1"');
+  // pg lowercases unquoted aliases; keep camelCase names (skip ALL-CAPS types like INTEGER)
+  s = s.replace(/\bAS\s+([a-zA-Z_][a-zA-Z0-9_]*[A-Z][a-zA-Z0-9_]*)\b/g, (full, name) => (
+    name === name.toUpperCase() ? full : `AS "${name}"`
+  ));
 
   if (orIgnore && !/\bON CONFLICT\b/i.test(s)) {
     s = s.replace(/;?\s*$/, ' ON CONFLICT DO NOTHING');
