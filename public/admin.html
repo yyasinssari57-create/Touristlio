@@ -1339,6 +1339,7 @@ function imageSourceBadge(url) {
   if (!u) return '';
   if (isUnsplashUrl(u)) return '<span class="adm-img-badge adm-img-badge-ext">Unsplash</span>';
   if (u.startsWith('/uploads/')) return '<span class="adm-img-badge adm-img-badge-up">Yüklenen</span>';
+  if (/supabase\.co\/storage\//i.test(u)) return '<span class="adm-img-badge adm-img-badge-up">Yüklenen</span>';
   if (/^https?:\/\//i.test(u)) return '<span class="adm-img-badge adm-img-badge-ext">Harici</span>';
   return '';
 }

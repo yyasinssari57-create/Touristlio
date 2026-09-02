@@ -41,6 +41,19 @@ DATABASE_URL=postgresql://postgres.fmfjvogppeypqrozwrak:GERÇEK_ŞİFRE@aws-0-eu
 
 Aynı değeri Render → Environment → `DATABASE_URL` olarak ekleyin (`sync: false`). `.env` commit etmeyin.
 
+## Görseller (Supabase Storage)
+
+Yüklenen fotoğraflar (admin yer görseli, avatar, Tiola) **Supabase Storage** `uploads` bucket’ına gider. Render diskine yazılmaz.
+
+```
+SUPABASE_URL=https://fmfjvogppeypqrozwrak.supabase.co
+SUPABASE_SERVICE_KEY=sb_secret_...   # service key — tarayıcıya koyma
+```
+
+Eski `uploads/` klasörünü taşımak: `npm run uploads:migrate`
+
+Aynı değeri Render Environment’a da ekleyin.
+
 **Yedek:** Admin paneli `pg_dump` ile `.sql` indirir. Geri yükleme Supabase Dashboard → Database → Backups / SQL Editor üzerinden yapılır.
 
 **Komut satırı:**

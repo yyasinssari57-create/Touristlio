@@ -1,9 +1,8 @@
-const path = require('path');
 const { db } = require('../db');
 const notifications = require('./notifications');
 const authModel = require('../modules/auth/auth.model');
 const { sendTiolaRejectionEmail, sendBlogRejectionEmail } = require('./mailer');
-const { unlinkImageAndVariants } = require('./image-process');
+const { deleteStoredImage } = require('./image-process');
 const { refreshPlaceStatsForTiola } = require('./tiola-stats');
 
 const REPORT_STATUSES = {
@@ -147,8 +146,7 @@ async function removeProfilePhoto(userId) {
   if (!row) return { ok: false, error: 'Kullanıcı bulunamadı' };
   if (!row.avatar_url) return { ok: true, alreadyRemoved: true, hadPhoto: false };
 
-  const filePath = path.join(__dirname, '..', '..', row.avatar_url.replace(/^\//, ''));
-  try { unlinkImageAndVariants(filePath); } catch { /* ignore */ }
+  try { await deleteStoredImage(row.avatar_url); } catch { /* ignore */ }
   await authModel.clearAvatarPhoto(userId);
   if (!row.avatar_preset) {
     await authModel.updateAvatarPreset(userId, 'none', row.avatar_color || '#0ea5e9');

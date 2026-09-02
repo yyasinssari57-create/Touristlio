@@ -23,6 +23,12 @@ function validateProductionEnv() {
     });
   }
 
+  if (!String(process.env.SUPABASE_URL || '').trim() || !String(process.env.SUPABASE_SERVICE_KEY || '').trim()) {
+    logger.warn({
+      msg: 'Production: SUPABASE_URL / SUPABASE_SERVICE_KEY not set — uploaded photos stay on ephemeral disk and will vanish on redeploy. Set both for Supabase Storage.',
+    });
+  }
+
   if (mailer.isConfigured()) {
     logger.info({ msg: 'SMTP configured for transactional email' });
   }

@@ -45,6 +45,7 @@
     if (!u) return '';
     if (/images\.unsplash\.com/i.test(u)) return unsplashSrcset(u);
     if (u.startsWith('/uploads/')) return localSrcset(u);
+    if (/supabase\.co\/storage\/v1\/object\/public\//i.test(u)) return localSrcset(u);
     if (/\/images\/hero(\.webp)?/i.test(u)) return localSrcset(u.replace(/\/images\/hero$/i, '/images/hero.webp'));
     return '';
   }

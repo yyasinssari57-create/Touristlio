@@ -35,7 +35,7 @@ Blueprint şunları oluşturur:
 | Start | `npm run start:prod` |
 | Node.js | **22.16.0** (`.node-version` + `NODE_VERSION` env) |
 | Health check | `GET /api/health` |
-| Disk | 1 GB → uploads (veritabanı Supabase’de) |
+| Disk | gerekmez (görseller Supabase Storage) |
 | Plan | `starter` |
 
 ### 2. Ortam değişkenlerini doldur
@@ -47,7 +47,9 @@ Deploy başlamadan veya ilk deploy sonrası **Environment** sekmesinde aşağıd
 | Değişken | Örnek | Açıklama |
 |----------|-------|----------|
 | `SITE_URL` | `https://www.touristlio.com` (veya geçici `https://touristlio.onrender.com`) | CSRF, e-posta ve sitemap. **Tarayıcıdaki canlı origin ile aynı** (sonda `/` yok). Canonical host **www**. |
-| `DATABASE_URL` | `postgresql://postgres:ŞİFRE@db.PROJECT.supabase.co:5432/postgres` | **Zorunlu.** Supabase Database şifresi. Render diski geçici olduğu için SQLite kullanılmaz. `@` → `%40`. |
+| `DATABASE_URL` | `postgresql://postgres:ŞİFRE@db.PROJECT.supabase.co:5432/postgres` | **Zorunlu.** Supabase Database şifresi. `@` → `%40`. |
+| `SUPABASE_URL` | `https://xxxx.supabase.co` | Görsel deposu (Storage) |
+| `SUPABASE_SERVICE_KEY` | `sb_secret_…` | Storage service key — tarayıcıya koyma |
 | `CORS_ORIGIN` | `https://www.touristlio.com` | Tarayıcı CORS; kod apex eşini otomatik kabul eder. |
 | `ADMIN_EMAIL` | `admin@touristlio.com` | İlk admin hesabı |
 | `ADMIN_PASSWORD` | güçlü şifre | Seed/ensure-admin ile kullanılır |

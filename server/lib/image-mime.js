@@ -3,6 +3,13 @@ const FileType = require('file-type');
 
 const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
+async function detectImageMimeFromBuffer(buf) {
+  if (!buf || !buf.length) return null;
+  const slice = Buffer.isBuffer(buf) ? buf.subarray(0, 4100) : Buffer.from(buf).subarray(0, 4100);
+  const detected = await FileType.fromBuffer(slice);
+  return detected?.mime || null;
+}
+
 async function detectImageMime(filePath) {
   const fd = fs.openSync(filePath, 'r');
   try {
@@ -43,7 +50,12 @@ function validateUploadedImage(errorMessage = 'Geçersiz veya desteklenmeyen gö
     if (!files.length) return next();
     try {
       for (const file of files) {
-        const ok = await validateFilePath(file.path);
+        let ok = false;
+        if (file.buffer && file.buffer.length) {
+          ok = isAllowedImageMime(await detectImageMimeFromBuffer(file.buffer));
+        } else if (file.path) {
+          ok = await validateFilePath(file.path);
+        }
         if (!ok) {
           for (const f of files) {
             if (f.path) fs.unlink(f.path, () => {});
@@ -66,6 +78,7 @@ function validateUploadedImage(errorMessage = 'Geçersiz veya desteklenmeyen gö
 module.exports = {
   ALLOWED_IMAGE_MIMES,
   detectImageMime,
+  detectImageMimeFromBuffer,
   isAllowedImageMime,
   imageFileFilter,
   validateUploadedImage,

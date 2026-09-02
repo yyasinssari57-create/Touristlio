@@ -26,7 +26,7 @@ const AVATAR_COLORS = [
   '#db2777', '#059669', '#dc2626', '#4f46e5', '#0891b2',
 ];
 
-const PRESET_IDS = new Set(AVATAR_PRESETS.map((p) => p.id));
+const { publicImageUrl } = require('./media-url');
 
 function isValidPreset(id) {
   return typeof id === 'string' && PRESET_IDS.has(id);
@@ -39,7 +39,7 @@ function isValidColor(color) {
 function mapAvatarFields(row) {
   if (!row) return { avatarUrl: null, avatarPreset: null, avatarColor: '#0ea5e9' };
   return {
-    avatarUrl: row.avatar_url || null,
+    avatarUrl: publicImageUrl(row.avatar_url),
     avatarPreset: row.avatar_preset || null,
     avatarColor: row.avatar_color || '#0ea5e9',
   };
