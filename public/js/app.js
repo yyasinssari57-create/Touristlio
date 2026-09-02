@@ -2727,7 +2727,7 @@ function initAvatarSettings(u) {
   const colors = document.getElementById('avatarColorRow');
   const preview = document.getElementById('avatarPreview');
   if (!grid || !window.TL_AVATARS) return;
-  avatarPick.preset = u.avatarUrl ? avatarPick.preset : (u.avatarPreset || 'none');
+  avatarPick.preset = u.avatarPreset || 'none';
   avatarPick.color = u.avatarColor || avatarPick.color;
   const picker = window.TL_AVATARS.renderPickerGrid(avatarPick.preset, avatarPick.color, ({ preset, color }) => {
     if (preset) avatarPick.preset = preset;
@@ -2766,7 +2766,7 @@ async function saveAvatarPreset() {
     } else {
       window.TL_TOAST?.error(t('avatarSaveFailed'));
     }
-  } catch { /* toast from api */ }
+  } catch { /* api() already showed a toast */ }
   finally { window.TL_SKELETON?.button(btn, false); }
 }
 

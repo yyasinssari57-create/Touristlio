@@ -181,6 +181,7 @@ app.get('/api/health', async (_req, res) => {
       service: 'Touristlio',
       db: 'postgres',
       storage: require('./lib/supabase-storage').isEnabled() ? 'supabase' : 'disk',
+      smtp: require('./lib/mailer').isConfigured(),
       version: getAppVersion(),
       ts: new Date().toISOString(),
     });

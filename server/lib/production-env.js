@@ -12,8 +12,11 @@ function validateProductionEnv() {
   }
 
   if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && !mailer.isConfigured()) {
+    const reason = mailer.smtpStatus().reason;
     logger.warn({
-      msg: 'Production: REQUIRE_EMAIL_VERIFICATION=true but SMTP is not configured — verification emails will not be sent',
+      msg: reason === 'placeholder'
+        ? 'Production: SMTP_* still has placeholder values from .env.example — verification emails will not be sent. Set real Brevo SMTP_USER/SMTP_PASS in Render Environment.'
+        : 'Production: REQUIRE_EMAIL_VERIFICATION=true but SMTP is not configured — verification emails will not be sent',
     });
   }
 

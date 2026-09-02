@@ -1,28 +1,59 @@
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
 
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = Number(process.env.SMTP_PORT) || 587;
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
-const SMTP_FROM = process.env.SMTP_FROM || 'touristlio.info@gmail.com';
-
 let transporter = null;
+let transporterKey = '';
+
+function trimEnv(value) {
+  return String(value || '').trim().replace(/^['"]|['"]$/g, '');
+}
+
+function looksPlaceholder(value) {
+  return /your-brevo|example\.com|changeme|placeholder|smtp-key-here|şifre|password-here|xxx+|TODO/i.test(String(value || ''));
+}
+
+function smtpEnv() {
+  return {
+    host: trimEnv(process.env.SMTP_HOST),
+    port: Number(process.env.SMTP_PORT) || 587,
+    user: trimEnv(process.env.SMTP_USER),
+    pass: trimEnv(process.env.SMTP_PASS),
+    from: trimEnv(process.env.SMTP_FROM) || 'touristlio.info@gmail.com',
+  };
+}
+
+function smtpStatus() {
+  const cfg = smtpEnv();
+  if (!cfg.host || !cfg.user || !cfg.pass) {
+    return { configured: false, reason: 'missing', host: cfg.host || '', port: cfg.port };
+  }
+  if (looksPlaceholder(cfg.host) || looksPlaceholder(cfg.user) || looksPlaceholder(cfg.pass)) {
+    return { configured: false, reason: 'placeholder', host: cfg.host, port: cfg.port };
+  }
+  return { configured: true, reason: null, host: cfg.host, port: cfg.port };
+}
 
 function isConfigured() {
-  return Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+  return smtpStatus().configured;
 }
 
 function getTransporter() {
-  if (!isConfigured()) return null;
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    });
-  }
+  const status = smtpStatus();
+  if (!status.configured) return null;
+  const cfg = smtpEnv();
+  const key = `${cfg.host}:${cfg.port}:${cfg.user}:${cfg.pass.length}`;
+  if (transporter && transporterKey === key) return transporter;
+  transporter = nodemailer.createTransport({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.port === 465,
+    requireTLS: cfg.port === 587,
+    auth: { user: cfg.user, pass: cfg.pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
+  });
+  transporterKey = key;
   return transporter;
 }
 
@@ -82,12 +113,19 @@ function buildHtmlEmail({ title, intro, actionLabel, actionUrl, footer }) {
 
 async function sendMail({ to, subject, text, html, replyTo }) {
   const tx = getTransporter();
+  const cfg = smtpEnv();
   if (!tx) {
-    logger.info({ msg: 'Email skipped (SMTP not configured)', to, subject });
+    const status = smtpStatus();
+    logger.info({
+      msg: 'Email skipped (SMTP not configured)',
+      to,
+      subject,
+      reason: status.reason || 'missing',
+    });
     return false;
   }
   const message = {
-    from: `"Touristlio" <${SMTP_FROM}>`,
+    from: `"Touristlio" <${cfg.from}>`,
     to,
     subject,
     text: text || '',
@@ -98,7 +136,17 @@ async function sendMail({ to, subject, text, html, replyTo }) {
   if (!message.text && message.html) {
     message.text = message.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
-  await tx.sendMail(message);
+  try {
+    await tx.sendMail(message);
+  } catch (err) {
+    const hint = /535|auth/i.test(String(err.message || ''))
+      ? ' Check SMTP_USER/SMTP_PASS (Brevo SMTP key, not API key) and that SMTP_FROM is a verified sender.'
+      : '';
+    logger.warn({ msg: 'Email send failed', to, subject, err: err.message });
+    const wrapped = new Error(`${err.message}${hint}`);
+    wrapped.cause = err;
+    throw wrapped;
+  }
   logger.info({ msg: 'Email sent', to, subject });
   return true;
 }
@@ -247,7 +295,8 @@ async function sendAdminMessageEmail(email, { userName, subject, body, siteUrl }
 }
 
 async function sendContactFormEmail({ name, email, subject, message }) {
-  const to = process.env.CONTACT_EMAIL || process.env.ADMIN_EMAIL || SMTP_FROM;
+  const cfg = smtpEnv();
+  const to = process.env.CONTACT_EMAIL || process.env.ADMIN_EMAIL || cfg.from;
   const safeName = String(name || '').slice(0, 120);
   const safeEmail = String(email || '').slice(0, 200);
   const safeSubject = String(subject || '').slice(0, 200);
@@ -273,6 +322,8 @@ async function sendContactFormEmail({ name, email, subject, message }) {
 
 module.exports = {
   isConfigured,
+  smtpStatus,
+  looksPlaceholder,
   sendMail,
   sendPasswordResetEmail,
   sendVerificationEmail,

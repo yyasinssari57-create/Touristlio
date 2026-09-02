@@ -174,9 +174,10 @@
   }
 
   function presetDisplayColor(presetId, userColor) {
+    if (userColor && /^#[0-9a-fA-F]{6}$/i.test(userColor)) return userColor;
     const p = presetById(presetId);
-    if (p?.category === 'animal' && p.defaultColor) return p.defaultColor;
-    return userColor || '#0ea5e9';
+    if (p?.defaultColor) return p.defaultColor;
+    return '#0ea5e9';
   }
 
   function presetIconSvg(id) {

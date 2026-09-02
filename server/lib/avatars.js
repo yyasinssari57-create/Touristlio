@@ -28,6 +28,8 @@ const AVATAR_COLORS = [
 
 const { publicImageUrl } = require('./media-url');
 
+const PRESET_IDS = new Set(AVATAR_PRESETS.map((p) => p.id));
+
 function isValidPreset(id) {
   return typeof id === 'string' && PRESET_IDS.has(id);
 }

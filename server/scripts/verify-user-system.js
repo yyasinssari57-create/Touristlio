@@ -9,7 +9,7 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 const jwt = require('jsonwebtoken');
-const { db } = require('../db');
+const { db, initDb } = require('../db');
 const { SESSION_EXPIRED_MSG } = require('../middleware/auth');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -21,6 +21,28 @@ function fail(msg) {
 }
 
 console.log('verify-user-system');
+
+const { isValidPreset } = require('../lib/avatars');
+if (!isValidPreset('fox') || !isValidPreset('none') || !isValidPreset('traveler') || isValidPreset('not-a-preset')) {
+  fail('isValidPreset missing PRESET_IDS (avatar save 500)');
+} else ok('avatar presets validate (fox/none/traveler)');
+
+const { isConfigured, smtpStatus } = require('../lib/mailer');
+const smtpNow = smtpStatus();
+ok(`smtp status configured=${smtpNow.configured} reason=${smtpNow.reason || 'ok'}`);
+const prevSmtp = {
+  SMTP_HOST: process.env.SMTP_HOST,
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+};
+process.env.SMTP_HOST = 'smtp-relay.brevo.com';
+process.env.SMTP_USER = 'your-brevo-login@email.com';
+process.env.SMTP_PASS = 'your-brevo-smtp-key-here';
+if (isConfigured()) fail('placeholder SMTP treated as configured');
+else ok('placeholder SMTP is not treated as configured');
+process.env.SMTP_HOST = prevSmtp.SMTP_HOST;
+process.env.SMTP_USER = prevSmtp.SMTP_USER;
+process.env.SMTP_PASS = prevSmtp.SMTP_PASS;
 
 const appJs = fs.readFileSync(path.join(ROOT, 'public/js/app.js'), 'utf8');
 if (!appJs.includes('handleSessionExpired') || !appJs.includes('sessionExpired')) {
@@ -142,7 +164,7 @@ function errMsg(json) {
 }
 
 function waitForServer(url, tries) {
-  const max = tries || 50;
+  const max = tries || 240;
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -153,12 +175,12 @@ function waitForServer(url, tries) {
       });
       req.on('error', () => {
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 400);
       });
       req.on('timeout', () => {
         req.destroy();
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 400);
       });
     };
     tick();
@@ -182,6 +204,7 @@ function spawnServer(port) {
 }
 
 async function checkLive(base) {
+  await initDb();
   const root = base.replace(/\/$/, '');
   const origin = root;
   const jar = {};
@@ -268,6 +291,24 @@ async function checkLive(base) {
   else ok('register returns user');
   if (!jar.tl_token) fail('auth cookie missing after register');
   else ok('auth cookie set after register');
+
+  const av = await request(`${root}/api/auth/avatar`, {
+    method: 'PATCH',
+    jar,
+    headers: { Origin: origin },
+    body: { avatarPreset: 'fox', avatarColor: '#7c3aed' },
+  });
+  const avPayload = unwrap(av.json);
+  if (av.status !== 200) {
+    fail(`PATCH /auth/avatar HTTP ${av.status}: ${av.body.slice(0, 180)}`);
+  } else if (avPayload.user?.avatarPreset !== 'fox' || avPayload.user?.avatarColor !== '#7c3aed') {
+    fail(`avatar not saved: ${JSON.stringify(avPayload.user)}`);
+  } else ok('PATCH /auth/avatar saves fox + color');
+  const meAv = await request(`${root}/api/auth/me`, { jar });
+  const meAvUser = unwrap(meAv.json).user;
+  if (meAvUser?.avatarPreset !== 'fox' || meAvUser?.avatarColor !== '#7c3aed') {
+    fail(`GET /me after avatar: ${JSON.stringify(meAvUser)}`);
+  } else ok('GET /me returns saved avatar');
 
   const dup = await request(`${root}/api/auth/register`, {
     method: 'POST',
@@ -467,13 +508,16 @@ async function main() {
     const port = 3058;
     const child = spawnServer(port);
     let stderr = '';
+    let stdout = '';
     child.stderr.on('data', (c) => { stderr += c; });
+    child.stdout.on('data', (c) => { stdout += c; });
     const base = `http://127.0.0.1:${port}`;
     try {
-      await waitForServer(`${base}/api/health`, 60);
+      await waitForServer(`${base}/api/health`, 240);
       await checkLive(base);
     } catch (e) {
-      fail(`live server :${port}: ${e.message}${stderr ? ` (${stderr.slice(0, 280)})` : ''}`);
+      const extra = `${stderr}${stdout}`.trim().slice(0, 280);
+      fail(`live server :${port}: ${e.message}${extra ? ` (${extra})` : ''}`);
     } finally {
       child.kill('SIGTERM');
       await new Promise((r) => setTimeout(r, 200));
