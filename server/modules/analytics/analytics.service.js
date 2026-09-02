@@ -121,12 +121,14 @@ async function topPlaces() {
 
 async function topUsers() {
   const rows = await db.prepare(`
-    SELECT u.id, u.name, u.email,
-      (SELECT COUNT(*) FROM tiolas t WHERE t.user_id = u.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiola_count,
-      (SELECT COUNT(*) FROM blogs b WHERE b.user_id = u.id AND b.status = 'approved') AS blog_count,
-      (SELECT COUNT(*) FROM tiola_likes tl JOIN tiolas t ON t.id = tl.tiola_id WHERE t.user_id = u.id) AS like_count
-    FROM users u
-    WHERE u.role = 'member'
+    SELECT * FROM (
+      SELECT u.id, u.name, u.email,
+        (SELECT COUNT(*) FROM tiolas t WHERE t.user_id = u.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiola_count,
+        (SELECT COUNT(*) FROM blogs b WHERE b.user_id = u.id AND b.status = 'approved') AS blog_count,
+        (SELECT COUNT(*) FROM tiola_likes tl JOIN tiolas t ON t.id = tl.tiola_id WHERE t.user_id = u.id) AS like_count
+      FROM users u
+      WHERE u.role = 'member'
+    ) ranked
     ORDER BY (tiola_count + blog_count + like_count) DESC
     LIMIT 10
   `).all();
