@@ -67,7 +67,7 @@ function publicBlogSelect() {
 
 router.get('/meta', async (_req, res) => {
   const lang = String(_req.query.lang || 'tr').startsWith('en') ? 'en' : 'tr';
-  const page = settingsService.getBlogPageSettings();
+  const page = await settingsService.getBlogPageSettings();
   const categories = (await blogDb.listBlogCategories()).map((c) => ({
     slug: c.slug,
     label: lang === 'en'
@@ -123,7 +123,7 @@ router.get('/', authOptional, async (req, res) => {
   const rows = await db.prepare(`
     ${publicBlogSelect()}
     ${where}
-    ORDER BY b.featured DESC, datetime(COALESCE(b.published_at, b.created_at)) DESC
+    ORDER BY b.featured DESC, COALESCE(b.published_at, b.created_at) DESC
   `).all(...params);
 
   res.json({ blogs: await Promise.all(rows.map((r) => mapBlog(r, lang, req.user?.id))) });

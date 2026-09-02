@@ -38,13 +38,13 @@ function buildTiolaListFilters(query, { approvedOnly = false, pendingOnly = fals
 
   const from = sanitizeText(query.from, 30);
   if (from) {
-    where += ' AND date(t.created_at) >= date(?)';
+    where += ' AND LEFT(t.created_at, 10) >= LEFT(?::text, 10)';
     params.push(from);
   }
 
   const to = sanitizeText(query.to, 30);
   if (to) {
-    where += ' AND date(t.created_at) <= date(?)';
+    where += ' AND LEFT(t.created_at, 10) <= LEFT(?::text, 10)';
     params.push(to);
   }
 
@@ -82,13 +82,13 @@ function buildBlogListFilters(query, { approvedOnly = false, pendingOnly = false
 
   const from = sanitizeText(query.from, 30);
   if (from) {
-    where += ' AND date(b.created_at) >= date(?)';
+    where += ' AND LEFT(b.created_at, 10) >= LEFT(?::text, 10)';
     params.push(from);
   }
 
   const to = sanitizeText(query.to, 30);
   if (to) {
-    where += ' AND date(b.created_at) <= date(?)';
+    where += ' AND LEFT(b.created_at, 10) <= LEFT(?::text, 10)';
     params.push(to);
   }
 

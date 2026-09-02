@@ -4,33 +4,23 @@ const { db } = require('../../db');
 
 
 
-function dashboard() {
-
+async function dashboard() {
   return {
-
-    users: analyticsModel.count('users'),
-
-    places: analyticsModel.count('places'),
-
-    tiolasApproved: analyticsModel.count('tiolas', "status = 'approved'"),
-
-    tiolasPending: analyticsModel.count('tiolas', "status = 'pending'"),
-
-    blogsPending: analyticsModel.count('blogs', "status = 'pending'"),
-
-    visitedRecords: analyticsModel.count('visited_places'),
-
-    travelLists: analyticsModel.count('travel_lists'),
-
+    users: await analyticsModel.count('users'),
+    places: await analyticsModel.count('places'),
+    tiolasApproved: await analyticsModel.count('tiolas', "status = 'approved'"),
+    tiolasPending: await analyticsModel.count('tiolas', "status = 'pending'"),
+    blogsPending: await analyticsModel.count('blogs', "status = 'pending'"),
+    visitedRecords: await analyticsModel.count('visited_places'),
+    travelLists: await analyticsModel.count('travel_lists'),
   };
-
 }
 
 
 
 async function contentQuality() {
 
-  const total = analyticsModel.count('places');
+  const total = await analyticsModel.count('places');
 
   const noPhoto = (await db.prepare("SELECT COUNT(*) AS c FROM places WHERE photos IS NULL OR photos = '[]' OR photos = ''").get()).c;
 
@@ -113,10 +103,10 @@ async function timeseries() {
 async function topPlaces() {
   const rows = await db.prepare(`
     SELECT p.id, p.name, p.city, p.country,
-      (SELECT COUNT(*) FROM tiolas t WHERE t.place_id = p.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiolaCount,
-      (SELECT COUNT(*) FROM saved_places sp WHERE sp.place_id = p.id) AS saveCount
+      (SELECT COUNT(*) FROM tiolas t WHERE t.place_id = p.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiola_count,
+      (SELECT COUNT(*) FROM saved_places sp WHERE sp.place_id = p.id) AS save_count
     FROM places p
-    ORDER BY tiolaCount DESC, saveCount DESC
+    ORDER BY tiola_count DESC, save_count DESC
     LIMIT 10
   `).all();
   return rows.map((r) => ({
@@ -124,30 +114,32 @@ async function topPlaces() {
     name: r.name,
     city: r.city,
     country: r.country,
-    tiolaCount: r.tiolaCount,
-    saveCount: r.saveCount,
+    tiolaCount: r.tiola_count,
+    saveCount: r.save_count,
   }));
 }
 
 async function topUsers() {
   const rows = await db.prepare(`
-    SELECT u.id, u.name, u.email,
-      (SELECT COUNT(*) FROM tiolas t WHERE t.user_id = u.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiolaCount,
-      (SELECT COUNT(*) FROM blogs b WHERE b.user_id = u.id AND b.status = 'approved') AS blogCount,
-      (SELECT COUNT(*) FROM tiola_likes tl JOIN tiolas t ON t.id = tl.tiola_id WHERE t.user_id = u.id) AS likeCount
-    FROM users u
-    WHERE u.role = 'member'
-    ORDER BY (tiolaCount + blogCount + likeCount) DESC
+    SELECT * FROM (
+      SELECT u.id, u.name, u.email,
+        (SELECT COUNT(*) FROM tiolas t WHERE t.user_id = u.id AND t.status = 'approved' AND t.parent_id IS NULL) AS tiola_count,
+        (SELECT COUNT(*) FROM blogs b WHERE b.user_id = u.id AND b.status = 'approved') AS blog_count,
+        (SELECT COUNT(*) FROM tiola_likes tl JOIN tiolas t ON t.id = tl.tiola_id WHERE t.user_id = u.id) AS like_count
+      FROM users u
+      WHERE u.role = 'member'
+    ) ranked
+    ORDER BY (tiola_count + blog_count + like_count) DESC
     LIMIT 10
   `).all();
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
     email: r.email,
-    tiolaCount: r.tiolaCount,
-    blogCount: r.blogCount,
-    likeCount: r.likeCount,
-    activityScore: r.tiolaCount + r.blogCount + r.likeCount,
+    tiolaCount: r.tiola_count,
+    blogCount: r.blog_count,
+    likeCount: r.like_count,
+    activityScore: r.tiola_count + r.blog_count + r.like_count,
   }));
 }
 

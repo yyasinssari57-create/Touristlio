@@ -21,6 +21,44 @@ function quoteIdent(name) {
   return `"${String(name).replace(/"/g, '""')}"`;
 }
 
+/** Replace sqlite FUNC(inner) calls, including nested parentheses. */
+function replaceFuncCalls(sql, funcName, replacer) {
+  const re = new RegExp(`\\b${funcName}\\s*\\(`, 'gi');
+  let s = sql;
+  let searchFrom = 0;
+  while (searchFrom < s.length) {
+    re.lastIndex = searchFrom;
+    const m = re.exec(s);
+    if (!m) break;
+    const start = m.index;
+    const open = start + m[0].length - 1;
+    let depth = 1;
+    let quote = null;
+    let j = open + 1;
+    for (; j < s.length; j += 1) {
+      const c = s[j];
+      if (quote) {
+        if (c === quote && s[j - 1] !== '\\') quote = null;
+        continue;
+      }
+      if (c === "'" || c === '"') {
+        quote = c;
+        continue;
+      }
+      if (c === '(') depth += 1;
+      else if (c === ')') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    if (depth !== 0) break;
+    const replacement = replacer(s.slice(open + 1, j));
+    s = s.slice(0, start) + replacement + s.slice(j + 1);
+    searchFrom = start + replacement.length;
+  }
+  return s;
+}
+
 function convertDialect(sql) {
   let s = String(sql);
   const orIgnore = /\bINSERT\s+OR\s+IGNORE\s+INTO\b/i.test(s);
@@ -45,20 +83,31 @@ function convertDialect(sql) {
   s = s.replace(/\bGLOB\b/gi, 'LIKE');
   s = s.replace(
     /\bdate\s*\(\s*'now'\s*,\s*'-'\s*\|\|\s*\?\s*\|\|\s*'\s*days'\s*\)/gi,
-    "(CURRENT_DATE - CAST(? AS INTEGER) * INTERVAL '1 day')::text",
+    "(CURRENT_DATE - CAST(? AS integer) * INTERVAL '1 day')::text",
   );
   s = s.replace(
     /\bdate\s*\(\s*'now'\s*,\s*'-(\d+)\s+days'\s*\)/gi,
     "((CURRENT_DATE - INTERVAL '$1 days')::text)",
   );
   s = s.replace(/\bdate\s*\(\s*'now'\s*\)/gi, 'CURRENT_DATE::text');
+  s = s.replace(/\bdate\s*\(\s*\?\s*\)/gi, 'LEFT(?::text, 10)');
   s = s.replace(/\bdate\s*\(\s*([a-zA-Z_][\w.]*)\s*\)/gi, 'LEFT($1, 10)');
   s = s.replace(/\s+COLLATE\s+NOCASE/gi, '');
   s = s.replace(/\bdatetime\s*\(\s*([a-zA-Z_][\w.]*)\s*\)/gi, '$1');
+  // leftover datetime(COALESCE(...)) / date(expr) that the identifier regex misses
+  s = replaceFuncCalls(s, 'datetime', (inner) => `(${inner.trim()})`);
+  s = replaceFuncCalls(s, 'date', (inner) => {
+    const t = inner.trim();
+    if (t === '?') return 'LEFT(?::text, 10)';
+    if (/^[a-zA-Z_][\w.]*$/.test(t)) return `LEFT(${t}, 10)`;
+    return `LEFT((${t}), 10)`;
+  });
   s = s.replace(/\bNOT\s+LIKE\b/gi, 'NOT ILIKE');
   s = s.replace(/\bLIKE\b/gi, 'ILIKE');
-  // pg lowercases unquoted aliases; keep previous camelCase column names
-  s = s.replace(/\bAS\s+([a-zA-Z_][a-zA-Z0-9_]*[A-Z][a-zA-Z0-9_]*)\b/g, 'AS "$1"');
+  // pg lowercases unquoted aliases; keep camelCase names (skip ALL-CAPS types like INTEGER)
+  s = s.replace(/\bAS\s+([a-zA-Z_][a-zA-Z0-9_]*[A-Z][a-zA-Z0-9_]*)\b/g, (full, name) => (
+    name === name.toUpperCase() ? full : `AS "${name}"`
+  ));
 
   if (orIgnore && !/\bON CONFLICT\b/i.test(s)) {
     s = s.replace(/;?\s*$/, ' ON CONFLICT DO NOTHING');
@@ -147,5 +196,6 @@ module.exports = {
   bindParams,
   maybeReturning,
   splitStatements,
+  replaceFuncCalls,
   CONFLICT_TARGETS,
 };

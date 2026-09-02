@@ -1,36 +1,20 @@
 const { ok } = require('../../lib/apiResponse');
-
 const settingsService = require('./settings.service');
 
-
-
 async function getPublic(_req, res) {
-
   return ok(res, await settingsService.getPublic());
-
 }
 
-
-
-function getAll(_req, res) {
-
-  return ok(res, { settings: settingsService.getAll() });
-
+async function getAll(_req, res) {
+  return ok(res, { settings: await settingsService.getAll() });
 }
 
-
-
-function update(req, res) {
-
+async function update(req, res) {
   const body = req.body?.settings || req.body || {};
-
-  Object.entries(body).forEach(([key, value]) => settingsService.set(key, value));
-
-  return ok(res, { settings: settingsService.getAll() });
-
+  for (const [key, value] of Object.entries(body)) {
+    await settingsService.set(key, value);
+  }
+  return ok(res, { settings: await settingsService.getAll() });
 }
-
-
 
 module.exports = { getPublic, getAll, update };
-
