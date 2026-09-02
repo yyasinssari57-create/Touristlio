@@ -2145,12 +2145,18 @@ router.get('/moderation/risk', checkPermission('admin.moderate'), async (_req, r
 
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    const msg = err.code === 'LIMIT_FILE_SIZE'
-      ? 'Yedek dosyası en fazla 100 MB olabilir'
-      : (err.message || 'Yükleme hatası');
-    return fail(res, msg, 400);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      const backup = /backup|restore|yedek/i.test(String(req.path || '') + String(req.originalUrl || ''));
+      return fail(res, backup
+        ? 'Yedek dosyası en fazla 100 MB olabilir'
+        : 'Dosya en fazla 5 MB olabilir. Daha küçük bir görsel seçin.', 400);
+    }
+    return fail(res, err.message || 'Yükleme hatası', 400);
   }
   if (err?.message === 'Yalnızca .db dosyası yüklenebilir') {
+    return fail(res, err.message, 400);
+  }
+  if (/Sadece JPEG|desteklenmeyen görsel/i.test(String(err.message || ''))) {
     return fail(res, err.message, 400);
   }
   return next(err);

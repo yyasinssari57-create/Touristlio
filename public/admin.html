@@ -568,17 +568,17 @@
       <section id="adm-appearance" class="adm-section" hidden role="tabpanel" aria-label="Görünüm">
         <div class="admin-card adm-settings">
           <h2 class="adm-h2" style="margin-top:0">Hero görseli</h2>
-          <p class="adm-field-hint">Ana sayfa arka planı. JPEG, PNG veya WebP · en fazla 5 MB.</p>
+          <p class="adm-field-hint">Ana sayfa arka planı. JPEG, PNG veya WebP. Dosyayı seçince otomatik kaydedilir.</p>
           <div id="heroImageErr" class="admin-form-err" role="alert" tabindex="-1"></div>
           <div id="heroImagePreview" class="photo-preview-row" aria-live="polite"></div>
           <div class="adm-photo-section">
             <div class="adm-photo-drop">
-              <label class="adm-photo-btn">
+              <label class="adm-photo-btn" id="heroImageBtn">
                 <span id="heroImageBtnLabel">Görseli ayarla</span>
-                <input type="file" id="heroImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp" aria-label="Hero görseli yükle"/>
+                <input type="file" id="heroImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp,image/jpg" aria-label="Hero görseli yükle"/>
               </label>
             </div>
-            <p class="photo-upload-hint">Yüklenen görsel kaydedilir ve ana sayfada hemen görünür.</p>
+            <p class="photo-upload-hint">iPhone’da HEIC değil JPEG/PNG seçin (veya Ayarlar → Kamera → En Uyumlu). Görsel kaydedilince ana sayfada görünür.</p>
           </div>
         </div>
       </section>
@@ -1442,6 +1442,47 @@ async function loadHeroAppearance() {
   }
 }
 
+function compressHeroImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const type = String(file.type || '').toLowerCase();
+    if (type && !/^image\/(jpeg|jpg|pjpeg|png|webp|gif)$/i.test(type)) {
+      reject(new Error('JPEG, PNG veya WebP seçin. iPhone HEIC fotoğrafları yüklenmez — “En Uyumlu” formatını kullanın.'));
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      reject(new Error('Dosya en fazla 12 MB olabilir.'));
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const maxEdge = 1920;
+      const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+      const cw = Math.max(1, Math.round(img.naturalWidth * scale));
+      const ch = Math.max(1, Math.round(img.naturalHeight * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, cw, ch);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Görsel işlenemedi'));
+          return;
+        }
+        const name = (file.name || 'hero').replace(/\.[^.]+$/, '') + '.jpg';
+        resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }));
+      }, 'image/jpeg', 0.88);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Bu görsel açılamadı. JPEG veya PNG deneyin (iPhone HEIC desteklenmez).'));
+    };
+    img.src = url;
+  });
+}
+
 function bindHeroImageInput() {
   const input = document.getElementById('heroImageFile');
   if (!input || input.dataset.bound === '1') return;
@@ -1450,24 +1491,33 @@ function bindHeroImageInput() {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    const apply = async (chosen) => {
+    const errEl = document.getElementById('heroImageErr');
+    if (errEl) {
+      errEl.textContent = '';
+      errEl.style.display = 'none';
+    }
+    const label = document.getElementById('heroImageBtnLabel');
+    const prevLabel = label ? label.textContent : '';
+    if (label) label.textContent = 'Yükleniyor…';
+    input.disabled = true;
+    const localUrl = URL.createObjectURL(file);
+    renderImagePreview('heroImagePreview', localUrl);
+    try {
+      const chosen = await compressHeroImageFile(file);
       const fd = new FormData();
       fd.append('image', chosen);
-      try {
-        const data = await api('/admin/hero-image', { method: 'POST', body: fd });
-        renderImagePreview('heroImagePreview', data.url);
-        const label = document.getElementById('heroImageBtnLabel');
-        if (label) label.textContent = 'Görseli değiştir';
-        showToast('Hero görseli kaydedildi');
-      } catch (e) {
-        showErr(e.message, 'heroImageErr');
-      }
-    };
-    if (!window.TL_PLACE_CROP) {
-      await apply(file);
-      return;
+      const data = await api('/admin/hero-image', { method: 'POST', body: fd });
+      renderImagePreview('heroImagePreview', data.url);
+      if (label) label.textContent = 'Görseli değiştir';
+      showToast('Hero görseli kaydedildi. Ana sayfayı yenileyin.');
+    } catch (e) {
+      renderImagePreview('heroImagePreview', '');
+      showErr(e.message || 'Görsel yüklenemedi', 'heroImageErr');
+      if (label) label.textContent = prevLabel || 'Görseli ayarla';
+    } finally {
+      URL.revokeObjectURL(localUrl);
+      input.disabled = false;
     }
-    window.TL_PLACE_CROP.open(file, (cropped) => { apply(cropped); }, () => {});
   };
 }
 
@@ -1641,7 +1691,7 @@ function showErr(msg, elId) {
   el.textContent = msg;
   el.style.display = 'block';
   el.focus();
-  if (elId !== 'loginErr') {
+  if (elId !== 'loginErr' && elId !== 'heroImageErr') {
     setTimeout(() => { if (el.textContent === msg) el.style.display = 'none'; }, 8000);
   }
 }
