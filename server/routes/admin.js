@@ -30,9 +30,12 @@ const placesService = require('../modules/places/places.service');
 const { ok, fail } = require('../lib/apiResponse');
 const { mapReport } = require('./reports');
 const reportMod = require('../lib/report-moderation');
-const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
+const { validateUploadedImage } = require('../lib/image-mime');
 const { processImageUpload } = require('../middleware/process-image-upload');
-const { unlinkImageAndVariants } = require('../lib/image-process');
+const { deleteStoredImage, diskUploadRoot } = require('../lib/image-process');
+const { imageUploader } = require('../lib/image-uploader');
+const { publicImageUrl } = require('../lib/media-url');
+const supabaseStorage = require('../lib/supabase-storage');
 const logger = require('../lib/logger');
 const { refreshPlaceStatsForTiola } = require('../lib/tiola-stats');
 
@@ -62,30 +65,10 @@ async function logModeration(req, contentType, contentId, action, reason) {
   });
 }
 
-const uploadRoot = path.join(__dirname, '..', '..', 'uploads');
+const uploadRoot = diskUploadRoot();
 if (!fs.existsSync(uploadRoot)) fs.mkdirSync(uploadRoot, { recursive: true });
 
-function placeUploadDir(placeId) {
-  const dir = path.join(uploadRoot, String(placeId));
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
-const storage = multer.diskStorage({
-  destination(req, _file, cb) {
-    cb(null, placeUploadDir(req.params.id));
-  },
-  filename(_req, file, cb) {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024, files: 10 },
-  fileFilter: imageFileFilter,
-});
+const upload = imageUploader({ fileSize: 5 * 1024 * 1024, files: 10 });
 function mapPendingTiola(row) {
   return {
     id: row.id,
@@ -93,7 +76,7 @@ function mapPendingTiola(row) {
     placeName: row.place_name || '(Genel Tiola)',
     stars: row.stars,
     text: row.text,
-    photoUrl: row.photo_path ? `/uploads/${row.photo_path}` : null,
+    photoUrl: publicImageUrl(row.photo_path),
     cityTag: row.city_tag,
     status: row.status,
     createdAt: row.created_at,
@@ -726,17 +709,20 @@ router.delete('/places/:id', checkPermission('admin.places'), async (req, res) =
 
 function isExternalPhotoUrl(url) {
   const u = String(url || '').trim();
-  return /^https?:\/\//i.test(u) && !/\/uploads\//i.test(u);
+  if (!/^https?:\/\//i.test(u)) return false;
+  if (/\/uploads\//i.test(u)) return false;
+  if (/supabase\.co\/storage\//i.test(u)) return false;
+  return true;
 }
 
-router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), validateUploadedImage(), processImageUpload(), async (req, res) => {
+router.post('/places/:id/photos', checkPermission('admin.places'), upload.array('photos', 10), validateUploadedImage(), processImageUpload({ destRel: (req) => `places/${req.params.id}` }), async (req, res) => {
   const placeId = parsePositiveInt(req.params.id, res);
   if (!placeId) return;
   const row = await db.prepare('SELECT * FROM places WHERE id = ?').get(placeId);
   if (!row) return fail(res, 'Yer bulunamadı', 404);
   if (!req.files?.length) return fail(res, 'Görsel gerekli', 400);
 
-  const newUrls = (req.files || []).map((f) => `/uploads/${placeId}/${f.filename}`);
+  const newUrls = (req.files || []).map((f) => f.publicUrl || publicImageUrl(f.storageKey));
   let existing = [];
   try { existing = JSON.parse(row.photos || '[]'); } catch { existing = []; }
 
@@ -763,24 +749,11 @@ router.post('/places/:id/photos', checkPermission('admin.places'), upload.array(
   return ok(res, { photos, imageUrl, uploaded: newUrls.length });
 });
 
-const mediaRoot = path.join(uploadRoot, 'media');
-if (!fs.existsSync(mediaRoot)) fs.mkdirSync(mediaRoot, { recursive: true });
+const mediaUpload = imageUploader({ fileSize: 5 * 1024 * 1024, files: 1 });
 
-const mediaUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, mediaRoot),
-    filename: (_req, file, cb) => {
-      const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-      cb(null, `${Date.now()}-${safe}`);
-    },
-  }),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: imageFileFilter,
-});
-
-router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), processImageUpload(), async (req, res) => {
+router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), processImageUpload({ destRel: 'media' }), async (req, res) => {
   if (!req.file) return fail(res, 'Görsel gerekli', 400);
-  const url = `/uploads/media/${req.file.filename}`;
+  const url = req.file.publicUrl || publicImageUrl(req.file.storageKey);
   return ok(res, { url });
 });
 
@@ -2051,7 +2024,38 @@ router.get('/media', checkPermission('admin.places', 'admin.content'), async (re
   const placeIdFilter = Number.isFinite(placeId) && placeId > 0 ? placeId : null;
 
   const all = [];
-  scanUploadsDir(uploadRoot, '', placeIdFilter, q, all);
+  if (supabaseStorage.isEnabled()) {
+    try {
+      const objects = await supabaseStorage.listAllObjects('', 1000);
+      for (const obj of objects) {
+        if (!obj || obj.id == null && !obj.name) continue;
+        if (obj.metadata && obj.metadata.mimetype && !String(obj.metadata.mimetype).startsWith('image/')) continue;
+        const name = obj.name;
+        if (!name || name.endsWith('/')) continue;
+        const ext = path.extname(name).toLowerCase();
+        if (ext && !IMAGE_EXT.has(ext)) continue;
+        const relPath = name.replace(/\\/g, '/');
+        if (/-\d+w\.webp$/i.test(relPath)) continue;
+        let linkedPlaceId = null;
+        const placeMatch = relPath.match(/^(?:places\/)?(\d+)\//);
+        if (placeMatch) linkedPlaceId = Number(placeMatch[1]);
+        if (placeIdFilter && linkedPlaceId !== placeIdFilter) continue;
+        if (q && !name.toLowerCase().includes(q.toLowerCase())) continue;
+        all.push({
+          path: relPath,
+          url: publicImageUrl(relPath),
+          filename: path.posix.basename(relPath),
+          placeId: linkedPlaceId,
+          sizeBytes: Number(obj.metadata?.size || obj.metadata?.contentLength || 0),
+          modifiedAt: obj.updated_at || obj.created_at || new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      logger.warn({ msg: 'Storage media list failed', err: err.message });
+    }
+  } else {
+    scanUploadsDir(uploadRoot, '', placeIdFilter, q, all);
+  }
   all.sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
   const total = all.length;
   const totalBytes = all.reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
@@ -2066,30 +2070,34 @@ router.delete('/media', checkPermission('admin.places', 'admin.content'), async 
     return fail(res, 'Geçersiz dosya yolu', 400);
   }
 
-  const normalized = path.normalize(relPath);
+  const normalized = path.normalize(relPath).replace(/\\/g, '/');
   if (normalized.startsWith('..')) return fail(res, 'Geçersiz dosya yolu', 400);
 
-  const fullPath = path.join(uploadRoot, normalized);
-  const resolved = path.resolve(fullPath);
-  const rootResolved = path.resolve(uploadRoot);
-  if (!resolved.startsWith(rootResolved + path.sep) && resolved !== rootResolved) {
-    return fail(res, 'Geçersiz dosya yolu', 400);
-  }
-  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
-    return fail(res, 'Dosya bulunamadı', 404);
+  if (!supabaseStorage.isEnabled()) {
+    const fullPath = path.join(uploadRoot, normalized);
+    const resolved = path.resolve(fullPath);
+    const rootResolved = path.resolve(uploadRoot);
+    if (!resolved.startsWith(rootResolved + path.sep) && resolved !== rootResolved) {
+      return fail(res, 'Geçersiz dosya yolu', 400);
+    }
+    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+      return fail(res, 'Dosya bulunamadı', 404);
+    }
   }
 
-  const urlPath = `/uploads/${normalized.replace(/\\/g, '/')}`;
-  const placeMatch = normalized.match(/^(\d+)\//);
+  const urlPath = publicImageUrl(normalized) || `/uploads/${normalized.replace(/\\/g, '/')}`;
+  const placeMatch = normalized.match(/^(?:places\/)?(\d+)\//);
   if (placeMatch) {
     const placeId = Number(placeMatch[1]);
     const row = await db.prepare('SELECT id, photos, image_url FROM places WHERE id = ?').get(placeId);
     if (row) {
       let photos = [];
       try { photos = JSON.parse(row.photos || '[]'); } catch { photos = []; }
-      const nextPhotos = photos.filter((u) => u !== urlPath);
+      const nextPhotos = photos.filter((u) => u !== urlPath && !String(u).endsWith(`/${path.posix.basename(normalized)}`));
       let nextImage = row.image_url;
-      if (nextImage === urlPath) nextImage = nextPhotos[0] || null;
+      if (nextImage === urlPath || String(nextImage || '').endsWith(`/${path.posix.basename(normalized)}`)) {
+        nextImage = nextPhotos[0] || null;
+      }
       await db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
         JSON.stringify(nextPhotos),
         nextImage,
@@ -2100,7 +2108,7 @@ router.delete('/media', checkPermission('admin.places', 'admin.content'), async 
     }
   }
 
-  unlinkImageAndVariants(resolved);
+  await deleteStoredImage(normalized);
   logAdmin(req, 'media.delete', 'media', null, normalized);
   return ok(res, { deleted: true, path: normalized });
 });

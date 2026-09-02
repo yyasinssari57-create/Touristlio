@@ -1,7 +1,4 @@
-const path = require('path');
-const fs = require('fs');
 const express = require('express');
-const multer = require('multer');
 const { body } = require('express-validator');
 const { authRequired } = require('../../middleware/auth');
 const { authLimiter, formLimiter } = require('../../middleware/rateLimit');
@@ -10,25 +7,12 @@ const { isValidEmail, EMAIL_RE } = require('../../lib/sanitize');
 const { recaptchaGuard } = require('../../middleware/recaptcha');
 const { honeypotGuard } = require('../../middleware/honeypot');
 const controller = require('./auth.controller');
-const { imageFileFilter, validateUploadedImage } = require('../../lib/image-mime');
+const { validateUploadedImage } = require('../../lib/image-mime');
 const { processImageUpload } = require('../../middleware/process-image-upload');
+const { imageUploader } = require('../../lib/image-uploader');
 const { MIN_PASSWORD_LENGTH } = require('../../auth');
 
-const uploadRoot = path.join(__dirname, '..', '..', '..', 'uploads');
-if (!fs.existsSync(uploadRoot)) fs.mkdirSync(uploadRoot, { recursive: true });
-
-const avatarStorage = multer.diskStorage({
-  destination: uploadRoot,
-  filename: (_req, _file, cb) => {
-    cb(null, `avatar-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
-  },
-});
-
-const avatarUpload = multer({
-  storage: avatarStorage,
-  limits: { fileSize: 3 * 1024 * 1024 },
-  fileFilter: imageFileFilter,
-});
+const avatarUpload = imageUploader({ fileSize: 3 * 1024 * 1024, files: 1 });
 
 const router = express.Router();
 
@@ -102,6 +86,6 @@ router.post('/avatar-upload', authRequired, async (req, res, next) => {
     }
     next();
   });
-}, validateUploadedImage(), processImageUpload(), controller.updateAvatarPhoto);
+}, validateUploadedImage(), processImageUpload({ destRel: 'avatars' }), controller.updateAvatarPhoto);
 
 module.exports = router;

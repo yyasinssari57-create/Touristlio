@@ -1,8 +1,4 @@
-const path = require('path');
-
 const express = require('express');
-
-const multer = require('multer');
 
 const { db } = require('../db');
 
@@ -16,8 +12,10 @@ const { logAbnormal } = require('../lib/anti-bot-log');
 
 const { enrichTiolaLikes, toggleTiolaLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
-const { imageFileFilter, validateUploadedImage } = require('../lib/image-mime');
+const { validateUploadedImage } = require('../lib/image-mime');
 const { processImageUpload } = require('../middleware/process-image-upload');
+const { imageUploader } = require('../lib/image-uploader');
+const { publicImageUrl } = require('../lib/media-url');
 const { containsBannedWord } = require('../lib/contentFilter');
 const { refreshPlaceStatsForTiola } = require('../lib/tiola-stats');
 
@@ -31,43 +29,7 @@ const MONTHLY_COMMENT_LIMIT = 5;
 
 
 
-const MIME_TO_EXT = {
-
-  'image/jpeg': '.jpg',
-
-  'image/png': '.png',
-
-  'image/webp': '.webp',
-
-};
-
-
-
-const storage = multer.diskStorage({
-
-  destination: path.join(__dirname, '..', '..', 'uploads'),
-
-  filename: (_req, file, cb) => {
-
-    const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
-
-    cb(null, `tiola-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-
-  },
-
-});
-
-
-
-const upload = multer({
-
-  storage,
-
-  limits: { fileSize: 5 * 1024 * 1024 },
-
-  fileFilter: imageFileFilter,
-
-});
+const upload = imageUploader({ fileSize: 5 * 1024 * 1024, files: 1 });
 
 
 
@@ -121,7 +83,7 @@ async function mapTiola(row, userId) {
 
     text: row.text,
 
-    photoUrl: row.photo_path ? `/uploads/${path.basename(row.photo_path)}` : null,
+    photoUrl: publicImageUrl(row.photo_path),
 
     cityTag: row.city_tag,
 
@@ -293,7 +255,7 @@ router.get('/', authOptional, async (req, res) => {
 
 
 
-router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.single('photo'), validateUploadedImage(), processImageUpload(), async (req, res) => {
+router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.single('photo'), validateUploadedImage(), processImageUpload({ destRel: 'tiolas' }), async (req, res) => {
 
   if (isHoneypotFilled(req.body)) {
     return res.status(400).json({ error: 'Geçersiz istek' });
@@ -343,7 +305,7 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
 
     if (!parent) {
 
-      const monthly = countMonthlyPlaceComments(req.user.id, pid);
+      const monthly = await countMonthlyPlaceComments(req.user.id, pid);
 
       if (monthly >= MONTHLY_COMMENT_LIMIT) {
 
@@ -394,7 +356,7 @@ router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.singl
     });
   }
 
-  const photoPath = req.file ? req.file.filename : null;
+  const photoPath = req.file ? (req.file.storageKey || req.file.publicUrl || req.file.filename) : null;
 
   let info;
   try {

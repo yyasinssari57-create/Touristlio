@@ -1,9 +1,8 @@
-const path = require('path');
 const { db } = require('../db');
 const authModel = require('../modules/auth/auth.model');
 const { sanitizeText, sanitizeName } = require('./sanitize');
 const { isValidPreset, isValidColor } = require('./avatars');
-const { unlinkImageAndVariants } = require('./image-process');
+const { deleteStoredImage } = require('./image-process');
 
 const VALID_TYPES = new Set(['avatar_preset', 'avatar_photo', 'display_name']);
 const VALID_STATUS = new Set(['pending', 'approved', 'rejected']);
@@ -77,8 +76,7 @@ async function applyApproved(row) {
     if (!payload.avatarUrl) throw new Error('Görsel URL eksik');
     const existing = await authModel.findById(userId);
     if (existing?.avatar_url && existing.avatar_url !== payload.avatarUrl) {
-      const oldPath = path.join(__dirname, '..', '..', existing.avatar_url.replace(/^\//, ''));
-      try { unlinkImageAndVariants(oldPath); } catch { /* ignore */ }
+      try { await deleteStoredImage(existing.avatar_url); } catch { /* ignore */ }
     }
     await authModel.updateAvatarUrl(userId, payload.avatarUrl);
   } else if (row.change_type === 'display_name') {
@@ -93,7 +91,7 @@ async function approve(id, reviewerId) {
   if (!row) return { ok: false, error: 'Talep bulunamadı' };
   if (row.status !== 'pending') return { ok: false, error: 'Talep zaten işlendi' };
   try {
-    applyApproved(row);
+    await applyApproved(row);
   } catch (err) {
     return { ok: false, error: err.message };
   }

@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const path = require('path');
 const { validationResult } = require('express-validator');
-const { unlinkImageAndVariants } = require('../../lib/image-process');
+const { deleteStoredImage } = require('../../lib/image-process');
 const { createUser, comparePassword, sanitizeUser, signToken, hashPassword, findUserById, needsRehash } = require('../../auth');
 const { AVATAR_PRESETS, AVATAR_COLORS, isValidPreset, isValidColor } = require('../../lib/avatars');
 const { sanitizeName, isValidEmail } = require('../../lib/sanitize');
@@ -239,10 +239,9 @@ async function updateAvatarPhoto(userId, file) {
   const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
 
-  const url = `/uploads/${path.basename(file.filename || file.path)}`;
+  const url = file.publicUrl || `/uploads/${path.basename(file.filename || file.path || '')}`;
   if (row.avatar_url && row.avatar_url !== url) {
-    const oldPath = path.join(__dirname, '..', '..', '..', row.avatar_url.replace(/^\//, ''));
-    try { unlinkImageAndVariants(oldPath); } catch { /* ignore */ }
+    try { await deleteStoredImage(row.avatar_url); } catch { /* ignore */ }
   }
   await authModel.updateAvatarUrl(userId, url);
   return {

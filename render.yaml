@@ -13,14 +13,14 @@ services:
     buildCommand: npm ci
     startCommand: npm run start:prod
     healthCheckPath: /api/health
-    # Node 22 LTS. Database is Supabase PostgreSQL (DATABASE_URL) — Render disk is ephemeral.
-    # Disk is only for uploaded images under /uploads, not the database.
-    disk:
-      name: touristlio-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
+    # Node 22 LTS. Database is Supabase PostgreSQL (DATABASE_URL).
+    # Images use Supabase Storage (SUPABASE_URL + SUPABASE_SERVICE_KEY). Render disk is not required for photos.
     envVars:
       - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
         sync: false
       - key: NODE_VERSION
         value: "22.16.0"

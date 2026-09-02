@@ -128,7 +128,14 @@ app.use(async (req, res, next) => {
 });
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
-app.use('/uploads', uploadsStaticHeaders, uploadsSrcsetFallback(UPLOADS_DIR), express.static(UPLOADS_DIR));
+app.use('/uploads', uploadsStaticHeaders, (req, res, next) => {
+  const storage = require('./lib/supabase-storage');
+  if (!storage.isEnabled()) return next();
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  const rel = decodeURIComponent((req.path || '').replace(/^\/+/, ''));
+  if (!rel || rel.includes('..')) return next();
+  return res.redirect(302, storage.publicObjectUrl(rel));
+}, uploadsSrcsetFallback(UPLOADS_DIR), express.static(UPLOADS_DIR));
 
 const { buildSitemapXml, buildRobotsTxt } = require('./lib/sitemap');
 app.get('/robots.txt', async (_req, res) => {
@@ -173,6 +180,7 @@ app.get('/api/health', async (_req, res) => {
       ok: true,
       service: 'Touristlio',
       db: 'postgres',
+      storage: require('./lib/supabase-storage').isEnabled() ? 'supabase' : 'disk',
       version: getAppVersion(),
       ts: new Date().toISOString(),
     });
@@ -361,6 +369,12 @@ function spawnSitemapIfStale() {
 async function boot() {
   const { initDb } = require('./db');
   await initDb();
+  try {
+    const storage = require('./lib/supabase-storage');
+    if (storage.isEnabled()) await storage.ensureBucket();
+  } catch (err) {
+    logger.warn({ msg: 'Supabase Storage init skipped', err: err.message });
+  }
   try {
     const { seedDefaults } = require('./modules/settings/settings.service');
     await seedDefaults();

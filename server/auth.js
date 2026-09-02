@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { db } = require('./db');
 const { effectivePermissions } = require('./middleware/rbac');
 const { sanitizeName } = require('./lib/sanitize');
+const { publicImageUrl } = require('./lib/media-url');
 
 const crypto = require('crypto');
 
@@ -106,7 +107,7 @@ async function sanitizeUser(row) {
     email: row.email,
     role: row.role,
     avatarColor: row.avatar_color,
-    avatarUrl: row.avatar_url || null,
+    avatarUrl: publicImageUrl(row.avatar_url),
     avatarPreset: row.avatar_preset || null,
     createdAt: row.created_at,
     emailVerified: !!row.email_verified,

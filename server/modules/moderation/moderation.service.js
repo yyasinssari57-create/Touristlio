@@ -1,6 +1,7 @@
 const moderationModel = require('./moderation.model');
 const { computeUserRiskScore } = require('../../middleware/rbac');
 const { db } = require('../../db');
+const { publicImageUrl } = require('../../lib/media-url');
 const { refreshPlaceStatsForTiola } = require('../../lib/tiola-stats');
 
 function mapPendingTiola(row) {
@@ -10,7 +11,7 @@ function mapPendingTiola(row) {
     placeName: row.place_name || '(Genel Tiola)',
     stars: row.stars,
     text: row.text,
-    photoUrl: row.photo_path ? `/uploads/${row.photo_path}` : null,
+    photoUrl: publicImageUrl(row.photo_path),
     cityTag: row.city_tag,
     status: row.status,
     createdAt: row.created_at,
