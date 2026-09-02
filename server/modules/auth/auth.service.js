@@ -74,7 +74,15 @@ async function register(req) {
     if (emailVerificationSent) {
       logger.info({ msg: 'Verification email sent', email: user.email });
     } else {
-      logger.warn({ msg: 'Verification email skipped (SMTP not configured)', email: user.email });
+      const smtp = mailer.smtpStatus();
+      logger.warn({
+        msg: 'Verification email skipped (SMTP not configured)',
+        email: user.email,
+        reason: smtp.reason,
+      });
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info({ msg: 'Dev verification URL (SMTP off)', email: user.email, verifyUrl });
+      }
     }
   } catch (e) {
     logger.warn({ msg: 'Verification email failed', email: user.email, err: e.message });
@@ -133,8 +141,9 @@ async function forgotPassword(req) {
     await authModel.insertPasswordReset(row.id, token, expires);
     const resetUrl = `${siteBase()}/reset-password?token=${token}`;
     try {
-      await mailer.sendPasswordResetEmail(row.email, resetUrl);
-      logger.info({ msg: 'Password reset email sent', email: row.email });
+      const sent = await mailer.sendPasswordResetEmail(row.email, resetUrl);
+      if (sent) logger.info({ msg: 'Password reset email sent', email: row.email });
+      else logger.warn({ msg: 'Password reset email skipped (SMTP not configured)', email: row.email });
     } catch (e) {
       logger.warn({ msg: 'Password reset email failed', email: row.email, err: e.message });
     }
@@ -202,7 +211,10 @@ async function changeEmail(req, userId) {
   await authModel.updateVerification(userId, verifyToken);
   const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
   try {
-    await mailer.sendVerificationEmail(normalized, verifyUrl);
+    const sent = await mailer.sendVerificationEmail(normalized, verifyUrl);
+    if (!sent) {
+      logger.warn({ msg: 'Verification email skipped after email change (SMTP not configured)', email: normalized });
+    }
   } catch (e) {
     logger.warn({ msg: 'Verification email failed after email change', email: normalized, err: e.message });
   }
@@ -260,7 +272,10 @@ async function resendVerification(userId) {
   await authModel.updateVerification(userId, verifyToken);
   const verifyUrl = `${siteBase()}/verify-email?token=${verifyToken}`;
   try {
-    await mailer.sendVerificationEmail(row.email, verifyUrl);
+    const sent = await mailer.sendVerificationEmail(row.email, verifyUrl);
+    if (!sent) {
+      return { error: 'E-posta servisi yapılandırılmamış. SMTP_HOST / SMTP_USER / SMTP_PASS kontrol edin.', status: 503 };
+    }
   } catch (e) {
     logger.warn({ msg: 'Verification resend failed', email: row.email, err: e.message });
     return { error: 'Doğrulama e-postası gönderilemedi', status: 500 };

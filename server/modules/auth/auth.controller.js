@@ -101,11 +101,11 @@ async function updateAvatarPreset(req, res) {
   if (err) return fail(res, err, 400);
   const result = await authService.updateAvatarPreset(req.user.id, req.body || {});
   if (result.error) return fail(res, result.error, result.status);
-  return res.status(result.status || 200).json({
+  return ok(res, {
     user: result.user || null,
     message: result.message,
     pending: result.pending || false,
-  });
+  }, result.status || 200);
 }
 
 async function updateAvatarPhoto(req, res) {
