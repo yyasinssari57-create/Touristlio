@@ -73,6 +73,26 @@ if (!visitor.includes("'web_vital'") || !visitor.includes('VALID_VITALS')) {
 if (!visitor.includes('hasAnalyticsConsent') || !visitor.includes("tl_cookie_ok === '1'")) {
   fail('trackEvent missing consent check');
 } else ok('POST /api/analytics/track requires consent cookie');
+if (!visitor.includes('ON CONFLICT') || !visitor.includes('await upsertSession')) {
+  fail('upsertSession must use ON CONFLICT and be awaited (duplicate session_id must not crash prod)');
+} else ok('session upsert is awaited and ON CONFLICT');
+if (!visitor.includes('await analyticsTablesReady()')) {
+  fail('visitorDashboard missing await on analyticsTablesReady');
+} else ok('visitorDashboard awaits table check');
+
+const { convertDialect } = require('../lib/pg-sql');
+const upsertSql = convertDialect(`
+    INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
+    VALUES (?, ?, datetime('now'), datetime('now'))
+    ON CONFLICT(session_id) DO UPDATE SET
+      last_seen_at = datetime('now'),
+      user_id = COALESCE(excluded.user_id, analytics_sessions.user_id)
+`);
+if (!/ON CONFLICT\s*\(\s*session_id\s*\)/i.test(upsertSql)) {
+  fail('pg dialect dropped ON CONFLICT(session_id)');
+} else if (!/to_char\(timezone\('utc',\s*now\(\)\)/i.test(upsertSql)) {
+  fail(`upsert datetime(now) not converted: ${upsertSql.slice(0, 220)}`);
+} else ok('session upsert SQL converts to Postgres ON CONFLICT');
 
 const indexHtml = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
 if (indexHtml.includes('googletagmanager.com') || indexHtml.includes('gtag(')) {
@@ -179,7 +199,7 @@ function get(url) {
 }
 
 function waitForServer(url, tries) {
-  const max = tries || 50;
+  const max = tries || 120;
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -190,12 +210,12 @@ function waitForServer(url, tries) {
       });
       req.on('error', () => {
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 400);
       });
       req.on('timeout', () => {
         req.destroy();
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 400);
       });
     };
     tick();
@@ -260,6 +280,18 @@ async function checkLive(base, { expectGa, expectGsc } = {}) {
   else if (withConsent.json?.data?.stored !== true) fail(`track with consent stored=${JSON.stringify(withConsent.json)}`);
   else ok('track with consent stores page_view');
 
+  const sameSid = '2cfbe933-02f9-4314-b429-0e87ff2af010';
+  const sameCookie = { Cookie: `tl_cookie_ok=1; tl_sid=${sameSid}` };
+  const [raceA, raceB] = await Promise.all([
+    postJson(`${root}/api/analytics/track`, { type: 'page_view', path: '/', tab: 'explore' }, sameCookie),
+    postJson(`${root}/api/analytics/track`, { type: 'page_view', path: '/', tab: 'explore' }, sameCookie),
+  ]);
+  if (raceA.status !== 200 || raceB.status !== 200) {
+    fail(`parallel track same session HTTP ${raceA.status}/${raceB.status} ${raceA.body.slice(0, 120)} ${raceB.body.slice(0, 120)}`);
+  } else if (raceA.json?.data?.stored !== true || raceB.json?.data?.stored !== true) {
+    fail(`parallel track stored=${JSON.stringify([raceA.json, raceB.json])}`);
+  } else ok('parallel track with same session_id does not 500');
+
   const vital = await postJson(`${root}/api/analytics/track`, {
     type: 'web_vital',
     tab: 'LCP',
@@ -309,13 +341,16 @@ function spawnServer(port, extraEnv) {
 async function withServer(port, extraEnv, fn) {
   const child = spawnServer(port, extraEnv);
   let stderr = '';
+  let stdout = '';
   child.stderr.on('data', (c) => { stderr += c; });
+  child.stdout.on('data', (c) => { stdout += c; });
   const base = `http://127.0.0.1:${port}`;
   try {
-    await waitForServer(base, 50);
+    await waitForServer(base, 240);
     await fn(base);
   } catch (e) {
-    fail(`live server :${port}: ${e.message}${stderr ? ` (${stderr.slice(0, 220)})` : ''}`);
+    const extra = `${stderr}${stdout}`.trim().slice(0, 280);
+    fail(`live server :${port}: ${e.message}${extra ? ` (${extra})` : ''}`);
   } finally {
     child.kill('SIGTERM');
     await new Promise((r) => setTimeout(r, 200));
@@ -323,8 +358,47 @@ async function withServer(port, extraEnv, fn) {
   }
 }
 
+async function checkSessionUpsertRace() {
+  const { initDb, db, closePool } = require('../db');
+  if (!String(process.env.DATABASE_URL || '').trim()) {
+    ok('skipped session upsert race (no DATABASE_URL)');
+    return;
+  }
+  await initDb();
+  const sid = `verify-upsert-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+  const sql = `
+    INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
+    VALUES (?, ?, datetime('now'), datetime('now'))
+    ON CONFLICT(session_id) DO UPDATE SET
+      last_seen_at = datetime('now'),
+      user_id = COALESCE(excluded.user_id, analytics_sessions.user_id)
+  `;
+  try {
+    await Promise.all([
+      db.prepare(sql).run(sid, null),
+      db.prepare(sql).run(sid, null),
+    ]);
+    const row = await db.prepare(
+      'SELECT COUNT(*) AS c FROM analytics_sessions WHERE session_id = ?',
+    ).get(sid);
+    if (Number(row?.c) !== 1) fail(`expected 1 session row for race, got ${row && row.c}`);
+    else ok('parallel session upsert keeps one row');
+  } catch (err) {
+    fail(`parallel session upsert: ${err.message}`);
+  } finally {
+    try {
+      await db.prepare('DELETE FROM analytics_events WHERE session_id = ?').run(sid);
+      await db.prepare('DELETE FROM analytics_sessions WHERE session_id = ?').run(sid);
+    } catch {
+      /* ignore cleanup */
+    }
+    await closePool();
+  }
+}
+
 async function main() {
   const given = process.env.VERIFY_ANALYTICS_URL;
+  await checkSessionUpsertRace();
   if (given) {
     await checkLive(given, {});
   } else {

@@ -32,24 +32,14 @@ function ensureSessionId(req, res) {
 }
 
 async function upsertSession(sessionId, userId) {
-  const existing = await db.prepare(
-    'SELECT id FROM analytics_sessions WHERE session_id = ?',
-  ).get(sessionId);
-
-  if (!existing) {
-    await db.prepare(`
-      INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
-      VALUES (?, ?, datetime('now'), datetime('now'))
-    `).run(sessionId, userId);
-    return;
-  }
-
+  // Concurrent POST /track used to SELECT then INSERT; UNIQUE became an unhandledRejection and start-prod exited.
   await db.prepare(`
-    UPDATE analytics_sessions
-    SET last_seen_at = datetime('now'),
-        user_id = COALESCE(?, user_id)
-    WHERE session_id = ?
-  `).run(userId, sessionId);
+    INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
+    VALUES (?, ?, datetime('now'), datetime('now'))
+    ON CONFLICT(session_id) DO UPDATE SET
+      last_seen_at = datetime('now'),
+      user_id = COALESCE(excluded.user_id, analytics_sessions.user_id)
+  `).run(sessionId, userId);
 }
 
 async function updateSessionDuration(sessionId, endSession) {
@@ -114,10 +104,10 @@ async function trackEvent(req, res, payload) {
   const sessionId = ensureSessionId(req, res);
   const userId = req.user?.id || null;
 
-  upsertSession(sessionId, userId);
+  await upsertSession(sessionId, userId);
 
   if (type === 'heartbeat' || type === 'session_end') {
-    updateSessionDuration(sessionId, type === 'session_end');
+    await updateSessionDuration(sessionId, type === 'session_end');
   }
 
   if (type === 'page_view' || type === 'tab_click') {
@@ -177,7 +167,7 @@ function formatDuration(sec) {
 }
 
 async function visitorDashboard() {
-  if (!analyticsTablesReady()) return emptyVisitorDashboard();
+  if (!(await analyticsTablesReady())) return emptyVisitorDashboard();
 
   const onlineNow = (await db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_sessions

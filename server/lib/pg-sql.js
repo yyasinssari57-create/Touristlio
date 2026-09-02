@@ -15,6 +15,7 @@ const CONFLICT_TARGETS = {
   permissions: ['slug'],
   roles: ['slug'],
   banned_words: ['word'],
+  analytics_sessions: ['session_id'],
 };
 
 function quoteIdent(name) {
