@@ -91,7 +91,25 @@ function injectAnalyticsScripts(html, relativePath) {
   return html + tags;
 }
 
-function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
+function cssUrlValue(url) {
+  return String(url || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/</g, '');
+}
+
+function injectHeroBackground(html, url) {
+  const src = String(url || '').trim();
+  if (!src) return html;
+  if (!/^https?:\/\//i.test(src) && !src.startsWith('/')) return html;
+  const safe = cssUrlValue(src);
+  const css = `<style id="tl-hero-bg">.hbg{background-image:url("${safe}") !important;}</style>`;
+  if (/id="tl-hero-bg"/.test(html)) return html;
+  if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, `${css}</head>`);
+  return css + html;
+}
+
+async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   let html = readPublicHtml(publicDir, relativePath);
   html = injectClientErrorBoundary(html);
   html = injectAnalyticsScripts(html, relativePath);
@@ -104,6 +122,16 @@ function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   const lang = seo.lang || req?.tlLang || langFromPath(pathname);
   const seoRest = { ...seo };
   delete seoRest.errorDetail;
+  if (relativePath === 'index.html') {
+    try {
+      const settingsService = require('../modules/settings/settings.service');
+      const pub = await settingsService.getPublic();
+      if (pub.heroImageUrl) {
+        html = injectHeroBackground(html, pub.heroImageUrl);
+        if (!seoRest.image) seoRest.image = pub.heroImageUrl;
+      }
+    } catch { /* default CSS hero */ }
+  }
   const jsonLd = seo.jsonLd != null ? seo.jsonLd : autoJsonLd(pathname, relativePath, lang);
   html = injectSeoHead(html, {
     pathname,
