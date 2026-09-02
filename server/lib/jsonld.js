@@ -252,7 +252,7 @@ async function loadApprovedTiolasForPlace(placeId) {
       JOIN users u ON u.id = t.user_id
       LEFT JOIN places p ON p.id = t.place_id
       WHERE t.place_id = ? AND t.status = 'approved' AND t.parent_id IS NULL
-      ORDER BY datetime(t.created_at) DESC
+      ORDER BY t.created_at DESC
       LIMIT ?
     `).all(placeId, MAX_REVIEWS);
   } catch {

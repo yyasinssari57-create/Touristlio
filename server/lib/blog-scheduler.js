@@ -6,7 +6,7 @@ async function publishDueBlogs() {
     SELECT id FROM blogs
     WHERE status IN ('draft', 'pending')
       AND published_at IS NOT NULL
-      AND datetime(published_at) <= datetime('now')
+      AND published_at <= to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')
   `).all();
 
   if (!due.length) return 0;
@@ -18,7 +18,7 @@ async function publishDueBlogs() {
       published_at = COALESCE(published_at, datetime('now'))
     WHERE status IN ('draft', 'pending')
       AND published_at IS NOT NULL
-      AND datetime(published_at) <= datetime('now')
+      AND published_at <= to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')
   `).run();
 
   if (result.changes) {
@@ -36,8 +36,8 @@ async function listScheduled() {
     JOIN users u ON u.id = b.user_id
     WHERE b.status IN ('draft', 'pending')
       AND b.published_at IS NOT NULL
-      AND datetime(b.published_at) > datetime('now')
-    ORDER BY datetime(b.published_at) ASC
+      AND b.published_at > to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')
+    ORDER BY b.published_at ASC
   `).all();
   return rows.map((r) => ({
     id: r.id,

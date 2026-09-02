@@ -2,7 +2,7 @@ const { db } = require('../db');
 const adminPlace = require('./admin-place');
 const { sanitizeText } = require('./sanitize');
 
-async function escapeCsv(val) {
+function escapeCsv(val) {
   const s = val == null ? '' : String(val);
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
@@ -69,7 +69,7 @@ async function exportPlacesCsv() {
   return lines.join('\n');
 }
 
-async function parseCsv(text) {
+function parseCsv(text) {
   const lines = String(text || '').split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) return [];
   const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());

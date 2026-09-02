@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const express = require('express');
+require('./lib/express-async-errors').patchExpressAsyncErrors();
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');

@@ -179,11 +179,11 @@ function formatDuration(sec) {
 async function visitorDashboard() {
   if (!analyticsTablesReady()) return emptyVisitorDashboard();
 
-  const onlineNow = await db.prepare(`
+  const onlineNow = (await db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_sessions
-    WHERE datetime(last_seen_at) >= datetime('now', '-5 minutes')
-      AND (ended_at IS NULL OR datetime(ended_at) >= datetime('now', '-5 minutes'))
-  `).get().c;
+    WHERE last_seen_at >= datetime('now', '-5 minutes')
+      AND (ended_at IS NULL OR ended_at >= datetime('now', '-5 minutes'))
+  `).get()).c;
 
   const todayPageViews = (await db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_events

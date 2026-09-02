@@ -184,7 +184,7 @@ async function backfillBlogSlugs(database) {
   const db = getDb(database);
   const rows = await db.prepare("SELECT id, title, slug FROM blogs WHERE slug IS NULL OR slug = ''").all();
   for (const row of rows) {
-    const base = uniqueBlogSlug(db, slugify(sanitizeText(row.title, 200)) || `blog-${row.id}`, row.id);
+    const base = await uniqueBlogSlug(db, slugify(sanitizeText(row.title, 200)) || `blog-${row.id}`, row.id);
     await db.prepare('UPDATE blogs SET slug = ? WHERE id = ?').run(base, row.id);
   }
 }

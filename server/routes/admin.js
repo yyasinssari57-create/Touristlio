@@ -133,7 +133,7 @@ async function queryBlogList(req, res, { approvedOnly, pendingOnly }) {
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id
     ${where}
-    ORDER BY datetime(COALESCE(b.published_at, b.created_at)) ${approvedOnly ? 'DESC' : 'ASC'}
+    ORDER BY COALESCE(b.published_at, b.created_at) ${approvedOnly ? 'DESC' : 'ASC'}
     LIMIT ? OFFSET ?
   `).all(...params, limit, offset);
   return ok(res, {
@@ -646,12 +646,12 @@ router.get('/places', checkPermission('admin.places'), async (req, res) => {
 router.get('/places/export', checkPermission('admin.places'), async (req, res) => {
   const format = String(req.query.format || 'json').toLowerCase();
   if (format === 'csv') {
-    const csv = placesImportExport.exportPlacesCsv();
+    const csv = await placesImportExport.exportPlacesCsv();
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="places-export.csv"');
     return res.send(`\uFEFF${csv}`);
   }
-  const places = placesImportExport.exportPlacesJson();
+  const places = await placesImportExport.exportPlacesJson();
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="places-export.json"');
   return res.json(places);
@@ -665,7 +665,7 @@ const placesImportUpload = multer({
 router.post('/places/import', checkPermission('admin.places'), placesImportUpload.single('file'), async (req, res) => {
   try {
     const items = placesImportExport.parseImportPayload(req.body, req.file);
-    const result = placesImportExport.importPlaces(items, {
+    const result = await placesImportExport.importPlaces(items, {
       updateExisting: req.body?.updateExisting !== false && req.body?.updateExisting !== '0',
     });
     clearCache('places-list');
@@ -948,12 +948,12 @@ router.get('/users/:id', checkPermission('admin.moderate', 'admin.users'), async
   const blogPending = (await db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'pending'").get(id)).c;
   const blogRejected = (await db.prepare("SELECT COUNT(*) AS c FROM blogs WHERE user_id = ? AND status = 'rejected'").get(id)).c;
   const reportCount = (await db.prepare('SELECT COUNT(*) AS c FROM reports WHERE reporter_id = ?').get(id)).c;
-  const reportedCount = await db.prepare(`
+  const reportedCount = (await db.prepare(`
     SELECT COUNT(*) AS c FROM reports
     WHERE (target_type = 'profile' AND target_id = ?)
        OR (target_type = 'tiola' AND target_id IN (SELECT id FROM tiolas WHERE user_id = ?))
        OR (target_type = 'blog' AND target_id IN (SELECT id FROM blogs WHERE user_id = ?))
-  `).get(id, id, id).c;
+  `).get(id, id, id)).c;
   const recentTiolas = await db.prepare(`
     SELECT t.id, t.text, t.status, t.stars, t.place_id, t.created_at, t.moderated_at, t.rejection_reason,
            p.name AS place_name, m.name AS moderated_by_name
@@ -1402,7 +1402,7 @@ router.get('/contact-messages', checkPermission('admin.dashboard'), async (req, 
   const rows = await db.prepare(`
     SELECT id, name, email, subject, message, created_at AS createdAt
     FROM contact_messages
-    ORDER BY datetime(created_at) DESC
+    ORDER BY created_at DESC
     LIMIT ? OFFSET ?
   `).all(limit, offset);
   return ok(res, { items: rows, total, page, limit });
@@ -1526,11 +1526,11 @@ async function mapAdminBlog(row) {
 
 /* ── Blog page settings ── */
 router.get('/blog-page', checkPermission('admin.content'), async (_req, res) => {
-  return ok(res, { page: settingsService.getBlogPageSettings() });
+  return ok(res, { page: await settingsService.getBlogPageSettings() });
 });
 
 router.put('/blog-page', checkPermission('admin.content'), async (req, res) => {
-  const page = settingsService.setBlogPageSettings(req.body?.page || req.body || {});
+  const page = await settingsService.setBlogPageSettings(req.body?.page || req.body || {});
   return ok(res, { page });
 });
 
@@ -1603,9 +1603,9 @@ router.get('/blogs', checkPermission('admin.content'), async (req, res) => {
     SELECT b.*, u.name AS user_name FROM blogs b
     JOIN users u ON u.id = b.user_id
     ${where}
-    ORDER BY b.featured DESC, datetime(COALESCE(b.published_at, b.created_at)) DESC
+    ORDER BY b.featured DESC, COALESCE(b.published_at, b.created_at) DESC
   `).all(...params);
-  return ok(res, { blogs: rows.map(mapAdminBlog) });
+  return ok(res, { blogs: await Promise.all(rows.map(mapAdminBlog)) });
 });
 
 router.post('/blogs', checkPermission('admin.content'), async (req, res) => {
@@ -1788,13 +1788,13 @@ router.get('/reports', checkPermission('admin.moderate'), async (req, res) => {
     ORDER BY r.created_at DESC
     LIMIT 200
   `).all(...params);
-  return ok(res, { reports: rows.map(enrichReportRow) });
+  return ok(res, { reports: await Promise.all(rows.map(enrichReportRow)) });
 });
 
 router.get('/reports/:id', checkPermission('admin.moderate'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const row = fetchReportRow(id);
+  const row = await fetchReportRow(id);
   if (!row) return fail(res, 'Şikayet bulunamadı', 404);
   return ok(res, { report: enrichReportRow(row) });
 });
@@ -1828,7 +1828,7 @@ router.post('/reports/:id/resolve-remove', checkPermission('admin.moderate'), as
 
   await reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
   logAdmin(req, 'report.resolve_remove', 'report', id, reason);
-  const updated = fetchReportRow(id);
+  const updated = await fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
 });
 
@@ -1850,7 +1850,7 @@ router.post('/reports/:id/dismiss', checkPermission('admin.moderate'), async (re
 
   await reportMod.setReportDismissed(id, req.user.id, note);
   logAdmin(req, 'report.dismiss', 'report', id, note);
-  const updated = fetchReportRow(id);
+  const updated = await fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
 });
 
@@ -1870,7 +1870,7 @@ router.post('/reports/:id/reopen', checkPermission('admin.moderate'), async (req
 
   await reportMod.clearReportResolution(id);
   logAdmin(req, 'report.reopen', 'report', id, null);
-  const updated = fetchReportRow(id);
+  const updated = await fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
 });
 
@@ -1897,7 +1897,7 @@ router.post('/reports/:id/change-decision', checkPermission('admin.moderate'), a
     }
     await reportMod.setReportDismissed(id, req.user.id, note || row.resolution_reason);
     logAdmin(req, 'report.change_decision', 'report', id, 'dismiss');
-    const updated = fetchReportRow(id);
+    const updated = await fetchReportRow(id);
     return ok(res, { report: enrichReportRow(updated) });
   }
 
@@ -1915,7 +1915,7 @@ router.post('/reports/:id/change-decision', checkPermission('admin.moderate'), a
 
   await reportMod.setReportRemoved(id, req.user.id, reason, removal.prevStatus);
   logAdmin(req, 'report.change_decision', 'report', id, `remove: ${reason}`);
-  const updated = fetchReportRow(id);
+  const updated = await fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated), contentRemoved: !removal.alreadyRemoved });
 });
 
@@ -1936,7 +1936,7 @@ router.patch('/reports/:id', checkPermission('admin.moderate'), async (req, res)
   `).run(normalized === 'reviewed' ? 'reviewed' : normalized, req.user.id, id);
   logAdmin(req, 'report.status_change', 'report', id, status);
 
-  const updated = fetchReportRow(id);
+  const updated = await fetchReportRow(id);
   return ok(res, { report: enrichReportRow(updated) });
 });
 

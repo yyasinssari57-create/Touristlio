@@ -72,8 +72,8 @@ async function getPublic() {
   };
 }
 
-function getBlogPageSettings() {
-  const all = getAll();
+async function getBlogPageSettings() {
+  const all = await getAll();
   return {
     heroTitleTr: all.blog_hero_title_tr,
     heroTitleEmTr: all.blog_hero_title_em_tr,
@@ -94,7 +94,7 @@ function getBlogPageSettings() {
   };
 }
 
-function setBlogPageSettings(body = {}) {
+async function setBlogPageSettings(body = {}) {
   const map = {
     heroTitleTr: 'blog_hero_title_tr',
     heroTitleEmTr: 'blog_hero_title_em_tr',
@@ -114,13 +114,13 @@ function setBlogPageSettings(body = {}) {
     viewPlaceEn: 'blog_view_place_en',
   };
   for (const [key, settingKey] of Object.entries(map)) {
-    if (body[key] != null) set(settingKey, String(body[key]));
+    if (body[key] != null) await set(settingKey, String(body[key]));
   }
   return getBlogPageSettings();
 }
 
-function set(key, value) {
-  require('./settings.model').upsert(key, value);
+async function set(key, value) {
+  await require('./settings.model').upsert(key, value);
 }
 
 async function seedDefaults() {
