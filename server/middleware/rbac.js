@@ -22,6 +22,10 @@ function isProtectedUserRole(role) {
 }
 
 function assertCanManageUser(actor, targetRole, res, failFn) {
+  if (!actor) {
+    failFn(res, 'Giriş gerekli', 401);
+    return false;
+  }
   if (isProtectedUserRole(targetRole) && actor.role !== 'admin') {
     failFn(res, 'Yönetici hesapları üzerinde işlem yapılamaz', 403);
     return false;
@@ -44,7 +48,7 @@ async function effectivePermissions(roleSlug) {
 function checkPermission(...required) {
   return async (req, res, next) => {
     if (!req.user) return fail(res, 'Giriş gerekli', 401);
-    if (req.user.role === 'admin') return next();
+    if (req.user?.role === 'admin') return next();
     const perms = await effectivePermissions(req.user.role);
     if (required.some((p) => perms.includes(p))) return next();
     return fail(res, 'Yetki yok', 403);

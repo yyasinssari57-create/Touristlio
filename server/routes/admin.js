@@ -1941,8 +1941,8 @@ router.patch('/reports/:id', checkPermission('admin.moderate'), async (req, res)
 });
 
 router.get('/audit-log', async (req, res) => {
-  const isAdmin = req.user.role === 'admin';
-  const isStaffViewer = ['moderator', 'staff', 'editor'].includes(req.user.role);
+  const isAdmin = req.user?.role === 'admin';
+  const isStaffViewer = ['moderator', 'staff', 'editor'].includes(req.user?.role);
   if (!isAdmin && !isStaffViewer) {
     return fail(res, 'Yetki yok', 403);
   }

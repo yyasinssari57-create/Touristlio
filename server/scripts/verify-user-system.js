@@ -67,6 +67,16 @@ if (!mw.includes('TokenExpiredError') || !mw.includes('sessionExpired')) {
   fail('auth middleware missing expired-token handling');
 } else ok('expired JWT returns sessionExpired');
 
+const authCtrl = fs.readFileSync(path.join(ROOT, 'server/modules/auth/auth.controller.js'), 'utf8');
+if (!/await\s+authService\.login\s*\(/.test(authCtrl) || !/await\s+loadUserFromToken\s*\(/.test(authCtrl)) {
+  fail('auth.controller must await login and loadUserFromToken (Postgres async)');
+} else ok('auth.controller awaits login + /me user lookup');
+
+const adminHtml = fs.readFileSync(path.join(ROOT, 'public/admin.html'), 'utf8');
+if (!adminHtml.includes('data?.user') || !/!PANEL_ROLES\.includes\(user\.role\)/.test(adminHtml) || !/showLoginScreen\(\)/.test(adminHtml)) {
+  fail('admin.html must guard missing user.role and return to login');
+} else ok('admin.html guards user.role and redirects to login');
+
 const placesLegacy = fs.readFileSync(path.join(ROOT, 'server/routes/places-legacy.js'), 'utf8');
 if (!placesLegacy.includes("INSERT OR IGNORE INTO saved_places") || !placesLegacy.includes("DELETE FROM saved_places")) {
   fail('favorite save/delete SQL missing');
@@ -281,6 +291,17 @@ async function checkLive(base) {
   if (wrong.status !== 401 || !/E-posta veya şifre/i.test(errMsg(wrong.json))) {
     fail(`wrong password expected 401, got ${wrong.status} ${wrong.body.slice(0, 180)}`);
   } else ok('login wrong password → 401 with clear message');
+
+  const loginOk = await request(`${root}/api/auth/login`, {
+    method: 'POST',
+    jar,
+    headers: { Origin: origin },
+    body: { email, password, website: '' },
+  });
+  const loginUser = unwrap(loginOk.json).user;
+  if (loginOk.status !== 200 || !loginUser || !loginUser.role) {
+    fail(`login expected user.role, got ${loginOk.status} ${loginOk.body.slice(0, 180)}`);
+  } else ok('login returns user.role (admin page safe)');
 
   const me = await request(`${root}/api/auth/me`, { jar });
   const meUser = unwrap(me.json).user;
