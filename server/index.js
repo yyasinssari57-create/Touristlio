@@ -182,6 +182,8 @@ app.get('/api/health', async (_req, res) => {
       db: 'postgres',
       storage: require('./lib/supabase-storage').isEnabled() ? 'supabase' : 'disk',
       smtp: require('./lib/mailer').isConfigured(),
+      smtpTransport: require('./lib/mailer').smtpStatus().transport || null,
+      smtpLastError: require('./lib/mailer').getLastMailError(),
       version: getAppVersion(),
       ts: new Date().toISOString(),
     });

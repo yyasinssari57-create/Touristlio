@@ -3,13 +3,28 @@ const logger = require('./logger');
 
 let transporter = null;
 let transporterKey = '';
+let lastMailError = null;
+
+function setLastMailError(err, extra) {
+  const code = err?.code ? `[${err.code}] ` : '';
+  const port = extra?.port != null ? ` port=${extra.port}` : '';
+  lastMailError = `${code}${err?.message || String(err)}${port}`.slice(0, 300);
+}
+
+function getLastMailError() {
+  return lastMailError;
+}
 
 function trimEnv(value) {
   return String(value || '').trim().replace(/^['"]|['"]$/g, '');
 }
 
 function looksPlaceholder(value) {
-  return /your-brevo|example\.com|changeme|placeholder|smtp-key-here|şifre|password-here|xxx+|TODO/i.test(String(value || ''));
+  const v = String(value || '').trim();
+  if (!v) return true;
+  return /^(your-brevo|changeme|placeholder|smtp-key-here|şifre|password-here|TODO)/i.test(v)
+    || /example\.com/i.test(v)
+    || /your-brevo-login|your-brevo-smtp-key/i.test(v);
 }
 
 function smtpEnv() {
@@ -24,37 +39,92 @@ function smtpEnv() {
 
 function smtpStatus() {
   const cfg = smtpEnv();
+  const api = brevoApiKey();
+  if (api) {
+    return { configured: true, reason: null, host: 'api.brevo.com', port: 443, transport: 'brevo-api' };
+  }
   if (!cfg.host || !cfg.user || !cfg.pass) {
-    return { configured: false, reason: 'missing', host: cfg.host || '', port: cfg.port };
+    return { configured: false, reason: 'missing', host: cfg.host || '', port: cfg.port, transport: 'none' };
   }
   if (looksPlaceholder(cfg.host) || looksPlaceholder(cfg.user) || looksPlaceholder(cfg.pass)) {
-    return { configured: false, reason: 'placeholder', host: cfg.host, port: cfg.port };
+    return { configured: false, reason: 'placeholder', host: cfg.host, port: cfg.port, transport: 'none' };
   }
-  return { configured: true, reason: null, host: cfg.host, port: cfg.port };
+  return { configured: true, reason: null, host: cfg.host, port: cfg.port, transport: 'smtp' };
 }
 
 function isConfigured() {
   return smtpStatus().configured;
 }
 
+function brevoApiKey() {
+  const explicit = trimEnv(process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY);
+  if (explicit && !looksPlaceholder(explicit)) return explicit;
+  const pass = smtpEnv().pass;
+  if (/^xkeysib-/i.test(pass)) return pass;
+  return '';
+}
+
+function isConnError(err) {
+  const blob = `${err?.code || ''} ${err?.message || ''} ${err?.command || ''}`;
+  return /ETIMEDOUT|ECONNREFUSED|ECONNRESET|ESOCKET|ECONNECTION|ENOTFOUND|EHOSTUNREACH|ENETUNREACH|Greeting never received|Connection timeout|timeout/i.test(blob);
+}
+
+function createTransporter(port) {
+  const cfg = smtpEnv();
+  const p = Number(port) || cfg.port;
+  return nodemailer.createTransport({
+    host: cfg.host,
+    port: p,
+    secure: p === 465,
+    requireTLS: p === 587 || p === 2525,
+    family: 4,
+    auth: { user: cfg.user, pass: cfg.pass },
+    connectionTimeout: 12000,
+    greetingTimeout: 12000,
+    socketTimeout: 20000,
+  });
+}
+
 function getTransporter() {
   const status = smtpStatus();
-  if (!status.configured) return null;
+  if (!status.configured || status.transport === 'brevo-api') return null;
   const cfg = smtpEnv();
   const key = `${cfg.host}:${cfg.port}:${cfg.user}:${cfg.pass.length}`;
   if (transporter && transporterKey === key) return transporter;
-  transporter = nodemailer.createTransport({
-    host: cfg.host,
-    port: cfg.port,
-    secure: cfg.port === 465,
-    requireTLS: cfg.port === 587,
-    auth: { user: cfg.user, pass: cfg.pass },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000,
-  });
+  transporter = createTransporter(cfg.port);
   transporterKey = key;
   return transporter;
+}
+
+async function sendViaBrevoApi(message) {
+  const key = brevoApiKey();
+  if (!key) return false;
+  const cfg = smtpEnv();
+  const payload = {
+    sender: { name: 'Touristlio', email: cfg.from },
+    to: [{ email: message.to }],
+    subject: message.subject,
+    htmlContent: message.html || undefined,
+    textContent: message.text || undefined,
+  };
+  if (message.replyTo) payload.replyTo = { email: message.replyTo };
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': key,
+      accept: 'application/json',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    const err = new Error(`Brevo API ${res.status}: ${text.slice(0, 180)}`);
+    err.status = res.status;
+    throw err;
+  }
+  logger.info({ msg: 'Email sent via Brevo HTTP API', to: message.to, subject: message.subject });
+  return true;
 }
 
 function escapeHtml(str) {
@@ -112,18 +182,8 @@ function buildHtmlEmail({ title, intro, actionLabel, actionUrl, footer }) {
 }
 
 async function sendMail({ to, subject, text, html, replyTo }) {
-  const tx = getTransporter();
   const cfg = smtpEnv();
-  if (!tx) {
-    const status = smtpStatus();
-    logger.info({
-      msg: 'Email skipped (SMTP not configured)',
-      to,
-      subject,
-      reason: status.reason || 'missing',
-    });
-    return false;
-  }
+  const status = smtpStatus();
   const message = {
     from: `"Touristlio" <${cfg.from}>`,
     to,
@@ -136,19 +196,81 @@ async function sendMail({ to, subject, text, html, replyTo }) {
   if (!message.text && message.html) {
     message.text = message.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
-  try {
-    await tx.sendMail(message);
-  } catch (err) {
-    const hint = /535|auth/i.test(String(err.message || ''))
-      ? ' Check SMTP_USER/SMTP_PASS (Brevo SMTP key, not API key) and that SMTP_FROM is a verified sender.'
-      : '';
-    logger.warn({ msg: 'Email send failed', to, subject, err: err.message });
-    const wrapped = new Error(`${err.message}${hint}`);
-    wrapped.cause = err;
-    throw wrapped;
+
+  if (brevoApiKey()) {
+    try {
+      await sendViaBrevoApi(message);
+      lastMailError = null;
+      return true;
+    } catch (err) {
+      setLastMailError(err, { port: 443 });
+      logger.warn({ msg: 'Brevo HTTP send failed', to, subject, err: err.message });
+      if (!cfg.host || !cfg.user || !cfg.pass || looksPlaceholder(cfg.pass)) {
+        throw err;
+      }
+      logger.warn({ msg: 'Falling back to SMTP after Brevo HTTP failure' });
+    }
   }
-  logger.info({ msg: 'Email sent', to, subject });
-  return true;
+
+  if (!status.configured && !cfg.host) {
+    logger.info({
+      msg: 'Email skipped (SMTP not configured)',
+      to,
+      subject,
+      reason: status.reason || 'missing',
+    });
+    return false;
+  }
+  if (!cfg.host || !cfg.user || !cfg.pass || looksPlaceholder(cfg.user) || looksPlaceholder(cfg.pass)) {
+    logger.info({
+      msg: 'Email skipped (SMTP not configured)',
+      to,
+      subject,
+      reason: status.reason || 'missing',
+    });
+    return false;
+  }
+
+  const ports = [...new Set([cfg.port, 2525, 587, 465].filter((p) => Number(p) > 0))];
+  let lastErr = null;
+  for (const port of ports) {
+    try {
+      const tx = createTransporter(port);
+      await tx.sendMail(message);
+      lastMailError = null;
+      logger.info({ msg: 'Email sent', to, subject, port });
+      return true;
+    } catch (err) {
+      lastErr = err;
+      setLastMailError(err, { port });
+      logger.warn({
+        msg: 'SMTP send failed',
+        to,
+        subject,
+        port,
+        code: err.code,
+        command: err.command,
+        err: err.message,
+      });
+      if (!isConnError(err)) {
+        const hint = /535|auth/i.test(String(err.message || ''))
+          ? ' Check SMTP_USER/SMTP_PASS (Brevo SMTP key, not API key) and that SMTP_FROM is a verified sender.'
+          : /550|sender|unrecognised|verified/i.test(String(err.message || ''))
+            ? ' SMTP_FROM must be a verified sender in Brevo (Settings → Senders).'
+            : '';
+        const wrapped = new Error(`${err.message}${hint}`);
+        wrapped.cause = err;
+        throw wrapped;
+      }
+    }
+  }
+  const wrapped = new Error(
+    lastErr?.message
+      ? `${lastErr.message} (SMTP ports blocked or unreachable; tried ${ports.join(', ')})`
+      : 'SMTP send failed',
+  );
+  wrapped.cause = lastErr;
+  throw wrapped;
 }
 
 async function sendPasswordResetEmail(email, resetUrl) {
@@ -324,6 +446,8 @@ module.exports = {
   isConfigured,
   smtpStatus,
   looksPlaceholder,
+  getLastMailError,
+  isConnError,
   sendMail,
   sendPasswordResetEmail,
   sendVerificationEmail,
