@@ -30,6 +30,7 @@ const DEFAULTS = {
   blog_view_place_en: 'View place',
   maintenance_mode: 'false',
   maintenance_message: 'Site bakımda. Lütfen daha sonra tekrar deneyin.',
+  hero_image_url: '',
 };
 
 async function getAll() {
@@ -69,6 +70,7 @@ async function getPublic() {
       subtitleEn: all.blog_hero_subtitle_en,
       catAllEn: all.blog_cat_all_en,
     },
+    heroImageUrl: all.hero_image_url || '',
   };
 }
 
