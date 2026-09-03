@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getAppVersion } = require('./app-version');
+const { nonceFromRes, injectNonce } = require('../middleware/csp-nonce');
 
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -140,6 +141,8 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
     ...seoRest,
     jsonLd,
   });
+  // Last step: every inline <script> above must carry this request's nonce.
+  html = injectNonce(html, nonceFromRes(res));
   res.set({
     ...NO_CACHE_HEADERS,
     'Content-Type': 'text/html; charset=utf-8',
@@ -163,6 +166,7 @@ function htmlPageRoutesMiddleware(publicDir) {
     if (!fs.existsSync(filePath)) return next();
 
     if (req.method === 'HEAD') {
+      // Length is approximate for HEAD (SEO/nonce injection happens on GET).
       const size = Buffer.byteLength(readPublicHtml(root, relativePath), 'utf8');
       res.set({
         ...NO_CACHE_HEADERS,
@@ -210,6 +214,7 @@ module.exports = {
   injectClientErrorBoundary,
   injectAnalyticsScripts,
   injectErrorDetail,
+  injectNonce,
   HTML_PAGE_ROUTES,
   readPublicHtml,
 };
