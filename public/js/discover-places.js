@@ -127,14 +127,20 @@ window.TL_DISCOVER = (function () {
     viewMode = mode;
     const citiesStep = document.getElementById('discoverStepCities');
     const placesStep = document.getElementById('discoverStepPlaces');
-    if (mode === 'cities') {
-      citiesStep?.classList.add('active');
-      placesStep?.classList.remove('active');
+    const showCities = mode === 'cities';
+    if (citiesStep) {
+      citiesStep.classList.toggle('active', showCities);
+      citiesStep.hidden = !showCities;
+      citiesStep.setAttribute('aria-hidden', showCities ? 'false' : 'true');
+    }
+    if (placesStep) {
+      placesStep.classList.toggle('active', !showCities);
+      placesStep.hidden = showCities;
+      placesStep.setAttribute('aria-hidden', showCities ? 'true' : 'false');
+    }
+    if (showCities) {
       const pager = document.getElementById('discoverPager');
       if (pager) pager.style.display = 'none';
-    } else {
-      citiesStep?.classList.remove('active');
-      placesStep?.classList.add('active');
     }
     updateHeader();
   }

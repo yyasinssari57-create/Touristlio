@@ -87,18 +87,22 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `AggregateRating` yalnızca `tiolaCount > 0`.
 - logo/url `SITE_URL` / `siteBaseUrl()` (www). Localhost curl’de origin localhost olabilir.
 
-## KRİTİK-8 eşleşmesi (dosya vs önceki commit)
+## v2 KRİTİK-8 (tek h1)
 
-- Yüklenen tam denetim (`touristlio_cursor_audit.md`, 506 satır) **KRİTİK-8 başlığı içermiyor.** KRİTİK-7’den sonra doğrudan [YÜKSEK-1] geliyor.
-- `origin/main` commit `7f43487` (“KVKK — Çerez onayı olmadan analitik”) dosyadaki bir KRİTİK-8 değil; önceki leftover’dan ekstra iş. Yeniden yapılmadı.
-- Canlıda: çerez reddi sonrası Network’te `track` olmamalı; kabul sonrası `stored: true`.
+- Tamamlandı: logo metni artık `span`; ana sayfanın tek görünür `h1` başlığı “Sadece Ziyaret Etme. Hisset.”
+- “Gezilecek Yerler” ve “Seyahat Hikayeleri” bölüm başlıkları `h2`.
+- Mekân detayında `#pdTitle`, blog detayında `.bd-title` dinamik `h1`.
+- Blog listeleme ve profil için ekran okuyucuya açık tek sayfa `h1` başlığı var.
+- SPA ana sayfaları, alt sekmeler, mekân detay sekmeleri ve blog liste/detay geçişleri `hidden` + `aria-hidden` durumunu JS ile birlikte güncelliyor.
+- Bağımsız HTML sayfalarının (arama, giriş, kayıt, yasal sayfalar, 404/500, admin, profil) her birinde tam bir `h1`.
+- `npm run verify:h1`
 
 ## YÜKSEK-1 (hero görsel)
 
 - Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.
 - Mevcut metin / şehir pill’leri taşınmadı; noktalı mesh görseli fotoğrafın üstünde bırakılmadı (HTML div duruyor).
 - Repoda zaten `public/images/hero.webp` vardı (İstanbul / Galata, KRİTİK-5 OG). Denetimin önerdiği Unsplash flatlay (`photo-1488646953014`) ile **değiştirilmedi** — mevcut görsel markaya daha uygun.
-- Slogan (“Sadece Ziyaret Etme. Hisset.”) navbar’da; hero içinde h1 yok. Taşınmadı.
+- Slogan (“Sadece Ziyaret Etme. Hisset.”) v2 KRİTİK-8 ile hero içinde tek `h1`; navbar kopyası paragraf olarak duruyor.
 - Mobilde `.hero { min-height: auto }` kısa kalabilir; cover/center yine geçerli.
 
 ## YÜKSEK-2 (harita)

@@ -72,7 +72,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
     <button type="button" class="nav-toggle" id="navToggle" data-i18n-aria="menuAria" aria-label="Menü" aria-expanded="false" aria-controls="navMenu" onclick="toggleNavMenu()">☰</button>
     <div class="navbar-left">
       <a href="/" class="brand" onclick="showMainTab('explore');return false" aria-label="Touristlio ana sayfa">
-        <h1 class="brand-name">Tourist<span class="brand-accent">lio</span></h1>
+        <span class="brand-name">Tourist<span class="brand-accent">lio</span></span>
       </a>
       <span class="nav-divider" aria-hidden="true"></span>
       <p class="brand-slogan" data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></p>
@@ -101,12 +101,13 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
 <main id="main-content" tabindex="-1">
 <!-- ══════════════ EXPLORE PAGE ══════════════ -->
-<div class="page active" id="page-explore">
+<div class="page active" id="page-explore" aria-hidden="false">
   <!-- HERO -->
   <section class="hero">
     <div class="hbg"></div><div class="hmesh"></div><div class="hov"></div>
     <div class="hc">
       <div class="hpill" data-i18n="heroPill">🌍 Dünyanın en kişisel seyahat rehberi</div>
+      <h1 data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></h1>
       <p class="hsub" data-i18n="heroSub">Gizli yerel köşelerden ikonik yapılara — gerçek gezginler tarafından derlendi.</p>
       <div class="srch-wrap">
         <form class="srch-bar" role="search" autocomplete="off" onsubmit="event.preventDefault();doSearch();return false;">
@@ -144,7 +145,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </div>
 
   <!-- MAP TAB -->
-  <div class="explore-section" id="es-map" data-error-boundary="map">
+  <div class="explore-section" id="es-map" data-error-boundary="map" hidden aria-hidden="true">
     <div class="discover-wrap map-tab-wrap">
       <div class="explore-map-hd">
         <h4 data-i18n="mapTitle">🗺️ Harita</h4>
@@ -165,7 +166,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </div>
 
   <!-- DISCOVER TAB -->
-  <div class="explore-section active" id="es-discover">
+  <div class="explore-section active" id="es-discover" aria-hidden="false">
     <div class="discover-wrap">
       <div class="discover-filter-bar" id="discoverFilterBar">
         <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
@@ -201,7 +202,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </div>
 
   <!-- FILTER TAB -->
-  <div class="explore-section" id="es-filter">
+  <div class="explore-section" id="es-filter" hidden aria-hidden="true">
     <div class="filter-tab-wrap">
       <div class="filter-tab-title" data-i18n="filterTitle">🎛️ Gelişmiş Filtreleme</div>
       <div class="filter-tab-sub" data-i18n="filterSub">Ülke, şehir, ilçe ve daha fazlasına göre filtrele</div>
@@ -336,7 +337,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
 
   <!-- TIOLA TAB -->
-  <div class="explore-section" id="es-tiolas" data-error-boundary="tiolas">
+  <div class="explore-section" id="es-tiolas" data-error-boundary="tiolas" hidden aria-hidden="true">
     <div class="discover-wrap">
       <div class="results-bar">
         <h3 data-i18n-html="tiolaFeedTitle">Gezginlerden <em class="em-accent">Tiola</em></h3>
@@ -348,7 +349,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </div>
 
   <!-- CATEGORIES TAB -->
-  <div class="explore-section" id="es-categories">
+  <div class="explore-section" id="es-categories" hidden aria-hidden="true">
     <div class="showcase">
       <div class="sec-ey" data-i18n="catSectionEy">Tüm Kategoriler</div>
       <div class="sec-ti" data-i18n-html="catSectionTitle">Ne <em>arıyorsun?</em></div>
@@ -364,18 +365,18 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 </div>
 
 <!-- ══════════════ GEZİLECEK YERLER ══════════════ -->
-<div class="page" id="page-places">
+<div class="page" id="page-places" hidden aria-hidden="true">
   <div class="discover-page">
     <div class="discover-layout">
       <div class="discover-main">
-        <div class="discover-step" id="discoverStepCities">
+        <div class="discover-step" id="discoverStepCities" hidden aria-hidden="true">
           <header class="discover-hd">
-            <h1 data-i18n="discoverPlacesTitle">Gezilecek Yerler</h1>
+            <h2 data-i18n="discoverPlacesTitle">Gezilecek Yerler</h2>
             <p data-i18n="discoverPlacesSub">Şehir seçin — ardından kategori ve harita ile keşfedin.</p>
           </header>
           <div class="discover-city-grid" id="discoverCityGrid" role="list"></div>
         </div>
-        <div class="discover-step active" id="discoverStepPlaces">
+        <div class="discover-step active" id="discoverStepPlaces" aria-hidden="false">
           <header class="discover-hd discover-hd-row">
             <div class="discover-hd-actions">
               <button type="button" class="btn bo bsm" id="discoverBackBtn" style="display:none" data-i18n="discoverClearCity">← Tüm yerler</button>
@@ -408,10 +409,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 </div>
 
 <!-- ══════════════ BLOG PAGE ══════════════ -->
-<div class="page" id="page-blog">
-  <div class="blog-wrap" id="blogListing">
+<div class="page" id="page-blog" hidden aria-hidden="true">
+  <div class="blog-wrap" id="blogListing" aria-hidden="false">
+    <h1 class="sr-only" data-i18n="blog">Blog</h1>
     <div class="blog-hero-card">
-      <h1 id="blogHeroTitle">Seyahat <em>Hikayeleri</em></h1>
+      <h2 id="blogHeroTitle">Seyahat <em>Hikayeleri</em></h2>
       <p id="blogHeroSub">Yerel yazarlardan özenle seçilmiş gezi rehberleri, gizli köşeler ve kültürel keşifler.</p>
       <div class="blog-search-row">
         <label class="sr-only" for="blogSearch" data-i18n="blogSearchAria">Blog ara</label>
@@ -421,7 +423,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
     </div>
     <div class="blog-grid" id="blogGrid"></div>
   </div>
-  <article class="blog-article-page" id="blogArticle" hidden>
+  <article class="blog-article-page" id="blogArticle" hidden aria-hidden="true">
     <div class="blog-wrap">
       <a class="blog-back" id="blogBackLink" href="/blog" onclick="event.preventDefault();closeBlogDetail();" data-i18n="blogBack">← Tüm yazılar</a>
       <div class="blog-detail-box blog-detail-page" id="blogDetailBody"></div>
@@ -430,14 +432,14 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 </div>
 
 <!-- ══════════════ DETAIL PAGE ══════════════ -->
-<div class="page" id="page-detail">
+<div class="page" id="page-detail" hidden aria-hidden="true">
   <div class="detail-page">
     <div class="pd-hero">
       <img id="pdImg" src="" alt="Mekân görseli" data-i18n-alt="placePhotoAria" loading="lazy" decoding="async"/>
       <button type="button" class="pd-save" id="pdSaveBtn" onclick="activePlace && toggleSave(activePlace.id,this)" aria-label="Favori" aria-pressed="false">🤍</button>
       <div class="pd-hero-ov">
         <div class="pd-cat" id="pdCat"></div>
-        <div class="pd-title" id="pdTitle"></div>
+        <h1 class="pd-title" id="pdTitle"></h1>
         <div class="pd-loc" id="pdLoc"></div>
       </div>
     </div>
@@ -453,19 +455,19 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <div class="pd-layout">
         <div>
-          <div class="dtab-panel active" id="dtab-overview">
+          <div class="dtab-panel active" id="dtab-overview" aria-hidden="false">
           <div class="sec-block"><h2 data-i18n="detailOverview">📍 Genel Bakış</h2><p id="pdOverview" class="pd-text"></p><button type="button" class="read-more-btn" id="pdOverviewMore" style="display:none"></button></div>
           </div>
-          <div class="dtab-panel" id="dtab-history">
+          <div class="dtab-panel" id="dtab-history" hidden aria-hidden="true">
           <div class="sec-block"><h2 data-i18n="detailHistory">🏛️ Tarihçe & Kültürel Önemi</h2><p id="pdHist" class="pd-text"></p><button type="button" class="read-more-btn" id="pdHistMore" style="display:none"></button></div>
           </div>
-          <div class="dtab-panel" id="dtab-things">
+          <div class="dtab-panel" id="dtab-things" hidden aria-hidden="true">
           <div class="sec-block"><h2 data-i18n="detailThings">✅ Yapılacaklar</h2><ul id="pdThings" class="pd-list"></ul></div>
           </div>
-          <div class="dtab-panel" id="dtab-culture">
+          <div class="dtab-panel" id="dtab-culture" hidden aria-hidden="true">
           <div class="sec-block"><h2 data-i18n="detailCulture">🍽️ Kültür & Gastronomi</h2><p id="pdCulture" class="pd-text"></p><button type="button" class="read-more-btn" id="pdCultureMore" style="display:none"></button></div>
           </div>
-          <div class="dtab-panel" id="dtab-tips">
+          <div class="dtab-panel" id="dtab-tips" hidden aria-hidden="true">
           <div class="sec-block"><h2 data-i18n="detailTips">💡 Seyahat İpuçları</h2><p id="pdTips" class="pd-text"></p><button type="button" class="read-more-btn" id="pdTipsMore" style="display:none"></button></div>
           <div class="sec-block"><h2 data-i18n="detailBestTime">📅 En İyi Zaman</h2><p id="pdBestTime" class="pd-text"></p></div>
           <div class="sec-block"><h2 data-i18n="detailHowToGet">🚌 Nasıl Gidilir</h2><p id="pdHowToGet" class="pd-text"></p></div>
@@ -554,8 +556,9 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 </div>
 
 <!-- ══════════════ PROFILE PAGE ══════════════ -->
-<div class="page" id="page-profile">
+<div class="page" id="page-profile" hidden aria-hidden="true">
   <div class="profile-wrap">
+    <h1 class="sr-only" data-i18n="profile">Profilim</h1>
     <div id="pLoginNotice" style="display:none">
       <div class="profile-login-icon">🔒</div>
       <div class="profile-login-title" data-i18n="profileLoginTitle">Giriş Yapın</div>
