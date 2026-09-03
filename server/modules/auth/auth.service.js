@@ -86,7 +86,12 @@ async function register(req) {
       }
     }
   } catch (e) {
-    logger.warn({ msg: 'Verification email failed', email: user.email, err: e.message });
+    logger.warn({
+      msg: 'Verification email failed',
+      email: user.email,
+      err: e.message,
+      last: mailer.getLastMailError(),
+    });
   }
   const token = signToken(user);
   return {

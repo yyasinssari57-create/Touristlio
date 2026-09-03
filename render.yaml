@@ -70,6 +70,9 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      # Optional: Brevo HTTP API key (xkeysib-...). Uses HTTPS so Render SMTP port blocks do not matter.
+      - key: BREVO_API_KEY
+        sync: false
       - key: GA_MEASUREMENT_ID
         sync: false
       - key: GOOGLE_SITE_VERIFICATION
