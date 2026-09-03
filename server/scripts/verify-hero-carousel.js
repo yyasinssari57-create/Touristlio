@@ -50,8 +50,6 @@ if (!js.includes('visibilitychange')) fail('no pause when the tab is hidden');
 else ok('pauses on visibilitychange');
 if (!js.includes('prefers-reduced-motion')) fail('no reduced-motion guard');
 else ok('respects prefers-reduced-motion');
-if (!js.includes('data-hero-custom')) fail('custom admin hero is not skipped');
-else ok('admin custom hero skips rotation');
 
 if (!css.includes('transition:opacity 1.5s ease-in-out')) fail('missing 1.5s fade');
 else ok('1.5s fade transition');
@@ -60,8 +58,8 @@ else ok('active slide is visible');
 if (!css.includes('.hov{') || !css.includes('rgba(0,0,0,.4)')) fail('readability overlay missing');
 else ok('dark overlay kept for text');
 
-if (!sender.includes('data-hero-custom="1"')) fail('injectHeroBackground does not freeze carousel');
-else ok('custom hero_image_url freezes the carousel');
+if (!sender.includes('.hbg{background-image:url("${safe}") !important;}')) fail('injectHeroBackground no longer overrides first slide');
+else ok('custom hero_image_url becomes the first slide');
 
 const unsplash = [
   'photo-1499856871958-5b9627545d1a',

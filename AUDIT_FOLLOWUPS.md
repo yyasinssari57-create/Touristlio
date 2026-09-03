@@ -102,7 +102,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Tamamlandı: ana sayfa hero 5 saniyede bir fade (1.5s). İlk kare yerel `/images/hero.webp` (Galata, LCP preload aynı). Sonraki kareler Unsplash: Paris, Kyoto, Roma, Santorini.
 - Slogan, arama kutusu ve şehir pill’leri `.hc` içinde duruyor; taşınmadı.
 - Overlay `rgba(0,0,0,.4)` duruyor. `prefers-reduced-motion` ve gizli sekme karuseli durdurur.
-- Admin Görünüm’den özel hero yüklenirse karusel kapanır (`data-hero-custom`); yalnızca o görsel kalır.
+- Admin Görünüm’den özel hero yüklenirse o görsel **ilk kare** olur; Unsplash kareleri ardından döner.
 - `npm run verify:hero`
 
 ### Leftover

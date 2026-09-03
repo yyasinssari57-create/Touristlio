@@ -9,7 +9,6 @@
   const carousel = document.querySelector('.hero-carousel');
   const slides = carousel ? carousel.querySelectorAll('.hero-slide') : [];
   if (!carousel || slides.length < 2) return;
-  if (carousel.getAttribute('data-hero-custom') === '1') return;
 
   let current = 0;
   let timer = null;
