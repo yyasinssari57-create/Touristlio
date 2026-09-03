@@ -24,7 +24,7 @@ async function main() {
   const envPass = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
   const user = await findUserByEmail(envEmail);
   if (user) {
-    const ok = comparePassword(envPass, user.password_hash);
+    const ok = await comparePassword(envPass, user.password_hash);
     console.log('=== .env password check ===');
     console.log('email:', envEmail);
     console.log('role:', user.role);

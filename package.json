@@ -30,6 +30,7 @@
     "verify:indexes": "node server/scripts/verify-indexes.js",
     "verify:blog": "node server/scripts/verify-blog-pages.js",
     "verify:user-system": "node server/scripts/verify-user-system.js",
+    "verify:passwords": "node server/scripts/verify-password-hash.js",
     "verify:admin-role": "node server/scripts/verify-admin-role.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",
     "verify:a11y": "node server/scripts/verify-accessibility.js",
@@ -47,6 +48,7 @@
     "node": ">=20.18.0 <23"
   },
   "dependencies": {
+    "argon2": "^0.45.1",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

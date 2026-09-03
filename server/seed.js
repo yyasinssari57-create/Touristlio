@@ -109,7 +109,7 @@ async function seedAdmin() {
   const name = process.env.ADMIN_NAME || 'Yasin';
   const existing = await findUserByEmail(email);
   if (existing) {
-    const hash = hashPassword(password);
+    const hash = await hashPassword(password);
     await db.prepare('UPDATE users SET password_hash = ?, name = ?, role = ? WHERE id = ?').run(
       hash, name.trim(), 'admin', existing.id,
     );
@@ -129,7 +129,7 @@ async function syncLegacyAdminPassword(password) {
   if (envEmail === legacyEmail) return;
   const legacy = await findUserByEmail(legacyEmail);
   if (!legacy || legacy.role !== 'admin') return;
-  const hash = hashPassword(password);
+  const hash = await hashPassword(password);
   await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, legacy.id);
   await markEmailVerified(legacy.id);
   await clearLockout(legacy.id);

@@ -9,8 +9,10 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { db, initDb } = require('../db');
 const { SESSION_EXPIRED_MSG } = require('../middleware/auth');
+const { isArgon2idHash } = require('../auth');
 
 const ROOT = path.join(__dirname, '..', '..');
 let failed = 0;
@@ -76,6 +78,8 @@ if (!profileHtml.includes('profBadges') || !profileHtml.includes('myTiolaList') 
 } else ok('profile.html has Tiolas, badges, visited countries, favorites');
 if (!profileHtml.includes('/auth/profile')) fail('profile.html does not load GET /auth/profile');
 else ok('profile.html uses GET /auth/profile');
+if (/AES-?256/i.test(`${loginHtml}\n${registerHtml}\n${profileHtml}`)) fail('AES-256 still in auth HTML');
+else ok('login/register/profile have no AES-256 copy');
 
 const routes = fs.readFileSync(path.join(ROOT, 'server/modules/auth/auth.routes.js'), 'utf8');
 if (!routes.includes("router.get('/me'") || routes.includes("router.get('/me', authRequired")) {
@@ -291,6 +295,18 @@ async function checkLive(base) {
   else ok('register returns user');
   if (!jar.tl_token) fail('auth cookie missing after register');
   else ok('auth cookie set after register');
+  const regCookies = register.headers['set-cookie'] || [];
+  const tokenCookie = [].concat(regCookies).find((c) => /^tl_token=/i.test(String(c)));
+  if (!tokenCookie || !/HttpOnly/i.test(String(tokenCookie))) {
+    fail(`register Set-Cookie is not HttpOnly: ${String(tokenCookie || '').slice(0, 120)}`);
+  } else ok('register JWT cookie is HttpOnly');
+  if (unwrap(register.json).token) fail('register JSON still returns a JWT body token');
+  else ok('register JSON does not return a JWT');
+
+  const stored = await db.prepare('SELECT password_hash FROM users WHERE email = ?').get(email);
+  if (!stored || !isArgon2idHash(stored.password_hash)) {
+    fail(`new user hash is not Argon2id: ${String(stored?.password_hash || '').slice(0, 24)}`);
+  } else ok('new user password stored as Argon2id');
 
   const av = await request(`${root}/api/auth/avatar`, {
     method: 'PATCH',
@@ -343,6 +359,27 @@ async function checkLive(base) {
   if (loginOk.status !== 200 || !loginUser || !loginUser.role) {
     fail(`login expected user.role, got ${loginOk.status} ${loginOk.body.slice(0, 180)}`);
   } else ok('login returns user.role (admin page safe)');
+
+  const bcryptEmail = `bcrypt7-${Date.now()}@touristlio.local`;
+  const bcryptPass = 'UserSystem1234';
+  const bcryptHash = bcrypt.hashSync(bcryptPass, 12);
+  await db.prepare(
+    'INSERT INTO users (name, email, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?)',
+  ).run('Bcrypt Legacy', bcryptEmail, bcryptHash, 'member', '#0ea5e9');
+  const bcryptJar = {};
+  const bcryptLogin = await request(`${root}/api/auth/login`, {
+    method: 'POST',
+    jar: bcryptJar,
+    headers: { Origin: origin },
+    body: { email: bcryptEmail, password: bcryptPass, website: '' },
+  });
+  if (bcryptLogin.status !== 200 || !unwrap(bcryptLogin.json).user) {
+    fail(`bcrypt login expected 200, got ${bcryptLogin.status} ${bcryptLogin.body.slice(0, 180)}`);
+  } else ok('legacy bcrypt password still logs in');
+  const upgraded = await db.prepare('SELECT password_hash FROM users WHERE email = ?').get(bcryptEmail);
+  if (!upgraded || !isArgon2idHash(upgraded.password_hash)) {
+    fail(`bcrypt hash was not upgraded to Argon2id: ${String(upgraded?.password_hash || '').slice(0, 24)}`);
+  } else ok('successful bcrypt login rehashes to Argon2id');
 
   const me = await request(`${root}/api/auth/me`, { jar });
   const meUser = unwrap(me.json).user;

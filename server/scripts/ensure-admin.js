@@ -27,7 +27,7 @@ async function main() {
   const existing = await findUserByEmail(email);
   let action;
   if (existing) {
-    const hash = hashPassword(password);
+    const hash = await hashPassword(password);
     await db.prepare('UPDATE users SET password_hash = ?, name = ?, role = ? WHERE id = ?').run(
       hash, name, 'admin', existing.id,
     );
@@ -44,7 +44,7 @@ async function main() {
   if (email !== legacyEmail) {
     const legacy = await findUserByEmail(legacyEmail);
     if (legacy && legacy.role === 'admin') {
-      const hash = hashPassword(password);
+      const hash = await hashPassword(password);
       await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, legacy.id);
       await markEmailVerified(legacy.id);
       await clearLockout(legacy.id);
@@ -53,7 +53,7 @@ async function main() {
   }
 
   const user = await findUserByEmail(email);
-  const passwordOk = comparePassword(password, user.password_hash);
+  const passwordOk = await comparePassword(password, user.password_hash);
 
   const admins = await db.prepare(`
     SELECT id, email, role, name, email_verified, failed_login_count, locked_until
