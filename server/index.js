@@ -327,7 +327,7 @@ app.get('/blog/:slug', async (req, res) => {
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
   const { loadApprovedBlog, jsonLdForBlog } = require('./lib/jsonld');
-  const blog = loadApprovedBlog(slug);
+  const blog = await loadApprovedBlog(slug);
   if (!blog) {
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');

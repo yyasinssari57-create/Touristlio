@@ -575,8 +575,47 @@ function travelAgencyJsonLd() {
     name: 'Touristlio',
     url: origin,
     logo: `${origin}/images/logo.webp`,
-    description: 'Topluluk tabanlı seyahat rehberliği platformu',
+    description: 'Sadece Ziyaret Etme. Hisset. Topluluk tabanlı seyahat rehberliği.',
   };
+}
+
+function webSiteJsonLd() {
+  const origin = schemaOrigin();
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Touristlio',
+    url: origin,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${origin}/explore?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+function homeJsonLdBase() {
+  return [travelAgencyJsonLd(), webSiteJsonLd()];
+}
+
+function collectionPageJsonLd() {
+  const origin = schemaOrigin();
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: lang === 'en' ? 'Travel Stories — Touristlio' : 'Seyahat Hikayeleri — Touristlio',
+    url: origin + (lang === 'en' ? '/en/blog' : '/blog'),
+    isPartOf: { '@type': 'WebSite', name: 'Touristlio', url: origin },
+  };
+}
+
+function pageCspNonce() {
+  try {
+    const el = document.querySelector('script[nonce]');
+    return (el && el.nonce) || '';
+  } catch {
+    return '';
+  }
 }
 
 function absSchemaUrl(url) {
@@ -635,17 +674,19 @@ function articleJsonLd(b) {
 
 function setJsonLdBlocks(blocks) {
   document.querySelectorAll('script[data-tl-jsonld]').forEach((s) => s.remove());
+  const nonce = pageCspNonce();
   (blocks || []).filter(Boolean).forEach((data) => {
     const s = document.createElement('script');
     s.type = 'application/ld+json';
     s.dataset.tlJsonld = '1';
+    if (nonce) s.nonce = nonce;
     s.textContent = JSON.stringify(data);
     document.head.appendChild(s);
   });
 }
 
 function injectHomeJsonLd(tiolas) {
-  const blocks = [travelAgencyJsonLd()];
+  const blocks = homeJsonLdBase();
   (tiolas || []).forEach((ti) => {
     if (ti.status && ti.status !== 'approved') return;
     if (ti.parentId) return;
@@ -674,7 +715,7 @@ function injectPlaceJsonLd(p, tiolas) {
   if (count > 0 && Number.isFinite(rating) && rating > 0) {
     attraction.aggregateRating = {
       '@type': 'AggregateRating',
-      ratingValue: String(rating),
+      ratingValue: rating.toFixed(1),
       reviewCount: count,
       bestRating: '5',
       worstRating: '1',
@@ -687,8 +728,8 @@ function injectPlaceJsonLd(p, tiolas) {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Touristlio', item: origin },
-        { '@type': 'ListItem', position: 2, name: geoLabel(p.country) || p.country, item: `${origin}/search?country=${encodeURIComponent(p.country)}` },
+        { '@type': 'ListItem', position: 1, name: lang === 'en' ? 'Home' : 'Ana Sayfa', item: origin + (lang === 'en' ? '/en/' : '/') },
+        { '@type': 'ListItem', position: 2, name: geoLabel(p.country) || p.country, item: `${origin}${window.TL_EXPLORE_QUERY ? window.TL_EXPLORE_QUERY.explorePathWithQuery({ country: p.country }, lang) : ((lang === 'en' ? '/en' : '') + '/explore')}` },
         { '@type': 'ListItem', position: 3, name: p.name, item: `${origin}${placePublicPath(p)}` },
       ],
     },
@@ -1637,7 +1678,8 @@ async function showMainTab(tab, skipRoute) {
   else if (tab === 'blog') setCanonical(activeBlogSlug ? blogPublicPath({ slug: activeBlogSlug }) : blogListPath());
   else if (tab !== 'detail') setCanonical(lang === 'en' ? '/en/' : '/');
   if (tab === 'explore') injectHomeJsonLd();
-  else if (tab !== 'detail') setJsonLdBlocks([travelAgencyJsonLd()]);
+  else if (tab === 'blog') setJsonLdBlocks([collectionPageJsonLd()]);
+  else if (tab !== 'detail') setJsonLdBlocks(homeJsonLdBase());
   const tasks = [];
   if (tab === 'blog') {
     if (!skipRoute) {
@@ -2459,7 +2501,7 @@ function closeBlogDetail(skipRoute) {
   activeBlogSlug = null;
   showBlogListing();
   document.body.style.overflow = '';
-  setJsonLdBlocks([travelAgencyJsonLd()]);
+  setJsonLdBlocks([collectionPageJsonLd()]);
   setCanonical(blogListPath());
   const hero = document.getElementById('blogHeroTitle');
   if (hero) {
