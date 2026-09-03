@@ -33,6 +33,7 @@
     "verify:passwords": "node server/scripts/verify-password-hash.js",
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
+    "verify:csp": "node server/scripts/verify-csp.js",
     "verify:admin-role": "node server/scripts/verify-admin-role.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",
     "verify:a11y": "node server/scripts/verify-accessibility.js",

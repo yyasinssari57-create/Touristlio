@@ -20,6 +20,7 @@ const { sendPublicHtml, publicHtmlMiddleware, htmlPageRoutesMiddleware } = requi
 const { getAppVersion } = require('./lib/app-version');
 const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require('./lib/cors-origins');
 const { canonicalHostMiddleware } = require('./middleware/canonical-host');
+const { cspNonceMiddleware } = require('./middleware/csp-nonce');
 const { recaptchaConfig, publicRecaptchaConfig } = require('./middleware/recaptcha');
 const { publicAnalyticsConfig, gaCspSources } = require('./lib/analytics-config');
 
@@ -67,11 +68,27 @@ const gaSrc = gaCspSources();
 
 app.use(apiPreflightMiddleware(corsOrigins));
 
+app.use(cspNonceMiddleware());
+
+// CSP_FORCE=true turns the policy on in development so it can be tested locally.
+const cspEnabled = isProd || process.env.CSP_FORCE === 'true';
+// CSP_REPORT_ONLY=true reports violations without blocking (rollout safety valve).
+const cspReportOnly = process.env.CSP_REPORT_ONLY === 'true';
+
 app.use(helmet({
-  contentSecurityPolicy: isProd ? {
+  contentSecurityPolicy: cspEnabled ? {
+    useDefaults: false,
+    reportOnly: cspReportOnly,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", ...recaptchaSrc, ...gaSrc],
+      // No 'unsafe-inline': inline blocks get a per-request nonce instead.
+      scriptSrc: [
+        "'self'",
+        (_req, res) => `'nonce-${res.locals.cspNonce}'`,
+        ...recaptchaSrc,
+        ...gaSrc,
+      ],
+      // index.html + admin.html still carry ~220 inline handlers; a nonce cannot cover attributes.
       scriptSrcAttr: ["'unsafe-inline'"],
       // unsafe-inline: index.html critical <style> + admin panel visibility toggles (style="" / el.style)
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
@@ -81,6 +98,9 @@ app.use(helmet({
       connectSrc: [...getConnectSrcOrigins(), ...recaptchaSrc, ...gaSrc],
       frameSrc: recaptchaOn ? recaptchaSrc : ["'self'"],
       frameAncestors: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
     },
   } : false,
   crossOriginEmbedderPolicy: false,
