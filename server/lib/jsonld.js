@@ -1,14 +1,16 @@
 /**
- * [YÜKSEK-4] Schema.org JSON-LD builders.
+ * [YÜKSEK-4] / v2 KRİTİK-7 Schema.org JSON-LD builders.
  * Ratings/reviews are Tiola (user-generated) only — never Google.
  */
 const { siteBaseUrl, absUrl, canonicalFor, stripEnPrefix } = require('./seo');
 const { sanitizeText } = require('./sanitize');
+const { slugify } = require('./slugify');
 
 const LOGO_PATH = '/images/logo.webp';
-const AGENCY_DESCRIPTION = 'Topluluk tabanlı seyahat rehberliği platformu';
+const AGENCY_DESCRIPTION = 'Sadece Ziyaret Etme. Hisset. Topluluk tabanlı seyahat rehberliği.';
 const CONTACT_EMAIL = 'touristlio.info@gmail.com';
 const MAX_REVIEWS = 50;
+const INSTAGRAM_URL = String(process.env.INSTAGRAM_URL || '').trim();
 
 function toIso(value) {
   if (!value) return undefined;
@@ -47,13 +49,97 @@ function jsonLdScriptTags(blocks) {
 
 function travelAgency() {
   const base = siteBaseUrl();
-  return {
+  const schema = {
     '@context': 'https://schema.org',
     '@type': 'TravelAgency',
     name: 'Touristlio',
     url: base,
     logo: `${base}${LOGO_PATH}`,
     description: AGENCY_DESCRIPTION,
+  };
+  if (INSTAGRAM_URL) schema.sameAs = [INSTAGRAM_URL];
+  return schema;
+}
+
+function webSite() {
+  const base = siteBaseUrl();
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Touristlio',
+    url: base,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${base}/explore?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+function countryExploreUrl(country, lang = 'tr') {
+  const raw = String(country || '').replace(/\s[\u{1F1E0}-\u{1F1FF}]{2}/gu, '').trim();
+  if (!raw) return null;
+  const slug = slugify(raw);
+  if (!slug || slug === 'item') return null;
+  return `${canonicalFor('/explore', lang)}?country=${encodeURIComponent(slug)}`;
+}
+
+function breadcrumbList(place, lang = 'tr') {
+  if (!place || !place.name) return null;
+  const path = place.slug
+    ? `/places/${encodeURIComponent(place.slug)}`
+    : `/places/${place.id}`;
+  const items = [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: lang === 'en' ? 'Home' : 'Ana Sayfa',
+      item: canonicalFor('/', lang),
+    },
+  ];
+  const countryUrl = countryExploreUrl(place.country, lang);
+  if (place.country) {
+    items.push({
+      '@type': 'ListItem',
+      position: 2,
+      name: place.country,
+      item: countryUrl || undefined,
+    });
+  }
+  items.push({
+    '@type': 'ListItem',
+    position: items.length + 1,
+    name: place.name,
+    item: canonicalFor(path, lang),
+  });
+  return compact({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items,
+  });
+}
+
+function faqPage(place, lang = 'tr') {
+  if (!place) return null;
+  const list = lang === 'en' ? (place.faqEN || place.faq_en || []) : (place.faqTR || place.faq_tr || []);
+  if (!Array.isArray(list) || !list.length) return null;
+  const mainEntity = list
+    .map((item) => {
+      const name = item && (item.q || item.question);
+      const text = item && (item.a || item.answer);
+      if (!name || !text) return null;
+      return {
+        '@type': 'Question',
+        name: String(name),
+        acceptedAnswer: { '@type': 'Answer', text: String(text) },
+      };
+    })
+    .filter(Boolean);
+  if (!mainEntity.length) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity,
   };
 }
 
@@ -92,7 +178,7 @@ function touristAttraction(place, lang = 'tr') {
   if (count > 0 && Number.isFinite(rating) && rating > 0) {
     schema.aggregateRating = {
       '@type': 'AggregateRating',
-      ratingValue: String(rating),
+      ratingValue: Number(rating).toFixed(1),
       reviewCount: count,
       bestRating: '5',
       worstRating: '1',
@@ -197,7 +283,7 @@ function isTopLevelApprovedTiola(tiola) {
 }
 
 function jsonLdForHome() {
-  return [travelAgency()];
+  return [travelAgency(), webSite()];
 }
 
 function jsonLdForContact(lang = 'tr') {
@@ -211,7 +297,7 @@ function jsonLdForPlace(place, tiolas = [], lang = 'tr') {
     .slice(0, MAX_REVIEWS)
     .map((t) => reviewSchema(t, place))
     .filter(Boolean);
-  return [attraction, ...reviews].filter(Boolean);
+  return [attraction, breadcrumbList(place, lang), faqPage(place, lang), ...reviews].filter(Boolean);
 }
 
 function jsonLdForBlog(blog, lang = 'tr') {
@@ -238,7 +324,7 @@ function jsonLdForHomeWithTiolas(tiolas = []) {
     .slice(0, MAX_REVIEWS)
     .map((t) => reviewSchema(t, { name: t.placeName || t.place_name }))
     .filter(Boolean);
-  return [travelAgency(), ...reviews];
+  return [travelAgency(), webSite(), ...reviews];
 }
 
 async function loadApprovedTiolasForPlace(placeId) {
@@ -310,10 +396,13 @@ function autoJsonLd(pathname, relativePath, lang = 'tr') {
 
 module.exports = {
   travelAgency,
+  webSite,
   touristAttraction,
   reviewSchema,
   articleSchema,
   contactPage,
+  breadcrumbList,
+  faqPage,
   jsonLdForHome,
   jsonLdForContact,
   jsonLdForPlace,

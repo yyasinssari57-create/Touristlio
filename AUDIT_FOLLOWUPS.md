@@ -70,6 +70,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Canlıda sorun: Render env `CSP_REPORT_ONLY=true` → engellemez, yalnızca raporlar. `CSP_FORCE=true` development’ta politikayı açar.
 - `npm run verify:csp`
 
+## v2 KRİTİK-7 (JSON-LD Schema.org)
+
+- Tamamlandı (YÜKSEK-4 üzerine):
+  - Ana sayfa HTML: **TravelAgency** + **WebSite** + **SearchAction** (`/explore?q={search_term_string}`).
+  - TravelAgency açıklaması: “Sadece Ziyaret Etme. Hisset. Topluluk tabanlı seyahat rehberliği.”
+  - `/places/:slug` sunucu HTML: **TouristAttraction** + **BreadcrumbList** (Ana Sayfa → ülke → mekân) + varsa **FAQPage** + Tiola **Review**.
+  - `/blog/:slug` Article: `loadApprovedBlog` artık `await` (önce Promise kaçıyordu).
+  - SPA JSON-LD script’lerine CSP nonce kopyalanır.
+- `npm run verify:jsonld`
+
+### Leftover
+- `sameAs` Instagram **yok**: sitede/Instagram’da resmi `@touristlio` hesabı bulunamadı; uydurulmadı. Hesap açılınca Render `INSTAGRAM_URL` (ör. `https://www.instagram.com/HANDLE`) → TravelAgency `sameAs`.
+- `addressCountry` ISO kod değil, DB’deki ülke adı (tabloda `country_code` yok).
+- Ana sayfa ilk HTML’de Tiola Review yok (JS feed); crawler için asıl kaynak mekân URL’leri.
+- `AggregateRating` yalnızca `tiolaCount > 0`.
+- logo/url `SITE_URL` / `siteBaseUrl()` (www). Localhost curl’de origin localhost olabilir.
+
 ## KRİTİK-8 eşleşmesi (dosya vs önceki commit)
 
 - Yüklenen tam denetim (`touristlio_cursor_audit.md`, 506 satır) **KRİTİK-8 başlığı içermiyor.** KRİTİK-7’den sonra doğrudan [YÜKSEK-1] geliyor.
@@ -121,22 +138,21 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 ## YÜKSEK-4 (JSON-LD Schema.org)
 
-- Tamamlandı: sunucu HTML’e `application/ld+json` enjekte eder (Googlebot JS’siz görür).
-  - Ana sayfa `/` ve `/en/` → **TravelAgency** (`name`, `url`, `logo` `/images/logo.webp`, `description` denetimdeki metin).
-  - `/places/:slug` → **TouristAttraction** (dinamik: ad, açıklama, url, görsel, adres, geo). Tiola ortalaması varsa **AggregateRating** (yalnızca Tiola; Google puanı yok).
-  - Her onaylı üst seviye Tiola → ayrı **Review** (`itemReviewed` = mekân, `reviewRating` Tiola yıldızı).
-  - `/blog/:slug` → **Article** (headline, yazar, publisher Touristlio, tarih).
-  - `/legal/contact.html` → **ContactPage** (`mainEntity` TravelAgency + e-posta).
-- SPA: `TouristDestination` → `TouristAttraction`; ana sayfa feed ve mekân Tiola listesi Review ekler; blog overlay Article.
+- Tamamlandı: sunucu HTML’e `application/ld+json` enjekte eder (Googlebot JS’siz görür). v2 KRİTİK-7 ile genişletildi.
+  - Ana sayfa `/` ve `/en/` → **TravelAgency** + **WebSite** SearchAction.
+  - `/places/:slug` → **TouristAttraction**, **BreadcrumbList**, varsa **FAQPage**. Tiola ortalaması varsa **AggregateRating**.
+  - Her onaylı üst seviye Tiola → ayrı **Review**.
+  - `/blog/:slug` → **Article**.
+  - `/legal/contact.html` → **ContactPage**.
+- SPA: `TouristDestination` → `TouristAttraction`; ana sayfa feed Review ekler; blog CollectionPage / Article.
 - UI’da Google puanı yok; AggregateRating yalnızca mevcut Tiola yıldızlarıyla (kartlarda zaten görünen).
 
 ### Leftover
-- SPA içinden blog açılınca URL hâlâ `#blog`; Article HTML’si yalnızca doğrudan `/blog/:slug` isteğinde. Overlay kapanınca TravelAgency’ye döner.
-- Tiola’ların kendi kanonik URL’si yok; Review mekân sayfasına / ana sayfa feed’ine bağlı. Google Review zengin sonucu için `itemReviewed` + görünür yıldız şart — Search Console’da doğrula.
-- Ana sayfa ilk HTML’de sadece TravelAgency; feed Review’ları JS sonrası (crawler JS çalıştırmazsa mekân URL’lerindeki Review’lar asıl kaynak).
-- `AggregateRating` yalnızca `tiolaCount > 0` iken; puansız mekânda rich snippet rating çıkmaz.
-- FAQPage / BreadcrumbList hâlâ istemci tarafında (önceki davranış); sunucu HTML’sine taşınmadı.
-- logo.webp Absolute URL `SITE_URL` / `siteBaseUrl()` (www). Localhost curl’de origin localhost olabilir.
+- Instagram `sameAs` yok (hesap doğrulanmadı). `INSTAGRAM_URL` ile eklenir.
+- Tiola’ların kendi kanonik URL’si yok; Review mekân sayfasına bağlı.
+- Ana sayfa ilk HTML’de Tiola Review yok (JS sonrası).
+- `AggregateRating` yalnızca `tiolaCount > 0`.
+- logo.webp Absolute URL `SITE_URL` / `siteBaseUrl()` (www).
 
 ## YÜKSEK-5 (ana sayfa istatistikleri)
 
