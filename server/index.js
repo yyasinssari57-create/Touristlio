@@ -54,6 +54,7 @@ if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
 }
 
+// First request middleware: apex→www + production HTTP→HTTPS (v2 KRİTİK-4).
 app.use(canonicalHostMiddleware());
 
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
