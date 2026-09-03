@@ -161,8 +161,8 @@
 
   const PICKER_SECTIONS = [
     { key: 'none', label: null, filter: (p) => p.initialOnly },
-    { key: 'travel', label: 'Gezi', filter: (p) => p.category === 'travel' },
-    { key: 'animal', label: 'Hayvanlar', filter: (p) => p.category === 'animal' },
+    { key: 'travel', labelKey: 'avatarTravel', filter: (p) => p.category === 'travel' },
+    { key: 'animal', labelKey: 'avatarAnimals', filter: (p) => p.category === 'animal' },
   ];
 
   function presetById(id) {
@@ -281,12 +281,15 @@
       <button type="button" class="av-pick-item${selectedPreset === p.id ? ' on' : ''}" data-preset="${p.id}" title="${escapeHtml(p.label)}" aria-label="${escapeHtml(p.label)}">
         ${presetPickerInner(p, selectedColor)}
       </button>`).join('');
-    if (!section.label) {
+    const label = section.labelKey
+      ? (window.TL_I18N?.t(localStorage.getItem('tl_lang') || 'tr', section.labelKey) || section.labelKey)
+      : section.label;
+    if (!label) {
       return `<div class="av-pick-section av-pick-section-none">${buttons}</div>`;
     }
     return `
       <div class="av-pick-section">
-        <div class="av-pick-section-label">${escapeHtml(section.label)}</div>
+        <div class="av-pick-section-label">${escapeHtml(label)}</div>
         <div class="av-pick-section-grid">${buttons}</div>
       </div>`;
   }

@@ -115,7 +115,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <input type="password" name="password" autocomplete="current-password" tabindex="-1"/>
           </div>
           <label class="sr-only" for="heroSearch" data-i18n="searchAria">Destinasyon ara</label>
-          <input type="search" id="heroSearch" name="place-query" data-i18n-placeholder="searchPh" placeholder="İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu..." oninput="onSearch(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly aria-label="Destinasyon ara"/>
+          <input type="search" id="heroSearch" name="place-query" data-i18n-placeholder="searchPh" placeholder="İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu..." oninput="onSearch(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly data-i18n-aria="searchAria" aria-label="Destinasyon ara"/>
           <button type="submit" class="btn bp bsm" data-i18n="searchBtn">🔍 Keşfet</button>
         </form>
         <div class="srch-drop" id="srchDrop"></div>
@@ -211,28 +211,60 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <label class="fg-lbl" for="contSel" data-i18n="filterContinent">Kıta</label>
           <select class="fg-sel" onchange="onContinentChange(this.value)" id="contSel">
             <option value="" data-i18n="allContinents">Tüm Kıtalar</option>
-            <option>Europe</option><option>Asia</option><option>Americas</option>
-            <option>Middle East</option><option>Africa</option><option>Oceania</option>
+            <option value="Europe">Avrupa</option>
+            <option value="Asia">Asya</option>
+            <option value="Americas">Amerika</option>
+            <option value="Middle East">Ortadoğu</option>
+            <option value="Africa">Afrika</option>
+            <option value="Oceania">Okyanusya</option>
           </select>
         </div>
         <div class="fg">
           <label class="fg-lbl" for="cntSel" data-i18n="filterCountry">Ülke</label>
           <select class="fg-sel" id="cntSel" onchange="onCountryChange(this.value)">
             <option value="" data-i18n="allCountries">Tüm Ülkeler</option>
-            <option>Turkey 🇹🇷</option><option>France 🇫🇷</option><option>Japan 🇯🇵</option>
-            <option>Italy 🇮🇹</option><option>Greece 🇬🇷</option><option>Spain 🇪🇸</option>
-            <option>UK 🇬🇧</option><option>Germany 🇩🇪</option><option>USA 🇺🇸</option>
-            <option>Canada 🇨🇦</option><option>Brazil 🇧🇷</option><option>Thailand 🇹🇭</option>
-            <option>Indonesia 🇮🇩</option><option>India 🇮🇳</option><option>Australia 🇦🇺</option>
-            <option>UAE 🇦🇪</option><option>Portugal 🇵🇹</option><option>Morocco 🇲🇦</option>
-            <option>Egypt 🇪🇬</option><option>South Africa 🇿🇦</option><option>Mexico 🇲🇽</option>
-            <option>Norway 🇳🇴</option><option>Iceland 🇮🇸</option><option>South Korea 🇰🇷</option>
-            <option>Vietnam 🇻🇳</option><option>Cambodia 🇰🇭</option><option>Nepal 🇳🇵</option>
-            <option>Jordan 🇯🇴</option><option>Peru 🇵🇪</option><option>Cuba 🇨🇺</option>
-            <option>Tanzania 🇹🇿</option><option>Croatia 🇭🇷</option><option>Switzerland 🇨🇭</option>
-            <option>Netherlands 🇳🇱</option><option>Austria 🇦🇹</option><option>New Zealand 🇳🇿</option>
-            <option>Argentina 🇦🇷</option><option>Colombia 🇨🇴</option><option>Chile 🇨🇱</option>
-            <option>Singapore 🇸🇬</option><option>Malaysia 🇲🇾</option><option>Sri Lanka 🇱🇰</option>
+            <option value="Turkey 🇹🇷">Türkiye 🇹🇷</option>
+            <option value="France 🇫🇷">Fransa 🇫🇷</option>
+            <option value="Japan 🇯🇵">Japonya 🇯🇵</option>
+            <option value="Italy 🇮🇹">İtalya 🇮🇹</option>
+            <option value="Greece 🇬🇷">Yunanistan 🇬🇷</option>
+            <option value="Spain 🇪🇸">İspanya 🇪🇸</option>
+            <option value="UK 🇬🇧">Birleşik Krallık 🇬🇧</option>
+            <option value="Germany 🇩🇪">Almanya 🇩🇪</option>
+            <option value="USA 🇺🇸">ABD 🇺🇸</option>
+            <option value="Canada 🇨🇦">Kanada 🇨🇦</option>
+            <option value="Brazil 🇧🇷">Brezilya 🇧🇷</option>
+            <option value="Thailand 🇹🇭">Tayland 🇹🇭</option>
+            <option value="Indonesia 🇮🇩">Endonezya 🇮🇩</option>
+            <option value="India 🇮🇳">Hindistan 🇮🇳</option>
+            <option value="Australia 🇦🇺">Avustralya 🇦🇺</option>
+            <option value="UAE 🇦🇪">BAE 🇦🇪</option>
+            <option value="Portugal 🇵🇹">Portekiz 🇵🇹</option>
+            <option value="Morocco 🇲🇦">Fas 🇲🇦</option>
+            <option value="Egypt 🇪🇬">Mısır 🇪🇬</option>
+            <option value="South Africa 🇿🇦">Güney Afrika 🇿🇦</option>
+            <option value="Mexico 🇲🇽">Meksika 🇲🇽</option>
+            <option value="Norway 🇳🇴">Norveç 🇳🇴</option>
+            <option value="Iceland 🇮🇸">İzlanda 🇮🇸</option>
+            <option value="South Korea 🇰🇷">Güney Kore 🇰🇷</option>
+            <option value="Vietnam 🇻🇳">Vietnam 🇻🇳</option>
+            <option value="Cambodia 🇰🇭">Kamboçya 🇰🇭</option>
+            <option value="Nepal 🇳🇵">Nepal 🇳🇵</option>
+            <option value="Jordan 🇯🇴">Ürdün 🇯🇴</option>
+            <option value="Peru 🇵🇪">Peru 🇵🇪</option>
+            <option value="Cuba 🇨🇺">Küba 🇨🇺</option>
+            <option value="Tanzania 🇹🇿">Tanzanya 🇹🇿</option>
+            <option value="Croatia 🇭🇷">Hırvatistan 🇭🇷</option>
+            <option value="Switzerland 🇨🇭">İsviçre 🇨🇭</option>
+            <option value="Netherlands 🇳🇱">Hollanda 🇳🇱</option>
+            <option value="Austria 🇦🇹">Avusturya 🇦🇹</option>
+            <option value="New Zealand 🇳🇿">Yeni Zelanda 🇳🇿</option>
+            <option value="Argentina 🇦🇷">Arjantin 🇦🇷</option>
+            <option value="Colombia 🇨🇴">Kolombiya 🇨🇴</option>
+            <option value="Chile 🇨🇱">Şili 🇨🇱</option>
+            <option value="Singapore 🇸🇬">Singapur 🇸🇬</option>
+            <option value="Malaysia 🇲🇾">Malezya 🇲🇾</option>
+            <option value="Sri Lanka 🇱🇰">Sri Lanka 🇱🇰</option>
           </select>
         </div>
         <div class="fg">
@@ -603,7 +635,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <div class="ptab-c" id="ptab-revs" style="display:none">
         <div id="myRevList"></div>
-        <div class="empty-state" id="revEmpty"><div class="empty-icon">⭐</div><p>Henüz yorum yazmadınız.</p></div>
+        <div class="empty-state" id="revEmpty"><div class="empty-icon">⭐</div><p data-i18n="emptyReviews">Henüz yorum yazmadınız.</p></div>
       </div>
       <div class="ptab-c" id="ptab-saved">
         <div class="pgrid" id="savedGrid"></div>

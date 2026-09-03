@@ -190,6 +190,8 @@ window.TL_I18N.apply(lang);
 
 function t(k){ return window.TL_I18N.t(lang,k); }
 
+function geoLabel(v){ return window.TL_I18N.geoName ? window.TL_I18N.geoName(lang, v) : (v || ''); }
+
 function escapeHtml(s) {
 
   if (s == null) return '';
@@ -316,7 +318,7 @@ function renderVisited(places, countries) {
   const countryNames = Array.isArray(countries) ? countries : [];
   if (countryRow) {
     countryRow.innerHTML = countryNames.map((c) =>
-      `<span class="tiola-badge earned">${escapeHtml(c)}</span>`
+      `<span class="tiola-badge earned">${escapeHtml(geoLabel(c))}</span>`
     ).join('');
   }
   if (!grid) return;
@@ -328,7 +330,7 @@ function renderVisited(places, countries) {
   if (empty) empty.style.display = 'none';
   grid.innerHTML = list.map((p) => `<a class="pc" href="${placeHref(p)}">
     <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div>
-    <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${escapeHtml(p.visitedAt || p.country || '')}</div></div>
+    <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${escapeHtml(p.visitedAt || geoLabel(p.country) || '')}</div></div>
   </a>`).join('');
 }
 

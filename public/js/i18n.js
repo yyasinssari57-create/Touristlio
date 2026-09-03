@@ -249,6 +249,25 @@ window.TL_I18N = (function () {
       reportProfileBtn: 'Profili şikayet et',
       reportSent: 'Şikayetiniz alındı',
       reportNoteRequired: 'Lütfen en az 10 karakterlik bir açıklama yazın',
+      reportReason: 'Neden',
+      reportNoteLabel: 'Ek not (isteğe bağlı)',
+      reportNotePh: 'Kısa açıklama yazabilirsiniz…',
+      reportSpam: 'İstenmeyen / spam',
+      reportInappropriate: 'Uygunsuz içerik',
+      reportHarassment: 'Taciz',
+      reportFake: 'Sahte hesap',
+      reportCopyright: 'Telif',
+      reportOther: 'Diğer',
+      viewDetails: 'Detay →',
+      youAreHere: 'Buradasınız',
+      geoNotSupported: 'Konum desteklenmiyor',
+      locationFound: 'Konum bulundu',
+      locationDenied: 'Konum izni reddedildi',
+      emptyReviews: 'Henüz yorum yazmadınız.',
+      legalBack: '← Siteye dön',
+      avatarTravel: 'Gezi',
+      avatarAnimals: 'Hayvanlar',
+      reportTypeProfile: 'Profil',
       deleteTitle: 'Sil',
       deleteBtn: 'Sil',
       deleteConfirm: 'Bu paylaşımı silmek istediğinize emin misiniz?',
@@ -510,6 +529,25 @@ window.TL_I18N = (function () {
       reportProfileBtn: 'Report profile',
       reportSent: 'Your report was submitted',
       reportNoteRequired: 'Please write at least 10 characters explaining your report',
+      reportReason: 'Reason',
+      reportNoteLabel: 'Extra note (optional)',
+      reportNotePh: 'You can add a short explanation…',
+      reportSpam: 'Spam',
+      reportInappropriate: 'Inappropriate content',
+      reportHarassment: 'Harassment',
+      reportFake: 'Fake account',
+      reportCopyright: 'Copyright',
+      reportOther: 'Other',
+      viewDetails: 'View details →',
+      youAreHere: 'You are here',
+      geoNotSupported: 'Geolocation not supported',
+      locationFound: 'Location found',
+      locationDenied: 'Location permission denied',
+      emptyReviews: 'You have not written a review yet.',
+      legalBack: '← Back to site',
+      avatarTravel: 'Travel',
+      avatarAnimals: 'Animals',
+      reportTypeProfile: 'Profile',
       deleteTitle: 'Delete',
       deleteBtn: 'Delete',
       deleteConfirm: 'Are you sure you want to delete this post?',
@@ -530,6 +568,99 @@ window.TL_I18N = (function () {
     viewpoint: 'catViewpoint', religious: 'catReligious', market: 'catMarket',
     shopping: 'catShopping', nightlife: 'catNightlife', adventure: 'catAdventure', spa: 'catSpa',
   };
+
+  const CONTINENT_TR = {
+    Europe: 'Avrupa', Asia: 'Asya', Americas: 'Amerika',
+    'Middle East': 'Ortadoğu', Africa: 'Afrika', Oceania: 'Okyanusya',
+  };
+
+  const COUNTRY_TR = {
+    Albania: 'Arnavutluk', Algeria: 'Cezayir', Andorra: 'Andorra', Argentina: 'Arjantin',
+    Armenia: 'Ermenistan', Australia: 'Avustralya', Austria: 'Avusturya', Azerbaijan: 'Azerbaycan',
+    Bahrain: 'Bahreyn', Bangladesh: 'Bangladeş', Barbados: 'Barbados', Belarus: 'Belarus',
+    Belgium: 'Belçika', Belize: 'Belize', Bhutan: 'Bhutan', Bolivia: 'Bolivya',
+    Bosnia: 'Bosna-Hersek', Botswana: 'Botsvana', Brazil: 'Brezilya', Bulgaria: 'Bulgaristan',
+    'Burkina Faso': 'Burkina Faso', Cambodia: 'Kamboçya', Canada: 'Kanada', Chile: 'Şili',
+    China: 'Çin', Colombia: 'Kolombiya', 'Costa Rica': 'Kosta Rika', Croatia: 'Hırvatistan',
+    Cuba: 'Küba', 'Czech Republic': 'Çekya', Denmark: 'Danimarka', Djibouti: 'Cibuti',
+    Ecuador: 'Ekvador', Egypt: 'Mısır', Estonia: 'Estonya', Ethiopia: 'Etiyopya',
+    Fiji: 'Fiji', Finland: 'Finlandiya', France: 'Fransa', 'French Polynesia': 'Fransız Polinezyası',
+    Georgia: 'Gürcistan', Germany: 'Almanya', Ghana: 'Gana', Greece: 'Yunanistan',
+    Guatemala: 'Guatemala', Honduras: 'Honduras', Hungary: 'Macaristan', Iceland: 'İzlanda',
+    India: 'Hindistan', Indonesia: 'Endonezya', Iran: 'İran', Iraq: 'Irak',
+    Ireland: 'İrlanda', Israel: 'İsrail', Italy: 'İtalya', Japan: 'Japonya',
+    Jordan: 'Ürdün', Kazakhstan: 'Kazakistan', Kenya: 'Kenya', Kosovo: 'Kosova',
+    Kuwait: 'Kuveyt', Kyrgyzstan: 'Kırgızistan', Laos: 'Laos', Latvia: 'Letonya',
+    Lebanon: 'Lübnan', Lesotho: 'Lesotho', Libya: 'Libya', Lithuania: 'Litvanya',
+    Luxembourg: 'Lüksemburg', Madagascar: 'Madagaskar', Malawi: 'Malavi', Malaysia: 'Malezya',
+    Maldives: 'Maldivler', Mali: 'Mali', Malta: 'Malta', Mauritius: 'Mauritius',
+    Mexico: 'Meksika', Mongolia: 'Moğolistan', Montenegro: 'Karadağ', Morocco: 'Fas',
+    Mozambique: 'Mozambik', Myanmar: 'Myanmar', Namibia: 'Namibya', Nepal: 'Nepal',
+    Netherlands: 'Hollanda', 'New Zealand': 'Yeni Zelanda', Nigeria: 'Nijerya',
+    'North Macedonia': 'Kuzey Makedonya', Norway: 'Norveç', Oman: 'Umman', Panama: 'Panama',
+    Paraguay: 'Paraguay', Peru: 'Peru', Philippines: 'Filipinler', Poland: 'Polonya',
+    Portugal: 'Portekiz', Qatar: 'Katar', Romania: 'Romanya', Russia: 'Rusya',
+    Rwanda: 'Ruanda', Samoa: 'Samoa', 'Saudi Arabia': 'Suudi Arabistan', Senegal: 'Senegal',
+    Serbia: 'Sırbistan', Seychelles: 'Seyşeller', Singapore: 'Singapur', Slovakia: 'Slovakya',
+    Slovenia: 'Slovenya', 'South Africa': 'Güney Afrika', 'South Korea': 'Güney Kore',
+    Spain: 'İspanya', 'Sri Lanka': 'Sri Lanka', 'St Lucia': 'Saint Lucia', Sudan: 'Sudan',
+    Sweden: 'İsveç', Switzerland: 'İsviçre', Syria: 'Suriye', Taiwan: 'Tayvan',
+    Tanzania: 'Tanzanya', Thailand: 'Tayland', Tunisia: 'Tunus', Turkey: 'Türkiye',
+    Türkiye: 'Türkiye', Turkmenistan: 'Türkmenistan', UAE: 'BAE', UK: 'Birleşik Krallık',
+    USA: 'ABD', Uganda: 'Uganda', Ukraine: 'Ukrayna', Uruguay: 'Uruguay',
+    Uzbekistan: 'Özbekistan', Vatican: 'Vatikan', Venezuela: 'Venezuela', Vietnam: 'Vietnam',
+    Zambia: 'Zambiya', Zimbabwe: 'Zimbabve',
+  };
+
+  const CITY_TR = {
+    Istanbul: 'İstanbul', Izmir: 'İzmir', Agri: 'Ağrı', Aydin: 'Aydın',
+    Balikesir: 'Balıkesir', Bartin: 'Bartın', Canakkale: 'Çanakkale', Corum: 'Çorum',
+    Dogubayazit: 'Doğubayazıt', Eskisehir: 'Eskişehir', Karabuk: 'Karabük', Kas: 'Kaş',
+    Kutahya: 'Kütahya', Mugla: 'Muğla', Nevsehir: 'Nevşehir', Sanliurfa: 'Şanlıurfa',
+    Selcuk: 'Selçuk', Adiyaman: 'Adıyaman', Rome: 'Roma', Florence: 'Floransa',
+    Venice: 'Venedik', Athens: 'Atina', London: 'Londra', Lisbon: 'Lizbon',
+    Cairo: 'Kahire', Seoul: 'Seul', Vienna: 'Viyana', Munich: 'Münih',
+    Prague: 'Prag', Warsaw: 'Varşova', Brussels: 'Brüksel', Copenhagen: 'Kopenhag',
+    Moscow: 'Moskova', Beijing: 'Pekin', Geneva: 'Cenevre', Zurich: 'Zürih',
+  };
+
+  const FLAG_RE = /[\u{1F1E0}-\u{1F1FF}]{2}/u;
+
+  function stripFlag(value) {
+    return String(value || '').replace(/\s*[\u{1F1E0}-\u{1F1FF}]{2}\s*/gu, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function geoName(lang, raw) {
+    const src = String(raw == null ? '' : raw);
+    if (!src) return '';
+    const flagMatch = src.match(FLAG_RE);
+    const flag = flagMatch ? flagMatch[0] : '';
+    const key = stripFlag(src);
+    if (!key) return src;
+    if (lang !== 'en') {
+      const mapped = CONTINENT_TR[key] || COUNTRY_TR[key] || CITY_TR[key];
+      if (mapped) return flag ? `${mapped} ${flag}` : mapped;
+    }
+    return src;
+  }
+
+  function geoText(lang, raw) {
+    const src = String(raw == null ? '' : raw).trim();
+    if (!src) return '';
+    return src.split(/\s*,\s*/).map((part) => geoName(lang, part) || part).join(', ');
+  }
+
+  function applyGeo(lang) {
+    ['contSel', 'cntSel', 'citSel', 'disSel'].forEach((id) => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      [...sel.options].forEach((opt) => {
+        if (!opt.value) return;
+        if (!opt.hasAttribute('value')) opt.setAttribute('value', opt.value);
+        opt.textContent = geoName(lang, opt.value);
+      });
+    });
+  }
 
   function t(lang, key) {
     return dict[lang]?.[key] ?? dict.tr[key] ?? key;
@@ -579,6 +710,10 @@ window.TL_I18N = (function () {
     document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
       el.setAttribute('aria-label', t(lang, el.getAttribute('data-i18n-aria')));
     });
+    document.querySelectorAll('[data-i18n-alt]').forEach((el) => {
+      const val = t(lang, el.getAttribute('data-i18n-alt'));
+      if (val) el.setAttribute('alt', val);
+    });
     document.querySelectorAll('select.sort-sel option').forEach((opt) => {
       const map = {
         popularity: 'sortPopularity', tiola: 'sortTiola', reviewed: 'sortReviewed', local: 'sortLocal', az: 'sortAz',
@@ -586,6 +721,7 @@ window.TL_I18N = (function () {
       const k = map[opt.value] || opt.getAttribute('data-i18n-sort');
       if (k) opt.textContent = t(lang, k);
     });
+    applyGeo(lang);
     document.documentElement.setAttribute('data-tl-lang', lang);
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
@@ -618,5 +754,5 @@ window.TL_I18N = (function () {
     }
   }
 
-  return { dict, t, catLabel, CAT_KEYS, apply };
+  return { dict, t, catLabel, CAT_KEYS, apply, geoName, geoText, applyGeo };
 })();

@@ -70,7 +70,7 @@ window.TL_MAP = (function () {
       <strong>${m.name}</strong>
       <div style="font-size:.72rem;color:#64748b;margin:4px 0">${m.shortDesc || ''}</div>
       <button type="button" onclick="openDetail(${m.id})" style="font-size:.7rem;color:#0ea5e9;border:none;background:none;cursor:pointer;padding:0">
-        ${lang === 'en' ? 'View details →' : 'Detay →'}
+        ${window.TL_I18N?.t(lang, 'viewDetails') || (lang === 'en' ? 'View details →' : 'Detay →')}
       </button>
     </div>`;
   }
@@ -296,7 +296,7 @@ window.TL_MAP = (function () {
 
   function locateUser(map) {
     if (!map || !navigator.geolocation) {
-      window.TL_TOAST?.warning(lastLang === 'en' ? 'Geolocation not supported' : 'Konum desteklenmiyor');
+      window.TL_TOAST?.warning(window.TL_I18N?.t(lastLang, 'geoNotSupported') || (lastLang === 'en' ? 'Geolocation not supported' : 'Konum desteklenmiyor'));
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -311,12 +311,12 @@ window.TL_MAP = (function () {
         });
         userMarker = L.marker([latitude, longitude], { icon, zIndexOffset: 1000 })
           .addTo(map)
-          .bindPopup(lastLang === 'en' ? 'You are here' : 'Buradasınız');
+          .bindPopup(window.TL_I18N?.t(lastLang, 'youAreHere') || (lastLang === 'en' ? 'You are here' : 'Buradasınız'));
         map.setView([latitude, longitude], 13);
-        window.TL_TOAST?.success(lastLang === 'en' ? 'Location found' : 'Konum bulundu');
+        window.TL_TOAST?.success(window.TL_I18N?.t(lastLang, 'locationFound') || (lastLang === 'en' ? 'Location found' : 'Konum bulundu'));
       },
       () => {
-        window.TL_TOAST?.error(lastLang === 'en' ? 'Location permission denied' : 'Konum izni reddedildi');
+        window.TL_TOAST?.error(window.TL_I18N?.t(lastLang, 'locationDenied') || (lastLang === 'en' ? 'Location permission denied' : 'Konum izni reddedildi'));
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
