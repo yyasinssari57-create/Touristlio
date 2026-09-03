@@ -48,9 +48,14 @@ if (!found.length) {
 }
 
 const kvkk = fs.readFileSync(path.join(LEGAL_DIR, 'kvkk.html'), 'utf8');
-if (!kvkk.includes('[⚠️ DOLDURULACAK: Veri sorumlusu bilgisi')) {
-  fail('kvkk.html missing DOLDURULACAK controller mark');
-} else ok('kvkk.html marks missing controller legal name/address');
+if (!/Veri sorumlusu:<\/strong>/.test(kvkk)) fail('kvkk.html missing Veri sorumlusu line');
+else ok('kvkk.html states a data controller');
+if (kvkk.includes('DOLDURULACAK')) {
+  fail('kvkk.html still shows a DOLDURULACAK placeholder to visitors');
+} else ok('no DOLDURULACAK placeholder left on the live page');
+if (!/touristlio\.info@gmail\.com/.test(kvkk)) {
+  fail('kvkk.html controller has no contact channel');
+} else ok('controller has a working contact channel');
 if (/yasal unvan ve adres domain yayını sonrası güncellenecektir/.test(kvkk)) {
   fail('kvkk.html still has unmarked “güncellenecektir” placeholder');
 } else ok('unmarked “güncellenecektir” phrase removed');
