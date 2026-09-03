@@ -31,6 +31,7 @@
     "verify:blog": "node server/scripts/verify-blog-pages.js",
     "verify:user-system": "node server/scripts/verify-user-system.js",
     "verify:passwords": "node server/scripts/verify-password-hash.js",
+    "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:admin-role": "node server/scripts/verify-admin-role.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",
     "verify:a11y": "node server/scripts/verify-accessibility.js",

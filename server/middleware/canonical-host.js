@@ -1,17 +1,22 @@
 /**
- * KRİTİK-7: apex touristlio.com → 301 https://www.touristlio.com + same path.
+ * v2 KRİTİK-4 / v1 KRİTİK-7:
+ * - apex touristlio.com → 301 https://www.touristlio.com + same path
+ * - production HTTP → HTTPS (X-Forwarded-Proto)
  *
  * Loop-safe:
- * - Redirects only when the public host is exactly apex `touristlio.com`
+ * - Apex redirect only when the public host is exactly `touristlio.com`
  *   (not www, not Render, not other hosts).
+ * - HTTPS upgrade only in production, only when proto is explicitly http.
  * - Skips localhost / loopback.
- * - Skips when DISABLE_WWW_REDIRECT=true (emergency kill switch if Cloudflare
- *   already 301s the other direction).
+ * - DISABLE_WWW_REDIRECT=true kills apex→www.
+ * - DISABLE_HTTPS_REDIRECT=true kills HTTP→HTTPS.
  * - Reads X-Forwarded-Host / X-Forwarded-Proto behind Render/Cloudflare.
  *
  * Do not also enable Cloudflare “Redirect www to root” (www→apex). That plus
  * this middleware causes ERR_TOO_MANY_REDIRECTS. One direction only: apex→www.
  * Cloudflare SSL/TLS should be Full (or Full strict), not Flexible.
+ *
+ * Mount this middleware first (before helmet/cors/static).
  */
 
 const APEX_HOST = 'touristlio.com';
@@ -42,6 +47,14 @@ function hostnameFromReq(req) {
   return stripHostPort(xfHost || hostHeader);
 }
 
+function protoFromReq(req) {
+  const xf = firstHeaderValue(req.get && req.get('x-forwarded-proto'));
+  if (xf) return xf.toLowerCase();
+  if (req.secure) return 'https';
+  const proto = String(req.protocol || '').toLowerCase();
+  return proto || 'http';
+}
+
 function isLocalHostname(host) {
   if (!host) return true;
   return (
@@ -54,15 +67,26 @@ function isLocalHostname(host) {
   );
 }
 
-function redirectDisabled() {
+function wwwRedirectDisabled() {
   return String(process.env.DISABLE_WWW_REDIRECT || '').toLowerCase() === 'true';
 }
 
+function httpsRedirectDisabled() {
+  return String(process.env.DISABLE_HTTPS_REDIRECT || '').toLowerCase() === 'true';
+}
+
 function shouldRedirectApexToWww(host) {
-  if (redirectDisabled()) return false;
+  if (wwwRedirectDisabled()) return false;
   if (isLocalHostname(host)) return false;
   if (host === WWW_HOST) return false;
   return host === APEX_HOST;
+}
+
+function shouldRedirectHttpToHttps(req, host) {
+  if (process.env.NODE_ENV !== 'production') return false;
+  if (httpsRedirectDisabled()) return false;
+  if (isLocalHostname(host)) return false;
+  return protoFromReq(req) === 'http';
 }
 
 function canonicalTarget(originalUrl) {
@@ -70,19 +94,31 @@ function canonicalTarget(originalUrl) {
   return `${CANONICAL_ORIGIN}${pathAndQuery}`;
 }
 
+function httpsTarget(host, originalUrl) {
+  const pathAndQuery = originalUrl && originalUrl.startsWith('/') ? originalUrl : '/';
+  const safeHost = host === APEX_HOST ? WWW_HOST : host;
+  return `https://${safeHost}${pathAndQuery}`;
+}
+
 function canonicalHostMiddleware() {
   return async (req, res, next) => {
     const host = hostnameFromReq(req);
-    if (!shouldRedirectApexToWww(host)) return next();
-    return res.redirect(301, canonicalTarget(req.originalUrl));
+    const toWww = shouldRedirectApexToWww(host);
+    const toHttps = shouldRedirectHttpToHttps(req, host);
+    if (!toWww && !toHttps) return next();
+    if (toWww) return res.redirect(301, canonicalTarget(req.originalUrl));
+    return res.redirect(301, httpsTarget(host, req.originalUrl));
   };
 }
 
 module.exports = {
   canonicalHostMiddleware,
   hostnameFromReq,
+  protoFromReq,
   shouldRedirectApexToWww,
+  shouldRedirectHttpToHttps,
   canonicalTarget,
+  httpsTarget,
   isLocalHostname,
   APEX_HOST,
   WWW_HOST,

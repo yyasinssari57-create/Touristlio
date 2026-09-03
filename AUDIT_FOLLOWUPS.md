@@ -25,13 +25,16 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - SMTP (`SMTP_HOST` / `SMTP_USER` / `SMTP_PASS`) yoksa form DB’ye yazar, e-posta gitmez.
 - Admin panelde iletişim kutusu listesi **var** (`/admin` → İletişim sekmesi, `GET /api/admin/contact-messages`). SMTP hâlâ Yasin env.
 
-## KRİTİK-7 (apex vs www)
+## KRİTİK-7 (apex vs www) / v2 KRİTİK-4
 - Tamamlandı: Express, yalnızca public host `touristlio.com` (apex) ise **301** → `https://www.touristlio.com` + aynı path/query. `www` ve diğer host’lar dokunulmaz. Localhost / `127.0.0.1` yönlendirilmez.
+- Production’da `X-Forwarded-Proto: http` → **301 HTTPS** (aynı host; apex ise tek seferde www). `DISABLE_HTTPS_REDIRECT=true` ile kapatılır.
+- Middleware `server/index.js` içinde helmet/cors/static’ten **önce**.
 - KRİTİK-5 canonical www duruyor (`siteBaseUrl`, sitemap, `setCanonical`).
 - **Döngü riski:** Cloudflare **www → apex** (Redirect www to root) açıksa + uygulama apex → www **ERR_TOO_MANY_REDIRECTS**. Cloudflare SSL **Full** (Flexible değil). Yön tek: apex → www.
-- Acil kapatma: Render env `DISABLE_WWW_REDIRECT=true`.
+- Acil kapatma: Render env `DISABLE_WWW_REDIRECT=true` (apex) / `DISABLE_HTTPS_REDIRECT=true` (HTTP).
 - Render’da `SITE_URL` / `CORS_ORIGIN` = `https://www.touristlio.com`. Custom domain’e apex **ve** www eklenmeli.
 - Canlı Cloudflare kurallarını Yasin’in panelinden doğrula (bu ortam CF’ye erişemez).
+- `npm run verify:www`
 
 ## KRİTİK-6 (şifre) / v2 KRİTİK-3 (Argon2id)
 - Tamamlandı: yeni şifreler **Argon2id** (`m=65536,t=3,p=1`). Eski bcrypt (`$2a$` / `$2b$`, cost 10 veya 12) girişte doğrulanır, sonra sessizce Argon2id’ye yükseltilir.
