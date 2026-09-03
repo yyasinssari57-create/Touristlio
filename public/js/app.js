@@ -169,6 +169,37 @@ function t(key) {
   return window.TL_I18N.t(lang, key);
 }
 
+function geoLabel(value) {
+  return (window.TL_I18N && window.TL_I18N.geoName)
+    ? window.TL_I18N.geoName(lang, value)
+    : (value || '');
+}
+
+function geoText(value) {
+  return (window.TL_I18N && window.TL_I18N.geoText)
+    ? window.TL_I18N.geoText(lang, value)
+    : (value || '');
+}
+
+function localizeTag(tag) {
+  const raw = String(tag || '').trim();
+  if (!raw) return '';
+  const geo = geoLabel(raw);
+  if (geo && geo !== raw) return geo;
+  const meta = categoryMeta?.categories?.find((c) => c.slug === raw);
+  if (meta) return lang === 'en' ? meta.nameEn : meta.nameTr;
+  const fromI18n = window.TL_I18N?.catLabel?.(lang, raw);
+  if (fromI18n && fromI18n !== raw) return fromI18n.replace(/^[^\s]+\s/, '');
+  return raw;
+}
+
+function appendGeoOption(selectEl, value) {
+  const o = document.createElement('option');
+  o.value = value;
+  o.textContent = geoLabel(value);
+  selectEl.appendChild(o);
+}
+
 function catLabel(cat) {
   const meta = categoryMeta?.categories?.find((c) => c.slug === cat);
   if (meta) {
@@ -194,7 +225,7 @@ function renderLikeBar(targetType, targetId, count, likedByMe, opts = {}) {
   const liked = likedByMe ? ' liked' : '';
   const fn = targetType === 'blog' ? 'toggleBlogLike' : 'toggleTiolaLike';
   return `<div class="tiola-like-bar">
-    <button type="button" class="tiola-like-btn${liked}" onclick="event.stopPropagation();${fn}(${targetId},this)" aria-label="Beğen">
+    <button type="button" class="tiola-like-btn${liked}" onclick="event.stopPropagation();${fn}(${targetId},this)" aria-label="${t('profileStatLikes')}">
       <span class="tiola-like-emoji">${likedByMe ? '❤️' : '🤍'}</span>
       <span class="tiola-like-count">${count || 0}</span>
     </button>
@@ -633,7 +664,7 @@ function injectPlaceJsonLd(p, tiolas) {
     description: placeField(p, 'overview') || placeField(p, 'description') || undefined,
     url: origin + placePublicPath(p),
     image: img,
-    address: { '@type': 'PostalAddress', addressLocality: p.city, addressCountry: p.country },
+    address: { '@type': 'PostalAddress', addressLocality: geoLabel(p.city) || p.city, addressCountry: geoLabel(p.country) || p.country },
   };
   if (p.lat != null && p.lng != null) {
     attraction.geo = { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng };
@@ -657,7 +688,7 @@ function injectPlaceJsonLd(p, tiolas) {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Touristlio', item: origin },
-        { '@type': 'ListItem', position: 2, name: p.country, item: `${origin}/search?country=${encodeURIComponent(p.country)}` },
+        { '@type': 'ListItem', position: 2, name: geoLabel(p.country) || p.country, item: `${origin}/search?country=${encodeURIComponent(p.country)}` },
         { '@type': 'ListItem', position: 3, name: p.name, item: `${origin}${placePublicPath(p)}` },
       ],
     },
@@ -967,12 +998,12 @@ function renderGrid(list, append = false) {
         <button type="button" class="pc-save" aria-label="${savedIds.has(p.id) ? t('unsaveAria') : t('saveAria')}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" onclick="event.stopPropagation();toggleSave(${p.id},this)">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
       </div>
       <div class="pc-body">
-        <div class="pc-loc">📍 ${escapeHtml(p.location)}</div>
+        <div class="pc-loc">📍 ${escapeHtml(geoText(p.location))}</div>
         <div class="pc-name">${escapeHtml(p.name)}</div>
         <div class="pc-rats">
           ${renderTiolaRatingLine(p)}
         </div>
-        <div class="pc-foot"><div class="pc-type">${catLabel(p.category)}</div><div style="font-size:.61rem;color:var(--t3)">${escapeHtml(p.country)}</div></div>
+        <div class="pc-foot"><div class="pc-type">${catLabel(p.category)}</div><div style="font-size:.61rem;color:var(--t3)">${escapeHtml(geoLabel(p.country))}</div></div>
       </div>
     </div>`).join('');
   if (append && grid) grid.insertAdjacentHTML('beforeend', html);
@@ -1297,7 +1328,7 @@ function onSearch(val) {
           return `
           <div class="sd-item" tabindex="0" role="option" onmousedown="pickSearch(${p.id})" onclick="pickSearch(${p.id})">
             ${responsiveImg(placeImg(p), { alt: p.name, className: 'sd-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
-            <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(p.location)}</div>
+            <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(geoText(p.location))}</div>
             <div class="sd-rat">${s.stars} ${s.num} (${s.count} ${t('tiolaCount')})</div></div>
           </div>`;
         }).join('');
@@ -1974,8 +2005,8 @@ function updateCountryList(cont) {
     Africa: ['Egypt 🇪🇬', 'Tanzania 🇹🇿'],
     Oceania: ['Australia 🇦🇺'],
   };
-  if (!cont) Object.keys(CITYDB).forEach((c) => { const o = document.createElement('option'); o.textContent = c; cs.appendChild(o); });
-  else (MAP[cont] || []).forEach((c) => { const o = document.createElement('option'); o.textContent = c; cs.appendChild(o); });
+  if (!cont) Object.keys(CITYDB).forEach((c) => appendGeoOption(cs, c));
+  else (MAP[cont] || []).forEach((c) => appendGeoOption(cs, c));
   document.getElementById('citSel').innerHTML = `<option value="">${t('allCities')}</option>`;
   document.getElementById('disSel').innerHTML = `<option value="">${t('allDistricts')}</option>`;
 }
@@ -2003,7 +2034,7 @@ function updateCityList(cnt) {
   const cs = document.getElementById('citSel');
   cs.innerHTML = `<option value="">${t('allCities')}</option>`;
   document.getElementById('disSel').innerHTML = `<option value="">${t('allDistricts')}</option>`;
-  if (CITYDB[cnt]) Object.keys(CITYDB[cnt]).forEach((c) => { const o = document.createElement('option'); o.textContent = c; cs.appendChild(o); });
+  if (CITYDB[cnt]) Object.keys(CITYDB[cnt]).forEach((c) => appendGeoOption(cs, c));
 }
 
 function updateDistrictList(city) {
@@ -2011,7 +2042,7 @@ function updateDistrictList(city) {
   ds.innerHTML = `<option value="">${t('allDistricts')}</option>`;
   const cnt = document.getElementById('cntSel').value;
   const dists = CITYDB[cnt] && CITYDB[cnt][city];
-  if (dists) dists.forEach((d) => { const o = document.createElement('option'); o.textContent = d; ds.appendChild(o); });
+  if (dists) dists.forEach((d) => appendGeoOption(ds, d));
 }
 
 function renderDetailGallery(p) {
@@ -2074,7 +2105,7 @@ async function openDetail(id, skipRoute) {
     renderDetailGallery(p);
     document.getElementById('pdCat').textContent = catLabel(p.category);
     document.getElementById('pdTitle').textContent = p.name;
-    document.getElementById('pdLoc').textContent = '📍 ' + p.location + ' · ' + p.country
+    document.getElementById('pdLoc').textContent = '📍 ' + geoText(p.location) + ' · ' + geoLabel(p.country)
       + (p.lat != null && p.lng != null ? ` · ${Number(p.lat).toFixed(4)}, ${Number(p.lng).toFixed(4)}` : '');
     setCollapsibleText(document.getElementById('pdOverview'), document.getElementById('pdOverviewMore'), placeField(p, 'overview') || placeField(p, 'description'));
     setCollapsibleText(document.getElementById('pdHist'), document.getElementById('pdHistMore'), placeField(p, 'history'));
@@ -2088,7 +2119,7 @@ async function openDetail(id, skipRoute) {
     if (howEl) howEl.textContent = placeField(p, 'howToGetThere') || '—';
     const bestEl = document.getElementById('pdBestTime');
     if (bestEl) bestEl.textContent = placeField(p, 'bestTime') || '—';
-    document.getElementById('pdTags').innerHTML = (p.tags || []).map((tag) => `<span class="pd-tag">${escapeHtml(tag)}</span>`).join('');
+    document.getElementById('pdTags').innerHTML = (p.tags || []).map((tag) => `<span class="pd-tag">${escapeHtml(localizeTag(tag))}</span>`).join('');
     renderFaqAccordion(p);
     renderNearbyCards(data.nearby);
     renderSimilarCards(data.similar);
@@ -2108,8 +2139,8 @@ async function openDetail(id, skipRoute) {
     const score = formatTiolaScore(p);
     document.getElementById('pdTS').textContent = `${score.stars} ${score.num}`;
     document.getElementById('pdTC').textContent = `${score.count} ${t('tiolaCount')}`;
-    document.getElementById('icCountry').textContent = p.country;
-    document.getElementById('icCity').textContent = p.city;
+    document.getElementById('icCountry').textContent = geoLabel(p.country);
+    document.getElementById('icCity').textContent = geoLabel(p.city);
     document.getElementById('icCat').textContent = p.categoryDisplay || catLabel(p.category);
     document.getElementById('icEntry').textContent = placeField(p, 'entryFee') || '—';
     document.getElementById('icBest').textContent = placeField(p, 'bestTime') || '—';
@@ -2612,7 +2643,7 @@ async function updateProfilePage() {
   }
 
   const arcSel = document.getElementById('arcPlace');
-  arcSel.innerHTML = `<option value="">${t('placeOptional')}</option>` + places.map((p) => `<option value="${p.id}">${escapeHtml(p.name)} — ${escapeHtml(p.country)}</option>`).join('');
+  arcSel.innerHTML = `<option value="">${t('placeOptional')}</option>` + places.map((p) => `<option value="${p.id}">${escapeHtml(p.name)} — ${escapeHtml(geoLabel(p.country))}</option>`).join('');
 
   loadBlogPage().catch(() => {});
 }
@@ -2940,7 +2971,7 @@ function buildAuthForm(m) {
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <div style="display:flex;gap:6px;align-items:flex-start;font-size:.68rem;color:var(--t2);margin-bottom:8px">
          <input type="checkbox" id="gC" style="accent-color:var(--b);margin-top:2px"/>
-         <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${lang === 'en' ? 'I accept' : 'kabul ediyorum'}</label>
+         <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${t('authAccept')}</label>
        </div>
        <p id="authFormError" class="auth-inline-error" hidden></p>
        <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px" onclick="doRegSubmit()">${t('authCreate')}</button>`;

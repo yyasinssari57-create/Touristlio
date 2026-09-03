@@ -30,14 +30,14 @@
   <h1 class="search-page-title" data-i18n="searchPageTitle">Destinasyon Ara</h1>
   <form class="search-page-form" id="searchForm" role="search" autocomplete="off" data-error-boundary="form">
     <label class="sr-only" for="searchQ" data-i18n="searchAria">Destinasyon ara</label>
-    <input type="search" id="searchQ" name="q" data-i18n-placeholder="searchPh" placeholder="İstanbul, Paris..." autocomplete="one-time-code" autocapitalize="off" spellcheck="false" aria-label="Arama"/>
+    <input type="search" id="searchQ" name="q" data-i18n-placeholder="searchPh" placeholder="İstanbul, Paris..." autocomplete="one-time-code" autocapitalize="off" spellcheck="false" data-i18n-aria="searchAria" aria-label="Arama"/>
     <label class="sr-only" for="searchCat" data-i18n="searchCatAria">Kategori</label>
     <select id="searchCat" aria-label="Kategori">
       <option value="all" data-i18n="all">Tümü</option>
-      <option value="landmark">🏛️ Tarihi</option>
-      <option value="museum">🏺 Müze</option>
-      <option value="nature">⛰️ Doğa</option>
-      <option value="restaurant">🍽️ Restoran</option>
+      <option value="landmark" data-i18n="catLandmark">🏛️ Tarihi Yerler</option>
+      <option value="museum" data-i18n="catMuseum">🏺 Müzeler</option>
+      <option value="nature" data-i18n="catNature">⛰️ Doğa</option>
+      <option value="restaurant" data-i18n="catRestaurant">🍽️ Restoranlar</option>
     </select>
     <label class="sr-only" for="searchSort" data-i18n="sortAria">Sıralama</label>
     <select id="searchSort" aria-label="Sıralama">
@@ -74,6 +74,7 @@ let total = 0;
 let totalPages = 1;
 
 function t(k) { return window.TL_I18N.t(lang, k); }
+function geoText(v) { return window.TL_I18N.geoText ? window.TL_I18N.geoText(lang, v) : (v || ''); }
 
 function setSearchLang(l, btn) {
   lang = l;
@@ -162,7 +163,7 @@ async function runSearch(resetPage) {
     const html = (payload.places || []).map(pl => `
       <a class="pc" href="/places/${encodeURIComponent(pl.slug || pl.id)}">
         <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(pl.imageUrl, { alt: pl.name, kind: 'card' }) : `<img src="${pl.imageUrl}" alt="${pl.name}" loading="lazy"/>`}</div>
-        <div class="pc-body"><div class="pc-loc">📍 ${pl.location}</div><div class="pc-name">${pl.name}</div></div>
+        <div class="pc-body"><div class="pc-loc">📍 ${geoText(pl.location)}</div><div class="pc-name">${pl.name}</div></div>
       </a>`).join('');
     grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/explore#explore/map" class="btn bo bsm" style="margin-top:12px;display:inline-flex">${t('mapExploreBtn')}</a></div>`;
     renderSearchPager();

@@ -1,17 +1,17 @@
 (function () {
-  const REASONS = [
-    { id: 'spam', label: 'Spam' },
-    { id: 'uygunsuz', label: 'Uygunsuz içerik' },
-    { id: 'taciz', label: 'Taciz' },
-    { id: 'sahte', label: 'Sahte hesap' },
-    { id: 'telif', label: 'Telif' },
-    { id: 'diger', label: 'Diğer' },
+  const REASON_KEYS = [
+    { id: 'spam', key: 'reportSpam' },
+    { id: 'uygunsuz', key: 'reportInappropriate' },
+    { id: 'taciz', key: 'reportHarassment' },
+    { id: 'sahte', key: 'reportFake' },
+    { id: 'telif', key: 'reportCopyright' },
+    { id: 'diger', key: 'reportOther' },
   ];
 
-  const TYPE_LABELS = {
-    profile: 'Profil',
-    tiola: 'Tiola',
-    blog: 'Blog',
+  const TYPE_KEYS = {
+    profile: 'reportTypeProfile',
+    tiola: 'tiolaLabel',
+    blog: 'blog',
   };
 
   let pending = null;
@@ -20,8 +20,16 @@
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  function lang() {
+    try {
+      const stored = localStorage.getItem('tl_lang');
+      if (stored === 'en' || stored === 'tr') return stored;
+    } catch { /* private mode */ }
+    return (document.documentElement.lang || 'tr').slice(0, 2) === 'en' ? 'en' : 'tr';
+  }
+
   function t(key) {
-    return window.TL_I18N?.t?.(window.TL_I18N?.lang || 'tr', key) || key;
+    return window.TL_I18N?.t?.(lang(), key) || key;
   }
 
   function ensureOverlay() {
@@ -32,16 +40,16 @@
     ov.className = 'auth-ov';
     ov.innerHTML = `
       <div class="auth-box report-box" role="dialog" aria-labelledby="reportTitle">
-        <button type="button" class="aclose" id="reportClose" aria-label="Kapat">✕</button>
-        <h3 id="reportTitle" class="report-title">Şikayet Et</h3>
+        <button type="button" class="aclose" id="reportClose" data-i18n-aria="closeAria" aria-label="${escapeHtml(t('closeAria'))}">✕</button>
+        <h3 id="reportTitle" class="report-title" data-i18n="reportTitle">${escapeHtml(t('reportTitle'))}</h3>
         <p id="reportTarget" class="report-target"></p>
-        <label class="report-label" for="reportReason">Neden</label>
+        <label class="report-label" for="reportReason" data-i18n="reportReason">${escapeHtml(t('reportReason'))}</label>
         <select class="ain report-inp" id="reportReason"></select>
-        <label class="report-label" for="reportNote">Ek not (isteğe bağlı)</label>
-        <textarea class="ain report-inp" id="reportNote" rows="3" maxlength="500" placeholder="Kısa açıklama yazabilirsiniz…"></textarea>
+        <label class="report-label" for="reportNote" data-i18n="reportNoteLabel">${escapeHtml(t('reportNoteLabel'))}</label>
+        <textarea class="ain report-inp" id="reportNote" rows="3" maxlength="500" data-i18n-placeholder="reportNotePh" placeholder="${escapeHtml(t('reportNotePh'))}"></textarea>
         <div class="report-actions">
-          <button type="button" class="btn bo bsm" id="reportCancel">İptal</button>
-          <button type="button" class="btn bp bsm" id="reportSubmit">Gönder</button>
+          <button type="button" class="btn bo bsm" id="reportCancel" data-i18n="deleteCancel">${escapeHtml(t('deleteCancel'))}</button>
+          <button type="button" class="btn bp bsm" id="reportSubmit" data-i18n="contactSend">${escapeHtml(t('contactSend'))}</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -50,8 +58,33 @@
     document.getElementById('reportCancel').onclick = close;
     document.getElementById('reportSubmit').onclick = submit;
     const sel = document.getElementById('reportReason');
-    sel.innerHTML = REASONS.map((r) => `<option value="${r.id}">${escapeHtml(r.label)}</option>`).join('');
+    sel.innerHTML = REASON_KEYS.map((r) => `<option value="${r.id}">${escapeHtml(t(r.key))}</option>`).join('');
     return ov;
+  }
+
+  function syncOverlayCopy() {
+    const ov = document.getElementById('reportOv');
+    if (!ov) return;
+    const title = document.getElementById('reportTitle');
+    if (title) title.textContent = t('reportTitle');
+    const reasonLbl = ov.querySelector('label[for="reportReason"]');
+    if (reasonLbl) reasonLbl.textContent = t('reportReason');
+    const noteLbl = ov.querySelector('label[for="reportNote"]');
+    if (noteLbl) noteLbl.textContent = t('reportNoteLabel');
+    const note = document.getElementById('reportNote');
+    if (note) note.placeholder = t('reportNotePh');
+    const cancel = document.getElementById('reportCancel');
+    if (cancel) cancel.textContent = t('deleteCancel');
+    const submitBtn = document.getElementById('reportSubmit');
+    if (submitBtn) submitBtn.textContent = t('contactSend');
+    const closeBtn = document.getElementById('reportClose');
+    if (closeBtn) closeBtn.setAttribute('aria-label', t('closeAria'));
+    const sel = document.getElementById('reportReason');
+    if (sel) {
+      const prev = sel.value;
+      sel.innerHTML = REASON_KEYS.map((r) => `<option value="${r.id}">${escapeHtml(t(r.key))}</option>`).join('');
+      if (prev) sel.value = prev;
+    }
   }
 
   function open(targetType, targetId, label) {
@@ -61,9 +94,10 @@
     }
     pending = { targetType, targetId, label };
     ensureOverlay();
-    document.getElementById('reportTitle').textContent = t('reportTitle') || 'Şikayet Et';
+    syncOverlayCopy();
+    document.getElementById('reportTitle').textContent = t('reportTitle');
     document.getElementById('reportTarget').textContent =
-      `${TYPE_LABELS[targetType] || targetType}: ${label || '#' + targetId}`;
+      `${t(TYPE_KEYS[targetType] || 'reportTitle')}: ${label || '#' + targetId}`;
     document.getElementById('reportNote').value = '';
     document.getElementById('reportReason').selectedIndex = 0;
     document.getElementById('reportOv').classList.add('on');
@@ -229,5 +263,5 @@
   window.addEventListener('scroll', () => closeMenus(), true);
   window.addEventListener('resize', () => closeMenus());
 
-  window.TL_REPORTS = { REASONS, open, close, menuButton, toggleMenu, closeMenus };
+  window.TL_REPORTS = { REASON_KEYS, open, close, menuButton, toggleMenu, closeMenus };
 })();

@@ -26,6 +26,12 @@ window.TL_DISCOVER = (function () {
     return window.TL_I18N?.t(lang, key) || key;
   }
 
+  function cityName(c) {
+    if (!c) return '';
+    if (lang === 'en') return c.nameEn || c.name || '';
+    return window.TL_I18N?.geoName?.(lang, c.name) || c.name || '';
+  }
+
   function catLabel(id) {
     const meta = discoverCats.find((c) => c.id === id || c.slug === id);
     if (meta) return lang === 'en' ? meta.nameEn : meta.nameTr;
@@ -106,7 +112,7 @@ window.TL_DISCOVER = (function () {
       return;
     }
     if (selectedCity) {
-      if (title) title.textContent = lang === 'en' ? selectedCity.nameEn : selectedCity.name;
+      if (title) title.textContent = cityName(selectedCity);
       if (sub) sub.textContent = `${selectedCity.placeCount || 0} ${t('placesFound')}`;
       if (backBtn) backBtn.style.display = 'inline-flex';
     } else {
@@ -154,10 +160,10 @@ window.TL_DISCOVER = (function () {
     if (!grid) return;
     if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     grid.innerHTML = cities.map((c) => `
-      <button type="button" class="city-card" data-slug="${c.slug}" aria-label="${escapeHtml(c.name)}">
-        ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { alt: c.name, kind: 'card' }) : `<img src="${cityImg(c)}" alt="${escapeHtml(c.name)}" loading="lazy"/>`}
+      <button type="button" class="city-card" data-slug="${c.slug}" aria-label="${escapeHtml(cityName(c))}">
+        ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { alt: cityName(c), kind: 'card' }) : `<img src="${cityImg(c)}" alt="${escapeHtml(cityName(c))}" loading="lazy"/>`}
         <div class="city-card-body">
-          <h3>${escapeHtml(lang === 'en' ? c.nameEn : c.name)}</h3>
+          <h3>${escapeHtml(cityName(c))}</h3>
           <span>${c.placeCount || 0} ${t('placesFound')}</span>
         </div>
       </button>`).join('');

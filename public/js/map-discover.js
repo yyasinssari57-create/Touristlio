@@ -21,7 +21,7 @@ window.TL_MAP_DISCOVER = (function () {
     return `<div class="map-popup">${img}<strong>${m.name}</strong>
       <div style="font-size:.72rem;color:#64748b;margin:4px 0">${m.shortDesc || ''}</div>
       <button type="button" onclick="openDetail(${m.id})" style="font-size:.7rem;color:#0ea5e9;border:none;background:none;cursor:pointer;padding:0">
-        ${lang === 'en' ? 'View details →' : 'Detay →'}
+        ${window.TL_I18N?.t(lang, 'viewDetails') || (lang === 'en' ? 'View details →' : 'Detay →')}
       </button></div>`;
   }
 

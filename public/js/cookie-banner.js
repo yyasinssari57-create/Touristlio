@@ -50,13 +50,15 @@ window.TL_COOKIE = (function () {
   function render(lang) {
     if (decided()) return;
     let bar = document.getElementById('cookieBanner');
-    if (bar) return;
-    bar = document.createElement('div');
-    bar.id = 'cookieBanner';
-    bar.className = 'cookie-banner';
-    bar.setAttribute('role', 'dialog');
+    const created = !bar;
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'cookieBanner';
+      bar.className = 'cookie-banner';
+      bar.setAttribute('role', 'dialog');
+      bar.setAttribute('aria-live', 'polite');
+    }
     bar.setAttribute('aria-label', t(lang, 'cookieMsg'));
-    bar.setAttribute('aria-live', 'polite');
     bar.innerHTML = `
         <p>${t(lang, 'cookieMsg')}</p>
         <div class="cookie-actions">
@@ -65,7 +67,7 @@ window.TL_COOKIE = (function () {
           <button type="button" class="btn bo bsm" id="cookieReject">${t(lang, 'cookieReject')}</button>
           <button type="button" class="btn bp bsm" id="cookieAccept">${t(lang, 'cookieAccept')}</button>
         </div>`;
-    document.body.appendChild(bar);
+    if (created) document.body.appendChild(bar);
     document.getElementById('cookieAccept').onclick = () => accept(bar);
     document.getElementById('cookieReject').onclick = () => reject(bar);
   }
