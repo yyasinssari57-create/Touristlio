@@ -104,7 +104,14 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <div class="page active" id="page-explore" aria-hidden="false">
   <!-- HERO -->
   <section class="hero">
-    <div class="hbg"></div><div class="hmesh"></div><div class="hov"></div>
+    <div class="hero-carousel" aria-hidden="true">
+      <div class="hero-slide hbg active"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=1920&q=80&auto=format&fit=crop')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1920&q=80&auto=format&fit=crop')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=1920&q=80&auto=format&fit=crop')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1570939274717-7eda259b50ed?w=1920&q=80&auto=format&fit=crop')"></div>
+    </div>
+    <div class="hmesh"></div><div class="hov"></div>
     <div class="hc">
       <div class="hpill" data-i18n="heroPill">🌍 Dünyanın en kişisel seyahat rehberi</div>
       <h1 data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></h1>
@@ -795,6 +802,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <script src="/js/form-security.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>
 <script src="/js/explore-query.js?v=__APP_VERSION__"></script>
+<script src="/js/hero-carousel.js?v=__APP_VERSION__"></script>
 <script src="/js/app.js?v=__APP_VERSION__"></script>
 </body>
 </html>

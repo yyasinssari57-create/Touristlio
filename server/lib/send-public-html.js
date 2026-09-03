@@ -106,8 +106,14 @@ function injectHeroBackground(html, url) {
   const safe = cssUrlValue(src);
   const css = `<style id="tl-hero-bg">.hbg{background-image:url("${safe}") !important;}</style>`;
   if (/id="tl-hero-bg"/.test(html)) return html;
-  if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, `${css}</head>`);
-  return css + html;
+  let next = html;
+  if (/<\/head>/i.test(next)) next = next.replace(/<\/head>/i, `${css}</head>`);
+  else next = css + next;
+  // Admin-set hero: keep that one image, do not rotate Unsplash slides.
+  if (/class="hero-carousel"/.test(next) && !/\bdata-hero-custom=/.test(next)) {
+    next = next.replace('class="hero-carousel"', 'class="hero-carousel" data-hero-custom="1"');
+  }
+  return next;
 }
 
 async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {

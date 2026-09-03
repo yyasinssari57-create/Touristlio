@@ -97,6 +97,19 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Bağımsız HTML sayfalarının (arama, giriş, kayıt, yasal sayfalar, 404/500, admin, profil) her birinde tam bir `h1`.
 - `npm run verify:h1`
 
+## v2 YÜKSEK-1 (hero karusel)
+
+- Tamamlandı: ana sayfa hero 5 saniyede bir fade (1.5s). İlk kare yerel `/images/hero.webp` (Galata, LCP preload aynı). Sonraki kareler Unsplash: Paris, Kyoto, Roma, Santorini.
+- Slogan, arama kutusu ve şehir pill’leri `.hc` içinde duruyor; taşınmadı.
+- Overlay `rgba(0,0,0,.4)` duruyor. `prefers-reduced-motion` ve gizli sekme karuseli durdurur.
+- Admin Görünüm’den özel hero yüklenirse karusel kapanır (`data-hero-custom`); yalnızca o görsel kalır.
+- `npm run verify:hero`
+
+### Leftover
+- Unsplash kareleri uzak URL; WebP srcset yok (CSS background). İlk kare yerel srcset duruyor.
+- 2. kare preload edilmedi (LCP’yi bozmamak için).
+- Denetimdeki İstanbul Unsplash (`photo-1527838832700`) kullanılmadı — yerelde zaten Galata `hero.webp` var.
+
 ## YÜKSEK-1 (hero görsel)
 
 - Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.
