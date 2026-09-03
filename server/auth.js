@@ -1,3 +1,4 @@
+const argon2 = require('argon2');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('./db');
@@ -53,39 +54,72 @@ function verifyToken(token) {
 
 const BCRYPT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 12;
+const ARGON2_MEMORY_KIB = 65536;
+const ARGON2_TIME_COST = 3;
+const ARGON2_PARALLELISM = 1;
+const ARGON2_OPTS = {
+  type: argon2.argon2id,
+  memoryCost: ARGON2_MEMORY_KIB,
+  timeCost: ARGON2_TIME_COST,
+  parallelism: ARGON2_PARALLELISM,
+};
 
-/** Dummy bcrypt hash (cost 12) used when the stored hash is missing or not bcrypt. */
-const DUMMY_BCRYPT_HASH = '$2b$12$F9aU1.MRV04jYh.eJY1UTe3GPFJDiWpNSZZJCTGaO137a7DxOkBd6';
+/** Dummy Argon2id hash used when the stored hash is missing or unknown. */
+const DUMMY_ARGON2_HASH = '$argon2id$v=19$m=65536,p=1,t=3$+s2c2myev6yhs+RmPx9olQ$me91Kk2gqsOeisc2o7H9L1dZRW3C8yy59Asdd74vih4';
 
 function isBcryptHash(hash) {
   return typeof hash === 'string' && /^\$2[aby]?\$\d{2}\$[./A-Za-z0-9]{53}$/.test(hash);
 }
 
-function bcryptCost(hash) {
-  if (!isBcryptHash(hash)) return 0;
-  const cost = parseInt(hash.split('$')[2], 10);
-  return Number.isFinite(cost) ? cost : 0;
+function isArgon2Hash(hash) {
+  return typeof hash === 'string' && /^\$argon2(?:id|i|d)\$/.test(hash);
+}
+
+function isArgon2idHash(hash) {
+  return typeof hash === 'string' && hash.startsWith('$argon2id$');
+}
+
+function argon2Param(hash, name) {
+  const match = new RegExp(`(?:^|[,$$])${name}=(\\d+)`).exec(String(hash || ''));
+  if (!match) return 0;
+  const n = parseInt(match[1], 10);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function needsRehash(hash) {
-  return !isBcryptHash(hash) || bcryptCost(hash) < BCRYPT_ROUNDS;
+  if (!isArgon2idHash(hash)) return true;
+  return argon2Param(hash, 'm') < ARGON2_MEMORY_KIB
+    || argon2Param(hash, 't') < ARGON2_TIME_COST
+    || argon2Param(hash, 'p') < ARGON2_PARALLELISM;
 }
 
-function hashPassword(password) {
-  return bcrypt.hashSync(password, BCRYPT_ROUNDS);
+async function hashPassword(password) {
+  return argon2.hash(String(password ?? ''), ARGON2_OPTS);
 }
 
 /**
  * Verify a password against a stored hash.
- * bcrypt.compareSync compares the derived digest in constant time.
- * Missing or unknown hash formats still run a full bcrypt compare so timing
+ * New hashes are Argon2id. Existing bcrypt hashes still verify so users are
+ * not locked out; a successful login then rehashes to Argon2id.
+ * Missing or unknown formats still run a full Argon2id verify so timing
  * does not leak whether a user exists.
  */
-function comparePassword(password, hash) {
+async function comparePassword(password, hash) {
   const candidate = String(password ?? '');
-  const stored = isBcryptHash(hash) ? hash : DUMMY_BCRYPT_HASH;
-  const matches = bcrypt.compareSync(candidate, stored);
-  return isBcryptHash(hash) && matches;
+  if (isArgon2Hash(hash)) {
+    try {
+      return await argon2.verify(hash, candidate);
+    } catch {
+      return false;
+    }
+  }
+  if (isBcryptHash(hash)) {
+    return bcrypt.compareSync(candidate, hash);
+  }
+  try {
+    await argon2.verify(DUMMY_ARGON2_HASH, candidate);
+  } catch { /* ignore malformed dummy */ }
+  return false;
 }
 
 function passwordPolicyError(password) {
@@ -126,7 +160,7 @@ async function findUserById(id) {
 
 async function createUser({ name, email, password, role = 'member' }) {
   const colors = ['#0ea5e9', '#0d9488', '#b45309', '#e8642a', '#7c3aed'];
-  const hash = hashPassword(password);
+  const hash = await hashPassword(password);
   const cleanName = sanitizeName(name, 120) || 'Gezgin';
   const info = await db.prepare(`
     INSERT INTO users (name, email, password_hash, role, avatar_color)
@@ -145,6 +179,8 @@ module.exports = {
   comparePassword,
   needsRehash,
   isBcryptHash,
+  isArgon2idHash,
+  ARGON2_OPTS,
   passwordPolicyError,
   sanitizeUser,
   findUserByEmail,

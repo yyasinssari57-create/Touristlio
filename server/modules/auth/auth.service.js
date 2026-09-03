@@ -17,6 +17,7 @@ const COOKIE_OPTS = {
   secure: process.env.COOKIE_SECURE === 'true'
     || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'),
   sameSite: process.env.COOKIE_SAMESITE || 'lax',
+  // 7 days: a 15-minute JWT would log people out mid-browse. HttpOnly is the security win.
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: '/',
 };
@@ -103,18 +104,18 @@ async function login(req) {
   const { email, password } = req.body;
   const row = await authModel.findByEmail(email);
   if (!row) {
-    comparePassword(password, null);
+    await comparePassword(password, null);
     return { error: 'E-posta veya şifre hatalı', status: 401 };
   }
   if (isLocked(row)) {
     return { error: 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin.', status: 423 };
   }
-  if (!comparePassword(password, row.password_hash)) {
+  if (!(await comparePassword(password, row.password_hash))) {
     await authModel.recordFailedLogin(row, MAX_FAILED, LOCK_MINUTES);
     return { error: 'E-posta veya şifre hatalı', status: 401 };
   }
   if (needsRehash(row.password_hash)) {
-    await authModel.upgradePasswordHash(row.id, hashPassword(password));
+    await authModel.upgradePasswordHash(row.id, await hashPassword(password));
   }
   if (row.is_blocked) {
     return { error: 'Hesabınız engellenmiştir', status: 403 };
@@ -157,7 +158,7 @@ async function resetPassword(req) {
   const { token, password } = req.body;
   const row = await authModel.findPasswordReset(token);
   if (!row) return { error: 'Geçersiz veya süresi dolmuş token', status: 400 };
-  await authModel.usePasswordReset(row.id, row.user_id, hashPassword(password));
+  await authModel.usePasswordReset(row.id, row.user_id, await hashPassword(password));
   await authModel.clearFailedLogin(row.user_id);
   return { status: 200, message: 'Şifre güncellendi' };
 }
@@ -177,10 +178,10 @@ async function changePassword(req, userId) {
   const { currentPassword, password } = req.body;
   const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
-  if (!comparePassword(currentPassword, row.password_hash)) {
+  if (!(await comparePassword(currentPassword, row.password_hash))) {
     return { error: 'Mevcut şifre hatalı', status: 401 };
   }
-  await authModel.updatePasswordHash(userId, hashPassword(password));
+  await authModel.updatePasswordHash(userId, await hashPassword(password));
   await authModel.clearFailedLogin(userId);
   const updated = await authModel.findById(userId);
   const token = signToken(updated);
@@ -198,7 +199,7 @@ async function changeEmail(req, userId) {
   const { email, password } = req.body;
   const row = await authModel.findById(userId);
   if (!row) return { error: 'Kullanıcı bulunamadı', status: 404 };
-  if (!comparePassword(password, row.password_hash)) {
+  if (!(await comparePassword(password, row.password_hash))) {
     return { error: 'Şifre hatalı', status: 401 };
   }
   const normalized = email.toLowerCase().trim();
