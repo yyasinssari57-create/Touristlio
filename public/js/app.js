@@ -181,6 +181,18 @@ function geoText(value) {
     : (value || '');
 }
 
+function localizeTag(tag) {
+  const raw = String(tag || '').trim();
+  if (!raw) return '';
+  const geo = geoLabel(raw);
+  if (geo && geo !== raw) return geo;
+  const meta = categoryMeta?.categories?.find((c) => c.slug === raw);
+  if (meta) return lang === 'en' ? meta.nameEn : meta.nameTr;
+  const fromI18n = window.TL_I18N?.catLabel?.(lang, raw);
+  if (fromI18n && fromI18n !== raw) return fromI18n.replace(/^[^\s]+\s/, '');
+  return raw;
+}
+
 function appendGeoOption(selectEl, value) {
   const o = document.createElement('option');
   o.value = value;
@@ -2107,7 +2119,7 @@ async function openDetail(id, skipRoute) {
     if (howEl) howEl.textContent = placeField(p, 'howToGetThere') || '—';
     const bestEl = document.getElementById('pdBestTime');
     if (bestEl) bestEl.textContent = placeField(p, 'bestTime') || '—';
-    document.getElementById('pdTags').innerHTML = (p.tags || []).map((tag) => `<span class="pd-tag">${escapeHtml(tag)}</span>`).join('');
+    document.getElementById('pdTags').innerHTML = (p.tags || []).map((tag) => `<span class="pd-tag">${escapeHtml(localizeTag(tag))}</span>`).join('');
     renderFaqAccordion(p);
     renderNearbyCards(data.nearby);
     renderSimilarCards(data.similar);

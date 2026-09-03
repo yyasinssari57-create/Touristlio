@@ -263,5 +263,5 @@
   window.addEventListener('scroll', () => closeMenus(), true);
   window.addEventListener('resize', () => closeMenus());
 
-  window.TL_REPORTS = { REASONS, open, close, menuButton, toggleMenu, closeMenus };
+  window.TL_REPORTS = { REASON_KEYS, open, close, menuButton, toggleMenu, closeMenus };
 })();
