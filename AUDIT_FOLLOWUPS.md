@@ -61,6 +61,15 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Çerez: Reddet → `tl_cookie_ok=0` + `cookie_consent=rejected`. GA4 ve birinci taraf track yalnızca `accepted` / `1` iken.
 - `npm run verify:legal`
 
+## v2 KRİTİK-6 (CSP nonce)
+
+- Tamamlandı: `script-src` artık `'unsafe-inline'` içermiyor. Her istekte rastgele nonce (`cspNonceMiddleware`), HTML gönderilirken inline `<script>` (JSON-LD dahil) o nonce’u alıyor.
+- `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` eklendi.
+- **Leftover:** `script-src-attr 'unsafe-inline'` duruyor. `index.html` / `admin.html` içinde ~220 `onclick`/`onchange`; nonce attribute’ları kapsamıyor. Ayrı refactor.
+- `style-src` / `style-src-attr` hâlâ `'unsafe-inline'` (kritik CSS + admin `style=""`).
+- Canlıda sorun: Render env `CSP_REPORT_ONLY=true` → engellemez, yalnızca raporlar. `CSP_FORCE=true` development’ta politikayı açar.
+- `npm run verify:csp`
+
 ## KRİTİK-8 eşleşmesi (dosya vs önceki commit)
 
 - Yüklenen tam denetim (`touristlio_cursor_audit.md`, 506 satır) **KRİTİK-8 başlığı içermiyor.** KRİTİK-7’den sonra doğrudan [YÜKSEK-1] geliyor.
