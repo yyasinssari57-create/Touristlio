@@ -53,8 +53,9 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `public/index.html` statik canonical www; SSR enjeksiyonu KRİTİK-5 ile aynı host.
 
 ## v2 KRİTİK-5 (KVKK placeholder)
-- `public/legal/kvkk.html` veri sorumlusu satırı işaretli: `[⚠️ DOLDURULACAK: Veri sorumlusu bilgisi — yasal unvan ve tebligat adresi]`.
-- Yasal unvan / adres **uydurulmadı** — Yasin ticaret unvanını ve adresi yazmalı.
+- `public/legal/kvkk.html` veri sorumlusu satırı artık placeholder değil: şirket **yok**, proje gerçek kişi tarafından işletiliyor; başvuru/tebligat kanalı `touristlio.info@gmail.com`.
+- Ticari unvan / adres **uydurulmadı**. Şirket kurulunca unvan + vergi + adres bu satıra eklenecek (tek satır düzenleme).
+- Gerçek kişi adı bilinçli olarak yazılmadı (kişisel adres/isim yayınlamamak için). Yasin isterse eklenir.
 - Saklama metni SQLite değil, Supabase PostgreSQL.
 - privacy.html / terms.html’de TBD / güncellenecektir yok.
 - Çerez: Reddet → `tl_cookie_ok=0` + `cookie_consent=rejected`. GA4 ve birinci taraf track yalnızca `accepted` / `1` iken.
