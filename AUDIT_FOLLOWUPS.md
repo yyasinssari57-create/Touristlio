@@ -52,6 +52,14 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Hetzner / VPS dokümanları hâlâ örnek olarak apex `https://touristlio.com` gösteriyor; canlı env www olmalı.
 - `public/index.html` statik canonical www; SSR enjeksiyonu KRİTİK-5 ile aynı host.
 
+## v2 KRİTİK-5 (KVKK placeholder)
+- `public/legal/kvkk.html` veri sorumlusu satırı işaretli: `[⚠️ DOLDURULACAK: Veri sorumlusu bilgisi — yasal unvan ve tebligat adresi]`.
+- Yasal unvan / adres **uydurulmadı** — Yasin ticaret unvanını ve adresi yazmalı.
+- Saklama metni SQLite değil, Supabase PostgreSQL.
+- privacy.html / terms.html’de TBD / güncellenecektir yok.
+- Çerez: Reddet → `tl_cookie_ok=0` + `cookie_consent=rejected`. GA4 ve birinci taraf track yalnızca `accepted` / `1` iken.
+- `npm run verify:legal`
+
 ## KRİTİK-8 eşleşmesi (dosya vs önceki commit)
 
 - Yüklenen tam denetim (`touristlio_cursor_audit.md`, 506 satır) **KRİTİK-8 başlığı içermiyor.** KRİTİK-7’den sonra doğrudan [YÜKSEK-1] geliyor.

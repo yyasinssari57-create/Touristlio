@@ -5,6 +5,7 @@
 (function () {
   const HEARTBEAT_MS = 30000;
   const CONSENT_KEY = 'tl_cookie_ok';
+  const AUDIT_KEY = 'cookie_consent';
   const WEB_VITALS_SRC = '/vendor/web-vitals/web-vitals.iife.js';
   let heartbeatTimer = null;
   let ended = false;
@@ -15,7 +16,9 @@
 
   function hasConsent() {
     try {
-      return localStorage.getItem(CONSENT_KEY) === '1';
+      if (localStorage.getItem(CONSENT_KEY) === '1') return true;
+      if (localStorage.getItem(CONSENT_KEY) === '0') return false;
+      return localStorage.getItem(AUDIT_KEY) === 'accepted';
     } catch {
       return false;
     }

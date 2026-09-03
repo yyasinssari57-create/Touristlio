@@ -1,5 +1,6 @@
 window.TL_COOKIE = (function () {
   const KEY = 'tl_cookie_ok';
+  const AUDIT_KEY = 'cookie_consent';
 
   function t(lang, key) {
     return window.TL_I18N?.t(lang, key) || key;
@@ -7,7 +8,9 @@ window.TL_COOKIE = (function () {
 
   function hasConsent() {
     try {
-      return localStorage.getItem(KEY) === '1';
+      if (localStorage.getItem(KEY) === '1') return true;
+      if (localStorage.getItem(KEY) === '0') return false;
+      return localStorage.getItem(AUDIT_KEY) === 'accepted';
     } catch {
       return false;
     }
@@ -16,7 +19,9 @@ window.TL_COOKIE = (function () {
   function decided() {
     try {
       const v = localStorage.getItem(KEY);
-      return v === '1' || v === '0';
+      if (v === '1' || v === '0') return true;
+      const alt = localStorage.getItem(AUDIT_KEY);
+      return alt === 'accepted' || alt === 'rejected';
     } catch {
       return false;
     }
@@ -33,16 +38,22 @@ window.TL_COOKIE = (function () {
     document.cookie = `${KEY}=${value}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
   }
 
+  function persistChoice(accepted) {
+    try {
+      localStorage.setItem(KEY, accepted ? '1' : '0');
+      localStorage.setItem(AUDIT_KEY, accepted ? 'accepted' : 'rejected');
+    } catch { /* ignore */ }
+    setConsentCookie(accepted ? '1' : '0');
+  }
+
   function accept(bar) {
-    try { localStorage.setItem(KEY, '1'); } catch { /* ignore */ }
-    setConsentCookie('1');
+    persistChoice(true);
     bar?.remove();
     notify();
   }
 
   function reject(bar) {
-    try { localStorage.setItem(KEY, '0'); } catch { /* ignore */ }
-    setConsentCookie('0');
+    persistChoice(false);
     bar?.remove();
     notify();
   }
