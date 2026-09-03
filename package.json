@@ -34,6 +34,7 @@
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
     "verify:csp": "node server/scripts/verify-csp.js",
+    "verify:h1": "node server/scripts/verify-single-h1.js",
     "verify:admin-role": "node server/scripts/verify-admin-role.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",
     "verify:a11y": "node server/scripts/verify-accessibility.js",

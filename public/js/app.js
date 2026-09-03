@@ -1439,13 +1439,21 @@ function blogListPath() {
 }
 
 function showBlogListing() {
-  document.getElementById('blogListing')?.removeAttribute('hidden');
-  document.getElementById('blogArticle')?.setAttribute('hidden', '');
+  const listing = document.getElementById('blogListing');
+  const article = document.getElementById('blogArticle');
+  listing?.removeAttribute('hidden');
+  listing?.setAttribute('aria-hidden', 'false');
+  article?.setAttribute('hidden', '');
+  article?.setAttribute('aria-hidden', 'true');
 }
 
 function showBlogArticle() {
-  document.getElementById('blogListing')?.setAttribute('hidden', '');
-  document.getElementById('blogArticle')?.removeAttribute('hidden');
+  const listing = document.getElementById('blogListing');
+  const article = document.getElementById('blogArticle');
+  listing?.setAttribute('hidden', '');
+  listing?.setAttribute('aria-hidden', 'true');
+  article?.removeAttribute('hidden');
+  article?.setAttribute('aria-hidden', 'false');
 }
 
 function publicOrigin() {
@@ -1662,8 +1670,12 @@ function syncRoute(replace = true) {
 async function showMainTab(tab, skipRoute) {
   closeNavMenu();
   if (!skipRoute) window.TL_LOADER?.show();
-  document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
-  document.getElementById('page-' + tab).classList.add('active');
+  document.querySelectorAll('.page').forEach((p) => {
+    const active = p.id === 'page-' + tab;
+    p.classList.toggle('active', active);
+    p.hidden = !active;
+    p.setAttribute('aria-hidden', active ? 'false' : 'true');
+  });
   document.querySelectorAll('.ntab').forEach((n) => {
     n.classList.remove('on');
     n.setAttribute('aria-selected', 'false');
@@ -1711,8 +1723,12 @@ async function showMainTab(tab, skipRoute) {
 
 async function showExploreTab(name, el, skipRoute) {
   if (!skipRoute) window.TL_LOADER?.show();
-  document.querySelectorAll('.explore-section').forEach((s) => s.classList.remove('active'));
-  document.getElementById('es-' + name).classList.add('active');
+  document.querySelectorAll('.explore-section').forEach((s) => {
+    const active = s.id === 'es-' + name;
+    s.classList.toggle('active', active);
+    s.hidden = !active;
+    s.setAttribute('aria-hidden', active ? 'false' : 'true');
+  });
   document.querySelectorAll('.etab').forEach((e) => {
     e.classList.remove('on');
     e.setAttribute('aria-selected', 'false');
@@ -2120,8 +2136,12 @@ function showDetailTab(name, el, skipRoute) {
     el.classList.add('on');
     el.setAttribute('aria-selected', 'true');
   }
-  document.querySelectorAll('.dtab-panel').forEach((p) => p.classList.remove('active'));
-  document.getElementById('dtab-' + name)?.classList.add('active');
+  document.querySelectorAll('.dtab-panel').forEach((p) => {
+    const active = p.id === 'dtab-' + name;
+    p.classList.toggle('active', active);
+    p.hidden = !active;
+    p.setAttribute('aria-hidden', active ? 'false' : 'true');
+  });
   if (!skipRoute) syncRoute(true);
 }
 
