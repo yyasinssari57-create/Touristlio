@@ -31,7 +31,7 @@ function fail(msg) {
   failed += 1;
 }
 
-async function parseScripts(html) {
+function parseScripts(html) {
   const re = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   const out = [];
   let m;
@@ -56,7 +56,7 @@ function request(port, p) {
   });
 }
 
-function waitForServer(port, tries = 80) {
+function waitForServer(port, tries = 300) {
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -67,12 +67,12 @@ function waitForServer(port, tries = 80) {
       });
       req.on('error', () => {
         if (n >= tries) reject(new Error('server did not start'));
-        else setTimeout(tick, 250);
+        else setTimeout(tick, 400);
       });
       req.on('timeout', () => {
         req.destroy();
         if (n >= tries) reject(new Error('server did not start'));
-        else setTimeout(tick, 250);
+        else setTimeout(tick, 400);
       });
     };
     tick();
@@ -250,7 +250,7 @@ async function curlCheck(portOrBase) {
   const home = await get('/');
   if (home.status !== 200) fail(`GET / HTTP ${home.status}`);
   else ok('GET / → 200');
-  const homeLdLive = await parseScripts(home.body);
+  const homeLdLive = parseScripts(home.body);
   if (homeLdLive.some((b) => b['@type'] === 'TravelAgency')) ok('GET / TravelAgency');
   else fail('GET / missing TravelAgency');
   if (homeLdLive.some((b) => b['@type'] === 'WebSite' && b.potentialAction && /explore\?q=/.test(b.potentialAction.target || ''))) {
@@ -258,7 +258,7 @@ async function curlCheck(portOrBase) {
   } else fail('GET / missing WebSite SearchAction');
 
   const explore = await get('/explore');
-  const exploreLd = await parseScripts(explore.body);
+  const exploreLd = parseScripts(explore.body);
   if (explore.status === 200 && exploreLd.some((b) => b['@type'] === 'WebSite')) ok('GET /explore WebSite');
   else fail(`GET /explore missing WebSite (status ${explore.status})`);
 
@@ -274,7 +274,7 @@ async function curlCheck(portOrBase) {
   } catch { /* use default slug */ }
 
   const placeRes = await get(`/places/${encodeURIComponent(slug)}`);
-  const placeLive = await parseScripts(placeRes.body);
+  const placeLive = parseScripts(placeRes.body);
   if (placeRes.status === 200) {
     ok(`GET /places/${slug} → 200`);
     if (placeLive.some((b) => b['@type'] === 'TouristAttraction')) ok('place TouristAttraction in HTML');
