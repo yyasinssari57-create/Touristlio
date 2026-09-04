@@ -15,7 +15,7 @@ const CONTACT_OK = {
   message: 'Mesajınız kaydedildi. En kısa sürede dönüş yapacağız.',
 };
 
-router.post('/', contactLimiter, recaptchaGuard('contact'), honeypotGuard(CONTACT_OK), [
+router.post('/', contactLimiter, honeypotGuard(CONTACT_OK), recaptchaGuard('contact'), [
   body('name').trim().isLength({ min: 2, max: 120 }).withMessage('Ad soyad en az 2 karakter olmalı'),
   body('email').trim().custom((v) => {
     if (!isValidEmail(v) || !EMAIL_RE.test(String(v).trim())) {

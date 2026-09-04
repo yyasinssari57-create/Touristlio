@@ -113,8 +113,13 @@
 
   function honeypotValue(root) {
     const scope = root || document;
-    const el = scope.querySelector && scope.querySelector('input[name="website"]');
-    return el ? String(el.value || '') : '';
+    const els = scope.querySelectorAll && scope.querySelectorAll('input[name="website"]');
+    if (!els || !els.length) return '';
+    for (let i = 0; i < els.length; i += 1) {
+      const v = String(els[i].value || '').trim();
+      if (v) return v;
+    }
+    return '';
   }
 
   function honeypotHtml() {

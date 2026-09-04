@@ -105,6 +105,31 @@ else ok('form-security.js reCAPTCHA helper');
 const indexHtml = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
 if (!indexHtml.includes('/js/form-security.js')) fail('index.html missing form-security.js');
 else ok('index.html loads form-security.js');
+if (!indexHtml.includes('id="rfTxt"') || !indexHtml.includes('name="website"')) {
+  fail('place Tiola form missing honeypot');
+} else ok('place Tiola form honeypot markup');
+
+const tiolaRoutes = fs.readFileSync(path.join(ROOT, 'server', 'routes', 'tiolas.js'), 'utf8');
+if (!tiolaRoutes.includes("recaptchaGuard('tiola')")) fail('POST /api/tiolas missing recaptchaGuard');
+else ok('POST /api/tiolas recaptchaGuard(tiola)');
+if (!tiolaRoutes.includes('honeypotGuard(TIOLA_OK)') || !tiolaRoutes.includes('tiolaFormLimiter')) {
+  fail('POST /api/tiolas missing honeypot fake-200 or form limiter');
+} else ok('POST /api/tiolas honeypot fake 200 + 3/5 min limiter');
+if (!tiolaRoutes.includes('tiolaVoteLimiter')) fail('like route missing tiolaVoteLimiter');
+else ok('Tiola like keeps 5/min vote limiter');
+
+const rlJs = fs.readFileSync(path.join(ROOT, 'server', 'middleware', 'rateLimit.js'), 'utf8');
+if (!rlJs.includes('tiolaFormLimiter') || !rlJs.includes('5 * 60 * 1000')) {
+  fail('tiolaFormLimiter missing 5 min window');
+} else ok('tiolaFormLimiter 3 / 5 min');
+
+const appJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'app.js'), 'utf8');
+if (!appJs.includes("attach(fd, 'tiola')")) fail('app.js postTiola missing recaptcha attach');
+else ok('app.js attaches recaptcha token to Tiola POST');
+
+if (!fsJs.includes('querySelectorAll') || !fsJs.includes('input[name="website"]')) {
+  fail('form-security honeypotValue should scan all website fields');
+} else ok('honeypotValue reads any filled website field');
 
 function postJson(url, body, extraHeaders) {
   return new Promise((resolve, reject) => {
@@ -155,7 +180,7 @@ function fetchJson(url) {
 }
 
 function waitForServer(url, tries) {
-  const max = tries || 40;
+  const max = tries || 400;
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -166,12 +191,12 @@ function waitForServer(url, tries) {
       });
       req.on('error', () => {
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 250);
       });
       req.on('timeout', () => {
         req.destroy();
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 250);
       });
     };
     tick();
@@ -251,6 +276,120 @@ async function checkRecaptchaRequired(base) {
   } else ok('reCAPTCHA error copy');
 }
 
+function mergeCookies(jar, setCookie) {
+  const list = !setCookie ? [] : (Array.isArray(setCookie) ? setCookie : [setCookie]);
+  for (const line of list) {
+    const part = String(line).split(';')[0];
+    const eq = part.indexOf('=');
+    if (eq < 1) continue;
+    jar[part.slice(0, eq).trim()] = part.slice(eq + 1);
+  }
+}
+
+function cookieHeader(jar) {
+  return Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
+}
+
+function sessionRequest(url, { method = 'GET', body, headers, jar } = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const payload = body == null ? null : JSON.stringify(body);
+    const hdrs = { ...(headers || {}) };
+    if (jar && Object.keys(jar).length) hdrs.Cookie = cookieHeader(jar);
+    if (payload != null && !hdrs['Content-Type']) hdrs['Content-Type'] = 'application/json';
+    if (payload != null) hdrs['Content-Length'] = Buffer.byteLength(payload);
+    const req = http.request({
+      hostname: u.hostname,
+      port: u.port,
+      path: u.pathname + u.search,
+      method,
+      headers: hdrs,
+      timeout: 15000,
+    }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        if (jar) mergeCookies(jar, res.headers['set-cookie']);
+        let json = {};
+        try { json = JSON.parse(data); } catch { /* ignore */ }
+        resolve({ status: res.statusCode, json, body: data });
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    if (payload != null) req.write(payload);
+    req.end();
+  });
+}
+
+async function checkTiolaForms(base) {
+  const root = base.replace(/\/$/, '');
+  const origin = root;
+  const jar = {};
+  const csrfGet = await sessionRequest(`${root}/api/csrf`, { jar });
+  if (csrfGet.status !== 200 || !csrfGet.json.csrfToken) {
+    fail(`tiola csrf HTTP ${csrfGet.status}`);
+    return;
+  }
+  ok('tiola test: GET /api/csrf');
+
+  const email = `forms-tiola-${Date.now()}@touristlio.local`;
+  const register = await sessionRequest(`${root}/api/auth/register`, {
+    method: 'POST',
+    jar,
+    headers: { Origin: origin },
+    body: {
+      name: 'Form Tiola',
+      email,
+      password: 'TestVote12345',
+      kvkkAccepted: true,
+      website: '',
+    },
+  });
+  if (register.status !== 201) {
+    fail(`tiola test register HTTP ${register.status}: ${register.body.slice(0, 180)}`);
+    return;
+  }
+  ok('tiola test: registered user');
+
+  const csrf = jar.tl_csrf;
+  const honey = await sessionRequest(`${root}/api/tiolas`, {
+    method: 'POST',
+    jar,
+    headers: { Origin: origin, 'X-CSRF-Token': csrf },
+    body: {
+      text: 'Honeypot bot Tiola mesajı yeterince uzun olmalı.',
+      website: 'https://spam.example',
+    },
+  });
+  if (honey.status !== 200) fail(`tiola honeypot HTTP ${honey.status}: ${honey.body.slice(0, 180)}`);
+  else ok('tiola honeypot fake 200');
+  if (!honey.json.ok || honey.json.tiola) fail('tiola honeypot created a row');
+  else ok('tiola honeypot did not return a tiola');
+
+  async function postTiola(n) {
+    return sessionRequest(`${root}/api/tiolas`, {
+      method: 'POST',
+      jar,
+      headers: { Origin: origin, 'X-CSRF-Token': csrf },
+      body: {
+        text: `YÜKSEK-2 form limiter Tiola ${n} yeterince uzun.`,
+        website: '',
+      },
+    });
+  }
+
+  const a = await postTiola(1);
+  if (a.status !== 201) fail(`tiola 1 HTTP ${a.status}: ${a.body.slice(0, 180)}`);
+  else ok('tiola 1 accepted (201)');
+  const b = await postTiola(2);
+  if (b.status !== 201) fail(`tiola 2 HTTP ${b.status}: ${b.body.slice(0, 180)}`);
+  else ok('tiola 2 accepted (201)');
+  const limited = await postTiola(3);
+  if (limited.status !== 429) fail(`tiola 3 HTTP ${limited.status}, expected 429 (honeypot used a slot)`);
+  else ok('3rd real Tiola after honeypot is 429 (3 / 5 min)');
+}
+
 function spawnServer(port, extraEnv) {
   return spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')], {
     cwd: ROOT,
@@ -274,7 +413,7 @@ async function withServer(port, extraEnv, fn) {
   child.stderr.on('data', (c) => { stderr += c; });
   const base = `http://127.0.0.1:${port}`;
   try {
-    await waitForServer(base, 50);
+    await waitForServer(base, 400);
     await fn(base);
   } catch (e) {
     fail(`live server :${port}: ${e.message}${stderr ? ` (${stderr.slice(0, 220)})` : ''}`);
@@ -289,12 +428,14 @@ async function main() {
   const given = process.env.VERIFY_FORMS_URL;
   if (given) {
     await checkLive(given);
+    await checkTiolaForms(given);
   } else {
     await withServer(process.env.VERIFY_FORMS_PORT || '3047', {}, checkLive);
     await withServer(process.env.VERIFY_FORMS_RECAPTCHA_PORT || '3048', {
       RECAPTCHA_SITE_KEY: 'test-site-key-not-secret',
       RECAPTCHA_SECRET: 'test-secret-not-a-real-key',
     }, checkRecaptchaRequired);
+    await withServer(process.env.VERIFY_FORMS_TIOLA_PORT || '3049', {}, checkTiolaForms);
   }
   if (failed) {
     console.error(`verify-form-security: ${failed} failed`);
