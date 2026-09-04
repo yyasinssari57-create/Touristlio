@@ -80,8 +80,8 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <span class="nav-divider" aria-hidden="true"></span>
       <p class="brand-slogan" data-i18n-html="heroTitle">Sadece Ziyaret Etme.<br><em>Hisset.</em></p>
     </div>
-    <a href="/" class="nav-brand-center" onclick="showMainTab('explore');return false" aria-label="Touristlio">
-      <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="brand-mark" width="46" height="46" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/icon-white.svg'"/>
+    <a href="/" class="nav-brand-center" onclick="showMainTab('explore');return false" data-i18n-aria="logoHomeAlt" aria-label="Touristlio ana sayfaya git">
+      <img src="/images/logo-round.webp?v=6" alt="Touristlio ana sayfaya git" class="brand-mark" data-i18n-alt="logoHomeAlt" width="46" height="46" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/icon-white.svg'"/>
     </a>
     <div class="nav-spacer" aria-hidden="true"></div>
     <div class="nav-menu" id="navMenu">
@@ -182,7 +182,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
       </div>
       <div class="results-bar">
-        <h3 id="placesFoundLabel" aria-live="polite"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
+        <h3 id="results-count" aria-live="polite"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
         <div class="results-bar-actions">
           <button type="button" class="btn bo bsm" id="clearFiltersBtn" onclick="resetFilters()" data-i18n="filterClear" hidden>Filtreler Temizle</button>
           <label class="sr-only" for="sortSel" data-i18n="sortAria">Sıralama</label>
@@ -446,7 +446,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   <div class="detail-page">
     <div class="pd-hero">
       <img id="pdImg" src="" alt="Mekân görseli" data-i18n-alt="placePhotoAria" width="1200" height="800" loading="lazy" decoding="async"/>
-      <button type="button" class="pd-save" id="pdSaveBtn" onclick="activePlace && toggleSave(activePlace.id,this)" aria-label="Favori" aria-pressed="false">🤍</button>
+      <button type="button" class="pd-save" id="pdSaveBtn" onclick="activePlace && toggleSave(activePlace.id,this)" aria-label="Favorilere ekle" aria-pressed="false">🤍</button>
       <div class="pd-hero-ov">
         <div class="pd-cat" id="pdCat"></div>
         <h1 class="pd-title" id="pdTitle"></h1>

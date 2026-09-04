@@ -1,5 +1,5 @@
 /**
- * [DÜŞÜK-2] Skip link, form labels, icon-button names, keyboard widgets.
+ * [v2 ORTA-1] Skip link, form labels, icon-button names, keyboard widgets.
  */
 (function (global) {
   const WIDGET_SEL = [
@@ -97,7 +97,12 @@
       if (hasAccessibleName(el)) return;
       if (el.classList.contains('aclose')) el.setAttribute('aria-label', t('closeAria', 'Kapat'));
       else if (el.classList.contains('pc-save') || el.classList.contains('pd-save')) {
-        el.setAttribute('aria-label', t('saveAria', 'Favorilere ekle'));
+        const name = (el.getAttribute('data-place-name')
+          || (el.closest('.pc') && el.closest('.pc').querySelector('.pc-name')
+            && el.closest('.pc').querySelector('.pc-name').textContent)
+          || '').trim();
+        const base = t('saveAria', 'Favorilere ekle');
+        el.setAttribute('aria-label', name ? base + ': ' + name : base);
       } else if (el.classList.contains('nav-toggle')) {
         el.setAttribute('aria-label', t('menuAria', 'Menü'));
       } else {

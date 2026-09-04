@@ -480,6 +480,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .tour-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;margin-bottom:24px;}
 .tour-field label{display:block;font-size:.72rem;font-weight:600;color:var(--t2);margin-bottom:5px;}
 .tour-field input,.tour-field select{width:100%;background:var(--w);border:1.5px solid var(--l2);padding:10px 12px;border-radius:10px;font-size:.85rem;color:var(--navy);outline:none;}
+.tour-field input:focus-visible,.tour-field select:focus-visible{outline:3px solid var(--b2);outline-offset:2px;}
 .tour-form .btn.bp{grid-column:1/-1;justify-self:start;padding:11px 22px;}
 .tour-result{margin-top:8px;}
 .tour-summary{font-size:.9rem;color:var(--navy);margin-bottom:8px;}
