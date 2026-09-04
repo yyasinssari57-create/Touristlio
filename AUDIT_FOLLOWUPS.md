@@ -159,6 +159,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Dil değiştirince `i18n.js` ana sayfa OG’sine çekebilir (mekân sayfasında). Crawler sunucu HTML’i okur.
 - SPA sekmeleri (`#explore` hash) sunucu OG’si ana sayfa kalır.
 
+## v2 YÜKSEK-5 (sitemap kalite filtresi)
+
+- Tamamlandı (mevcut dinamik `GET /sitemap.xml` üzerine):
+  - Mekânlar: `COALESCE(status,'published') = 'published'` (denetim `verification_status`; bu şemada `status`). Draft ve arşiv yok.
+  - Slug zorunlu — `/places/{id}` yedek URL sitemap’e yazılmaz.
+  - Koordinat: `lat`/`lng` dolu ve **0 değil** (Null Island). Aralık dışı da elenir.
+  - Bloglar: `status = 'approved'` (denetim `is_published=true` / `blog_posts` yok). `lastmod` = `published_at` veya `created_at`, öncelik **0.7**, `monthly`.
+  - Mekân önceliği denetim örneği gibi **0.8** / weekly.
+  - Statik 200 sayfalar duruyor (/, /en/, gezilecek-yerler, blog, search, yasal). `/admin` `/login` yok.
+- `npm run verify:sitemap`
+
+### Leftover
+- `places` tablosunda `updated_at` yok; mekân `lastmod` bugünün tarihi (Google kabul eder).
+- İngilizce mekân `/en/places/:slug` ve blog `/en/blog/:slug` sitemap’te yok (hreflang HTML’de var). Denetim örneği yalnızca TR `/places/` ve `/blog/`.
+- Ekvator / Greenwich (lat veya lng tam 0) olan gerçek noktalar da elenir — denetim “0 olmamalı”.
+- `public/sitemap.xml` gitignore’da; canlı kaynak rota. Deploy sonrası `https://www.touristlio.com/sitemap.xml` 200 doğrula.
+
 ## YÜKSEK-1 (hero görsel)
 
 - Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.

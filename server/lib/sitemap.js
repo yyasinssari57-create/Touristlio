@@ -27,6 +27,30 @@ function isoDate(value) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Audit: lat/lng present, finite, in range, and not 0. (0,0 is Null Island.) */
+function isValidSitemapCoord(lat, lng) {
+  const la = Number(lat);
+  const ln = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return false;
+  if (la === 0 || ln === 0) return false;
+  if (Math.abs(la) > 90 || Math.abs(ln) > 180) return false;
+  return true;
+}
+
+/** Audit verification_status='published' → this schema uses places.status. */
+function isPublishedPlaceStatus(status) {
+  const s = String(status == null || status === '' ? 'published' : status).trim().toLowerCase();
+  return s === 'published';
+}
+
+function placeSitemapPath(row) {
+  const slug = String(row?.slug || '').trim();
+  if (!slug) return null;
+  if (!isPublishedPlaceStatus(row.status)) return null;
+  if (!isValidSitemapCoord(row.lat, row.lng)) return null;
+  return `/places/${encodeURIComponent(slug)}`;
+}
+
 function staticUrls(base) {
   return [
     { loc: `${base}/`, priority: '1.0', changefreq: 'daily' },
@@ -46,15 +70,24 @@ function staticUrls(base) {
 async function loadPlaceUrls(base) {
   try {
     const rows = await db.prepare(`
-      SELECT id, slug FROM places
-      WHERE COALESCE(status, 'published') != 'archived'
+      SELECT slug, lat, lng, status FROM places
+      WHERE COALESCE(NULLIF(TRIM(status), ''), 'published') = 'published'
+        AND slug IS NOT NULL AND TRIM(slug) <> ''
+        AND lat IS NOT NULL AND lng IS NOT NULL
+        AND lat <> 0 AND lng <> 0
       ORDER BY id
     `).all();
-    return rows.map((p) => ({
-      loc: p.slug ? `${base}/places/${encodeURIComponent(p.slug)}` : `${base}/places/${p.id}`,
-      priority: '0.7',
-      changefreq: 'weekly',
-    }));
+    const urls = [];
+    for (const row of rows) {
+      const path = placeSitemapPath(row);
+      if (!path) continue;
+      urls.push({
+        loc: `${base}${path}`,
+        priority: '0.8',
+        changefreq: 'weekly',
+      });
+    }
+    return urls;
   } catch {
     return [];
   }
@@ -64,14 +97,14 @@ async function loadBlogUrls(base) {
   try {
     const rows = await db.prepare(`
       SELECT slug, published_at, created_at FROM blogs
-      WHERE status = 'approved' AND slug IS NOT NULL AND slug != ''
+      WHERE status = 'approved' AND slug IS NOT NULL AND TRIM(slug) <> ''
       ORDER BY id
     `).all();
     return rows.map((b) => ({
       loc: `${base}/blog/${encodeURIComponent(b.slug)}`,
       lastmod: isoDate(b.published_at || b.created_at),
-      priority: '0.6',
-      changefreq: 'weekly',
+      priority: '0.7',
+      changefreq: 'monthly',
     }));
   } catch {
     return [];
@@ -107,4 +140,11 @@ function buildRobotsTxt() {
   ].join('\n');
 }
 
-module.exports = { siteBaseUrl, buildSitemapXml, buildRobotsTxt };
+module.exports = {
+  siteBaseUrl,
+  buildSitemapXml,
+  buildRobotsTxt,
+  isValidSitemapCoord,
+  isPublishedPlaceStatus,
+  placeSitemapPath,
+};

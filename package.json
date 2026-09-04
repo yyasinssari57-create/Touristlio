@@ -37,6 +37,7 @@
     "verify:h1": "node server/scripts/verify-single-h1.js",
     "verify:hero": "node server/scripts/verify-hero-carousel.js",
     "verify:og": "node server/scripts/verify-og-meta.js",
+    "verify:sitemap": "node server/scripts/verify-sitemap.js",
     "verify:admin-role": "node server/scripts/verify-admin-role.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",
     "verify:a11y": "node server/scripts/verify-accessibility.js",
