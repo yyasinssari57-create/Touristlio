@@ -1039,7 +1039,7 @@ function renderGrid(list, append = false) {
         ${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
         <div class="pc-badge">${catLabel(p.category)}</div>
         ${p.isLocal ? `<div class="pc-local">${t('localPick')}</div>` : ''}
-        <button type="button" class="pc-save" aria-label="${savedIds.has(p.id) ? t('unsaveAria') : t('saveAria')}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" onclick="event.stopPropagation();toggleSave(${p.id},this)">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
+        <button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, savedIds.has(p.id))}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" onclick="event.stopPropagation();toggleSave(${p.id},this)">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
       </div>
       <div class="pc-body">
         <div class="pc-loc">📍 ${escapeHtml(geoText(p.location))}</div>
@@ -2721,7 +2721,7 @@ async function updateProfilePage() {
     se.style.display = 'none';
     sg.innerHTML = saved.places.map((p) => `
       <div class="pc" tabindex="0" role="link" onclick="openDetail(${p.id})">
-        <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}<button type="button" class="pc-save" aria-label="${t('unsaveAria')}" aria-pressed="true" onclick="event.stopPropagation();toggleSave(${p.id},this)">❤️</button></div>
+        <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}<button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, true)}" aria-pressed="true" onclick="event.stopPropagation();toggleSave(${p.id},this)">❤️</button></div>
         <div class="pc-body"><div class="pc-name">${p.name}</div></div>
       </div>`).join('');
   }
@@ -2934,11 +2934,32 @@ async function toggleSave(id, btn) {
     if (btn) {
       const on = savedIds.has(id);
       btn.textContent = on ? '❤️' : '🤍';
-      btn.setAttribute('aria-label', on ? t('unsaveAria') : t('saveAria'));
+      btn.setAttribute('aria-label', favoriteAria(placeNameForSave(id, btn), on));
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
   }
   syncDetailSaveBtn();
+}
+
+function favoriteAria(placeName, saved) {
+  const base = saved ? t('unsaveAria') : t('saveAria');
+  const name = String(placeName || '').trim();
+  return name ? `${base}: ${name}` : base;
+}
+
+function favoriteAriaAttr(placeName, saved) {
+  return escapeHtml(favoriteAria(placeName, saved)).replace(/"/g, '&quot;');
+}
+
+function placeNameForSave(id, btn) {
+  const fromData = btn && btn.getAttribute && btn.getAttribute('data-place-name');
+  if (fromData) return fromData;
+  const fromCard = btn && btn.closest && btn.closest('.pc') && btn.closest('.pc').querySelector('.pc-name');
+  if (fromCard && fromCard.textContent) return fromCard.textContent.trim();
+  if (typeof activePlace !== 'undefined' && activePlace && Number(activePlace.id) === Number(id)) {
+    return activePlace.name || '';
+  }
+  return '';
 }
 
 function syncDetailSaveBtn() {
@@ -2947,7 +2968,8 @@ function syncDetailSaveBtn() {
   const on = savedIds.has(activePlace.id);
   btn.textContent = on ? '❤️' : '🤍';
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  btn.setAttribute('aria-label', on ? t('unsaveAria') : t('saveAria'));
+  btn.setAttribute('data-place-name', activePlace.name || '');
+  btn.setAttribute('aria-label', favoriteAria(activePlace.name, on));
 }
 
 function arcRate(n) {

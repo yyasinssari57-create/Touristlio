@@ -176,6 +176,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Ekvator / Greenwich (lat veya lng tam 0) olan gerçek noktalar da elenir — denetim “0 olmamalı”.
 - `public/sitemap.xml` gitignore’da; canlı kaynak rota. Deploy sonrası `https://www.touristlio.com/sitemap.xml` 200 doğrula.
 
+## v2 ORTA-1 (erişilebilirlik WCAG)
+
+- Tamamlandı (DÜŞÜK-2 skip-link / label / aria üzerine):
+  - Skip link “İçeriğe geç” + `#main-content` (odaklanınca görünür). Denetimin `left:-9999px` kopyası kullanılmadı — mevcut `top:-80px` / `:focus { top:8px }` daha az kaydırır.
+  - Nav logo `alt="Touristlio ana sayfaya git"` (`logoHomeAlt` i18n). Footer / auth logosu tıklanabilir değil, `alt="Touristlio"` kaldı.
+  - Formlar gerçek `<label for>` (görünür veya `.sr-only`); `a11y.js` eksikleri tamamlar.
+  - Favori kalbi: `aria-label="Favorilere ekle: {yer adı}"`.
+  - Filtre sonucu `#results-count` `aria-live="polite"` (`resCnt` + “yer bulundu”). Arama sayfası aynı id.
+  - `:focus-visible` global duruyor; tur formu `outline:none` sonrası geri yüklendi.
+- `npm run verify:a11y`
+
+### Leftover
+- Denetim outline rengi `#007bff`; marka `--b2` kullanılıyor (3px).
+- Leaflet vendor PNG alt’ları yok (harita kontrol ikonları).
+- Admin dinamik hücre görselleri jenerik alt.
+- Canlı ekran okuyucu testi Yasin’de.
+
 ## YÜKSEK-1 (hero görsel)
 
 - Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.

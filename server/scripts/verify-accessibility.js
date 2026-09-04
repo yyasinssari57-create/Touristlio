@@ -1,5 +1,5 @@
 /**
- * [DÜŞÜK-2] Accessibility: alt, labels, aria-label, skip link, focus outline.
+ * [v2 ORTA-1 / DÜŞÜK-2] Accessibility: skip link, alt, labels, aria-live, focus.
  * Usage: node server/scripts/verify-accessibility.js
  * Optional: VERIFY_A11Y_URL=http://127.0.0.1:3062 node server/scripts/verify-accessibility.js
  */
@@ -45,6 +45,14 @@ if (!indexHtml.includes('class="skip-link"') || !indexHtml.includes('id="main-co
   fail('index.html missing skip-link or main-content');
 } else ok('index skip-link + main');
 
+if (!indexHtml.includes('id="results-count"') || !indexHtml.includes('aria-live="polite"')) {
+  fail('index missing #results-count live region');
+} else ok('index #results-count aria-live');
+
+if (!indexHtml.includes('Touristlio ana sayfaya git') || !indexHtml.includes('data-i18n-alt="logoHomeAlt"')) {
+  fail('nav logo alt should be “Touristlio ana sayfaya git”');
+} else ok('nav logo alt homepage text');
+
 if (!indexHtml.includes('for="heroSearch"') || !indexHtml.includes('for="loginEmail"') === false) {
   /* loginEmail is in JS form; heroSearch must have label */
 }
@@ -68,6 +76,24 @@ else ok('login skip-link');
 if (!i18n.includes('skipLink:') || !i18n.includes('Skip to content')) {
   fail('i18n missing skipLink TR/EN');
 } else ok('i18n skipLink');
+
+if (!i18n.includes("logoHomeAlt: 'Touristlio ana sayfaya git'")
+  || !i18n.includes("logoHomeAlt: 'Touristlio go to homepage'")) {
+  fail('i18n missing logoHomeAlt TR/EN');
+} else ok('i18n logoHomeAlt');
+
+const appJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'app.js'), 'utf8');
+if (!appJs.includes('function favoriteAria') || !appJs.includes('`${base}: ${name}`')) {
+  fail('favorite aria-label must include place name');
+} else ok('favorite aria-label includes place name');
+
+if (!css.includes('.tour-field input:focus-visible')) {
+  fail('tour-field missing :focus-visible outline restore');
+} else ok('tour-field focus-visible');
+
+const searchHtml = fs.readFileSync(path.join(ROOT, 'public', 'search.html'), 'utf8');
+if (!searchHtml.includes('id="results-count"')) fail('search.html missing #results-count');
+else ok('search #results-count');
 
 const pages = [
   'public/login.html',
@@ -165,7 +191,7 @@ async function checkRoutes(base) {
       stdio: 'ignore',
     });
     try {
-      await waitForServer(base);
+      await waitForServer(base, 400);
       await checkRoutes(base);
     } catch (e) {
       fail('local server: ' + e.message);
