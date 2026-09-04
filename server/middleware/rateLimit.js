@@ -97,6 +97,16 @@ const formLimiter = rateLimit({
 
 const contactLimiter = formLimiter;
 
+/** Tiola create (not likes): same 3 / 5 min cap, own bucket so register/contact do not starve comments. */
+const tiolaFormLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: Number(process.env.FORM_RATE_LIMIT_MAX) || 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: async (req) => `form:tiola:ip:${req.ip}`,
+  message: { error: 'Çok fazla gönderim. 5 dakika sonra tekrar deneyin.' },
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
@@ -108,4 +118,5 @@ module.exports = {
   adminAnalyticsLimiter,
   contactLimiter,
   formLimiter,
+  tiolaFormLimiter,
 };

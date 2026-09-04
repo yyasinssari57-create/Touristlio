@@ -5,9 +5,11 @@ const { db } = require('../db');
 const { authOptional, authRequired } = require('../middleware/auth');
 
 const { sanitizeText } = require('../lib/sanitize');
-const { isHoneypotFilled } = require('../middleware/honeypot');
+const { honeypotGuard } = require('../middleware/honeypot');
 const { csrfTokenRequired } = require('../middleware/csrf');
 const { tiolaVoteLimiter } = require('../middleware/tiolaVoteLimit');
+const { tiolaFormLimiter } = require('../middleware/rateLimit');
+const { recaptchaGuard } = require('../middleware/recaptcha');
 const { logAbnormal } = require('../lib/anti-bot-log');
 
 const { enrichTiolaLikes, toggleTiolaLike } = require('../lib/likes');
@@ -26,6 +28,11 @@ const router = express.Router();
 
 
 const MONTHLY_COMMENT_LIMIT = 5;
+
+const TIOLA_OK = {
+  ok: true,
+  message: 'Tiola\'n alındı. Onay sonrası yayınlanacak.',
+};
 
 
 
@@ -255,11 +262,7 @@ router.get('/', authOptional, async (req, res) => {
 
 
 
-router.post('/', authRequired, csrfTokenRequired, tiolaVoteLimiter, upload.single('photo'), validateUploadedImage(), processImageUpload({ destRel: 'tiolas' }), async (req, res) => {
-
-  if (isHoneypotFilled(req.body)) {
-    return res.status(400).json({ error: 'Geçersiz istek' });
-  }
+router.post('/', authRequired, csrfTokenRequired, tiolaFormLimiter, upload.single('photo'), honeypotGuard(TIOLA_OK), recaptchaGuard('tiola'), validateUploadedImage(), processImageUpload({ destRel: 'tiolas' }), async (req, res) => {
 
   const { text, stars, category, placeId, cityTag, countryTag, parentId } = req.body || {};
 

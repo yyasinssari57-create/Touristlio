@@ -110,6 +110,22 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - 2. kare preload edilmedi (LCP’yi bozmamak için).
 - Denetimdeki İstanbul Unsplash (`photo-1527838832700`) kullanılmadı — yerelde zaten Galata `hero.webp` var.
 
+## v2 YÜKSEK-2 (reCAPTCHA + form rate limit)
+
+- Tamamlandı: iletişim zaten `contactLimiter` (3 / 5 dk) + reCAPTCHA v3 + honeypot sahte 200.
+- Tiola **gönderimi** (`POST /api/tiolas`): `tiolaFormLimiter` 3 / 5 dk (ayrı kova; kayıt/iletişim yorumu kilitlemesin), `recaptchaGuard('tiola')`, honeypot doluysa **sahte 200** (DB’ye yazılmaz, görsel işlenmez). Beğeni (`POST /:id/like`) ORTA-4 `tiolaVoteLimiter` 5/dk — zayıflatılmadı.
+- Honeypot, reCAPTCHA’dan önce (bot token’suz da sahte başarı görür). İletişim sırası aynı.
+- İstemci: `form-security.js` `attach(..., 'tiola'|'contact')`; mekân ve profil Tiola formlarında gizli `website` alanı. Birden fazla honeypot varsa dolu olan gönderilir.
+- Anahtar yoksa reCAPTCHA atlanır (dev). Anahtar uydurulmadı. `.env.example`: `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET` / `RECAPTCHA_MIN_SCORE`.
+- `npm run verify:forms` + `npm run verify:votes`
+
+### Leftover
+- Canlıda reCAPTCHA **yok** (Render env boş). Yasin https://www.google.com/recaptcha/admin v3 çifti üretip `RECAPTCHA_SITE_KEY` + `RECAPTCHA_SECRET` yazmalı.
+- Denetim kopyası “Bot tespit edildi”; ürün metni “Güvenlik doğrulaması başarısız…” (kullanıcıyı bot diye suçlamamak için).
+- Denetim 429 metni “Çok fazla deneme. 5 dakika bekleyin.”; ürün “Çok fazla gönderim. 5 dakika sonra tekrar deneyin.”
+- 409 mükerrer yıldız da 3/5 dk kovasını tüketir.
+- Redis yok; form limiti süreç belleği (Render free restart sıfırlar).
+
 ## YÜKSEK-1 (hero görsel)
 
 - Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.
@@ -210,7 +226,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Tamamlandı: sunucu tüm form metinlerini HTML/XSS temizliğiyle kaydeder (`sanitizeText` / `sanitizeName`); Tiola ve blog kullanıcı içeriği tag’siz saklanır; render’da mevcut `escapeHtml` duruyor.
 - E-posta: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` (iletişim, kayıt, giriş, şifre unuttum, e-posta değiştir).
 - Rate limit: aynı IP, 5 dakikada max 3 public form gönderimi (iletişim + kayıt + şifre unuttum). Giriş `authLimiter` (20/15 dk) — zayıflatılmadı.
-- Honeypot: gizli `website` alanı; doluysa iletişim sahte 200, diğerleri 400; DB’ye yazılmaz.
+- Honeypot: gizli `website` alanı; doluysa iletişim **ve Tiola gönderimi** sahte 200; kayıt hâlâ 400; DB’ye yazılmaz.
 - reCAPTCHA v3 (görünmez): `RECAPTCHA_SITE_KEY` + `RECAPTCHA_SECRET` ikisi de doluysa zorunlu. Anahtar yoksa atlanır — dev formları çalışır. Anahtar uydurulmadı.
 - `npm run verify:forms` — sanitization birim testleri + curl (geçersiz e-posta, XSS, honeypot, 429, anahtar varken tokensuz 400).
 

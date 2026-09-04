@@ -48,7 +48,10 @@ if (!tokensEqual('aa', 'aa') || tokensEqual('aa', 'ab') || tokensEqual('aa', 'aa
 const routes = fs.readFileSync(path.join(ROOT, 'server', 'routes', 'tiolas.js'), 'utf8');
 if (!routes.includes('csrfTokenRequired') || !routes.includes('tiolaVoteLimiter')) {
   fail('tiolas routes missing CSRF token or vote limiter');
-} else ok('POST /api/tiolas uses CSRF token + vote limiter');
+} else ok('Tiola mutating routes use CSRF token + like vote limiter');
+if (!routes.includes('tiolaFormLimiter') || !routes.includes("recaptchaGuard('tiola')") || !routes.includes('honeypotGuard(TIOLA_OK)')) {
+  fail('POST /api/tiolas missing form limiter, recaptcha, or honeypot fake 200');
+} else ok('POST /api/tiolas uses 3/5 min form limiter + recaptcha + honeypot 200');
 if (!routes.includes("kind: 'duplicate_vote'")) fail('duplicate vote not logged');
 else ok('duplicate vote writes anti-bot log');
 if (!routes.includes('idx_tiolas_unique_user_place_vote') && !fs.readFileSync(path.join(ROOT, 'db/migrations/007_tiola_unique_vote.js'), 'utf8').includes('idx_tiolas_unique_user_place_vote')) {
@@ -206,8 +209,8 @@ async function checkLive(base) {
   const placesRes = await request(`${root}/api/places?page=1&limit=20`);
   const placesPay = unwrap(placesRes.json);
   const places = placesPay.places || placesPay.items || [];
-  if (placesRes.status !== 200 || places.length < 6) {
-    fail(`need ≥6 places for vote tests, got ${places.length}`);
+  if (placesRes.status !== 200 || places.length < 2) {
+    fail(`need ≥2 places for vote tests, got ${places.length}`);
     return;
   }
   ok(`${places.length} places for vote tests`);
@@ -241,7 +244,7 @@ async function checkLive(base) {
   if (badToken.status !== 403) fail(`bad CSRF token HTTP ${badToken.status}, expected 403`);
   else ok('Tiola POST with mismatched CSRF token → 403');
 
-  async function postTiola(placeId, stars) {
+  async function postTiola(placeId, stars, extraBody) {
     return request(`${root}/api/tiolas`, {
       method: 'POST',
       jar,
@@ -251,9 +254,16 @@ async function checkLive(base) {
         stars,
         placeId,
         website: '',
+        ...extraBody,
       },
     });
   }
+
+  const honey = await postTiola(places[0].id, 5, { website: 'https://spam.example' });
+  if (honey.status !== 200) fail(`tiola honeypot HTTP ${honey.status}`);
+  else ok('Tiola honeypot returns fake 200');
+  if (!honey.json.ok || honey.json.tiola) fail('tiola honeypot should not create a row');
+  else ok('Tiola honeypot payload has no tiola');
 
   const first = await postTiola(places[0].id, 5);
   if (first.status !== 201) fail(`first vote HTTP ${first.status}: ${first.body.slice(0, 200)}`);
@@ -266,24 +276,12 @@ async function checkLive(base) {
   if (!dupMsg.toLowerCase().includes('zaten')) fail(`duplicate message: ${dupMsg}`);
   else ok('duplicate vote copy mentions existing rating');
 
-  const extra = [];
-  for (let i = 1; i <= 3; i += 1) {
-    extra.push(await postTiola(places[i].id, 5));
-  }
-  const extrasOk = extra.every((r) => r.status === 201);
-  if (!extrasOk) fail(`follow-up votes expected 201, got ${extra.map((r) => r.status).join(',')}`);
-  else ok('three more votes under the 5/min cap');
-
-  const limited = await postTiola(places[4].id, 5);
-  if (limited.status !== 429) fail(`6th vote HTTP ${limited.status}, expected 429`);
-  else ok('6th vote rate-limited 429 (5 / minute, IP+user)');
-  if (!String(limited.json.error || '').includes('Dakikada')) {
+  const limited = await postTiola(places[1].id, 5);
+  if (limited.status !== 429) fail(`4th Tiola POST HTTP ${limited.status}, expected 429`);
+  else ok('4th Tiola POST rate-limited 429 (3 / 5 min)');
+  if (!String(limited.json.error || '').includes('5 dakika')) {
     fail(`rate limit message: ${limited.json.error}`);
-  } else ok('rate limit error mentions per-minute cap');
-  const remaining = limited.headers['x-ratelimit-remaining'];
-  if (remaining != null && String(remaining) !== '0') {
-    fail(`X-RateLimit-Remaining expected 0 got ${remaining}`);
-  } else ok('X-RateLimit-Remaining is 0 (or omitted)');
+  } else ok('rate limit error mentions 5 minute window');
 }
 
 function spawnServer(port) {
