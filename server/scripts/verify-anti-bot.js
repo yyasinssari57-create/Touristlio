@@ -140,7 +140,7 @@ function request(url, { method = 'GET', body, headers, jar } = {}) {
 }
 
 function waitForServer(url, tries) {
-  const max = tries || 50;
+  const max = tries || 400;
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -151,12 +151,12 @@ function waitForServer(url, tries) {
       });
       req.on('error', () => {
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 250);
       });
       req.on('timeout', () => {
         req.destroy();
         if (n >= max) reject(new Error('server did not start'));
-        else setTimeout(tick, 150);
+        else setTimeout(tick, 250);
       });
     };
     tick();
@@ -313,7 +313,7 @@ async function main() {
     child.stderr.on('data', (c) => { stderr += c; });
     const base = `http://127.0.0.1:${port}`;
     try {
-      await waitForServer(base, 60);
+      await waitForServer(base, 400);
       await checkLive(base);
     } catch (e) {
       fail(`live server :${port}: ${e.message}${stderr ? ` (${stderr.slice(0, 240)})` : ''}`);
