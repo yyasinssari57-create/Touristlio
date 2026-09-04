@@ -167,7 +167,7 @@ window.TL_DISCOVER = (function () {
     if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     grid.innerHTML = cities.map((c) => `
       <button type="button" class="city-card" data-slug="${c.slug}" aria-label="${escapeHtml(cityName(c))}">
-        ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { alt: cityName(c), kind: 'card' }) : `<img src="${cityImg(c)}" alt="${escapeHtml(cityName(c))}" loading="lazy"/>`}
+        ${window.TL_IMG?.tag ? window.TL_IMG.tag(cityImg(c), { alt: cityName(c), kind: 'card' }) : `<img src="${cityImg(c)}" alt="${escapeHtml(cityName(c))}" width="400" height="300" loading="lazy"/>`}
         <div class="city-card-body">
           <h3>${escapeHtml(cityName(c))}</h3>
           <span>${c.placeCount || 0} ${t('placesFound')}</span>
@@ -244,8 +244,8 @@ window.TL_DISCOVER = (function () {
       return `
             <article class="discover-place-card" data-id="${p.id}" tabindex="0" role="button">
               ${window.TL_IMG?.tag
-                ? window.TL_IMG.tag(placeImg(p), { alt: name, kind: 'card', extra: typeof imgFallback === 'function' ? `onerror="imgFallback(this,'${p.category}',${p.id})"` : '' })
-                : `<img src="${placeImg(p)}" alt="${escapeHtml(name)}" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>`}
+                ? window.TL_IMG.tag(placeImg(p), { alt: name, kind: 'thumb', extra: typeof imgFallback === 'function' ? `onerror="imgFallback(this,'${p.category}',${p.id})"` : '' })
+                : `<img src="${placeImg(p)}" alt="${escapeHtml(name)}" width="96" height="72" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>`}
               <div>
                 <h4>${escapeHtml(name)}</h4>
                 <p>${escapeHtml(window.TL_I18N?.catLabel(lang, p.category) || catLabel(p.category))} · ${escapeHtml(p.district || p.city || '')}</p>

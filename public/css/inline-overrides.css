@@ -1676,7 +1676,8 @@ body.admin-body:not(.admin-session) {
   box-shadow: var(--sh);
 }
 .place-crop-preview-card .pc-img {
-  height: 165px;
+  height: auto;
+  aspect-ratio: 4 / 3;
 }
 .place-crop-preview-card canvas {
   width: 100%;

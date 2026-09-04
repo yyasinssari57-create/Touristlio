@@ -65,7 +65,9 @@ function responsiveImg(url, opts) {
   const alt = String(o.alt || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const cls = o.className ? ` class="${o.className}"` : '';
   const extra = o.extra ? ` ${o.extra}` : '';
-  return `<img src="${src}" alt="${alt}" loading="${loading}" decoding="async"${cls}${extra}/>`;
+  const dim = (window.TL_IMG && window.TL_IMG.DIMS && window.TL_IMG.DIMS[o.kind]) || (o.kind === 'card' ? { width: 400, height: 300 } : null);
+  const wh = dim ? ` width="${dim.width}" height="${dim.height}"` : '';
+  return `<img src="${src}" alt="${alt}" loading="${loading}" decoding="async"${cls}${wh}${extra}/>`;
 }
 
 let user = JSON.parse(localStorage.getItem('tl_user') || 'null');
@@ -1005,7 +1007,7 @@ function showGridSkeleton() {
     grid.classList.add('skeleton');
     grid.setAttribute('aria-busy', 'true');
     grid.innerHTML = Array(8).fill(0).map(() => `
-    <div class="pc sk"><div class="pc-img" style="background:var(--l2);min-height:165px"></div>
+    <div class="pc sk"><div class="pc-img" style="background:var(--l2)"></div>
     <div class="pc-body"><div style="height:12px;background:var(--l2);border-radius:4px;width:70%;margin-bottom:8px"></div></div></div>`).join('');
   }
 }
@@ -2119,7 +2121,7 @@ function renderDetailGallery(p) {
     thumb.onclick = () => {
       const src = imgs[Number(thumb.dataset.idx)] || thumb.getAttribute('src');
       const hero = document.getElementById('pdImg');
-      if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(hero, src, { kind: 'detail' });
+      if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(hero, src, { kind: 'detail', alt: p.name });
       else hero.src = src;
       gal.querySelectorAll('img').forEach((x) => x.classList.remove('active'));
       thumb.classList.add('active');

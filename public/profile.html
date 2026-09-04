@@ -330,7 +330,7 @@ function renderVisited(places, countries) {
   }
   if (empty) empty.style.display = 'none';
   grid.innerHTML = list.map((p) => `<a class="pc" href="${placeHref(p)}">
-    <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div>
+    <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" width="400" height="300" loading="lazy" decoding="async" />`}</div>
     <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${escapeHtml(p.visitedAt || geoLabel(p.country) || '')}</div></div>
   </a>`).join('');
 }
@@ -459,7 +459,7 @@ async function init(){
 
       se.style.display='none';
 
-      sg.innerHTML = savedPlaces.map(p=>`<a class="pc" href="${placeHref(p)}"><div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" />`}</div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></a>`).join('');
+      sg.innerHTML = savedPlaces.map(p=>`<a class="pc" href="${placeHref(p)}"><div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" width="400" height="300" loading="lazy" decoding="async" />`}</div><div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div></a>`).join('');
 
     }
 

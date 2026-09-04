@@ -1,12 +1,12 @@
 (function () {
-  /* Place cards: .pc-img height 165px, ~16:9 landscape crop for listings */
-  const ASPECT = 16 / 9;
+  /* Place cards: .pc-img aspect-ratio 4/3 (v2 YÜKSEK-3 CLS) */
+  const ASPECT = 4 / 3;
   const VIEWPORT_W = 360;
   const VIEWPORT_H = Math.round(VIEWPORT_W / ASPECT);
   const EXPORT_W = 1280;
   const EXPORT_H = Math.round(EXPORT_W / ASPECT);
   const PREVIEW_W = 230;
-  const PREVIEW_H = 165;
+  const PREVIEW_H = Math.round(PREVIEW_W / ASPECT);
   const MAX_ZOOM_FACTOR = 3;
   const ZOOM_STEP = 0.05;
   const MAX_FILE_BYTES = 5 * 1024 * 1024;
