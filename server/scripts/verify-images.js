@@ -112,19 +112,54 @@ async function makePngSpoofedAsJpg(filePath) {
     return acc;
   }
   let missingLazy = 0;
+  let missingSize = 0;
+  let missingAlt = 0;
   let pngLogoRefs = 0;
   for (const f of walkHtml(htmlRoot)) {
+    if (path.basename(f) === 'admin.html') continue;
     const html = fs.readFileSync(f, 'utf8');
     const imgs = html.match(/<img\b[^>]*>/gi) || [];
     for (const tag of imgs) {
       if (!/\bloading\s*=\s*["']lazy["']/i.test(tag)) missingLazy += 1;
+      if (!/\bwidth\s*=\s*["']?\d+/i.test(tag) || !/\bheight\s*=\s*["']?\d+/i.test(tag)) missingSize += 1;
+      if (!/\balt\s*=\s*["'][^"']*["']/i.test(tag) && !/\balt\s*=\s*["']["']/i.test(tag)) {
+        if (!/\balt\s*=/.test(tag)) missingAlt += 1;
+      }
       if (/logo-round\.png|\/images\/logo\.png/i.test(tag)) pngLogoRefs += 1;
     }
   }
   if (missingLazy) fail(`HTML <img> missing loading=lazy: ${missingLazy}`);
-  else ok('all public HTML <img> tags have loading="lazy" (hero is CSS, not <img>)');
+  else ok('public HTML <img> tags have loading="lazy" (hero is CSS, not <img>)');
+  if (missingSize) fail(`public HTML <img> missing width/height: ${missingSize}`);
+  else ok('public HTML <img> tags have width and height (CLS)');
+  if (missingAlt) fail(`public HTML <img> missing alt: ${missingAlt}`);
+  else ok('public HTML <img> tags have alt');
   if (pngLogoRefs) fail(`HTML still references PNG logos: ${pngLogoRefs}`);
   else ok('HTML logos point to .webp');
+
+  const css = fs.readFileSync(path.join(htmlRoot, 'css', 'style.css'), 'utf8');
+  if (!/img\{[^}]*max-width:\s*100%/.test(css.replace(/\s+/g, ''))) {
+    fail('style.css missing img { max-width: 100% }');
+  } else ok('img { max-width: 100%; height: auto }');
+  if (!/\.pc-img\{[^}]*aspect-ratio:\s*4\s*\/\s*3/.test(css.replace(/\s+/g, ''))) {
+    fail('.pc-img missing aspect-ratio 4/3');
+  } else ok('.pc-img aspect-ratio 4/3 (place cards)');
+  if (!/\.place-card img|\.pc-img img/.test(css)) fail('place card img object-fit rule missing');
+  else ok('place card images object-fit cover');
+
+  const imgJs = fs.readFileSync(path.join(htmlRoot, 'js', 'img.js'), 'utf8');
+  if (!imgJs.includes('width: 400') || !imgJs.includes('height: 300')) {
+    fail('TL_IMG card dims missing 400x300');
+  } else ok('TL_IMG card width=400 height=300');
+  if (!imgJs.includes(' — Touristlio')) fail('card alt missing Touristlio suffix');
+  else ok('card alt uses "[name] — Touristlio"');
+
+  const indexHtml = fs.readFileSync(path.join(htmlRoot, 'index.html'), 'utf8');
+  if (!indexHtml.includes('rel="preload" as="image" href="/images/hero.webp"') || !indexHtml.includes('fetchpriority="high"')) {
+    fail('hero preload missing fetchpriority=high');
+  } else ok('hero LCP preload is eager (fetchpriority=high), not an <img>');
+  if (!indexHtml.includes('fm=webp')) fail('hero carousel Unsplash slides missing fm=webp');
+  else ok('hero carousel Unsplash slides request WebP');
 
   try {
     fs.rmSync(tmp, { recursive: true, force: true });

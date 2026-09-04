@@ -4,6 +4,13 @@
  */
 (function (global) {
   const WIDTHS = [480, 800, 1080];
+  const DIMS = {
+    card: { width: 400, height: 300 },
+    detail: { width: 1200, height: 800 },
+    thumb: { width: 96, height: 72 },
+    avatar: { width: 48, height: 48 },
+    hero: { width: 1920, height: 1080 },
+  };
 
   function safeUrl(url) {
     const s = String(url || '').trim();
@@ -58,17 +65,34 @@
     return '(max-width: 640px) 100vw, 1080px';
   }
 
+  function dimsFor(kind, o) {
+    if (o && o.width && o.height) return { width: Number(o.width), height: Number(o.height) };
+    return DIMS[kind] || null;
+  }
+
+  function cardAlt(raw, kind) {
+    const a = String(raw || '').trim();
+    if (kind === 'card') {
+      if (!a) return 'Touristlio';
+      if (/touristlio/i.test(a)) return a;
+      return a + ' — Touristlio';
+    }
+    return a;
+  }
+
   function tag(url, opts) {
     const o = opts || {};
     const src = safeUrl(url);
     if (!src) return '';
     const loading = o.eager ? 'eager' : 'lazy';
-    const alt = escapeAttr(o.alt || '');
+    const alt = escapeAttr(cardAlt(o.alt, o.kind));
     const cls = o.className ? ` class="${escapeAttr(o.className)}"` : '';
     const extra = o.extra ? ` ${o.extra}` : '';
     const ss = o.srcset === false ? '' : srcset(src);
     const sizes = ss ? (o.sizes || defaultSizes(o.kind)) : '';
+    const dim = dimsFor(o.kind, o);
     let html = `<img src="${escapeAttr(src)}" alt="${alt}" loading="${loading}" decoding="async"${cls}`;
+    if (dim) html += ` width="${dim.width}" height="${dim.height}"`;
     if (ss) html += ` srcset="${escapeAttr(ss)}" sizes="${escapeAttr(sizes)}"`;
     html += `${extra}/>`;
     return html;
@@ -79,18 +103,25 @@
     const o = opts || {};
     const src = safeUrl(url);
     el.src = src;
-    if (o.alt != null) el.alt = o.alt;
+    if (o.alt != null) el.alt = cardAlt(o.alt, o.kind || el.dataset.imgKind);
     el.loading = o.eager ? 'eager' : 'lazy';
     el.decoding = 'async';
+    const kind = o.kind || el.dataset.imgKind;
+    const dim = dimsFor(kind, o);
+    if (dim) {
+      el.width = dim.width;
+      el.height = dim.height;
+    }
+    if (kind) el.dataset.imgKind = kind;
     const ss = o.srcset === false ? '' : srcset(src);
     if (ss) {
       el.srcset = ss;
-      el.sizes = o.sizes || defaultSizes(o.kind);
+      el.sizes = o.sizes || defaultSizes(kind);
     } else {
       el.removeAttribute('srcset');
       el.removeAttribute('sizes');
     }
   }
 
-  global.TL_IMG = { safeUrl, srcset, tag, applyTo, defaultSizes };
+  global.TL_IMG = { safeUrl, srcset, tag, applyTo, defaultSizes, DIMS };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -126,6 +126,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - 409 mükerrer yıldız da 3/5 dk kovasını tüketir.
 - Redis yok; form limiti süreç belleği (Render free restart sıfırlar).
 
+## v2 YÜKSEK-3 (görsel — WebP + lazy + CLS)
+
+- Tamamlandı (önceki YÜKSEK-3 WebP/EXIF üzerine):
+  - Mekân kartı `.pc-img` **aspect-ratio 4/3** + `object-fit: cover` (denetim `.place-card img`).
+  - `img { max-width: 100%; height: auto }` zaten vardı.
+  - `TL_IMG.tag` kartlara `width="400" height="300"` ve alt `"[mekân] — Touristlio"`.
+  - Public HTML `<img>`: `loading="lazy"`, `width`/`height`, `alt` (404/500 logo, footer, pdImg).
+  - Hero LCP: CSS arka plan + `<link rel="preload" fetchpriority="high">` — `<img loading="eager">` değil (karusel bozulmasın).
+  - Karusel Unsplash kareleri `fm=webp`.
+- `npm run verify:images`
+
+### Leftover
+- Hero tam ekran (100vh); denetimin `.hero-slide { aspect-ratio: 16/9 }` kuralı overlay `inset:0` yüzünden uygulanmadı — 16/9 hero’yu kısaltır.
+- `hero.webp` gerçek boyutu 1200×800, denetim 1920×1080.
+- Admin paneli img width/height tek tek eklenmedi.
+- Leaflet tile PNG’leri WebP değil (harita kırılmasın).
+
 ## YÜKSEK-1 (hero görsel)
 
 - Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.
@@ -168,6 +185,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Hero LCP preload hâlâ tam `hero.webp` (mobilde 480w gösterilse de büyük dosya önyüklenebilir).
 - Unsplash uzak görseller indirilip WebP’ye çevrilmiyor; tarayıcı `fm=webp` srcset kullanır.
 - Leaflet `vendor/**/*.png` (marker/layers) dönüştürülmedi.
+- v2: kart CLS 4/3 + width/height `img.js` / `.pc-img` ile tamamlandı.
 
 ## YÜKSEK-4 (JSON-LD Schema.org)
 
