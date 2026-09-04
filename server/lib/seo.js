@@ -111,15 +111,24 @@ function hreflangLinks(pathname) {
   ].join('\n');
 }
 
-function buildSeoHead({ pathname, lang, title, description, image, noindex }) {
+function ogTypeFor(pathname, explicit) {
+  if (explicit) return String(explicit);
+  const p = normalizePath(pathname);
+  if (/^\/places\/[^/]+$/.test(p)) return 'place';
+  if (/^\/blog\/[^/]+$/.test(p)) return 'article';
+  return 'website';
+}
+
+function buildSeoHead({ pathname, lang, title, description, image, noindex, ogType }) {
   const resolvedLang = lang || langFromPath(pathname);
   const defaults = pageDefaults(pathname, resolvedLang);
   const pageTitle = title || defaults.title;
-  const pageDesc = (description || defaults.description || '').slice(0, 200);
+  const pageDesc = (description || defaults.description || '').slice(0, 160);
   const img = absUrl(image || defaultOgImage());
   const canonical = canonicalFor(pathname, resolvedLang);
   const robots = noindex ? 'noindex, nofollow' : 'index,follow';
   const locale = resolvedLang === 'en' ? 'en_US' : 'tr_TR';
+  const type = ogTypeFor(pathname, ogType);
   const gsc = googleSiteVerification();
   return [
     `<title>${escapeAttr(pageTitle)}</title>`,
@@ -128,7 +137,7 @@ function buildSeoHead({ pathname, lang, title, description, image, noindex }) {
     gsc ? `<meta name="google-site-verification" content="${escapeAttr(gsc)}"/>` : '',
     `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
     hreflangLinks(pathname),
-    `<meta property="og:type" content="website"/>`,
+    `<meta property="og:type" content="${escapeAttr(type)}"/>`,
     `<meta property="og:site_name" content="Touristlio"/>`,
     `<meta property="og:locale" content="${locale}"/>`,
     `<meta property="og:locale:alternate" content="${resolvedLang === 'en' ? 'tr_TR' : 'en_US'}"/>`,
@@ -201,4 +210,5 @@ module.exports = {
   stripEnPrefix,
   injectSeoHead,
   buildSeoHead,
+  ogTypeFor,
 };

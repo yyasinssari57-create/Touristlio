@@ -299,13 +299,14 @@ app.get('/places/:slug', async (req, res) => {
   const place = mapPlaceRow(row, await placeStats(row.id));
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
   const desc = lang === 'en'
-    ? (place.descriptionEn || place.overviewEn || place.description || '')
-    : (place.description || place.overview || '');
+    ? (place.overviewEn || place.descriptionEn || place.overview || place.description || '')
+    : (place.overview || place.description || '');
   const tiolas = await loadApprovedTiolasForPlace(place.id);
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: `${place.name} — Touristlio`,
-    description: String(desc).slice(0, 200),
+    description: String(desc).slice(0, 160),
     image: place.imageUrl,
+    ogType: 'place',
     jsonLd: jsonLdForPlace(place, tiolas, lang),
   });
 });
@@ -335,8 +336,9 @@ app.get('/blog/:slug', async (req, res) => {
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: `${blog.title} — Touristlio`,
-    description: String(blog.excerpt || blog.body || '').slice(0, 200),
+    description: String(blog.excerpt || blog.body || '').slice(0, 160),
     image: blog.imageUrl,
+    ogType: 'article',
     jsonLd: jsonLdForBlog(blog, lang),
   });
 });

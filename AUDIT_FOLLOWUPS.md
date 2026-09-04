@@ -143,6 +143,22 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Admin paneli img width/height tek tek eklenmedi.
 - Leaflet tile PNG’leri WebP değil (harita kırılmasın).
 
+## v2 YÜKSEK-4 (OG meta)
+
+- Tamamlandı (KRİTİK-5 enjeksiyonu üzerine):
+  - Ana sayfa: `og:title` slogan, `og:image` + `twitter:image` **hero.webp** (mutlak `SITE_URL` / www), `twitter:card` = summary_large_image, `og:url`, canonical, hreflang tr/en/x-default.
+  - Mekân `/places/:slug`: `og:type` **place**, başlık `{ad} — Touristlio`, açıklama ≤160, görsel mekân fotoğrafı.
+  - Blog `/blog/:slug`: `og:type` **article**, kapak görseli, açıklama ≤160.
+  - Diğer sayfalar `og:type` website. Statik `index.html` fallback artık logo değil hero.webp.
+  - İstemci detay açılınca OG/Twitter güncellenir (paylaşım / SPA).
+- `npm run verify:og`
+
+### Leftover
+- Denetim ana sayfa açıklaması “Topluluk tabanlı seyahat rehberi.”; ürün daha uzun (destinasyon + Tiola + OSM) — Google için daha iyi, kısaltılmadı.
+- Facebook resmi OG tipleri arasında `place` nadir; denetim istediği için kullanıldı.
+- Dil değiştirince `i18n.js` ana sayfa OG’sine çekebilir (mekân sayfasında). Crawler sunucu HTML’i okur.
+- SPA sekmeleri (`#explore` hash) sunucu OG’si ana sayfa kalır.
+
 ## YÜKSEK-1 (hero görsel)
 
 - Tamamlandı: `.hero .hbg` artık `/images/hero.webp` (cover + center); overlay `rgba(0,0,0,.4)`.

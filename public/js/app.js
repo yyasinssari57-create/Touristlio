@@ -545,7 +545,7 @@ function placeListField(p, base) {
 function updateSeoForPlace(p) {
   if (!p) return;
   const title = `${p.name} — Touristlio`;
-  const desc = (placeField(p, 'overview') || placeField(p, 'description') || '').slice(0, 155);
+  const desc = (placeField(p, 'overview') || placeField(p, 'description') || '').slice(0, 160);
   document.title = title;
   const meta = document.querySelector('meta[name="description"]');
   if (meta) meta.content = desc;
@@ -559,6 +559,7 @@ function updateSeoForPlace(p) {
     ogI.content = img;
     setMetaContent('meta[name="twitter:image"]', img, { name: 'twitter:image' });
   }
+  setMetaContent('meta[property="og:type"]', 'place', { property: 'og:type' });
   setMetaContent('meta[name="twitter:title"]', title, { name: 'twitter:title' });
   setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
   setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
@@ -1691,6 +1692,9 @@ async function showMainTab(tab, skipRoute) {
   if (tab === 'places') setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
   else if (tab === 'blog') setCanonical(activeBlogSlug ? blogPublicPath({ slug: activeBlogSlug }) : blogListPath());
   else if (tab !== 'detail') setCanonical(lang === 'en' ? '/en/' : '/');
+  if (tab !== 'detail') {
+    setMetaContent('meta[property="og:type"]', (tab === 'blog' && activeBlogSlug) ? 'article' : 'website', { property: 'og:type' });
+  }
   if (tab === 'explore') injectHomeJsonLd();
   else if (tab === 'blog') setJsonLdBlocks([collectionPageJsonLd()]);
   else if (tab !== 'detail') setJsonLdBlocks(homeJsonLdBase());
@@ -2502,6 +2506,21 @@ async function openBlogDetail(slug, skipRoute) {
     }
     document.title = `${b.title} — Touristlio`;
     setCanonical(blogPublicPath(b));
+    const desc = String(b.excerpt || b.body || '').replace(/<[^>]+>/g, '').slice(0, 160);
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.content = desc;
+    setMetaContent('meta[property="og:title"]', `${b.title} — Touristlio`, { property: 'og:title' });
+    setMetaContent('meta[property="og:description"]', desc, { property: 'og:description' });
+    setMetaContent('meta[property="og:type"]', 'article', { property: 'og:type' });
+    const cover = safeUrl(b.imageUrl);
+    if (cover) {
+      const abs = cover.startsWith('http') ? cover : (publicOrigin() + cover);
+      setMetaContent('meta[property="og:image"]', abs, { property: 'og:image' });
+      setMetaContent('meta[name="twitter:image"]', abs, { name: 'twitter:image' });
+    }
+    setMetaContent('meta[name="twitter:title"]', `${b.title} — Touristlio`, { name: 'twitter:title' });
+    setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
+    setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
     setJsonLdBlocks([articleJsonLd(b)]);
     window.scrollTo(0, 0);
     if (!skipRoute) {
@@ -2525,6 +2544,7 @@ function closeBlogDetail(skipRoute) {
   document.body.style.overflow = '';
   setJsonLdBlocks([collectionPageJsonLd()]);
   setCanonical(blogListPath());
+  setMetaContent('meta[property="og:type"]', 'website', { property: 'og:type' });
   const hero = document.getElementById('blogHeroTitle');
   if (hero) {
     const page = blogMeta?.page || {};
