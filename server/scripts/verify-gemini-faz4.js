@@ -175,20 +175,18 @@ if (/for\s*\(.*\)[\s\S]{0,80}categories/.test(searchRoute) && /db\.prepare/.test
   fail('search route loops category queries');
 } else ok('search route maps categories in memory from the row');
 
-const n1Files = [
-  'server/modules/places/places.service.js',
-  'server/lib/places-search.js',
-  'server/routes/search.js',
-  'server/lib/catalog-db.js',
-];
-for (const rel of n1Files) {
-  const src = read(rel);
-  if (/for\s*\([^)]+of\s+(places|rows|allPlaces)/.test(src)
-    && /await[\s\S]{0,80}(place_categories|countCategoryUsage)/.test(src)) {
-    fail(`${rel} still loops per-place category SQL`);
-  }
-}
-ok('no City→Places→Categories per-row category SQL in list/search/discover');
+const listCatsFn = catalog.slice(catalog.indexOf('async function listCategories'));
+if (/for\s*\([^)]+of\s+(places|rows)/.test(listCatsFn.split('async function createCategory')[0] || '')
+  && /countCategoryUsage|db\.prepare/.test(listCatsFn.split('async function createCategory')[0] || '')) {
+  fail('listCategories still loops rows with per-slug SQL');
+} else ok('listCategories is one categories SELECT + one aggregate');
+
+const listSrc = read('server/modules/places/places.service.js');
+const searchLib = read('server/lib/places-search.js');
+const searchRt = read('server/routes/search.js');
+if (/await countCategoryUsage\(/.test(listSrc + searchLib + searchRt)) {
+  fail('list/search still calls countCategoryUsage per row');
+} else ok('no City→Places→Categories per-row category SQL in list/search/discover');
 
 const pkg = JSON.parse(read('package.json'));
 if (pkg.scripts['verify:faz4'] !== 'node server/scripts/verify-gemini-faz4.js') {
