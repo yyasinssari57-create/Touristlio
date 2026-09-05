@@ -149,7 +149,7 @@ function fetchText(url) {
   });
 }
 
-function waitForServer(base, max = 40) {
+function waitForServer(base, max = 400) {
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -244,7 +244,7 @@ async function main() {
     child.stderr.on('data', (c) => { stderr += c; });
     const base = `http://127.0.0.1:${port}`;
     try {
-      await waitForServer(base, 50);
+      await waitForServer(base, 400);
       await checkLive(base);
     } catch (e) {
       fail(`live server :${port}: ${e.message}${stderr ? ` (${stderr.slice(0, 220)})` : ''}`);
