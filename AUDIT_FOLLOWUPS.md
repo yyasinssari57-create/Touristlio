@@ -206,6 +206,21 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Sahte `G-` ID uydurulmadı. ID yokken yalnızca birinci taraf izleme (yine rıza sonrası) çalışır.
 - DÜŞÜK-6 Search Console / web-vitals aynı kaldı; bu madde yalnızca rıza sonrası GA4 boşluklarını hizalar.
 
+## v2 ORTA-4 (0 Tiola gösterimi)
+
+- Tamamlandı (ORTA-1 kart puanı üzerine; v1 ORTA-4 anti-bot ile karıştırma):
+  - Puan 0 / null ise yıldız ve `0.0` yok. Kart, keşfet, arama, yakındaki/benzer ve detay: **Henüz değerlendirme yok**.
+  - Puan varsa yıldız + `4.2 (12 Tiola)` duruyor. Google puanı yok.
+  - Detayda **İlk Tiola'yı sen yaz!** (`#firstTiolaCta`): girişsiz `openAuth`, girişli forma kaydırır.
+  - Unique `(user_id, place_id)` zaten var: `idx_tiolas_unique_user_place_vote` (007). İkinci tam UNIQUE eklenmedi — `parent_id` yanıtları ve yıldızsız yorum (ayda 5) aynı çifti kullanır.
+  - Ortalama yalnızca `status = 'approved'` + üst seviye + yıldız > 0 (`tiola-stats.js`).
+- `npm run verify:tiolas`
+
+### Leftover
+- Tam `UNIQUE (user_id, place_id)` yok: yanıt satırları ve yıldızsız ikinci Tiola (aylık 5) kırılırdı. Oy unique + 409 duruyor.
+- Arama kartında boş durumda yıldız yok; dolu durumda sayı + adet (keşfet kartındaki tam yıldız satırı değil).
+- CTA yalnızca puan 0 iken. Listede zaten onaylı Tiola varken form kilit metni duruyor.
+
 ## v2 ORTA-1 (erişilebilirlik WCAG)
 
 - Tamamlandı (DÜŞÜK-2 skip-link / label / aria üzerine):
@@ -346,7 +361,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 ### Leftover
 - Bekleyen (pending) Tiola kamu ortalamasına yansımaz; ortalama onayda güncellenir.
-- Keşfet kartlarında hâlâ Google yok; puan 0.0 / 0 Tiola boş mekânlarda görünür (tire yok).
+- Keşfet kartlarında hâlâ Google yok. Boş puan v2 ORTA-4 ile “Henüz değerlendirme yok”.
 - Rozetler hesaplanır, ayrı `user_badges` tablosu yok (silinen Tiola sayıyı düşürür).
 - Redis/anti-bot Tiola limiti ORTA-4.
 - Profil `profile.html` ayrı sayfası rozet HTML’si taşımaz; ana SPA profil kullanır.

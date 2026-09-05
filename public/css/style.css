@@ -194,6 +194,8 @@ a.pc{color:inherit;text-decoration:none;display:block;}
 .st{color:var(--star2);}
 .rn{font-weight:600;}
 .rc{color:var(--t3);}
+.rat--empty .rn-empty,.rn-empty{color:var(--t3);font-weight:500;}
+.first-tiola-cta{margin-top:10px;width:100%;}
 .pc-foot{display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--l);}
 .pc-type{font-size:.72rem;padding:2px 7px;border-radius:100px;background:rgba(14,165,233,.07);color:var(--b);border:1px solid rgba(14,165,233,.12);font-weight:500;}
 .no-res{text-align:center;padding:60px;color:var(--t3);font-size:.88rem;}
