@@ -12,6 +12,33 @@ const mailer = require('../../lib/mailer');
 const MAX_FAILED = 5;
 const LOCK_MINUTES = 15;
 
+function maskEmail(email) {
+  const s = String(email || '').toLowerCase().trim();
+  const at = s.indexOf('@');
+  if (at < 1 || at === s.length - 1) return '[redacted]';
+  const local = s.slice(0, at);
+  const domain = s.slice(at + 1);
+  const keep = local.length <= 2 ? local[0] : local.slice(0, 2);
+  return `${keep}***@${domain}`;
+}
+
+function clientIp(req) {
+  return req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || null;
+}
+
+/** Defensive signal only — never logs password or full token. */
+function logFailedLogin(req, { userId, locked, reason } = {}) {
+  logger.warn({
+    event: 'failed_login',
+    userId: userId != null ? Number(userId) || userId : null,
+    email: maskEmail(req.body?.email),
+    locked: !!locked,
+    reason: String(reason || 'bad_password'),
+    ip: clientIp(req),
+    path: req.originalUrl || req.path || '/api/auth/login',
+  });
+}
+
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.COOKIE_SECURE === 'true'
@@ -110,13 +137,22 @@ async function login(req) {
   const row = await authModel.findByEmail(email);
   if (!row) {
     await comparePassword(password, null);
+    logFailedLogin(req, { reason: 'unknown_user' });
     return { error: 'E-posta veya şifre hatalı', status: 401 };
   }
   if (isLocked(row)) {
+    logFailedLogin(req, { userId: row.id, locked: true, reason: 'locked' });
     return { error: 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin.', status: 423 };
   }
   if (!(await comparePassword(password, row.password_hash))) {
     await authModel.recordFailedLogin(row, MAX_FAILED, LOCK_MINUTES);
+    const nextCount = (row.failed_login_count || 0) + 1;
+    const nowLocked = nextCount >= MAX_FAILED;
+    logFailedLogin(req, {
+      userId: row.id,
+      locked: nowLocked,
+      reason: nowLocked ? 'locked' : 'bad_password',
+    });
     return { error: 'E-posta veya şifre hatalı', status: 401 };
   }
   if (needsRehash(row.password_hash)) {

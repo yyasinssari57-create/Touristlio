@@ -700,11 +700,15 @@ router.delete('/places/:id', checkPermission('admin.places'), async (req, res) =
   if (!id) return;
   const preview = await adminPlace.getAdminPlace(id);
   if (!preview) return fail(res, 'Yer bulunamadı', 404);
-  const result = await adminPlace.deletePlace(id);
-  logAdmin(req, 'place.delete', 'place', id, preview.name || null);
+  if (preview.status === 'archived') {
+    logAdmin(req, 'place.archive', 'place', id, preview.name || null);
+    return ok(res, { id, status: 'archived', archived: true, deleted: false });
+  }
+  const result = await adminPlace.archivePlace(id);
+  logAdmin(req, 'place.archive', 'place', id, preview.name || null);
   clearCache('places-list');
   clearCache('search');
-  return ok(res, result);
+  return ok(res, { ...result, archived: true, deleted: false });
 });
 
 function isExternalPhotoUrl(url) {
@@ -746,6 +750,7 @@ router.post('/places/:id/photos', checkPermission('admin.places'), upload.array(
   );
   clearCache('places-list');
   clearCache('search');
+  logAdmin(req, 'place.photos', 'place', placeId, `${newUrls.length} görsel`);
   return ok(res, { photos, imageUrl, uploaded: newUrls.length });
 });
 
@@ -754,6 +759,7 @@ const mediaUpload = imageUploader({ fileSize: 5 * 1024 * 1024, files: 1 });
 router.post('/media', checkPermission('admin.places', 'admin.cities'), mediaUpload.single('image'), validateUploadedImage(), processImageUpload({ destRel: 'media' }), async (req, res) => {
   if (!req.file) return fail(res, 'Görsel gerekli', 400);
   const url = req.file.publicUrl || publicImageUrl(req.file.storageKey);
+  logAdmin(req, 'media.upload', 'media', null, url);
   return ok(res, { url });
 });
 
@@ -818,7 +824,7 @@ router.delete('/cities/:id', checkPermission('admin.cities'), async (req, res) =
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   const preview = await catalogDb.getCityById(id);
-  const result = await catalogDb.deleteCity(id, { hard: true });
+  const result = await catalogDb.deleteCity(id);
   if (!result.ok) return fail(res, result.error, result.error?.includes('kayıtlı') ? 409 : 404);
   clearCache('places-list');
   logAdmin(req, 'city.delete', 'city', id, preview?.name || preview?.slug || null);
@@ -1191,6 +1197,7 @@ router.put('/places/:id/info-boxes', checkPermission('admin.places'), async (req
 
   payload = applyInfoBoxUpdates(payload, req.body || {});
   upsertLiveData(id, payload);
+  logAdmin(req, 'place.info_boxes', 'place', id, null);
   return ok(res, { saved: true, infoBoxes: buildInfoBoxesResponse(payload) });
 });
 
@@ -1454,7 +1461,8 @@ const dbRestoreUpload = multer({
   limits: { fileSize: DB_BACKUP_MAX_BYTES, files: 1 },
 });
 
-router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestoreUpload.single('file'), async (_req, res) => {
+router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestoreUpload.single('file'), async (req, res) => {
+  logAdmin(req, 'db.restore_blocked', 'database', null, 'sqlite restore disabled');
   return fail(
     res,
     'SQLite .db geri yükleme kaldırıldı. PostgreSQL için Supabase Dashboard → SQL Editor / Backups kullanın, veya sunucuda pg_restore çalıştırın.',
@@ -1462,12 +1470,13 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestore
   );
 });
 
-router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, async (_req, res) => {
+router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, async (req, res) => {
   clearCache();
+  logAdmin(req, 'tools.cache_clear', 'setting', null, null);
   return ok(res, { message: 'Cache temizlendi' });
 });
 
-router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, async (_req, res) => {
+router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, async (req, res) => {
   const result = runAdminScript('scripts/generate-sitemap.js');
   if (result.error) {
     return fail(res, result.error.message || 'Sitemap hatası', 500);
@@ -1475,10 +1484,11 @@ router.post('/tools/sitemap', requireRole('admin'), adminToolLimiter, async (_re
   if (result.status !== 0) {
     return fail(res, (result.stderr || result.stdout || 'Sitemap hatası').slice(0, 500), 500);
   }
+  logAdmin(req, 'tools.sitemap', 'setting', null, null);
   return ok(res, { message: 'Sitemap yenilendi' });
 });
 
-router.post('/tools/validate', requireRole('admin'), adminToolLimiter, async (_req, res) => {
+router.post('/tools/validate', requireRole('admin'), adminToolLimiter, async (req, res) => {
   const result = runAdminScript('scripts/validate-places.js');
   if (result.error) {
     return fail(res, result.error.message || 'Doğrulama hatası', 500);
@@ -1486,6 +1496,7 @@ router.post('/tools/validate', requireRole('admin'), adminToolLimiter, async (_r
   if (result.status !== 0) {
     return fail(res, (result.stderr || result.stdout || 'Doğrulama hatası').slice(0, 500), 500);
   }
+  logAdmin(req, 'tools.validate', 'place', null, null);
   return ok(res, { output: (result.stdout || '').slice(0, 2000) });
 });
 
@@ -1517,6 +1528,7 @@ router.get('/blog-page', checkPermission('admin.content'), async (_req, res) => 
 
 router.put('/blog-page', checkPermission('admin.content'), async (req, res) => {
   const page = await settingsService.setBlogPageSettings(req.body?.page || req.body || {});
+  logAdmin(req, 'settings.blog_page', 'setting', null, null);
   return ok(res, { page });
 });
 
@@ -1575,6 +1587,8 @@ router.get('/blogs', checkPermission('admin.content'), async (req, res) => {
   if (status && status !== 'all') {
     where += ' AND b.status = ?';
     params.push(status);
+  } else {
+    where += " AND b.status != 'deleted'";
   }
   if (category && category !== 'all') {
     where += ' AND b.category = ?';
@@ -1723,11 +1737,18 @@ router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
 router.delete('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
-  const existing = await db.prepare('SELECT id FROM blogs WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT id, title, status FROM blogs WHERE id = ?').get(id);
   if (!existing) return fail(res, 'Blog bulunamadı', 404);
-  await db.prepare('DELETE FROM blogs WHERE id = ?').run(id);
-  logAdmin(req, 'blog.delete', 'blog', id, null);
-  return ok(res, { deleted: true });
+  if (existing.status === 'deleted') {
+    logAdmin(req, 'blog.delete', 'blog', id, existing.title || null);
+    return ok(res, { deleted: true, soft: true });
+  }
+  await db.prepare(`
+    UPDATE blogs SET status = 'deleted', moderated_by = ?, moderated_at = datetime('now')
+    WHERE id = ?
+  `).run(req.user.id, id);
+  logAdmin(req, 'blog.delete', 'blog', id, existing.title || null);
+  return ok(res, { deleted: true, soft: true });
 });
 
 async function enrichReportRow(row) {
