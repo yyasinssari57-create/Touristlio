@@ -54,10 +54,8 @@ function placeSitemapPath(row) {
 function staticUrls(base) {
   return [
     { loc: `${base}/`, priority: '1.0', changefreq: 'daily' },
-    { loc: `${base}/en/`, priority: '0.9', changefreq: 'daily' },
     { loc: `${base}/gezilecek-yerler`, priority: '0.9', changefreq: 'daily' },
     { loc: `${base}/blog`, priority: '0.8', changefreq: 'daily' },
-    { loc: `${base}/en/blog`, priority: '0.7', changefreq: 'daily' },
     { loc: `${base}/search`, priority: '0.6', changefreq: 'weekly' },
     { loc: `${base}/legal/about.html`, priority: '0.4', changefreq: 'monthly' },
     { loc: `${base}/legal/contact.html`, priority: '0.4', changefreq: 'monthly' },
@@ -65,6 +63,31 @@ function staticUrls(base) {
     { loc: `${base}/legal/kvkk.html`, priority: '0.3', changefreq: 'yearly' },
     { loc: `${base}/legal/terms.html`, priority: '0.3', changefreq: 'yearly' },
   ];
+}
+
+/** /places/slug → /en/places/slug. Already-English locs are skipped. */
+function englishAlternateLoc(loc, base) {
+  const root = String(base || '').replace(/\/$/, '');
+  const full = String(loc || '');
+  if (!root || !full.startsWith(root)) return null;
+  const path = full.slice(root.length) || '/';
+  if (path === '/en' || path === '/en/' || path.startsWith('/en/')) return null;
+  return path === '/' ? `${root}/en/` : `${root}/en${path}`;
+}
+
+function withEnglishAlternates(urls, base) {
+  const extra = [];
+  for (const u of urls) {
+    const enLoc = englishAlternateLoc(u.loc, base);
+    if (!enLoc) continue;
+    const path = String(u.loc || '').slice(String(base || '').replace(/\/$/, '').length) || '/';
+    extra.push({
+      ...u,
+      loc: enLoc,
+      priority: path === '/' ? '0.9' : u.priority,
+    });
+  }
+  return [...urls, ...extra];
 }
 
 async function loadPlaceUrls(base) {
@@ -114,7 +137,10 @@ async function loadBlogUrls(base) {
 async function buildSitemapXml() {
   const base = siteBaseUrl();
   const today = isoDate();
-  const urls = [...staticUrls(base), ...(await loadPlaceUrls(base)), ...(await loadBlogUrls(base))];
+  const urls = withEnglishAlternates(
+    [...staticUrls(base), ...(await loadPlaceUrls(base)), ...(await loadBlogUrls(base))],
+    base,
+  );
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url>
@@ -127,17 +153,29 @@ ${urls.map((u) => `  <url>
 `;
 }
 
+const ROBOTS_PRIVATE_PATHS = [
+  '/admin',
+  '/login',
+  '/register',
+  '/profile',
+  '/reset-password',
+  '/verify-email',
+];
+
+const SITEMAP_CACHE_CONTROL = 'public, max-age=3600';
+
 function buildRobotsTxt() {
   const base = siteBaseUrl();
-  return [
-    'User-agent: *',
-    'Allow: /',
-    'Disallow: /admin',
-    'Disallow: /api',
-    '',
-    `Sitemap: ${base}/sitemap.xml`,
-    '',
-  ].join('\n');
+  const lines = ['User-agent: *', 'Allow: /'];
+  for (const p of ROBOTS_PRIVATE_PATHS) {
+    lines.push(`Disallow: ${p}`);
+    lines.push(`Disallow: /en${p}`);
+  }
+  lines.push('Disallow: /api');
+  lines.push('');
+  lines.push(`Sitemap: ${base}/sitemap.xml`);
+  lines.push('');
+  return lines.join('\n');
 }
 
 module.exports = {
@@ -147,4 +185,8 @@ module.exports = {
   isValidSitemapCoord,
   isPublishedPlaceStatus,
   placeSitemapPath,
+  englishAlternateLoc,
+  withEnglishAlternates,
+  ROBOTS_PRIVATE_PATHS,
+  SITEMAP_CACHE_CONTROL,
 };

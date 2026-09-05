@@ -178,6 +178,18 @@ async function checkLive(base) {
   if (!hasNoStore(cacheControl(cfg.headers))) {
     fail(`GET /api/config/public Cache-Control=${cacheControl(cfg.headers)}`);
   } else ok('GET /api/config/public no-store');
+
+  const sitemap = await fetchHeaders(`${base}/sitemap.xml`);
+  if (sitemap.status !== 200) fail(`GET /sitemap.xml HTTP ${sitemap.status}`);
+  else if (maxAgeSeconds(cacheControl(sitemap.headers)) < 60) {
+    fail(`GET /sitemap.xml Cache-Control=${cacheControl(sitemap.headers)}`);
+  } else ok('GET /sitemap.xml cached');
+
+  const robots = await fetchHeaders(`${base}/robots.txt`);
+  if (robots.status !== 200) fail(`GET /robots.txt HTTP ${robots.status}`);
+  else if (maxAgeSeconds(cacheControl(robots.headers)) < 60) {
+    fail(`GET /robots.txt Cache-Control=${cacheControl(robots.headers)}`);
+  } else ok('GET /robots.txt cached');
 }
 
 (async () => {

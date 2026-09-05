@@ -23,16 +23,11 @@ const HTML_PAGE_ROUTES = {
   '/blog': 'index.html',
   '/gezilecek-yerler': 'index.html',
   '/404': '404.html',
-  '/about': 'legal/about.html',
-  '/contact': 'legal/contact.html',
-  '/privacy': 'legal/privacy.html',
-  '/terms': 'legal/terms.html',
-  '/kvkk': 'legal/kvkk.html',
-  '/legal/about': 'legal/about.html',
-  '/legal/contact': 'legal/contact.html',
-  '/legal/privacy': 'legal/privacy.html',
-  '/legal/kvkk': 'legal/kvkk.html',
-  '/legal/terms': 'legal/terms.html',
+  '/legal/about.html': 'legal/about.html',
+  '/legal/contact.html': 'legal/contact.html',
+  '/legal/privacy.html': 'legal/privacy.html',
+  '/legal/kvkk.html': 'legal/kvkk.html',
+  '/legal/terms.html': 'legal/terms.html',
 };
 
 function injectAppVersion(html) {
@@ -123,6 +118,20 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   const lang = seo.lang || req?.tlLang || langFromPath(pathname);
   const seoRest = { ...seo };
   delete seoRest.errorDetail;
+  if (relativePath === '404.html') {
+    if (res.statusCode === 200) res.status(404);
+    if (!seoRest.title) {
+      seoRest.title = lang === 'en' ? 'Page not found — Touristlio' : 'Sayfa bulunamadı — Touristlio';
+    }
+    if (!seoRest.description) {
+      seoRest.description = lang === 'en'
+        ? 'This page does not exist on Touristlio.'
+        : 'Bu sayfa Touristlio’da yok.';
+    }
+  }
+  if (relativePath === '500.html' && !seoRest.title) {
+    seoRest.title = lang === 'en' ? 'Server error — Touristlio' : 'Sunucu hatası — Touristlio';
+  }
   if (relativePath === 'index.html') {
     try {
       const settingsService = require('../modules/settings/settings.service');

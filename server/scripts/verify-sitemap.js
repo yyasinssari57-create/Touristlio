@@ -11,6 +11,7 @@ const {
   isValidSitemapCoord,
   isPublishedPlaceStatus,
   placeSitemapPath,
+  englishAlternateLoc,
 } = require('../lib/sitemap');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -91,6 +92,20 @@ if (!robots.includes(`Sitemap: ${base}/sitemap.xml`)) fail('robots.txt missing S
 else ok('robots.txt points at /sitemap.xml');
 if (!robots.includes('Disallow: /admin')) fail('robots.txt should disallow /admin');
 else ok('robots.txt disallows /admin');
+if (!robots.includes('Disallow: /login') || !robots.includes('Disallow: /en/login')) {
+  fail('robots.txt should disallow /login and /en/login');
+} else ok('robots.txt disallows login (tr+en)');
+if (!robots.includes('Disallow: /register') || !robots.includes('Disallow: /profile')) {
+  fail('robots.txt should disallow register/profile');
+} else ok('robots.txt disallows register/profile');
+
+if (englishAlternateLoc('https://www.touristlio.com/places/ayasofya-istanbul', 'https://www.touristlio.com')
+  !== 'https://www.touristlio.com/en/places/ayasofya-istanbul') {
+  fail('englishAlternateLoc place path');
+} else ok('englishAlternateLoc /places → /en/places');
+if (englishAlternateLoc('https://www.touristlio.com/en/blog/x', 'https://www.touristlio.com')) {
+  fail('englishAlternateLoc must skip already-EN locs');
+} else ok('englishAlternateLoc skips /en/*');
 
 async function checkDatabase() {
   const { initDb, db, closePool } = require('../db');
@@ -117,6 +132,14 @@ async function checkDatabase() {
     else ok('place locs use slugs, not ids');
 
     const locSet = new Set(locs.map((loc) => pathnameOf(loc)));
+    if (!locSet.has('/en/') || !locSet.has('/en/blog') || !locSet.has('/en/gezilecek-yerler') || !locSet.has('/en/search')) {
+      fail('sitemap missing EN listing pages');
+    } else ok('EN listing pages in sitemap');
+    if (!locSet.has('/en/legal/about.html') || !locSet.has('/en/legal/contact.html')) {
+      fail('sitemap missing EN legal pages');
+    } else ok('EN legal pages in sitemap');
+    if (locs.some((loc) => pathnameOf(loc).startsWith('/en/en/'))) fail('sitemap has /en/en/ paths');
+    else ok('no /en/en/ duplicate prefix');
 
     const places = await db.prepare('SELECT slug, lat, lng, status FROM places').all();
     let expectedPlaces = 0;
@@ -127,6 +150,7 @@ async function checkDatabase() {
       if (pathName) {
         expectedPlaces += 1;
         if (!locSet.has(pathName)) missing += 1;
+        if (!locSet.has(`/en${pathName}`)) missing += 1;
       } else {
         const slug = String(row.slug || '').trim();
         if (slug && locSet.has(`/places/${encodeURIComponent(slug)}`)) leaked += 1;
@@ -148,8 +172,8 @@ async function checkDatabase() {
       const publicBlog = row.status === 'approved' && pathName;
       if (publicBlog) {
         expectedBlogs += 1;
-        if (!locSet.has(pathName)) blogMissing += 1;
-      } else if (pathName && locSet.has(pathName)) {
+        if (!locSet.has(pathName) || !locSet.has(`/en${pathName}`)) blogMissing += 1;
+      } else if (pathName && (locSet.has(pathName) || locSet.has(`/en${pathName}`))) {
         blogLeaked += 1;
       }
     }
@@ -182,6 +206,9 @@ async function main() {
     const xml = await buildSitemapXml();
     if (!xml.includes('<urlset')) fail('static xml missing urlset');
     else ok('static xml has urlset (no DB)');
+    if (!xml.includes('/en/gezilecek-yerler') || !xml.includes('/en/search') || !xml.includes('/en/legal/about.html')) {
+      fail('static sitemap missing EN twins');
+    } else ok('static sitemap has EN listing + legal twins');
   }
 
   if (failed) {

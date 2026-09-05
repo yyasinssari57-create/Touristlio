@@ -38,6 +38,7 @@
     "verify:hero": "node server/scripts/verify-hero-carousel.js",
     "verify:og": "node server/scripts/verify-og-meta.js",
     "verify:sitemap": "node server/scripts/verify-sitemap.js",
+    "verify:audit": "node server/scripts/verify-site-audit.js",
     "verify:admin-role": "node server/scripts/verify-admin-role.js",
     "verify:admin-security": "node server/scripts/verify-admin-security.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",

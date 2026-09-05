@@ -95,6 +95,27 @@ else ok('injectSeoHead strips duplicate OG tags');
 if (!injected.includes('twitter:image') || !injected.includes('hero.webp')) fail('injected home twitter:image');
 else ok('injected homepage twitter:image hero.webp');
 
+const loginHead = buildSeoHead({ pathname: '/login', lang: 'tr', noindex: true });
+if (!loginHead.includes('Giriş — Touristlio')) fail('login title should not fall back to homepage');
+else ok('login title is Giriş — Touristlio');
+if (!loginHead.includes('noindex, nofollow')) fail('login robots noindex');
+else ok('login robots noindex');
+if (loginHead.includes('hreflang=')) fail('noindex pages should omit hreflang');
+else ok('noindex omits hreflang');
+
+const loginEn = buildSeoHead({ pathname: '/en/login', lang: 'en', noindex: true });
+if (!loginEn.includes('Sign in — Touristlio')) fail('EN login title');
+else ok('EN login title Sign in');
+
+const notFound = buildSeoHead({
+  pathname: '/missing-page',
+  lang: 'tr',
+  noindex: true,
+  title: 'Sayfa bulunamadı — Touristlio',
+});
+if (!notFound.includes('Sayfa bulunamadı — Touristlio')) fail('404 title');
+else ok('404 title override');
+
 if (failed) {
   console.error(`verify-og-meta: ${failed} failed`);
   process.exit(1);
