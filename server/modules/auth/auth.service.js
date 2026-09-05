@@ -8,6 +8,7 @@ const { sanitizeName, isValidEmail } = require('../../lib/sanitize');
 const authModel = require('./auth.model');
 const logger = require('../../lib/logger');
 const mailer = require('../../lib/mailer');
+const { authCookieOptions } = require('../../lib/cookie-opts');
 
 const MAX_FAILED = 5;
 const LOCK_MINUTES = 15;
@@ -39,15 +40,9 @@ function logFailedLogin(req, { userId, locked, reason } = {}) {
   });
 }
 
-const COOKIE_OPTS = {
-  httpOnly: true,
-  secure: process.env.COOKIE_SECURE === 'true'
-    || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'),
-  sameSite: process.env.COOKIE_SAMESITE || 'lax',
-  // 7 days: a 15-minute JWT would log people out mid-browse. HttpOnly is the security win.
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-  path: '/',
-};
+function cookieOpts() {
+  return authCookieOptions();
+}
 
 function validationError(req) {
   const errors = validationResult(req);
@@ -56,15 +51,16 @@ function validationError(req) {
 }
 
 function setAuthCookie(res, token) {
-  res.cookie('tl_token', token, COOKIE_OPTS);
+  res.cookie('tl_token', token, cookieOpts());
 }
 
 function clearAuthCookie(res) {
+  const opts = cookieOpts();
   res.clearCookie('tl_token', {
-    path: '/',
-    httpOnly: true,
-    secure: COOKIE_OPTS.secure,
-    sameSite: COOKIE_OPTS.sameSite,
+    path: opts.path,
+    httpOnly: opts.httpOnly,
+    secure: opts.secure,
+    sameSite: opts.sameSite,
   });
 }
 

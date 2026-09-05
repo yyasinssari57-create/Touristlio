@@ -66,9 +66,14 @@ async function main() {
   } else ok('UI says secure encryption, not the algorithm');
 
   const cookieSrc = fs.readFileSync(path.join(ROOT, 'server/modules/auth/auth.service.js'), 'utf8');
-  if (!/httpOnly:\s*true/.test(cookieSrc) || !/cookie\('tl_token'/.test(cookieSrc)) {
-    fail('auth cookie is not HttpOnly tl_token');
+  const cookieOptsSrc = fs.readFileSync(path.join(ROOT, 'server/lib/cookie-opts.js'), 'utf8');
+  if (!/cookie\('tl_token'/.test(cookieSrc) || !cookieSrc.includes('authCookieOptions')) {
+    fail('auth cookie is not HttpOnly tl_token via cookie-opts');
   } else ok('JWT is stored in HttpOnly tl_token cookie');
+  if (!cookieOptsSrc.includes("process.env.COOKIE_SAMESITE || 'strict'")
+    || !cookieOptsSrc.includes('httpOnly: true')) {
+    fail('cookie-opts default is not HttpOnly + SameSite=Strict');
+  } else ok('cookie-opts default SameSite=Strict + HttpOnly');
   if (/localStorage\.setItem\(\s*['"]tl_token['"]/.test(publicJs)) {
     fail('app.js still writes JWT to localStorage');
   } else ok('client does not store JWT in localStorage');
