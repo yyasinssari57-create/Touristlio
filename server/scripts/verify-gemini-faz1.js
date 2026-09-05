@@ -111,11 +111,19 @@ if (/\.avif\(|image\/avif|avif\(/.test(imgSrc)) fail('AVIF added to Sharp pipeli
 else ok('AVIF not added to upload pipeline');
 
 const indexHtml = read('public/index.html');
-if (!indexHtml.includes('/vendor/leaflet/leaflet.js')
-  || !indexHtml.includes('/vendor/leaflet.markercluster/leaflet.markercluster.js')) {
-  fail('Leaflet vendor tags missing from index.html');
-} else ok('Leaflet + MarkerCluster still local vendor');
-if (/maplibre|supercluster|mapbox-gl/i.test(indexHtml)) fail('MapLibre/Supercluster injected into HTML');
+const mapLoader = read('public/js/map-loader.js');
+if (!indexHtml.includes('/vendor/leaflet/leaflet.css')
+  || !indexHtml.includes('/vendor/leaflet.markercluster/MarkerCluster.css')) {
+  fail('Leaflet vendor CSS missing from index.html');
+} else ok('Leaflet + MarkerCluster CSS still local vendor');
+if (!fs.existsSync(path.join(ROOT, 'public/vendor/leaflet/leaflet.js'))
+  || !fs.existsSync(path.join(ROOT, 'public/vendor/leaflet.markercluster/leaflet.markercluster.js'))) {
+  fail('Leaflet vendor JS missing from disk');
+} else ok('Leaflet + MarkerCluster JS still local vendor');
+if (!indexHtml.includes('/js/map-loader.js') || !mapLoader.includes('/vendor/leaflet/leaflet.js')) {
+  fail('map-loader does not lazy-load Leaflet vendor');
+} else ok('Leaflet JS lazy-loaded via map-loader');
+if (/maplibre|supercluster|mapbox-gl/i.test(indexHtml + mapLoader)) fail('MapLibre/Supercluster injected into HTML');
 else ok('no MapLibre swap in HTML');
 
 const envEx = read('.env.example');

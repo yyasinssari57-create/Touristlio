@@ -2,6 +2,23 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Gemini Faz 3 (Performans / Core Web Vitals)
+
+Gemini “Faz 3: Performans (Core Web Vitals)”. Express + vanilla JS. React / Next yok. Tasarım yok.
+
+1. **Code splitting** — Script’ler zaten ayrı dosya + `?v=__APP_VERSION__`. Admin ayrı HTML; blog SPA içinde. Tek büyük always-on yük: Leaflet + MarkerCluster + `map.js`. Ana sayfada artık yok; `map-loader.js` + `import()` (Leaflet UMD classic `<script>`, CSP `'self'`). `React.lazy()` eklenmedi.
+2. **Harita** — Leaflet CSS head’de duruyor (layout yok). JS, keşfet harita sekmesi / Yerler haritası / detay haritası açılınca yüklenir. MarkerCluster + max 500 + `invalidateSize` aynı. Supercluster / Canvas / MapLibre yok (pin rengi ve chrome değişirdi).
+3. **API cache** — Global `GET /api/*` `no-store` duruyor. Dar istisna: başarılı public `GET /api/places`, `/search`, `/map/markers` → `public, max-age=30, stale-while-revalidate=120`. Auth / kayıtlı yerler / detay / POST hâlâ `no-store`. Bellek 30s + `REDIS_URL` varsa Redis; yazınca `invalidatePlacesCache`.
+
+`npm run verify:faz3` (+ `verify:cache`).
+
+### Leftover
+- Supercluster + Canvas renderer yok; mevcut MarkerCluster + lazy-load. Pin rengi / cluster görünümü aynı kalsın diye.
+- Admin / blog ayrı paket yok (zaten ayrı sayfa / SPA dosyaları). `app.js` tek vanilla giriş; webpack chunk yok.
+- Redis yoksa cache süreç belleği (Render instance paylaşmaz). `REDIS_URL` (Upstash) varsa list/search/markers paylaşılır.
+- HTTP cache 30s: yeni yer ~30–150s sonra (SWR) görünür. Yazma bellek/Redis’i düşürür; paylaşılan CDN hâlâ TTL’ye kadar bayat tutabilir.
+- `style-src` hâlâ `'unsafe-inline'`. AVIF yok.
+
 ## Gemini Sprint 1 (güvenlik / veri bütünlüğü)
 
 Gemini “Faz 2: Güvenlik ve Veri Bütünlüğü (Sprint 1)”. Express + vanilla JS. Tasarım yok.

@@ -10,8 +10,10 @@ const { spawn } = require('child_process');
 const {
   staticAssetHeaders,
   apiNoStoreHeaders,
+  isPublicPlacesListGet,
   HTML_NO_CACHE,
   API_NO_STORE,
+  PLACES_PUBLIC_GET_CACHE,
   VERSIONED_ASSET_CACHE,
   DAY_CACHE,
 } = require('../middleware/static-cache');
@@ -70,6 +72,37 @@ if (headerOf(apiRes, 'Cache-Control') !== API_NO_STORE) {
 } else ok('API middleware: no-store');
 if (!nextCalled) fail('apiNoStoreHeaders did not call next');
 else ok('apiNoStoreHeaders calls next');
+
+if (isPublicPlacesListGet({ method: 'GET', path: '/places' })
+  && isPublicPlacesListGet({ method: 'GET', path: '/places/search' })
+  && isPublicPlacesListGet({ method: 'GET', path: '/places/map/markers' })) {
+  ok('public GET places list/search/markers allowlisted');
+} else fail('isPublicPlacesListGet missed list/search/markers');
+if (isPublicPlacesListGet({ method: 'POST', path: '/places' })
+  || isPublicPlacesListGet({ method: 'GET', path: '/places/saved/all' })
+  || isPublicPlacesListGet({ method: 'GET', path: '/places/42' })
+  || isPublicPlacesListGet({ method: 'GET', path: '/health' })) {
+  fail('isPublicPlacesListGet leaked auth/detail/other API');
+} else ok('saved/detail/POST/other API stay off the places allowlist');
+
+const placesMw = fakeRes();
+placesMw.writeHead = function writeHead(code) {
+  this.statusCode = code;
+  return this;
+};
+apiNoStoreHeaders({ method: 'GET', path: '/places' }, placesMw, () => {});
+if (typeof placesMw.writeHead !== 'function') fail('places GET middleware did not wrap writeHead');
+else {
+  placesMw.writeHead(200);
+  if (headerOf(placesMw, 'Cache-Control') !== PLACES_PUBLIC_GET_CACHE) {
+    fail(`places 200 Cache-Control: ${headerOf(placesMw, 'Cache-Control')}`);
+  } else ok('public GET /places 200 → max-age=30 swr=120');
+  placesMw.setHeader('Cache-Control', API_NO_STORE);
+  placesMw.writeHead(500);
+  if (headerOf(placesMw, 'Cache-Control') !== API_NO_STORE) {
+    fail(`places 500 Cache-Control: ${headerOf(placesMw, 'Cache-Control')}`);
+  } else ok('public GET /places 500 stays no-store');
+}
 
 const indexJs = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
 if (!indexJs.includes('apiNoStoreHeaders')) fail('index.js missing apiNoStoreHeaders');
@@ -178,6 +211,21 @@ async function checkLive(base) {
   if (!hasNoStore(cacheControl(cfg.headers))) {
     fail(`GET /api/config/public Cache-Control=${cacheControl(cfg.headers)}`);
   } else ok('GET /api/config/public no-store');
+
+  const places = await fetchHeaders(`${base}/api/places?limit=1`);
+  const placesCc = cacheControl(places.headers);
+  if (places.status >= 200 && places.status < 400) {
+    if (!/max-age=30/i.test(placesCc) || !/stale-while-revalidate=120/i.test(placesCc)) {
+      fail(`GET /api/places Cache-Control=${placesCc}`);
+    } else ok('GET /api/places public max-age=30 swr=120');
+  } else if (!hasNoStore(placesCc)) {
+    fail(`GET /api/places HTTP ${places.status} Cache-Control=${placesCc}`);
+  } else ok('GET /api/places error stays no-store');
+
+  const saved = await fetchHeaders(`${base}/api/places/saved/all`);
+  if (!hasNoStore(cacheControl(saved.headers))) {
+    fail(`GET /api/places/saved/all Cache-Control=${cacheControl(saved.headers)}`);
+  } else ok('GET /api/places/saved/all no-store');
 
   const sitemap = await fetchHeaders(`${base}/sitemap.xml`);
   if (sitemap.status !== 200) fail(`GET /sitemap.xml HTTP ${sitemap.status}`);
