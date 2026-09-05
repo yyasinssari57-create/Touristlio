@@ -1,5 +1,6 @@
 /**
- * [DÜŞÜK-5] Code cleanup: prod console silence, unused files/deps, CSS merge, dead imports.
+ * [DÜŞÜK-5 / v2 DÜŞÜK-1] Code cleanup: prod console silence, unused files/deps,
+ * CSS merge leftovers, .env.example keys.
  * Usage: node server/scripts/verify-code-cleanup.js
  * Optional: VERIFY_CLEANUP_URL=http://127.0.0.1:3065 node server/scripts/verify-code-cleanup.js
  */
@@ -110,6 +111,59 @@ const { slugify } = require('../lib/slugify');
 if (slugify('İstanbul') !== 'istanbul') fail(`slugify('İstanbul') → ${slugify('İstanbul')}`);
 else ok('slugify helper works');
 
+const seedSrc = fs.readFileSync(path.join(ROOT, 'server', 'seed.js'), 'utf8');
+if (!seedSrc.includes("require('./lib/logger')")) fail('seed.js missing logger');
+else ok('seed.js uses logger');
+const seedRuntimeLogs = seedSrc
+  .split('if (require.main === module)')[0]
+  .match(/console\.log\s*\(/g);
+if (seedRuntimeLogs && seedRuntimeLogs.length) fail('seed.js still console.log on startup path');
+else ok('seed.js startup path has no console.log');
+
+const envExample = fs.readFileSync(path.join(ROOT, '.env.example'), 'utf8');
+const envKeys = [
+  'TRUST_PROXY',
+  'COOKIE_SECURE',
+  'COOKIE_SAMESITE',
+  'DISABLE_WWW_REDIRECT',
+  'DISABLE_HTTPS_REDIRECT',
+  'SEED_ON_START',
+  'STORAGE_PERSISTENT',
+  'APP_VERSION',
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'SITE_URL',
+  'CORS_ORIGIN',
+  'RECAPTCHA_SITE_KEY',
+  'GA_MEASUREMENT_ID',
+];
+const missingEnv = envKeys.filter((k) => !envExample.includes(k));
+if (missingEnv.length) fail('.env.example missing keys: ' + missingEnv.join(', '));
+else ok('.env.example documents operator keys');
+if (!envExample.includes('https://www.touristlio.com')) fail('.env.example CORS/SITE comment missing www');
+else ok('.env.example production URL is www');
+
+function walkJs(dir, acc = []) {
+  for (const name of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (name.name === 'node_modules' || name.name === '.git' || name.name === 'scripts') continue;
+    const full = path.join(dir, name.name);
+    if (name.isDirectory()) walkJs(full, acc);
+    else if (name.name.endsWith('.js')) acc.push(full);
+  }
+  return acc;
+}
+const runtimeJs = walkJs(path.join(ROOT, 'server')).filter((f) => {
+  const rel = path.relative(ROOT, f);
+  return rel !== path.join('server', 'seed.js') && rel !== path.join('server', 'lib', 'logger.js');
+});
+const runtimeLogHits = [];
+for (const f of runtimeJs) {
+  const src = fs.readFileSync(f, 'utf8');
+  if (/console\.log\s*\(/.test(src)) runtimeLogHits.push(path.relative(ROOT, f));
+}
+if (runtimeLogHits.length) fail('runtime console.log still in: ' + runtimeLogHits.join(', '));
+else ok('server runtime has no console.log (except seed CLI / logger fallback)');
+
 const indexJs = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
 if (indexJs.includes('write-logo-transparent')) fail('dev write-logo-transparent route still in index.js');
 else ok('one-off logo API removed');
@@ -118,9 +172,9 @@ if (indexJs.includes('authRequired') || indexJs.includes('requireRole')) {
 } else ok('unused auth imports removed from index.js');
 
 const eb = fs.readFileSync(path.join(ROOT, 'public', 'js', 'error-boundary.js'), 'utf8');
-if (!eb.includes('function silenceProdConsole') || !eb.includes('c.log = noop')) {
+if (!eb.includes('function silenceProdConsole') || !eb.includes('c.log = noop') || !eb.includes('c.warn = noop')) {
   fail('error-boundary.js missing production console silence');
-} else ok('production console.log silenced');
+} else ok('production console.log/warn silenced');
 
 function runBoundary(isDevFlag) {
   const logs = [];
@@ -144,14 +198,18 @@ function runBoundary(isDevFlag) {
   sandbox.window.localStorage = sandbox.localStorage;
   sandbox.window.addEventListener = () => {};
   sandbox.window.__TL_DEV__ = isDevFlag;
+  sandbox.console.warn = (...a) => logs.push(['warn', ...a]);
   vm.runInNewContext(eb, sandbox);
   sandbox.console.log('probe-cleanup');
+  sandbox.console.warn('probe-warn');
   return { logs, sandbox };
 }
 
 const prodRun = runBoundary(false);
 if (prodRun.logs.some((a) => a[0] === 'probe-cleanup')) fail('production console.log still emits');
 else ok('vm: production console.log is a no-op');
+if (prodRun.logs.some((a) => a[0] === 'warn' && a[1] === 'probe-warn')) fail('production console.warn still emits');
+else ok('vm: production console.warn is a no-op');
 
 const devRun = runBoundary(true);
 if (!devRun.logs.some((a) => a[0] === 'probe-cleanup')) fail('development console.log was silenced');
@@ -175,7 +233,7 @@ function fetchText(url) {
   });
 }
 
-function waitForServer(base, max = 50) {
+function waitForServer(base, max = 400) {
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -196,7 +254,7 @@ function waitForServer(base, max = 50) {
 async function checkRoutes(base) {
   const routes = [
     ['/', ['error-boundary.js', 'css/style.css']],
-    ['/js/error-boundary.js', ['silenceProdConsole', 'c.log = noop']],
+    ['/js/error-boundary.js', ['silenceProdConsole', 'c.log = noop', 'c.warn = noop']],
     ['/css/style.css', ['.dual-rat{', '--nav-h:68px', '.tiola-grid{']],
   ];
   for (const [route, needles] of routes) {
