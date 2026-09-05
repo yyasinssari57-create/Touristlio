@@ -233,7 +233,7 @@ function fetchText(url) {
   });
 }
 
-function waitForServer(base, max = 50) {
+function waitForServer(base, max = 400) {
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
