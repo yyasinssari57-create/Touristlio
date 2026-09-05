@@ -12,7 +12,7 @@
 <a href="#loginScreen" class="skip-link">İçeriğe geç</a>
 <div id="loginScreen" class="admin-login" role="main" aria-labelledby="loginTitle" tabindex="-1">
   <header class="admin-login-header">
-    <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="admin-login-logo" width="56" height="56" onerror="this.onerror=null;this.src='/images/icon.svg'" loading="lazy" decoding="async" />
+    <img src="/images/logo-round.webp?v=6" alt="Touristlio" class="admin-login-logo" width="56" height="56" data-fallback="/images/icon.svg" loading="lazy" decoding="async" />
     <p class="admin-login-brand" aria-hidden="true">Tourist<span class="brand-accent">lio</span></p>
     <h1 id="loginTitle" class="admin-login-subtitle">Admin</h1>
   </header>
@@ -20,7 +20,7 @@
   <input class="ain" id="admEmail" type="email" placeholder="E-posta" autocomplete="username" aria-required="true"/>
   <label class="sr-only" for="admPass">Şifre</label>
   <input class="ain" id="admPass" type="password" placeholder="Şifre" autocomplete="current-password" aria-required="true"/>
-  <button class="btn bp" onclick="adminLogin()" aria-label="Admin paneline giriş yap">Giriş</button>
+  <button class="btn bp" data-act="adminLogin" aria-label="Admin paneline giriş yap">Giriş</button>
   <p class="admin-login-back"><a href="/">← Siteye dön</a></p>
   <div id="loginErr" class="admin-status err" style="display:none" role="alert"></div>
 </div>
@@ -28,30 +28,30 @@
 <div id="adminPanel">
   <nav class="tl-nav" aria-label="Üst menü"><div class="nav-inner">
     <a href="/admin" class="brand admin-nav-stay"><span class="brand-text">Tourist<span class="brand-accent">lio</span> Admin</span></a>
-    <a href="/admin" class="nav-brand-center admin-nav-stay" aria-label="Touristlio admin"><img src="/images/icon-white.svg" alt="Touristlio" class="brand-mark brand-mark-white" width="46" height="46" onerror="this.onerror=null;this.src='/images/icon.svg'" loading="lazy" decoding="async" /></a>
+    <a href="/admin" class="nav-brand-center admin-nav-stay" aria-label="Touristlio admin"><img src="/images/icon-white.svg" alt="Touristlio" class="brand-mark brand-mark-white" width="46" height="46" data-fallback="/images/icon.svg" loading="lazy" decoding="async" /></a>
     <div class="nav-r"><span id="admUser"></span>
     <a href="/" class="btn nav-btn-ghost nav-link-plain">Site</a>
-    <button class="btn nav-btn-ghost" onclick="adminLogout()" aria-label="Çıkış yap">Çıkış</button></div>
+    <button class="btn nav-btn-ghost" data-act="adminLogout" aria-label="Çıkış yap">Çıkış</button></div>
   </div></nav>
 
   <div class="admin-shell">
     <nav class="admin-topnav" id="adminTabs" role="tablist" aria-label="Admin bölümleri">
-      <button type="button" role="tab" aria-selected="true" class="on" data-section="dashboard" data-permission="admin.dashboard" onclick="showAdminSection('dashboard',this)">Özet</button>
-      <button type="button" role="tab" aria-selected="false" data-section="places" data-permission="admin.places" onclick="showAdminSection('places',this)">Gezilecek Yerler</button>
-      <button type="button" role="tab" aria-selected="false" data-section="cities" data-permission="admin.cities" onclick="showAdminSection('cities',this)">Şehirler</button>
-      <button type="button" role="tab" aria-selected="false" data-section="categories" data-permission="admin.categories" onclick="showAdminSection('categories',this)">Kategoriler</button>
-      <button type="button" role="tab" aria-selected="false" data-section="moderation" data-permission="admin.moderate" onclick="showAdminSection('moderation',this)">Moderasyon</button>
-      <button type="button" role="tab" aria-selected="false" data-section="reports" data-permission="admin.moderate" onclick="showAdminSection('reports',this)">Şikayetler</button>
-      <button type="button" role="tab" aria-selected="false" data-section="contact" data-permission="admin.dashboard" onclick="showAdminSection('contact',this)">İletişim</button>
-      <button type="button" role="tab" aria-selected="false" data-section="users" data-permission="admin.moderate" onclick="showAdminSection('users',this)">Kullanıcılar</button>
-      <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" onclick="showAdminSection('content',this)">İçerik</button>
-      <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.analytics" onclick="showAdminSection('analytics',this)">Analitik</button>
-      <button type="button" role="tab" aria-selected="false" data-section="media" data-permission="admin.places" onclick="showAdminSection('media',this)">Medya</button>
-      <button type="button" role="tab" aria-selected="false" data-section="appearance" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('appearance',this)">Görünüm</button>
-      <button type="button" role="tab" aria-selected="false" data-section="settings" data-role="admin" data-permission="admin.settings" onclick="showAdminSection('settings',this)">Ayarlar</button>
-      <button type="button" role="tab" aria-selected="false" data-section="roles" data-role="admin" data-permission="admin.roles" onclick="showAdminSection('roles',this)">Roller</button>
-      <button type="button" role="tab" aria-selected="false" data-section="audit-log" data-role="admin" onclick="showAdminSection('audit-log',this)">İşlem geçmişi</button>
-      <button type="button" role="tab" aria-selected="false" data-section="guide" onclick="showAdminSection('guide',this)">Kılavuz</button>
+      <button type="button" role="tab" aria-selected="true" class="on" data-section="dashboard" data-permission="admin.dashboard" data-act="showAdminSection" data-el data-arg="dashboard">Özet</button>
+      <button type="button" role="tab" aria-selected="false" data-section="places" data-permission="admin.places" data-act="showAdminSection" data-el data-arg="places">Gezilecek Yerler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="cities" data-permission="admin.cities" data-act="showAdminSection" data-el data-arg="cities">Şehirler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="categories" data-permission="admin.categories" data-act="showAdminSection" data-el data-arg="categories">Kategoriler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="moderation" data-permission="admin.moderate" data-act="showAdminSection" data-el data-arg="moderation">Moderasyon</button>
+      <button type="button" role="tab" aria-selected="false" data-section="reports" data-permission="admin.moderate" data-act="showAdminSection" data-el data-arg="reports">Şikayetler</button>
+      <button type="button" role="tab" aria-selected="false" data-section="contact" data-permission="admin.dashboard" data-act="showAdminSection" data-el data-arg="contact">İletişim</button>
+      <button type="button" role="tab" aria-selected="false" data-section="users" data-permission="admin.moderate" data-act="showAdminSection" data-el data-arg="users">Kullanıcılar</button>
+      <button type="button" role="tab" aria-selected="false" data-section="content" data-permission="admin.content" data-act="showAdminSection" data-el data-arg="content">İçerik</button>
+      <button type="button" role="tab" aria-selected="false" data-section="analytics" data-permission="admin.analytics" data-act="showAdminSection" data-el data-arg="analytics">Analitik</button>
+      <button type="button" role="tab" aria-selected="false" data-section="media" data-permission="admin.places" data-act="showAdminSection" data-el data-arg="media">Medya</button>
+      <button type="button" role="tab" aria-selected="false" data-section="appearance" data-role="admin" data-permission="admin.settings" data-act="showAdminSection" data-el data-arg="appearance">Görünüm</button>
+      <button type="button" role="tab" aria-selected="false" data-section="settings" data-role="admin" data-permission="admin.settings" data-act="showAdminSection" data-el data-arg="settings">Ayarlar</button>
+      <button type="button" role="tab" aria-selected="false" data-section="roles" data-role="admin" data-permission="admin.roles" data-act="showAdminSection" data-el data-arg="roles">Roller</button>
+      <button type="button" role="tab" aria-selected="false" data-section="audit-log" data-role="admin" data-act="showAdminSection" data-el data-arg="audit-log">İşlem geçmişi</button>
+      <button type="button" role="tab" aria-selected="false" data-section="guide" data-act="showAdminSection" data-el data-arg="guide">Kılavuz</button>
     </nav>
 
     <div class="admin-content" role="main">
@@ -61,15 +61,19 @@
         <div id="statsRow"></div>
         <div id="dbBackupSection" data-role="admin" class="admin-card" style="margin-top:12px;display:none">
           <h2 class="adm-h2" style="margin-top:0">Veritabanı yedeği</h2>
-          <p class="adm-field-hint">Her indirme tarihli yeni bir <code>.db</code> dosyası oluşturur; yedekleri Google Drive veya benzeri güvenli bir yerde saklayın.</p>
-          <p class="adm-field-hint">Geri yükleme yalnızca deploy sonrası veri kaybı gibi acil durumlarda kullanılmalıdır. İçerik yöneticileri (moderatörler) normal iş akışında geri yükleme yapmadan çalışır; geri yükleme <strong>tüm site verisini</strong> seçtiğiniz yedekle değiştirir.</p>
+          <p class="adm-field-hint">Her indirme tarihli yeni bir <code>.sql</code> (SHA-256 checksum başlığıyla) oluşturur. Render diski kalıcı değildir; dosyayı Drive veya benzeri güvenli bir yerde saklayın.</p>
+          <p class="adm-field-hint">Geri yükleme checksum eşleşmesi ister. Önce “yalnızca doğrula” ile deneyin. Şifreleme yalnızca <code>BACKUP_ENCRYPTION_KEY</code> tanımlıysa açılır. İçerik yöneticileri normal iş akışında geri yükleme yapmaz; uygulama <strong>tüm site verisini</strong> değiştirir.</p>
           <div class="admin-form" style="margin-top:12px">
-            <button class="btn bp bsm" type="button" onclick="downloadDbBackup()">Tam yedek indir (.db)</button>
+            <button class="btn bp bsm" type="button" data-act="downloadDbBackup">Tam yedek indir (.sql)</button>
             <label class="btn bo bsm adm-photo-btn" style="margin:0">
               Yedek dosyası seç
-              <input type="file" id="dbRestoreFile" class="adm-photo-input" accept=".db,application/octet-stream" aria-label="Veritabanı yedeği seç"/>
+              <input type="file" id="dbRestoreFile" class="adm-photo-input" accept=".sql,.enc,application/sql,application/octet-stream" aria-label="Veritabanı yedeği seç"/>
             </label>
-            <button class="btn bo bsm" type="button" onclick="restoreDbBackup()">Yedekten geri yükle</button>
+            <label class="adm-field-hint" style="margin:0;display:flex;align-items:center;gap:6px">
+              <input type="checkbox" id="dbRestoreDryRun" checked/>
+              Yalnızca doğrula (uygulama)
+            </label>
+            <button class="btn bo bsm" type="button" data-act="restoreDbBackup">Yedekten geri yükle</button>
           </div>
         </div>
       </section>
@@ -117,7 +121,7 @@
             <textarea class="ain full adm-textarea-sm" id="plDesc" placeholder="Açıklama (TR)" aria-label="Açıklama Türkçe"></textarea>
             <textarea class="ain full adm-textarea-sm" id="plDescEn" placeholder="Description (EN)" aria-label="Açıklama İngilizce"></textarea>
           </div>
-          <button class="btn bp bsm" type="button" id="btnAddPlace" onclick="addPlace()" aria-label="Yeni yeri kaydet">Yeri kaydet</button>
+          <button class="btn bp bsm" type="button" id="btnAddPlace" data-act="addPlace" aria-label="Yeni yeri kaydet">Yeri kaydet</button>
         </div>
         <h2 class="adm-h2-spaced">Yer listesi</h2>
         <div class="admin-card" id="placesQualityBar" style="margin-bottom:12px;display:none" aria-live="polite"></div>
@@ -125,14 +129,14 @@
           <div class="admin-form" style="margin-bottom:12px">
             <label class="sr-only" for="placeSearch">Yer ara</label>
             <label class="sr-only" for="placeSearch">Yer ara</label>
-            <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" oninput="debounceLoadPlaces()"/>
-            <button class="btn bo bsm" type="button" onclick="exportPlaces('json')">Dışa aktar (JSON)</button>
-            <button class="btn bo bsm" type="button" onclick="exportPlaces('csv')">Dışa aktar (CSV)</button>
+            <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" data-act="debounceLoadPlaces"/>
+            <button class="btn bo bsm" type="button" data-act="exportPlaces" data-arg="json">Dışa aktar (JSON)</button>
+            <button class="btn bo bsm" type="button" data-act="exportPlaces" data-arg="csv">Dışa aktar (CSV)</button>
             <label class="btn bp bsm adm-photo-btn" style="margin:0">
               İçe aktar
-              <input type="file" id="placesImportFile" class="adm-photo-input" accept=".json,.csv,application/json,text/csv" onchange="importPlacesFile(this)" aria-label="Yer içe aktar"/>
+              <input type="file" id="placesImportFile" class="adm-photo-input" accept=".json,.csv,application/json,text/csv" data-act="importPlacesFile" data-el-first aria-label="Yer içe aktar"/>
             </label>
-            <button class="btn bo bsm" type="button" id="btnClearPlaceFilter" style="display:none" onclick="clearPlaceQualityFilter()">Filtreyi temizle</button>
+            <button class="btn bo bsm" type="button" id="btnClearPlaceFilter" style="display:none" data-act="clearPlaceQualityFilter">Filtreyi temizle</button>
           </div>
           <div id="placesTableWrap" aria-live="polite"></div>
         </div>
@@ -162,7 +166,7 @@
             </div>
             <p class="photo-upload-hint">JPEG, PNG, WebP · dosya başına max 5 MB</p>
           </div>
-          <button class="btn bp bsm full" type="button" id="btnAddCity" onclick="addCity()" aria-label="Şehir ekle">Şehir ekle</button>
+          <button class="btn bp bsm full" type="button" id="btnAddCity" data-act="addCity" aria-label="Şehir ekle">Şehir ekle</button>
           </div>
         </div>
         <h2 class="adm-h2-spaced">Şehir listesi</h2>
@@ -205,7 +209,7 @@
               </label>
             </div>
           </div>
-          <button class="btn bp bsm full" type="button" id="btnAddCategory" onclick="addCategory()" aria-label="Kategori ekle">Kategori ekle</button>
+          <button class="btn bp bsm full" type="button" id="btnAddCategory" data-act="addCategory" aria-label="Kategori ekle">Kategori ekle</button>
           </div>
         </div>
         <h2 class="adm-h2-spaced">Kategori listesi</h2>
@@ -214,8 +218,8 @@
 
       <section id="adm-moderation" class="adm-section" hidden role="tabpanel" aria-label="Moderasyon">
         <div class="adm-report-tabs" id="modSubTabs" role="tablist" aria-label="Moderasyon filtreleri">
-          <button type="button" class="on" data-mfilter="pending" onclick="setModFilter('pending',this)">Bekleyen Tiola'lar</button>
-          <button type="button" data-mfilter="approved" onclick="setModFilter('approved',this)">Yayında Tiola'lar</button>
+          <button type="button" class="on" data-mfilter="pending" data-act="setModFilter" data-el data-arg="pending">Bekleyen Tiola'lar</button>
+          <button type="button" data-mfilter="approved" data-act="setModFilter" data-el data-arg="approved">Yayında Tiola'lar</button>
         </div>
         <div class="admin-card adm-mod-filters">
           <div class="admin-form adm-mod-filter-row">
@@ -230,16 +234,16 @@
             <input class="ain" id="modFilterPlaceId" placeholder="Yer ID" inputmode="numeric" aria-label="Yer ID filtresi"/>
             <input class="ain" id="modFilterFrom" type="date" aria-label="Başlangıç tarihi"/>
             <input class="ain" id="modFilterTo" type="date" aria-label="Bitiş tarihi"/>
-            <button class="btn bp bsm" type="button" onclick="applyModFilters()">Filtrele</button>
+            <button class="btn bp bsm" type="button" data-act="applyModFilters">Filtrele</button>
           </div>
           <p id="modResultCount" class="adm-mod-count" aria-live="polite"></p>
         </div>
         <div id="modBulkBar" class="adm-bulk-bar" style="display:none" aria-live="polite">
           <span id="modBulkCount">0 seçili</span>
-          <button class="btn bp bsm" type="button" id="modBulkApprove" onclick="bulkModAction('approve')">Toplu onayla</button>
-          <button class="btn bo bsm" type="button" id="modBulkReject" onclick="bulkModAction('reject')">Toplu reddet</button>
-          <button class="btn-no bsm" type="button" id="modBulkRemove" onclick="bulkModAction('remove')" style="display:none">Toplu kaldır</button>
-          <button class="btn bo bsm" type="button" onclick="clearModSelection()">Seçimi temizle</button>
+          <button class="btn bp bsm" type="button" id="modBulkApprove" data-act="bulkModAction" data-arg="approve">Toplu onayla</button>
+          <button class="btn bo bsm" type="button" id="modBulkReject" data-act="bulkModAction" data-arg="reject">Toplu reddet</button>
+          <button class="btn-no bsm" type="button" id="modBulkRemove" data-act="bulkModAction" data-arg="remove" style="display:none">Toplu kaldır</button>
+          <button class="btn bo bsm" type="button" data-act="clearModSelection">Seçimi temizle</button>
         </div>
         <div id="modPendingPanel">
           <h2 class="adm-h2-tight">Bekleyen Tiola'lar</h2>
@@ -256,9 +260,9 @@
       <section id="adm-reports" class="adm-section" hidden role="tabpanel" aria-label="Şikayetler">
         <h2 class="adm-h2-tight">Şikayetler</h2>
         <div class="adm-report-tabs" id="reportSubTabs" role="tablist" aria-label="Şikayet filtreleri">
-          <button type="button" class="on" data-rfilter="pending" onclick="setReportFilter('pending',this)">Bekleyen</button>
-          <button type="button" data-rfilter="resolved" onclick="setReportFilter('resolved',this)">İşlenen</button>
-          <button type="button" data-rfilter="all" onclick="setReportFilter('all',this)">Tümü</button>
+          <button type="button" class="on" data-rfilter="pending" data-act="setReportFilter" data-el data-arg="pending">Bekleyen</button>
+          <button type="button" data-rfilter="resolved" data-act="setReportFilter" data-el data-arg="resolved">İşlenen</button>
+          <button type="button" data-rfilter="all" data-act="setReportFilter" data-el data-arg="all">Tümü</button>
         </div>
         <div id="reportsList" aria-live="polite"></div>
       </section>
@@ -274,7 +278,7 @@
       <section id="adm-users" class="adm-section content-layout content-sidebar-open" hidden role="tabpanel" aria-label="Kullanıcılar">
         <div class="content-layout-frame">
           <header class="content-frame-toolbar">
-            <button type="button" class="content-sidebar-toggle" id="usersSidebarToggle" onclick="toggleUsersSidebar()" aria-expanded="true" aria-controls="usersSubTabs" aria-label="Kullanıcı menüsünü daralt">
+            <button type="button" class="content-sidebar-toggle" id="usersSidebarToggle" data-act="toggleUsersSidebar" aria-expanded="true" aria-controls="usersSubTabs" aria-label="Kullanıcı menüsünü daralt">
               <svg class="content-sidebar-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <div class="content-layout-title">
@@ -288,19 +292,19 @@
               <div class="content-sidebar-inner">
                 <p class="content-sidebar-heading">Bölümler</p>
                 <nav class="content-sidebar-nav" id="usersSubTabs" role="tablist" aria-label="Kullanıcı alt bölümleri">
-                  <button type="button" role="tab" class="on" aria-selected="true" data-sub="users-all" onclick="showUsersSub('users-all',this)">
+                  <button type="button" role="tab" class="on" aria-selected="true" data-sub="users-all" data-act="showUsersSub" data-el data-arg="users-all">
                     <span class="content-nav-icon" aria-hidden="true">👥</span>
                     <span class="content-nav-label">Tüm kullanıcılar</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="users-blocked" onclick="showUsersSub('users-blocked',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="users-blocked" data-act="showUsersSub" data-el data-arg="users-blocked">
                     <span class="content-nav-icon" aria-hidden="true">🚫</span>
                     <span class="content-nav-label">Engellenenler</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="users-moderators" onclick="showUsersSub('users-moderators',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="users-moderators" data-act="showUsersSub" data-el data-arg="users-moderators">
                     <span class="content-nav-icon" aria-hidden="true">🛡</span>
                     <span class="content-nav-label">Moderatörler</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="users-profile-pending" onclick="showUsersSub('users-profile-pending',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="users-profile-pending" data-act="showUsersSub" data-el data-arg="users-profile-pending">
                     <span class="content-nav-icon" aria-hidden="true">📋</span>
                     <span class="content-nav-label">Eski profil talepleri</span>
                   </button>
@@ -312,7 +316,7 @@
               <aside id="userDetailPanel" class="adm-user-slide-panel" hidden aria-label="Kullanıcı detayı">
                 <header class="adm-user-slide-head">
                   <h3 id="userDetailTitle">Kullanıcı</h3>
-                  <button type="button" class="adm-user-slide-close" onclick="closeUserDetailPanel()" aria-label="Kapat">×</button>
+                  <button type="button" class="adm-user-slide-close" data-act="closeUserDetailPanel" aria-label="Kapat">×</button>
                 </header>
                 <div id="userDetailBody" class="adm-user-slide-body"></div>
               </aside>
@@ -343,7 +347,7 @@
                     <input class="ain" id="modName" placeholder="Ad" aria-label="Moderatör adı"/>
                     <input class="ain" id="modEmail" placeholder="E-posta" aria-label="Moderatör e-posta" type="email"/>
                     <input class="ain full" id="modPass" type="password" placeholder="Geçici şifre" aria-label="Geçici şifre"/>
-                    <button class="btn bp bsm full" type="button" id="btnAddModerator" onclick="addModerator()" aria-label="Moderatör oluştur">Moderatör oluştur</button>
+                    <button class="btn bp bsm full" type="button" id="btnAddModerator" data-act="addModerator" aria-label="Moderatör oluştur">Moderatör oluştur</button>
                   </div>
                 </div>
               </div>
@@ -355,7 +359,7 @@
       <section id="adm-content" class="adm-section content-layout content-sidebar-open" hidden role="tabpanel" aria-label="İçerik">
         <div class="content-layout-frame">
           <header class="content-frame-toolbar">
-            <button type="button" class="content-sidebar-toggle" id="contentSidebarToggle" onclick="toggleContentSidebar()" aria-expanded="true" aria-controls="contentSubTabs" aria-label="Blog menüsünü daralt">
+            <button type="button" class="content-sidebar-toggle" id="contentSidebarToggle" data-act="toggleContentSidebar" aria-expanded="true" aria-controls="contentSubTabs" aria-label="Blog menüsünü daralt">
               <svg class="content-sidebar-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <div class="content-layout-title">
@@ -369,27 +373,27 @@
               <div class="content-sidebar-inner">
                 <p class="content-sidebar-heading">Bölümler</p>
                 <nav class="content-sidebar-nav" id="contentSubTabs" role="tablist" aria-label="Blog alt bölümleri">
-                  <button type="button" role="tab" class="on" aria-selected="true" data-sub="blog-page" onclick="showContentSub('blog-page',this)">
+                  <button type="button" role="tab" class="on" aria-selected="true" data-sub="blog-page" data-act="showContentSub" data-el data-arg="blog-page">
                     <span class="content-nav-icon" aria-hidden="true">⚙</span>
                     <span class="content-nav-label">Sayfa ayarları</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="blog-cats" onclick="showContentSub('blog-cats',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-cats" data-act="showContentSub" data-el data-arg="blog-cats">
                     <span class="content-nav-icon" aria-hidden="true">🏷</span>
                     <span class="content-nav-label">Kategoriler</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="blog-posts" onclick="showContentSub('blog-posts',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-posts" data-act="showContentSub" data-el data-arg="blog-posts">
                     <span class="content-nav-icon" aria-hidden="true">📝</span>
                     <span class="content-nav-label">Tüm yazılar</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="blog-pending" onclick="showContentSub('blog-pending',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-pending" data-act="showContentSub" data-el data-arg="blog-pending">
                     <span class="content-nav-icon" aria-hidden="true">⏳</span>
                     <span class="content-nav-label">Bekleyenler</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="blog-approved" onclick="showContentSub('blog-approved',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-approved" data-act="showContentSub" data-el data-arg="blog-approved">
                     <span class="content-nav-icon" aria-hidden="true">✅</span>
                     <span class="content-nav-label">Yayında</span>
                   </button>
-                  <button type="button" role="tab" aria-selected="false" data-sub="blog-scheduled" onclick="showContentSub('blog-scheduled',this)">
+                  <button type="button" role="tab" aria-selected="false" data-sub="blog-scheduled" data-act="showContentSub" data-el data-arg="blog-scheduled">
                     <span class="content-nav-icon" aria-hidden="true">📅</span>
                     <span class="content-nav-label">Zamanlanmış</span>
                   </button>
@@ -403,7 +407,7 @@
           <div class="admin-card">
             <div id="blogPageFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
             <div class="admin-form" id="blogPageForm"></div>
-            <button class="btn bp bsm" type="button" id="btnSaveBlogPage" onclick="saveBlogPageSettings()" aria-label="Blog sayfa ayarlarını kaydet">Kaydet</button>
+            <button class="btn bp bsm" type="button" id="btnSaveBlogPage" data-act="saveBlogPageSettings" aria-label="Blog sayfa ayarlarını kaydet">Kaydet</button>
           </div>
         </div>
 
@@ -422,7 +426,7 @@
               <input class="ain" id="blCatNameEn" placeholder="örn. Guides" aria-label="İngilizce ad"/>
               <label class="adm-label-sm" for="blCatIcon">İkon (emoji)</label>
               <input class="ain" id="blCatIcon" placeholder="🗺️" aria-label="İkon" maxlength="4"/>
-              <button class="btn bp bsm full" type="button" id="btnAddBlogCat" onclick="addBlogCategory()" aria-label="Blog kategorisi ekle">Kategori ekle</button>
+              <button class="btn bp bsm full" type="button" id="btnAddBlogCat" data-act="addBlogCategory" aria-label="Blog kategorisi ekle">Kategori ekle</button>
             </div>
           </div>
           <h2 class="adm-h2-spaced">Kategori listesi</h2>
@@ -456,16 +460,16 @@
               <textarea class="ain full adm-textarea-sm" id="bpExcerpt" placeholder="Özet" aria-label="Özet"></textarea>
               <textarea class="ain full" id="bpBody" placeholder="İçerik *" aria-label="İçerik" style="min-height:120px"></textarea>
             </div>
-            <button class="btn bp bsm" type="button" id="btnAddBlogPost" onclick="addBlogPost()" aria-label="Blog yazısı ekle">Yazı ekle</button>
+            <button class="btn bp bsm" type="button" id="btnAddBlogPost" data-act="addBlogPost" aria-label="Blog yazısı ekle">Yazı ekle</button>
           </div>
           <h2 class="adm-h2-spaced">Yazı listesi</h2>
           <div class="admin-card">
             <div class="admin-form" style="margin-bottom:12px">
-              <input class="ain" id="blogPostSearch" placeholder="Başlık veya slug ara…" oninput="debounceLoadBlogPosts()" aria-label="Blog ara"/>
-              <select class="ain" id="blogPostCategoryFilter" onchange="loadBlogPostsList()" aria-label="Kategori filtresi">
+              <input class="ain" id="blogPostSearch" placeholder="Başlık veya slug ara…" data-act="debounceLoadBlogPosts" aria-label="Blog ara"/>
+              <select class="ain" id="blogPostCategoryFilter" data-act="loadBlogPostsList" aria-label="Kategori filtresi">
                 <option value="all">Tüm kategoriler</option>
               </select>
-              <select class="ain" id="blogPostStatusFilter" onchange="loadBlogPostsList()" aria-label="Durum filtresi">
+              <select class="ain" id="blogPostStatusFilter" data-act="loadBlogPostsList" aria-label="Durum filtresi">
                 <option value="all">Tüm durumlar</option>
                 <option value="approved">Yayında</option>
                 <option value="draft">Taslak</option>
@@ -489,15 +493,15 @@
               </select>
               <input class="ain" id="blogPendingFilterFrom" type="date" aria-label="Başlangıç"/>
               <input class="ain" id="blogPendingFilterTo" type="date" aria-label="Bitiş"/>
-              <button class="btn bp bsm" type="button" onclick="loadPendingBlogs()">Filtrele</button>
+              <button class="btn bp bsm" type="button" data-act="loadPendingBlogs">Filtrele</button>
             </div>
             <p id="blogPendingCount" class="adm-mod-count"></p>
           </div>
           <div id="blogBulkBar" class="adm-bulk-bar" style="display:none">
             <span id="blogBulkCount">0 seçili</span>
-            <button class="btn bp bsm" type="button" onclick="bulkBlogAction('approve')">Toplu onayla</button>
-            <button class="btn bo bsm" type="button" onclick="bulkBlogAction('reject')">Toplu reddet</button>
-            <button class="btn bo bsm" type="button" onclick="clearBlogSelection()">Seçimi temizle</button>
+            <button class="btn bp bsm" type="button" data-act="bulkBlogAction" data-arg="approve">Toplu onayla</button>
+            <button class="btn bo bsm" type="button" data-act="bulkBlogAction" data-arg="reject">Toplu reddet</button>
+            <button class="btn bo bsm" type="button" data-act="clearBlogSelection">Seçimi temizle</button>
           </div>
           <div id="pendingBlogs"></div>
           <div id="blogPendingPagination" class="adm-pagination"></div>
@@ -510,14 +514,14 @@
               <input class="ain" id="approvedBlogSearch" placeholder="Başlık veya yazar ara…" aria-label="Yayında blog ara"/>
               <input class="ain" id="blogApprovedFilterFrom" type="date" aria-label="Başlangıç"/>
               <input class="ain" id="blogApprovedFilterTo" type="date" aria-label="Bitiş"/>
-              <button class="btn bp bsm" type="button" onclick="loadApprovedBlogs()">Filtrele</button>
+              <button class="btn bp bsm" type="button" data-act="loadApprovedBlogs">Filtrele</button>
             </div>
             <p id="blogApprovedCount" class="adm-mod-count"></p>
           </div>
           <div id="blogApprovedBulkBar" class="adm-bulk-bar" style="display:none">
             <span id="blogApprovedBulkCount">0 seçili</span>
-            <button class="btn-no bsm" type="button" onclick="bulkBlogAction('remove', true)">Toplu kaldır</button>
-            <button class="btn bo bsm" type="button" onclick="clearBlogSelection(true)">Seçimi temizle</button>
+            <button class="btn-no bsm" type="button" data-act="bulkBlogAction" data-arg="remove" data-arg2="true">Toplu kaldır</button>
+            <button class="btn bo bsm" type="button" data-act="clearBlogSelection" data-arg="true">Seçimi temizle</button>
           </div>
           <div id="approvedBlogs"></div>
           <div id="blogApprovedPagination" class="adm-pagination"></div>
@@ -557,7 +561,7 @@
           <div class="admin-form adm-mod-filter-row">
             <input class="ain" id="mediaSearchQ" placeholder="Dosya adı ara…" aria-label="Medya ara"/>
             <input class="ain" id="mediaPlaceFilter" placeholder="Yer ID" inputmode="numeric" aria-label="Yer ID"/>
-            <button class="btn bp bsm" type="button" onclick="loadMediaLibrary(1)">Filtrele</button>
+            <button class="btn bp bsm" type="button" data-act="loadMediaLibrary" data-arg="1">Filtrele</button>
           </div>
           <p id="mediaStats" class="adm-mod-count" aria-live="polite"></p>
         </div>
@@ -589,14 +593,14 @@
           <p class="adm-field-hint">Bakım modu açıkken site API'leri (giriş ve admin hariç) 503 döner.</p>
           <div id="maintenanceFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
           <div class="admin-form" id="maintenanceForm"></div>
-          <button class="btn bp bsm" type="button" id="btnSaveMaintenance" onclick="saveMaintenanceSettings()">Site durumunu kaydet</button>
+          <button class="btn bp bsm" type="button" id="btnSaveMaintenance" data-act="saveMaintenanceSettings">Site durumunu kaydet</button>
         </div>
         <div class="admin-card adm-settings" style="margin-top:16px">
           <h3>Yasaklı Kelimeler</h3>
           <p class="adm-field-hint">Bu kelimeleri içeren Tiola ve blog gönderileri otomatik spam olarak işaretlenir.</p>
           <div class="admin-form" style="margin-bottom:12px">
             <input class="ain" id="newBannedWord" placeholder="Yeni kelime…" aria-label="Yasaklı kelime"/>
-            <button class="btn bp bsm" type="button" onclick="addBannedWord()">Ekle</button>
+            <button class="btn bp bsm" type="button" data-act="addBannedWord">Ekle</button>
           </div>
           <div id="bannedWordsList" aria-live="polite"></div>
         </div>
@@ -604,7 +608,7 @@
           <h3>Site ayarları</h3>
           <div id="settingsFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
           <div class="admin-form" id="settingsForm"></div>
-          <button class="btn bp bsm" type="button" id="btnSaveSettings" onclick="saveSettings()" aria-label="Ayarları kaydet">Kaydet</button>
+          <button class="btn bp bsm" type="button" id="btnSaveSettings" data-act="saveSettings" aria-label="Ayarları kaydet">Kaydet</button>
         </div>
       </section>
 
@@ -682,7 +686,7 @@
               <option value="media">Medya</option>
               <option value="database">Veritabanı</option>
             </select>
-            <button class="btn bp bsm full adm-audit-filter-btn" type="button" onclick="loadAuditLog(1)">Filtrele</button>
+            <button class="btn bp bsm full adm-audit-filter-btn" type="button" data-act="loadAuditLog" data-arg="1">Filtrele</button>
           </div>
         </div>
         <div class="admin-card admin-card--table" id="auditLogTable" aria-live="polite"></div>
@@ -1080,11 +1084,12 @@
 </div>
 
 <div id="adminLightbox" class="admin-lightbox" role="dialog" aria-modal="true" aria-label="Görsel önizleme">
-  <button type="button" class="admin-lightbox-close" onclick="closeAdminLightbox()" aria-label="Kapat">×</button>
+  <button type="button" class="admin-lightbox-close" data-act="closeAdminLightbox" aria-label="Kapat">×</button>
   <p class="admin-lightbox-hint">Tekerlek veya çift tık ile yakınlaştırın</p>
   <img id="adminLightboxImg" src="" alt="Tiola fotoğrafı" loading="lazy" decoding="async" />
 </div>
 
+<script src="/js/bind-actions.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
 <script src="/js/avatars.js?v=__APP_VERSION__"></script>
@@ -1419,7 +1424,7 @@ function renderImagePreview(previewId, url) {
     el.innerHTML = '';
     return;
   }
-  el.innerHTML = `<div class="photo-thumb place-photo-thumb">${imageSourceBadge(url)}<img src="${escapeHtml(url)}" alt="Kapak önizleme" onerror="this.onerror=null;this.src='/images/icon.svg'" loading="lazy" decoding="async" /></div>`;
+  el.innerHTML = `<div class="photo-thumb place-photo-thumb">${imageSourceBadge(url)}<img src="${escapeHtml(url)}" alt="Kapak önizleme" data-fallback="/images/icon.svg" loading="lazy" decoding="async" /></div>`;
 }
 
 function bindCityImageInput(fileInputId, urlInputId, previewId, hintId) {
@@ -1628,7 +1633,7 @@ function renderExistingPhotos(containerId, photos) {
       ${idx === 0 ? '<span class="adm-img-badge adm-img-badge-cover">Kapak</span>' : ''}
       ${imageSourceBadge(url)}
       <img src="${escapeHtml(url)}" alt="Mevcut görsel ${idx + 1}" loading="lazy" decoding="async" />
-      <button type="button" aria-label="Görseli kaldır" onclick="removeEditPhoto(${idx})">×</button>
+      <button type="button" aria-label="Görseli kaldır" data-act="removeEditPhoto" data-arg="${idx}">×</button>
     </div>`).join('') || '<p style="font-size:.75rem;color:var(--t3);margin:0">Henüz görsel yok.</p>';
 }
 
@@ -1834,7 +1839,7 @@ function openTiolaPreview(id) {
   const item = pendingTiolaCache[id];
   if (!item) return;
   const photoHtml = item.photoUrl
-    ? `<img src="${escapeHtml(item.photoUrl)}" class="adm-tiola-preview-img" role="button" tabindex="0" alt="Tiola fotoğrafı" title="Tıklayın: büyüt" onclick="openAdminLightbox('${escapeHtml(item.photoUrl)}')" onkeydown="if(event.key==='Enter')openAdminLightbox('${escapeHtml(item.photoUrl)}')" loading="lazy" decoding="async" />`
+    ? `<img src="${escapeHtml(item.photoUrl)}" class="adm-tiola-preview-img" role="button" tabindex="0" alt="Tiola fotoğrafı" title="Tıklayın: büyüt" data-act="openAdminLightbox" data-arg="${escapeHtml(item.photoUrl)}" loading="lazy" decoding="async" />`
     : '';
   openModal('Tiola önizleme', `
     ${photoHtml}
@@ -1952,11 +1957,11 @@ async function loadReportsList() {
           </div>
         </div>
         <div class="admin-actions">
-          <button class="btn bo bsm" type="button" onclick="openReportDetail(${r.id})">İncele</button>
-          ${isPending && r.targetType === 'profile' ? `<button class="btn bp bsm" type="button" onclick="openReportProfileRemoveModal(${r.id})">Fotoğrafı kaldır</button>` : ''}
-          ${isPending && r.targetType !== 'profile' ? `<button class="btn bp bsm" type="button" onclick="openReportRemoveModal(${r.id})">İçeriği kaldır</button>` : ''}
-          ${isPending ? `<button class="btn bo bsm" type="button" onclick="dismissReport(${r.id})">Göz ardı et</button>` : ''}
-          ${isResolved ? `<button class="btn bo bsm" type="button" onclick="openReportChangeDecision(${r.id})">Kararı değiştir</button>` : ''}
+          <button class="btn bo bsm" type="button" data-act="openReportDetail" data-arg="${r.id}">İncele</button>
+          ${isPending && r.targetType === 'profile' ? `<button class="btn bp bsm" type="button" data-act="openReportProfileRemoveModal" data-arg="${r.id}">Fotoğrafı kaldır</button>` : ''}
+          ${isPending && r.targetType !== 'profile' ? `<button class="btn bp bsm" type="button" data-act="openReportRemoveModal" data-arg="${r.id}">İçeriği kaldır</button>` : ''}
+          ${isPending ? `<button class="btn bo bsm" type="button" data-act="dismissReport" data-arg="${r.id}">Göz ardı et</button>` : ''}
+          ${isResolved ? `<button class="btn bo bsm" type="button" data-act="openReportChangeDecision" data-arg="${r.id}">Kararı değiştir</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -2013,7 +2018,7 @@ function reportDetailBody(r) {
     ? '<p style="font-size:.82rem;color:var(--t2)">Profil şikayetlerinde <strong>Profil fotoğrafını kaldır</strong>, <strong>Kullanıcı profili</strong> üzerinden engelleme veya uyarı e-postası gönderebilirsiniz.</p>'
     : '';
   const userLink = r.targetUserId
-    ? `<p><strong>İlgili kullanıcı:</strong> <button type="button" class="btn-link" onclick="closeModal();openUserProfile(${r.targetUserId})">${escapeHtml(r.targetUserName || 'Kullanıcı')}</button></p>`
+    ? `<p><strong>İlgili kullanıcı:</strong> <button type="button" class="btn-link" data-before="closeModal" data-act="openUserProfile" data-arg="${r.targetUserId}">${escapeHtml(r.targetUserName || 'Kullanıcı')}</button></p>`
     : '';
   return `
     <p><strong>Tür:</strong> ${escapeHtml(REPORT_TYPE_LABELS[r.targetType] || r.targetType)}</p>
@@ -2144,7 +2149,7 @@ async function openReportChangeDecision(id) {
     openModal('Kararı değiştir', `
       <p style="font-size:.85rem;color:var(--t2)">Mevcut karar: <strong>${escapeHtml(REPORT_ACTION_LABELS[current] || REPORT_STATUS_LABELS[r.status] || r.status)}</strong></p>
       <label class="adm-label-sm full" for="reportNewDecision">Yeni karar</label>
-      <select class="ain full" id="reportNewDecision" onchange="toggleReportChangeReason()">
+      <select class="ain full" id="reportNewDecision" data-act="toggleReportChangeReason">
         <option value="dismiss" ${current === 'dismissed' ? 'selected' : ''}>Göz ardı et / İşlem yok</option>
         <option value="remove" ${current === 'content_removed' ? 'selected' : ''}>İçeriği kaldır</option>
       </select>
@@ -2335,8 +2340,8 @@ function renderUserCard(u) {
   const isSelf = u.id === currentUser?.id;
   const isAdminRole = u.role === 'admin';
   const blockAction = isSelf || isAdminRole ? '' : (u.isBlocked
-    ? `<button class="btn-ok bsm" type="button" aria-label="${escapeHtml(u.name)} engelini kaldır" onclick="toggleUserBlock(${u.id}, false)">Engeli kaldır</button>`
-    : `<button class="btn-no bsm" type="button" aria-label="${escapeHtml(u.name)} engelle" onclick="toggleUserBlock(${u.id}, true)">Engelle</button>`);
+    ? `<button class="btn-ok bsm" type="button" aria-label="${escapeHtml(u.name)} engelini kaldır" data-act="toggleUserBlock" data-arg="${u.id}" data-arg2="false">Engeli kaldır</button>`
+    : `<button class="btn-no bsm" type="button" aria-label="${escapeHtml(u.name)} engelle" data-act="toggleUserBlock" data-arg="${u.id}" data-arg2="true">Engelle</button>`);
   return `
     <div class="admin-card admin-item">
       <div>
@@ -2346,7 +2351,7 @@ function renderUserCard(u) {
         ${u.isBlocked ? ' · <span class="adm-spam-badge">Engelli</span>' : ''}
       </div>
       <div class="admin-actions">
-        <button class="btn-edit bsm" type="button" onclick="openUserProfile(${u.id})">Profili gör</button>
+        <button class="btn-edit bsm" type="button" data-act="openUserProfile" data-arg="${u.id}">Profili gör</button>
         ${blockAction}
       </div>
     </div>`;
@@ -2403,8 +2408,8 @@ function formatPendingProfileChange(c, userId) {
       <div style="margin-top:6px">${profileChangePreview(c)}</div>
     </div>
     <div class="admin-actions">
-      <button class="btn-ok bsm" type="button" onclick="approveProfileChangeFromDetail(${c.id}, ${userId})">Onayla</button>
-      <button class="btn-no bsm" type="button" onclick="rejectProfileChangeFromDetail(${c.id}, ${userId})">Reddet</button>
+      <button class="btn-ok bsm" type="button" data-act="approveProfileChangeFromDetail" data-arg="${c.id}" data-arg2="${userId}">Onayla</button>
+      <button class="btn-no bsm" type="button" data-act="rejectProfileChangeFromDetail" data-arg="${c.id}" data-arg2="${userId}">Reddet</button>
     </div>
   </div>`;
 }
@@ -2527,7 +2532,7 @@ function renderUserDetailTab() {
     `<option value="${r}" ${u.role === r ? 'selected' : ''}>${escapeHtml(ROLE_LABELS[r] || r)}</option>`
   ).join('');
   const pendingCount = u.pendingProfileChanges?.length || 0;
-  const tab = (id, label) => `<button type="button" class="${userDetailTab === id ? 'on' : ''}" onclick="setUserDetailTab('${id}')">${label}</button>`;
+  const tab = (id, label) => `<button type="button" class="${userDetailTab === id ? 'on' : ''}" data-act="setUserDetailTab" data-arg="${id}">${label}</button>`;
 
   body.innerHTML = `
     <div class="adm-user-detail-head">
@@ -2559,7 +2564,7 @@ function renderUserDetailTab() {
       <div class="admin-form" style="margin-bottom:12px">
         <label class="adm-label-sm" for="userDetailRole">Rol</label>
         <select class="ain full" id="userDetailRole">${roleOpts}</select>
-        <button class="btn bp bsm full" type="button" style="margin-top:8px" onclick="saveUserRole(${u.id})">Rolü kaydet</button>
+        <button class="btn bp bsm full" type="button" style="margin-top:8px" data-act="saveUserRole" data-arg="${u.id}">Rolü kaydet</button>
       </div>` : ''}
 
     <div class="adm-user-tabs" role="tablist">
@@ -2571,10 +2576,10 @@ function renderUserDetailTab() {
       ${tab('risk', 'Risk')}
     </div>
     <div class="adm-user-section">${tabContent}</div>
-    ${!isSelf ? `<button class="btn bo bsm full" type="button" style="margin-bottom:8px" onclick="openSendUserEmailModal(${u.id})">Kullanıcıya uyarı e-postası gönder</button>` : ''}
-    ${!isSelf && !isAdminRole && u.avatarUrl ? `<button class="btn bp bsm full" type="button" style="margin-bottom:8px" onclick="openRemoveUserAvatarModal(${u.id})">Profil fotoğrafını kaldır</button>` : ''}
-    ${!isSelf && !isAdminRole ? `<button class="btn bo bsm full" type="button" style="margin-bottom:8px" onclick="openEditUserNameModal(${u.id})">Görünen adı düzenle</button>` : ''}
-    ${!isSelf && !isAdminRole ? `<button class="btn ${u.isBlocked ? 'btn-ok' : 'btn-no'} bsm full" type="button" onclick="toggleUserBlock(${u.id}, ${!u.isBlocked});closeUserDetailPanel();">${u.isBlocked ? 'Engeli kaldır' : 'Kullanıcıyı engelle'}</button>` : ''}`;
+    ${!isSelf ? `<button class="btn bo bsm full" type="button" style="margin-bottom:8px" data-act="openSendUserEmailModal" data-arg="${u.id}">Kullanıcıya uyarı e-postası gönder</button>` : ''}
+    ${!isSelf && !isAdminRole && u.avatarUrl ? `<button class="btn bp bsm full" type="button" style="margin-bottom:8px" data-act="openRemoveUserAvatarModal" data-arg="${u.id}">Profil fotoğrafını kaldır</button>` : ''}
+    ${!isSelf && !isAdminRole ? `<button class="btn bo bsm full" type="button" style="margin-bottom:8px" data-act="openEditUserNameModal" data-arg="${u.id}">Görünen adı düzenle</button>` : ''}
+    ${!isSelf && !isAdminRole ? `<button class="btn ${u.isBlocked ? 'btn-ok' : 'btn-no'} bsm full" type="button" data-then="closeUserDetailPanel" data-act="toggleUserBlock" data-arg="${u.id}" data-arg2="${!u.isBlocked}">${u.isBlocked ? 'Engeli kaldır' : 'Kullanıcıyı engelle'}</button>` : ''}`;
 }
 
 function openSendUserEmailModal(userId) {
@@ -2719,8 +2724,8 @@ async function loadProfilePendingList() {
           <div style="margin-top:8px">${preview}</div>
         </div>
         <div class="admin-actions">
-          <button class="btn-ok bsm" type="button" onclick="approveProfileChange(${r.id})">Onayla</button>
-          <button class="btn-no bsm" type="button" onclick="rejectProfileChange(${r.id})">Reddet</button>
+          <button class="btn-ok bsm" type="button" data-act="approveProfileChange" data-arg="${r.id}">Onayla</button>
+          <button class="btn-no bsm" type="button" data-act="rejectProfileChange" data-arg="${r.id}">Reddet</button>
         </div>
       </div>`;
     }).join('');
@@ -2890,8 +2895,8 @@ async function loadBlogCategoriesList() {
           <td>${c.postCount || 0}</td>
           <td>${c.isActive ? 'Aktif' : 'Pasif'}</td>
           <td>
-            <button class="btn-edit" type="button" onclick="openBlogCategoryEdit(${c.id})">Düzenle</button>
-            <button class="btn-no" type="button" onclick="deleteBlogCategory(${c.id}, '${escapeHtml(c.slug)}')">Sil</button>
+            <button class="btn-edit" type="button" data-act="openBlogCategoryEdit" data-arg="${c.id}">Düzenle</button>
+            <button class="btn-no" type="button" data-act="deleteBlogCategory" data-arg="${c.id}" data-arg2="${escapeHtml(c.slug)}">Sil</button>
           </td>
         </tr>`).join('')}</tbody></table>` : '<p style="color:var(--t3)">Kategori yok.</p>';
     loadBlogCategorySelects();
@@ -3018,9 +3023,9 @@ async function loadBlogPostsList() {
           <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(b.excerpt || '')}</p>
         </div>
         <div class="admin-actions">
-          <button class="btn-edit" type="button" onclick="openBlogEdit(${b.id})">Düzenle</button>
-          ${b.status === 'approved' ? `<button class="btn-no" type="button" onclick="removeBlog(${b.id})">Kaldır</button>` : ''}
-          <button class="btn-no" type="button" onclick="deleteBlogPost(${b.id})">Sil</button>
+          <button class="btn-edit" type="button" data-act="openBlogEdit" data-arg="${b.id}">Düzenle</button>
+          ${b.status === 'approved' ? `<button class="btn-no" type="button" data-act="removeBlog" data-arg="${b.id}">Kaldır</button>` : ''}
+          <button class="btn-no" type="button" data-act="deleteBlogPost" data-arg="${b.id}">Sil</button>
         </div>
       </div>`).join('') : '<p style="color:var(--t3)">Yazı bulunamadı.</p>';
   } catch (e) { wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
@@ -3156,19 +3161,19 @@ async function loadPendingBlogs(page) {
     if (countEl) countEl.textContent = `${bl.total ?? items.length} içerik bulundu`;
     blEl.innerHTML = items.length ? `
       <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <input type="checkbox" onchange="toggleBlogSelectAll(this.checked, false)"/> Tümünü seç
+        <input type="checkbox" data-act="toggleBlogSelectAll" data-arg="this.checked" data-arg2="false"/> Tümünü seç
       </label>
       ${items.map((item) => `
       <div class="admin-card admin-item">
-        <input type="checkbox" class="blog-pending-check adm-mod-check" onchange="toggleBlogSelect(${item.id}, this.checked, false)" aria-label="Seç"/>
+        <input type="checkbox" class="blog-pending-check adm-mod-check" data-act="toggleBlogSelect" data-arg="${item.id}" data-arg2="this.checked" data-arg3="false" aria-label="Seç"/>
         <div style="flex:1"><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.userName)}
           ${item.status === 'spam' ? ' <span class="adm-spam-badge">Spam</span>' : ''}
           <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(item.excerpt || '')}</p>
           <div class="adm-mod-history-wrap" data-content-type="blog" data-content-id="${item.id}"></div></div>
         <div class="admin-actions">
-          <button class="btn-edit" type="button" onclick="openBlogEdit(${item.id})">Düzenle</button>
-          <button class="btn-ok" type="button" onclick="approveBlog(${item.id})">Onayla</button>
-          <button class="btn-no" type="button" onclick="rejectBlog(${item.id})">Reddet</button>
+          <button class="btn-edit" type="button" data-act="openBlogEdit" data-arg="${item.id}">Düzenle</button>
+          <button class="btn-ok" type="button" data-act="approveBlog" data-arg="${item.id}">Onayla</button>
+          <button class="btn-no" type="button" data-act="rejectBlog" data-arg="${item.id}">Reddet</button>
         </div>
       </div>`).join('')}
     ` : '<p style="color:var(--t3)">Bekleyen blog yok.</p>';
@@ -3193,7 +3198,7 @@ async function loadScheduledBlogs() {
           <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(BLOG_STATUS_LABELS[b.status] || b.status)} · Yayın: ${escapeHtml(b.publishedAt || '')}</p>
         </div>
         <div class="admin-actions">
-          <button class="btn-edit" type="button" onclick="openBlogEdit(${b.id})">Düzenle</button>
+          <button class="btn-edit" type="button" data-act="openBlogEdit" data-arg="${b.id}">Düzenle</button>
         </div>
       </div>`).join('') : '<p style="color:var(--t3)">Zamanlanmış blog yok.</p>';
   } catch (e) { el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
@@ -3340,7 +3345,7 @@ async function loadPlacesQualityBar() {
       const count = typeof val === 'object' ? val.count : val;
       const label = (typeof val === 'object' ? val.label : null) || PLACE_ISSUE_LABELS[key] || key;
       if (!count) return '';
-      return `<button type="button" class="btn bo bsm" onclick="openPlacesWithQualityFilter('${key}')">${count} ${escapeHtml(label)}</button>`;
+      return `<button type="button" class="btn bo bsm" data-act="openPlacesWithQualityFilter" data-arg="${key}">${count} ${escapeHtml(label)}</button>`;
     }).filter(Boolean).join(' ');
     el.style.display = chips ? '' : 'none';
     el.innerHTML = chips
@@ -3364,6 +3369,12 @@ function clearPlaceQualityFilter() {
   loadPlacesList();
 }
 
+async function sha256HexFile(file) {
+  const buf = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function downloadDbBackup() {
   if (currentUser?.role !== 'admin') {
     showErr('Tam veritabanı yedeği yalnızca yönetici hesabıyla indirilebilir.');
@@ -3377,7 +3388,8 @@ async function downloadDbBackup() {
     }
     const cd = res.headers.get('Content-Disposition') || '';
     const match = cd.match(/filename="?([^";]+)"?/i);
-    const filename = match ? match[1] : 'touristlio-backup.db';
+    const filename = match ? match[1] : 'touristlio-backup.sql';
+    const checksum = res.headers.get('X-Checksum-SHA256') || '';
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -3385,7 +3397,7 @@ async function downloadDbBackup() {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Veritabanı yedeği indirildi');
+    showToast(checksum ? `Yedek indirildi. SHA-256: ${checksum.slice(0, 12)}…` : 'Veritabanı yedeği indirildi');
   } catch (e) { showErr(e.message); }
 }
 
@@ -3397,26 +3409,29 @@ async function restoreDbBackup() {
   const input = document.getElementById('dbRestoreFile');
   const file = input?.files?.[0];
   if (!file) {
-    showErr('Önce bir .db yedek dosyası seçin.');
+    showErr('Önce bir .sql yedek dosyası seçin.');
     return;
   }
-  if (!/\.db$/i.test(file.name)) {
-    showErr('Yalnızca .db uzantılı SQLite yedek dosyası yüklenebilir.');
+  if (!/touristlio[-_][\w.-]+\.(sql|sql\.enc)$/i.test(file.name) || file.name.includes('..')) {
+    showErr('Dosya adı touristlio-*.sql olmalı; yol karakteri olamaz.');
     return;
   }
-  const okRestore = confirm(
-    'Seçilen yedek tüm site verisini (kullanıcılar, yerler, içerik) değiştirir. Mevcut veritabanı otomatik yedeklenir; işlem sonrası sunucunun yeniden başlatılması gerekir. Devam edilsin mi?'
-  );
-  if (!okRestore) return;
+  const dryRun = !!document.getElementById('dbRestoreDryRun')?.checked;
+  if (!dryRun) {
+    const okRestore = confirm(
+      'Seçilen yedek tüm site verisini (kullanıcılar, yerler, içerik) değiştirir. Önce “yalnızca doğrula” önerilir. Devam edilsin mi?'
+    );
+    if (!okRestore) return;
+  }
   try {
+    const checksum = await sha256HexFile(file);
     const fd = new FormData();
     fd.append('file', file);
+    fd.append('checksum', checksum);
+    fd.append('dryRun', dryRun ? '1' : '0');
     const data = await api('/admin/backup/restore', { method: 'POST', body: fd });
     input.value = '';
-    let msg = data.message || 'Geri yükleme tamamlandı';
-    if (data.needsRestart) msg += ' 30 saniye sonra sayfayı yenileyin.';
-    if (data.preBackup) msg += ` (Önceki DB: ${data.preBackup})`;
-    showToast(msg);
+    showToast(data.message || (dryRun ? 'Doğrulama tamam' : 'Geri yükleme tamamlandı'));
   } catch (e) {
     showErr(e.message);
     input.value = '';
@@ -3480,8 +3495,8 @@ async function loadPlacesList() {
         <td>${escapeHtml(displayLabel(p.category))}</td>
         <td>${escapeHtml(STATUS_LABELS[p.status] || p.status || 'Yayında')}</td>
         <td class="admin-actions">
-          <button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" onclick="openPlaceEdit(${p.id})">Düzenle</button>
-          <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" onclick="confirmDeletePlace(${p.id})">Sil</button>
+          <button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" data-act="openPlaceEdit" data-arg="${p.id}">Düzenle</button>
+          <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" data-act="confirmDeletePlace" data-arg="${p.id}">Sil</button>
         </td>
       </tr>`).join('')}</tbody></table>
       <p style="font-size:.72rem;color:var(--t3);margin-top:8px">Toplam: ${data.total || rows.length}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
@@ -3747,8 +3762,8 @@ async function loadCitiesList() {
         <td>${c.id}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.country)}</td>
         <td>${c.placeCount}</td><td>${c.isActive ? 'Aktif' : 'Pasif'}</td>
         <td class="admin-actions">
-          <button class="btn-edit" type="button" aria-label="${escapeHtml(c.name)} düzenle" onclick="openCityEdit(${c.id})">Düzenle</button>
-          <button class="btn-no" type="button" aria-label="${escapeHtml(c.name)} sil" onclick="confirmDeleteCity(${c.id},'${escapeHtml(c.name)}',${c.placeCount})">Sil</button>
+          <button class="btn-edit" type="button" aria-label="${escapeHtml(c.name)} düzenle" data-act="openCityEdit" data-arg="${c.id}">Düzenle</button>
+          <button class="btn-no" type="button" aria-label="${escapeHtml(c.name)} sil" data-act="confirmDeleteCity" data-arg="${c.id}" data-arg2="${escapeHtml(c.name)}" data-arg3="${c.placeCount}">Sil</button>
         </td></tr>`).join('')}</tbody></table>`;
   } catch (e) { wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
 }
@@ -3876,8 +3891,8 @@ async function loadCategoriesList() {
         <td>${c.isActive ? '<span style="color:#15803d">Aktif</span>' : '<span style="color:#b45309">Pasif</span>'}</td>
         <td>${c.placeCount}</td>
         <td class="admin-actions">
-          <button class="btn-edit" type="button" aria-label="${escapeHtml(c.nameTr)} düzenle" onclick="openCategoryEdit(${c.id})">Düzenle</button>
-          <button class="btn-no" type="button" aria-label="${escapeHtml(c.nameTr)} sil" onclick="confirmDeleteCategory(${c.id},'${escapeHtml(c.slug)}',${c.placeCount})">Sil</button>
+          <button class="btn-edit" type="button" aria-label="${escapeHtml(c.nameTr)} düzenle" data-act="openCategoryEdit" data-arg="${c.id}">Düzenle</button>
+          <button class="btn-no" type="button" aria-label="${escapeHtml(c.nameTr)} sil" data-act="confirmDeleteCategory" data-arg="${c.id}" data-arg2="${escapeHtml(c.slug)}" data-arg3="${c.placeCount}">Sil</button>
         </td></tr>`).join('')}</tbody></table>`;
     const sel = document.getElementById('plCat');
     if (sel) sel.innerHTML = rows.filter((c) => c.isActive).map((c) =>
@@ -4265,7 +4280,7 @@ async function loadAnalytics() {
         const count = typeof val === 'object' ? val.count : val;
         const label = (typeof val === 'object' ? val.label : null) || PLACE_ISSUE_LABELS[key] || key;
         if (!count) return '';
-        return `<button type="button" class="btn bo bsm adm-quality-btn" onclick="openPlacesWithQualityFilter('${key}')">${count} ${escapeHtml(label)}</button>`;
+        return `<button type="button" class="btn bo bsm adm-quality-btn" data-act="openPlacesWithQualityFilter" data-arg="${key}">${count} ${escapeHtml(label)}</button>`;
       };
       qEl.innerHTML = `<h3 class="adm-card-title">İçerik kalitesi</h3>
         <p>Skor: <strong>${quality.score}%</strong> (${quality.total} yer)</p>
@@ -4381,7 +4396,7 @@ async function loadMediaLibrary(page) {
     grid.innerHTML = items.length ? items.map((m) => `
       <div class="adm-media-item">
         <img src="${escapeHtml(m.url)}" alt="${escapeHtml(m.filename)}" loading="lazy"/>
-        <button type="button" class="adm-media-del" onclick="confirmDeleteMedia('${escapeHtml(m.path)}')">Sil</button>
+        <button type="button" class="adm-media-del" data-act="confirmDeleteMedia" data-arg="${escapeHtml(m.path)}">Sil</button>
         <div class="adm-media-meta">${escapeHtml(m.filename)}${m.placeId ? `<br>Yer #${m.placeId}` : ''}</div>
       </div>`).join('') : '<p style="color:var(--t3)">Medya bulunamadı.</p>';
     renderPagination('mediaPagination', mediaPage, data.total || 0, data.limit || 24, 'loadMediaLibrary');
@@ -4417,7 +4432,7 @@ async function loadBannedWords() {
       <tbody>${words.map((w) => `<tr>
         <td><code>${escapeHtml(w.word)}</code></td>
         <td style="font-size:.75rem">${escapeHtml(w.addedByName || '—')}</td>
-        <td><button class="btn-no bsm" type="button" onclick="deleteBannedWord(${w.id})">Sil</button></td>
+        <td><button class="btn-no bsm" type="button" data-act="deleteBannedWord" data-arg="${w.id}">Sil</button></td>
       </tr>`).join('')}</tbody></table>` : '<p style="color:var(--t3)">Yasaklı kelime yok.</p>';
   } catch (e) { el.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
 }
@@ -4641,9 +4656,9 @@ function renderPagination(elId, page, total, limit, onPage) {
   const pages = Math.max(Math.ceil(total / limit), 1);
   if (pages <= 1) { el.innerHTML = ''; return; }
   let html = '';
-  if (page > 1) html += `<button class="btn bo bsm" type="button" onclick="${onPage}(${page - 1})">←</button>`;
+  if (page > 1) html += `<button class="btn bo bsm" type="button" data-act="${onPage}" data-arg="${page - 1}">←</button>`;
   html += `<span style="font-size:.78rem;color:var(--t2);padding:0 8px">Sayfa ${page} / ${pages}</span>`;
-  if (page < pages) html += `<button class="btn bo bsm" type="button" onclick="${onPage}(${page + 1})">→</button>`;
+  if (page < pages) html += `<button class="btn bo bsm" type="button" data-act="${onPage}" data-arg="${page + 1}">→</button>`;
   el.innerHTML = html;
 }
 
@@ -4693,22 +4708,22 @@ function renderTiolaItem(item, showBulk) {
   const checked = modSelected.has(item.id);
   return `
     <div class="admin-card admin-item">
-      ${showBulk ? `<input type="checkbox" class="adm-mod-check" ${checked ? 'checked' : ''} onchange="toggleModSelect(${item.id}, this.checked)" aria-label="Seç"/>` : ''}
+      ${showBulk ? `<input type="checkbox" class="adm-mod-check" ${checked ? 'checked' : ''} data-act="toggleModSelect" data-arg="${item.id}" data-arg2="this.checked" aria-label="Seç"/>` : ''}
       <div class="adm-tiola-main">
-        ${item.photoUrl ? `<img src="${escapeHtml(item.photoUrl)}" alt="Tiola fotoğrafı" class="adm-tiola-thumb" role="button" tabindex="0" onclick="openAdminLightbox('${escapeHtml(item.photoUrl)}')" loading="lazy" decoding="async" />` : ''}
+        ${item.photoUrl ? `<img src="${escapeHtml(item.photoUrl)}" alt="Tiola fotoğrafı" class="adm-tiola-thumb" role="button" tabindex="0" data-act="openAdminLightbox" data-arg="${escapeHtml(item.photoUrl)}" loading="lazy" decoding="async" />` : ''}
         <div class="adm-tiola-body">
           <div><strong>${escapeHtml(item.userName)}</strong> · ${escapeHtml(item.placeName)}${item.status === 'spam' ? ' · <span class="adm-spam-badge">Spam</span>' : ''}</div>
           ${item.stars ? `<div style="color:var(--star)">${'★'.repeat(item.stars)}</div>` : ''}
           <p class="adm-tiola-snippet">${escapeHtml(item.text.length > 140 ? item.text.slice(0, 140) + '…' : item.text)}</p>
-          <button type="button" class="btn bo bsm adm-preview-btn" onclick="openTiolaPreview(${item.id})">Önizle</button>
+          <button type="button" class="btn bo bsm adm-preview-btn" data-act="openTiolaPreview" data-arg="${item.id}">Önizle</button>
           <div class="adm-mod-history-wrap" data-content-type="tiola" data-content-id="${item.id}"></div>
         </div>
       </div>
       <div class="admin-actions">
         ${modFilter === 'pending' ? `
-          <button class="btn-ok" type="button" onclick="approveTiola(${item.id})">Onayla</button>
-          <button class="btn-no" type="button" onclick="rejectTiola(${item.id})">Reddet</button>` : `
-          <button class="btn-no" type="button" onclick="removeTiola(${item.id})">Kaldır</button>`}
+          <button class="btn-ok" type="button" data-act="approveTiola" data-arg="${item.id}">Onayla</button>
+          <button class="btn-no" type="button" data-act="rejectTiola" data-arg="${item.id}">Reddet</button>` : `
+          <button class="btn-no" type="button" data-act="removeTiola" data-arg="${item.id}">Kaldır</button>`}
       </div>
     </div>`;
 }
@@ -4736,7 +4751,7 @@ async function loadPendingTiolas(page) {
     } else {
       tiEl.innerHTML = `
         <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <input type="checkbox" onchange="toggleModSelectAll(this.checked)"/> Tümünü seç
+          <input type="checkbox" data-act="toggleModSelectAll" data-arg="this.checked"/> Tümünü seç
         </label>
         ${items.map((item) => renderTiolaItem(item, true)).join('')}`;
     }
@@ -4818,7 +4833,7 @@ async function loadApprovedTiolas(page) {
     } else {
       el.innerHTML = `
         <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <input type="checkbox" onchange="toggleModSelectAll(this.checked)"/> Tümünü seç
+          <input type="checkbox" data-act="toggleModSelectAll" data-arg="this.checked"/> Tümünü seç
         </label>
         ${items.map((item) => renderTiolaItem(item, true)).join('')}`;
     }
@@ -4853,11 +4868,11 @@ async function loadApprovedBlogs(page) {
     if (countEl) countEl.textContent = `${data.total ?? items.length} içerik bulundu`;
     el.innerHTML = items.length ? `
       <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <input type="checkbox" onchange="toggleBlogSelectAll(this.checked, true)"/> Tümünü seç
+        <input type="checkbox" data-act="toggleBlogSelectAll" data-arg="this.checked" data-arg2="true"/> Tümünü seç
       </label>
       ${items.map((item) => `
       <div class="admin-card admin-item">
-        <input type="checkbox" class="blog-approved-check adm-mod-check" onchange="toggleBlogSelect(${item.id}, this.checked, true)" aria-label="Seç"/>
+        <input type="checkbox" class="blog-approved-check adm-mod-check" data-act="toggleBlogSelect" data-arg="${item.id}" data-arg2="this.checked" data-arg3="true" aria-label="Seç"/>
         <div style="flex:1">
           <strong>${escapeHtml(item.title)}</strong>
           <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(item.userName || '')} · ${escapeHtml(item.publishedAt || item.createdAt || '')}</p>
@@ -4865,7 +4880,7 @@ async function loadApprovedBlogs(page) {
           <div class="adm-mod-history-wrap" data-content-type="blog" data-content-id="${item.id}"></div>
         </div>
         <div class="admin-actions">
-          <button class="btn-no" type="button" onclick="removeBlog(${item.id})">Kaldır</button>
+          <button class="btn-no" type="button" data-act="removeBlog" data-arg="${item.id}">Kaldır</button>
         </div>
       </div>`).join('')}
     ` : '<p style="color:var(--t3)">Yayında blog bulunamadı.</p>';

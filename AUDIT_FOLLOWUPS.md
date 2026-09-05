@@ -2,6 +2,24 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Gemini Sprint 1 (güvenlik / veri bütünlüğü)
+
+Gemini “Faz 2: Güvenlik ve Veri Bütünlüğü (Sprint 1)”. Express + vanilla JS. Tasarım yok.
+
+1. **Admin yedek** — İndirme/geri yükleme dosya adı allowlist (`touristlio-*.sql`); `..` ve mutlak yol reddedilir. SHA-256 (`X-Checksum-SHA256` + sidecar). Geri yükleme checksum şart; `dryRun` dump’ı doğrular, uygulamaz. Şifreleme yalnızca mevcut `BACKUP_ENCRYPTION_KEY` (≥32, placeholder değil) ile AES-256-GCM; yeni anahtar uydurulmadı. İsimli dosya varsa mevcut Supabase Storage `createSignedUrl` (`backups/` prefix).
+2. **Sharp** — EXIF silme, 1920×1080, WebP, magic byte duruyor (YÜKSEK-3 / Faz 1). AVIF eklenmedi.
+3. **CSP** — `onclick`/`onchange`/`oninput`/`onerror` → `data-act` + `bind-actions.js`. Nonce duruyor. `script-src-attr 'unsafe-inline'` kalktı (`'none'`).
+
+`npm run verify:sprint1` (+ `verify:csp` / `verify:images` / `verify:filters`).
+
+### Leftover
+- Canlı yedek **ephemeral**: `GET /backup/download` anlık `pg_dump` (Render disk kalıcı değil). Kalıcı kopya = Supabase Dashboard Backups veya `npm run backup:db` çıktısını dışarı taşımak.
+- Uploads bucket yalnızca görsel MIME kabul eder; `.sql` oraya yazılmıyor. Yeni S3/bucket açılmadı. İleride ayrı private bucket + `createSignedUrl` mümkün.
+- `BACKUP_ENCRYPTION_KEY` boşsa dump düz SQL. Render’da uzun rastgele değer yoksa şifreleme kapalı kalır.
+- Eski SQLite `.db` geri yükleme yok (Postgres `.sql`).
+- `style-src` / `style-src-attr` hâlâ `'unsafe-inline'` (kritik CSS + `style=""`).
+- AVIF yok (eski tarayıcı + `picture`/kart oranı).
+
 ## Gemini Sprint 0 (logic / API — tasarım yok)
 
 Gemini “2. GÜVENLİ VE ONAYLI GELİŞTİRMELER”. Express + vanilla JS. Next.js SSR yok.
@@ -48,7 +66,7 @@ Canlı + kod taraması. Tat değil, doğrulanmış hatalar.
 - noindex sayfalarda hreflang yok.
 - `npm run verify:audit` (+ `verify:sitemap` / `verify:og` / `verify:links` / `verify:cache`).
 
-Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, ekstra rozet); hava chip’leri; hero 16/9; CSP `script-src-attr`; Instagram `sameAs`; `/admin` HTML herkese açık (API kilitli); GA4/reCAPTCHA/SMTP env Yasin’de.
+Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, ekstra rozet); hava chip’leri; hero 16/9; Instagram `sameAs`; `/admin` HTML herkese açık (API kilitli); GA4/reCAPTCHA/SMTP env Yasin’de. CSP `script-src-attr` Sprint 1’de kalktı.
 
 ## KRİTİK-1 (veri)
 - Canlı Render DB hâlâ boş olabilir: `places.json` deploy edilmeli; Render Free disk kalıcı değil.
@@ -113,7 +131,7 @@ Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, e
 
 - Tamamlandı: `script-src` artık `'unsafe-inline'` içermiyor. Her istekte rastgele nonce (`cspNonceMiddleware`), HTML gönderilirken inline `<script>` (JSON-LD dahil) o nonce’u alıyor.
 - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` eklendi.
-- **Leftover:** `script-src-attr 'unsafe-inline'` duruyor. `index.html` / `admin.html` içinde ~220 `onclick`/`onchange`; nonce attribute’ları kapsamıyor. Ayrı refactor.
+- Sprint 1: `script-src-attr 'unsafe-inline'` kaldırıldı (`bind-actions.js` + `data-act`).
 - `style-src` / `style-src-attr` hâlâ `'unsafe-inline'` (kritik CSS + admin `style=""`).
 - Canlıda sorun: Render env `CSP_REPORT_ONLY=true` → engellemez, yalnızca raporlar. `CSP_FORCE=true` development’ta politikayı açar.
 - `npm run verify:csp`

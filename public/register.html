@@ -28,11 +28,12 @@
   </div>
   <label class="kvkk-check"><input type="checkbox" id="gC"/> <span><a href="/legal/kvkk.html" target="_blank" rel="noopener" data-i18n="legalKvkk">KVKK</a> · <a href="/legal/terms.html" target="_blank" rel="noopener" data-i18n="termsShort">Kullanım Şartları</a> — <span data-i18n="authAccept">kabul ediyorum</span></span></label>
   <p id="authFormError" class="auth-inline-error" hidden></p>
-  <button class="btn bp" id="regSubmit" type="button" onclick="doReg()" data-i18n="authCreate">Hesap Oluştur</button>
+  <button class="btn bp" id="regSubmit" type="button" data-act="doReg" data-i18n="authCreate">Hesap Oluştur</button>
   <p class="auth-page-link"><span data-i18n="hasAccount">Zaten hesabınız var mı?</span> <a href="/login" data-i18n="login">Giriş Yap</a></p>
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/bind-actions.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>

@@ -243,7 +243,7 @@ function renderLikeBar(targetType, targetId, count, likedByMe, opts = {}) {
   const liked = likedByMe ? ' liked' : '';
   const fn = targetType === 'blog' ? 'toggleBlogLike' : 'toggleTiolaLike';
   return `<div class="tiola-like-bar">
-    <button type="button" class="tiola-like-btn${liked}" onclick="event.stopPropagation();${fn}(${targetId},this)" aria-label="${t('profileStatLikes')}">
+    <button type="button" class="tiola-like-btn${liked}" data-stop data-act="${fn}" data-el data-arg="${targetId}" aria-label="${t('profileStatLikes')}">
       <span class="tiola-like-emoji">${likedByMe ? '❤️' : '🤍'}</span>
       <span class="tiola-like-count">${count || 0}</span>
     </button>
@@ -362,7 +362,7 @@ function renderProfileChip(userId, userName, avUser, sizeClass = 'tiola-mini') {
   const name = escapeHtml(userName || '');
   if (!userId) return `<strong>${name}</strong>`;
   const avHtml = window.TL_AVATARS?.renderHtml(avUser || { name: userName }, sizeClass) || '';
-  return `<button type="button" class="profile-chip-btn" onclick="event.stopPropagation();navigateToProfile(${userId}, event)" aria-label="${name} profili">
+  return `<button type="button" class="profile-chip-btn" data-stop data-act="navigateToProfile" data-event data-arg="${userId}" aria-label="${name} profili">
     ${avHtml ? `<span class="tl-avatar-wrap">${avHtml}</span>` : ''}
     <span class="profile-chip-name">${name}</span>
   </button>`;
@@ -460,7 +460,7 @@ function ensurePublicProfileOverlay() {
   ov.className = 'auth-ov';
   ov.innerHTML = `
     <div class="auth-box public-prof-box" role="dialog" aria-labelledby="publicProfTitle">
-      <button type="button" class="aclose" onclick="closePublicProfile()" aria-label="Kapat">✕</button>
+      <button type="button" class="aclose" data-act="closePublicProfile" aria-label="Kapat">✕</button>
       <h3 id="publicProfTitle" class="report-title">Profil</h3>
       <div id="publicProfBody"></div>
     </div>`;
@@ -492,17 +492,17 @@ async function loadCategoryMeta() {
 
 function buildExploreFiltersHtml() {
   const allOn = activeFilterGroup === 'all' && activeCat === 'all';
-  let html = `<button type="button" class="fpill${allOn ? ' on' : ''}" data-kind="all" data-filter="all" onclick="setExploreFilter('all',this)">${t('all')}</button>`;
+  let html = `<button type="button" class="fpill${allOn ? ' on' : ''}" data-kind="all" data-filter="all" data-act="setExploreFilter" data-el data-arg="all">${t('all')}</button>`;
   (categoryMeta.groups || []).forEach((g) => {
     const label = t(GROUP_I18N[g] || g);
     const on = activeFilterGroup === g ? ' on' : '';
-    html += `<button type="button" class="fpill fpill-group${on}" data-kind="group" data-filter="${escapeHtml(g)}" onclick="setExploreFilter('group:${escapeHtml(g)}',this)">${escapeHtml(label)}</button>`;
+    html += `<button type="button" class="fpill fpill-group${on}" data-kind="group" data-filter="${escapeHtml(g)}" data-act="setExploreFilter" data-el data-arg="group:${escapeHtml(g)}">${escapeHtml(label)}</button>`;
   });
   (categoryMeta.categories || []).forEach((c) => {
     const label = lang === 'en' ? c.nameEn : c.nameTr;
     const icon = c.icon ? `${c.icon} ` : '';
     const on = activeFilterGroup === 'all' && activeCat === c.slug ? ' on' : '';
-    html += `<button type="button" class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" onclick="setExploreFilter('cat:${escapeHtml(c.slug)}',this)">${icon}${escapeHtml(label)}</button>`;
+    html += `<button type="button" class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" data-act="setExploreFilter" data-el data-arg="cat:${escapeHtml(c.slug)}">${icon}${escapeHtml(label)}</button>`;
   });
   return html;
 }
@@ -529,7 +529,7 @@ function renderCategoryCards() {
   grid.innerHTML = (categoryMeta.categories || []).map((c) => {
     const label = lang === 'en' ? c.nameEn : c.nameTr;
     return `
-      <div class="ccard" data-cat="${c.slug}" onclick="setCatAndSwitch('${c.slug}')">
+      <div class="ccard" data-cat="${c.slug}" data-act="setCatAndSwitch" data-arg="${c.slug}">
         ${responsiveImg(categoryImage(c.slug, c.imageUrl), { kind: 'card' })}
         <div class="cinfo">
           <div class="cname">${escapeHtml(label)}</div>
@@ -780,7 +780,7 @@ function renderFaqAccordion(p) {
   box.style.display = 'block';
   box.innerHTML = `<h2 data-i18n="faqTitle">❓ SSS</h2>` + faq.map((item, i) => `
     <div class="faq-item">
-      <button type="button" class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}" id="faq-q-${i}" onclick="toggleFaq(${i})">${escapeHtml(item.q)}</button>
+      <button type="button" class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}" id="faq-q-${i}" data-act="toggleFaq" data-arg="${i}">${escapeHtml(item.q)}</button>
       <div class="faq-a" id="faq-a-${i}" role="region" aria-labelledby="faq-q-${i}" hidden>${escapeHtml(item.a)}</div>
     </div>`).join('');
   window.TL_I18N.apply(lang);
@@ -805,8 +805,8 @@ function renderNearbyCards(list) {
       ? ` · <span class="st">${s.stars}</span> ${s.num} (${s.count})`
       : ` · <span class="rn-empty">${escapeHtml(s.emptyLabel)}</span>`;
     return `
-    <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail(${x.id})">
-      ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
+    <div class="nearby-item" data-act="openDetail" data-arg="${x.id}" role="button" tabindex="0">
+      ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `data-img-fallback data-fallback-cat="${x.category}" data-fallback-id="${x.id}"` })}
       <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${x.distanceKm != null ? ` · ${x.distanceKm} km` : ''}${scoreBit}</div></div>
     </div>`;
   }).join('') || `<p class="empty-hint">${t('nearbyEmpty')}</p>`;
@@ -821,8 +821,8 @@ function renderSimilarCards(list) {
       ? ` · <span class="st">${s.stars}</span> ${s.num} (${s.count})`
       : ` · <span class="rn-empty">${escapeHtml(s.emptyLabel)}</span>`;
     return `
-    <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0">
-      ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
+    <div class="nearby-item" data-act="openDetail" data-arg="${x.id}" role="button" tabindex="0">
+      ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `data-img-fallback data-fallback-cat="${x.category}" data-fallback-id="${x.id}"` })}
       <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${scoreBit}</div></div>
     </div>`;
   }).join('') || `<p class="empty-hint">${t('similarEmpty')}</p>`;
@@ -1060,19 +1060,19 @@ function renderGrid(list, append = false) {
   if (hintEl) {
     if (cardsLoaded && !list.length && lastOsmHint) {
       hintEl.style.display = 'block';
-      hintEl.innerHTML = `<p>${t('mapExploreHint')}</p><button type="button" class="btn bo bsm" onclick="exploreOnMap()">${t('mapExploreBtn')}</button>`;
+      hintEl.innerHTML = `<p>${t('mapExploreHint')}</p><button type="button" class="btn bo bsm" data-act="exploreOnMap">${t('mapExploreBtn')}</button>`;
     } else {
       hintEl.style.display = 'none';
       hintEl.innerHTML = '';
     }
   }
   const html = list.map((p) => `
-    <div class="pc" tabindex="0" role="link" onclick="openDetail(${p.id})">
+    <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
       <div class="pc-img">
-        ${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
+        ${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
         <div class="pc-badge">${catLabel(p.category)}</div>
         ${p.isLocal ? `<div class="pc-local">${t('localPick')}</div>` : ''}
-        <button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, savedIds.has(p.id))}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" onclick="event.stopPropagation();toggleSave(${p.id},this)">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
+        <button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, savedIds.has(p.id))}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" data-stop data-act="toggleSave" data-el data-arg="${p.id}">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
       </div>
       <div class="pc-body">
         <div class="pc-loc">📍 ${escapeHtml(geoText(p.location))}</div>
@@ -1131,7 +1131,7 @@ function renderExplorePagination() {
       if (item === '…') return '<span class="page-ellipsis" aria-hidden="true">…</span>';
       const on = Number(item) === Number(placesPage) ? ' on' : '';
       const current = on ? ' aria-current="page"' : '';
-      return `<button type="button" class="btn bo bsm page-num${on}" data-page="${item}" onclick="goToPlacesPage(${item})"${current}>${item}</button>`;
+      return `<button type="button" class="btn bo bsm page-num${on}" data-page="${item}" data-act="goToPlacesPage" data-arg="${item}"${current}>${item}</button>`;
     }).join('');
   }
 }
@@ -1398,7 +1398,7 @@ function onSearch(val) {
       const data = await api('/places/search?q=' + encodeURIComponent(q) + '&limit=7');
       const res = data.places;
       if (!res.length) {
-        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" onclick="exploreOnMap()">${t('mapExploreBtn')}</button></div>`;
+        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" data-act="exploreOnMap">${t('mapExploreBtn')}</button></div>`;
       } else {
         drop.innerHTML = res.map((p) => {
           const s = formatTiolaScore(p);
@@ -1406,8 +1406,8 @@ function onSearch(val) {
             ? `${s.stars} ${s.num} (${s.count} ${t('tiolaCount')})`
             : escapeHtml(s.emptyLabel);
           return `
-          <div class="sd-item" tabindex="0" role="option" onmousedown="pickSearch(${p.id})" onclick="pickSearch(${p.id})">
-            ${responsiveImg(placeImg(p), { alt: p.name, className: 'sd-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
+          <div class="sd-item" tabindex="0" role="option" data-act-mousedown="pickSearch" data-arg="${p.id}" data-act="pickSearch" data-arg="${p.id}">
+            ${responsiveImg(placeImg(p), { alt: p.name, className: 'sd-img', kind: 'thumb', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
             <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(geoText(p.location))}</div>
             <div class="sd-rat">${scoreHtml}</div></div>
           </div>`;
@@ -1840,7 +1840,7 @@ function renderTiolaCard(ti) {
   const photoHtml = renderTiolaPhotoHtml(ti);
   const noPhotoClass = photoHtml ? '' : ' tiola-card--no-photo';
   return `
-    <div class="tiola-card${noPhotoClass}" data-content-type="tiola" data-content-id="${ti.id}" ${ti.placeId && ti.status === 'approved' ? `onclick="openDetail(${ti.placeId})"` : ''}>
+    <div class="tiola-card${noPhotoClass}" data-content-type="tiola" data-content-id="${ti.id}" ${ti.placeId && ti.status === 'approved' ? `data-act="openDetail" data-arg="${ti.placeId}"` : ''}>
       ${photoHtml}
       <div class="tiola-body">
         <div class="tiola-hd">
@@ -1848,24 +1848,24 @@ function renderTiolaCard(ti) {
             ${profileChip}
             <span class="tiola-date">· ${formatDate(ti.createdAt)} ${statusBadge}</span>
           </div>
-          ${menuBtn ? `<div class="tiola-card-menu" onclick="event.stopPropagation()">${menuBtn}</div>` : ''}
+          ${menuBtn ? `<div class="tiola-card-menu" data-stop>${menuBtn}</div>` : ''}
         </div>
         <div>${place}</div>
         ${ti.stars ? `<div class="tiola-stars">${stars(ti.stars)}</div>` : ''}
         <div class="tiola-txt">${escapeHtml(ti.text)}</div>
         ${rejectionNote}
         ${ti.status === 'approved' ? `
-          <div class="tiola-actions-row" onclick="event.stopPropagation()">
+          <div class="tiola-actions-row" data-stop>
             ${renderLikeBar('tiola', ti.id, ti.likeCount, ti.likedByMe)}
-            ${ti.replyCount ? `<button type="button" class="tiola-reply-toggle" onclick="loadTiolaReplies(${ti.id},'tiola-replies-${ti.id}')">${ti.replyCount} ${t('replies')}</button>` : ''}
-            <button type="button" class="tiola-reply-toggle" onclick="toggleReplyForm(${ti.id})">${t('replyBtn')}</button>
+            ${ti.replyCount ? `<button type="button" class="tiola-reply-toggle" data-act="loadTiolaReplies" data-arg="${ti.id}" data-arg2="tiola-replies-${ti.id}">${ti.replyCount} ${t('replies')}</button>` : ''}
+            <button type="button" class="tiola-reply-toggle" data-act="toggleReplyForm" data-arg="${ti.id}">${t('replyBtn')}</button>
           </div>
-          <div class="tiola-reply-form" id="reply-form-${ti.id}" style="display:none" onclick="event.stopPropagation()">
+          <div class="tiola-reply-form" id="reply-form-${ti.id}" style="display:none" data-stop>
             <label class="sr-only" for="reply-txt-${ti.id}">${t('replyPlaceholder')}</label>
             <textarea class="rft tiola-reply-inp" id="reply-txt-${ti.id}" rows="2" placeholder="${t('replyPlaceholder')}"></textarea>
-            <button type="button" class="btn bp bsm" onclick="submitTiolaReply(${ti.id},${ti.placeId || 'null'})">${t('sendReply')}</button>
+            <button type="button" class="btn bp bsm" data-act="submitTiolaReply" data-arg="${ti.id}" data-arg2="${ti.placeId || 'null'}">${t('sendReply')}</button>
           </div>
-          <div class="tiola-replies-wrap" id="tiola-replies-${ti.id}" style="display:none" onclick="event.stopPropagation()"></div>
+          <div class="tiola-replies-wrap" id="tiola-replies-${ti.id}" style="display:none" data-stop></div>
         ` : ''}
       </div>
     </div>`;
@@ -2302,20 +2302,20 @@ async function renderRevList() {
           ${profileChip}
           <span class="ridt">${formatDate(r.createdAt)}</span>
         </div>
-        ${menuBtn ? `<div class="ri-menu" onclick="event.stopPropagation()">${menuBtn}</div>` : ''}
+        ${menuBtn ? `<div class="ri-menu" data-stop>${menuBtn}</div>` : ''}
       </div>
       ${r.stars ? `<div class="ristars ri-stars">${stars(r.stars)}</div>` : ''}
       ${renderTiolaPhotoHtml(r, 'ri-photo')}
       <div class="ritxt">${escapeHtml(r.text)}</div>
-      <div class="tiola-actions-row" onclick="event.stopPropagation()">
+      <div class="tiola-actions-row" data-stop>
         ${renderLikeBar('tiola', r.id, r.likeCount, r.likedByMe)}
-        ${r.replyCount ? `<button type="button" class="tiola-reply-toggle" onclick="loadTiolaReplies(${r.id},'rev-replies-${r.id}')">${r.replyCount} ${t('replies')}</button>` : ''}
-        <button type="button" class="tiola-reply-toggle" onclick="toggleReplyForm(${r.id})">${t('replyBtn')}</button>
+        ${r.replyCount ? `<button type="button" class="tiola-reply-toggle" data-act="loadTiolaReplies" data-arg="${r.id}" data-arg2="rev-replies-${r.id}">${r.replyCount} ${t('replies')}</button>` : ''}
+        <button type="button" class="tiola-reply-toggle" data-act="toggleReplyForm" data-arg="${r.id}">${t('replyBtn')}</button>
       </div>
-      <div class="tiola-reply-form" id="reply-form-${r.id}" style="display:none" onclick="event.stopPropagation()">
+      <div class="tiola-reply-form" id="reply-form-${r.id}" style="display:none" data-stop>
         <label class="sr-only" for="reply-txt-${r.id}">${t('replyPlaceholder')}</label>
         <textarea class="rft tiola-reply-inp" id="reply-txt-${r.id}" rows="2" placeholder="${t('replyPlaceholder')}"></textarea>
-        <button type="button" class="btn bp bsm" onclick="submitTiolaReply(${r.id},${activePlace.id})">${t('sendReply')}</button>
+        <button type="button" class="btn bp bsm" data-act="submitTiolaReply" data-arg="${r.id}" data-arg2="${activePlace.id}">${t('sendReply')}</button>
       </div>
       <div class="tiola-replies-wrap" id="rev-replies-${r.id}" style="display:none"></div>
     </div>`;
@@ -2363,7 +2363,7 @@ function updateRevForm() {
     if (!user) {
       av.textContent = '?'; nm.textContent = t('notLoggedIn'); tp.textContent = '';
       if (me) me.style.display = 'none';
-      nt.innerHTML = `<a href="/login" onclick="openAuth();return false;">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
+      nt.innerHTML = `<a href="/login" data-prevent data-act="openAuth">${t('loginToTiola')}</a> ${t('loginToTiolaNote')}`;
       setTiolaFormActive(false);
     } else {
       window.TL_AVATARS?.applyToElement(av, user);
@@ -2448,8 +2448,8 @@ async function loadBlogPage() {
     if (chips) {
       const allLabel = page.catAll || t('blogCatAll');
       const cats = blogMeta.categories || [];
-      chips.innerHTML = `<button type="button" class="bcat-chip ${blogCat === 'all' ? 'on' : ''}" onclick="setBlogCat('all',this)">${escapeHtml(allLabel)}</button>`
-        + cats.map((c) => `<button type="button" class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" onclick="setBlogCat('${escapeHtml(c.slug)}',this)">${escapeHtml(c.label || c.nameTr)}</button>`).join('');
+      chips.innerHTML = `<button type="button" class="bcat-chip ${blogCat === 'all' ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="all">${escapeHtml(allLabel)}</button>`
+        + cats.map((c) => `<button type="button" class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="${escapeHtml(c.slug)}">${escapeHtml(c.label || c.nameTr)}</button>`).join('');
     }
     const writeCat = document.getElementById('blogCat');
     if (writeCat && blogMeta.categories?.length) {
@@ -2493,7 +2493,7 @@ async function renderBlog() {
       const dateStr = formatDate(b.publishedAt || b.createdAt);
       const dateIso = b.publishedAt || b.createdAt || '';
       return `
-      <a class="bcard${isFeat ? ' feat' : ''}" href="${escapeHtml(href)}" data-content-type="blog" data-content-id="${b.id}" onclick="event.preventDefault();openBlogDetail('${slugAttr}')">
+      <a class="bcard${isFeat ? ' feat' : ''}" href="${escapeHtml(href)}" data-content-type="blog" data-content-id="${b.id}" data-prevent data-act="openBlogDetail" data-arg="${slugAttr}">
         ${responsiveImg(safeUrl(b.imageUrl) || placeImg({ category: displayLabel(b.category) || 'guide', id: b.id }), { className: 'bimg', kind: 'card' })}
         ${b.featured ? `<div class="bfeat-badge">${escapeHtml(labels.featuredLbl)}</div>` : ''}
         <div class="bbody">
@@ -2501,7 +2501,7 @@ async function renderBlog() {
           <div class="btitle">${escapeHtml(b.title)}</div>
           <div class="bexc">${escapeHtml(b.excerpt || '')}</div>
           <div class="bmeta"><div class="bauthor">${authorChip}</div>${dateStr ? `<time class="bdate" datetime="${escapeHtml(dateIso)}">${escapeHtml(dateStr)}</time>` : ''}</div>
-          <div class="tiola-actions-row bcard-actions-row" onclick="event.stopPropagation();event.preventDefault()">
+          <div class="tiola-actions-row bcard-actions-row" data-stop data-prevent>
             ${renderLikeBar('blog', b.id, b.likeCount, b.likedByMe, { countOnly: true })}
             ${menuBtn}
           </div>
@@ -2550,8 +2550,8 @@ async function openBlogDetail(slug, skipRoute) {
       ${b.excerpt ? `<p style="color:var(--t2);font-size:.85rem;margin-bottom:12px">${escapeHtml(b.excerpt)}</p>` : ''}
       <div class="bd-body">${escapeHtml(b.body || '')}</div>
       ${tags ? `<div class="bd-tags">${tags}</div>` : ''}
-      ${b.placeId ? `<p style="margin-top:16px"><button class="btn bp bsm" type="button" onclick="closeBlogDetail();openDetail(${b.placeId})">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
-      <div class="tiola-actions-row bd-like-row" onclick="event.stopPropagation()">
+      ${b.placeId ? `<p style="margin-top:16px"><button class="btn bp bsm" type="button" data-before="closeBlogDetail" data-act="openDetail" data-arg="${b.placeId}">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
+      <div class="tiola-actions-row bd-like-row" data-stop>
         ${renderLikeBar('blog', b.id, b.likeCount, b.likedByMe)}
         ${menuBtn}
       </div>
@@ -2732,7 +2732,7 @@ async function updateProfilePage() {
       else {
         if (ve) ve.style.display = 'none';
         vg.innerHTML = visited.places.map((p) => `
-          <div class="pc" tabindex="0" role="link" onclick="openDetail(${p.id})">
+          <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
             <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card' })}</div>
             <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${p.visitedAt || ''}</div></div>
           </div>`).join('');
@@ -2779,8 +2779,8 @@ async function updateProfilePage() {
   else {
     se.style.display = 'none';
     sg.innerHTML = saved.places.map((p) => `
-      <div class="pc" tabindex="0" role="link" onclick="openDetail(${p.id})">
-        <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}<button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, true)}" aria-pressed="true" onclick="event.stopPropagation();toggleSave(${p.id},this)">❤️</button></div>
+      <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
+        <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}<button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, true)}" aria-pressed="true" data-stop data-act="toggleSave" data-el data-arg="${p.id}">❤️</button></div>
         <div class="pc-body"><div class="pc-name">${p.name}</div></div>
       </div>`).join('');
   }
@@ -3125,8 +3125,8 @@ function buildAuthForm(m) {
        <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}" autocomplete="current-password"/>
        <p id="authFormError" class="auth-inline-error" hidden></p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
-       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px;margin-top:2px" onclick="doLoginSubmit()">${t('login')}</button>
-       <p class="auth-page-link" style="margin-top:10px"><button type="button" class="link-btn" onclick="doForgotPassword()">${t('forgotPassword')}</button></p>`
+       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px;margin-top:2px" data-act="doLoginSubmit">${t('login')}</button>
+       <p class="auth-page-link" style="margin-top:10px"><button type="button" class="link-btn" data-act="doForgotPassword">${t('forgotPassword')}</button></p>`
     : `<label class="sr-only" for="regName">${t('authName')}</label>
        <input class="ain" id="regName" type="text" placeholder="${t('authName')}" autocomplete="name"/>
        <label class="sr-only" for="regEmail">${t('authEmail')}</label>
@@ -3139,7 +3139,7 @@ function buildAuthForm(m) {
          <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${t('authAccept')}</label>
        </div>
        <p id="authFormError" class="auth-inline-error" hidden></p>
-       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px" onclick="doRegSubmit()">${t('authCreate')}</button>`;
+       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px" data-act="doRegSubmit">${t('authCreate')}</button>`;
   } catch (e) {
     window.TL_ERROR_BOUNDARY?.capture('form', e);
   }

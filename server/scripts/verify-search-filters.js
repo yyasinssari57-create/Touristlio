@@ -80,9 +80,9 @@ if (!html.includes('aria-live="polite"')) fail('places found not live');
 else ok('places found aria-live');
 if (!html.includes('/js/explore-query.js')) fail('explore-query.js not loaded');
 else ok('explore-query.js script');
-if (!html.includes('oninput="onSearch(this.value)"')) fail('hero search oninput missing');
+if (!html.includes('data-act="onSearch"')) fail('hero search data-act missing');
 else ok('hero search live input');
-if (!html.includes('onclick="resetFilters()"')) fail('resetFilters not wired');
+if (!html.includes('data-act="resetFilters"')) fail('resetFilters not wired');
 else ok('resetFilters wired');
 
 const appJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'app.js'), 'utf8');

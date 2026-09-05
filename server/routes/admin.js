@@ -1,7 +1,6 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const multer = require('multer');
 const { db } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
@@ -36,6 +35,7 @@ const { deleteStoredImage, diskUploadRoot } = require('../lib/image-process');
 const { imageUploader } = require('../lib/image-uploader');
 const { publicImageUrl } = require('../lib/media-url');
 const supabaseStorage = require('../lib/supabase-storage');
+const backupSafe = require('../lib/backup-safe');
 const logger = require('../lib/logger');
 const { refreshPlaceStatsForTiola } = require('../lib/tiola-stats');
 
@@ -1414,9 +1414,9 @@ router.get('/moderation-history/:contentType/:contentId', checkPermission('admin
 
 const DB_BACKUP_MAX_BYTES = 100 * 1024 * 1024;
 
-function backupFilename() {
+function backupFilename(encrypted) {
   const date = new Date().toISOString().slice(0, 10);
-  return `touristlio-backup-${date}.sql`;
+  return encrypted ? `touristlio-backup-${date}.sql.enc` : `touristlio-backup-${date}.sql`;
 }
 
 function writePgDump(destPath) {
@@ -1433,41 +1433,183 @@ function writePgDump(destPath) {
   }
 }
 
+function unlinkQuiet(filePath) {
+  try { if (filePath) fs.unlinkSync(filePath); } catch { /* ignore */ }
+}
+
+function sendBackupBuffer(res, buf, filename) {
+  const hex = backupSafe.sha256Buffer(buf);
+  const safeName = backupSafe.safeBackupBasename(filename) || backupFilename(false);
+  res.setHeader('Content-Type', safeName.endsWith('.enc') ? 'application/octet-stream' : 'application/sql');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+  res.setHeader('X-Checksum-SHA256', hex);
+  res.setHeader('Access-Control-Expose-Headers', 'X-Checksum-SHA256, Content-Disposition');
+  return res.send(buf);
+}
+
 router.get('/backup/download', requireRole('admin'), adminToolLimiter, async (req, res) => {
-  const filename = backupFilename();
-  const tmpPath = path.join(os.tmpdir(), `touristlio-backup-${Date.now()}.sql`);
+  const requested = backupSafe.safeBackupBasename(req.query.name);
+  if (req.query.name && !requested) {
+    return fail(res, 'Geçersiz yedek dosya adı', 400);
+  }
+
+  if (requested) {
+    const localPath = backupSafe.resolveBackupFile(requested);
+    if (localPath && fs.existsSync(localPath)) {
+      try {
+        const buf = fs.readFileSync(localPath);
+        logAdmin(req, 'db.backup_download', 'database', null, requested);
+        return sendBackupBuffer(res, buf, requested);
+      } catch (err) {
+        return fail(res, err.message || 'Yedek okunamadı', 500);
+      }
+    }
+    if (supabaseStorage.isEnabled()) {
+      try {
+        const signed = await supabaseStorage.createSignedUrl(`backups/${requested}`, 120);
+        if (signed) {
+          logAdmin(req, 'db.backup_signed_url', 'database', null, requested);
+          return res.redirect(302, signed);
+        }
+      } catch (err) {
+        logger.warn({ msg: 'Backup signed URL failed', err: err.message });
+      }
+    }
+    return fail(res, 'Yedek bulunamadı', 404);
+  }
+
+  const encrypt = backupSafe.encryptionConfigured();
+  const filename = backupFilename(encrypt);
+  const tmpPath = backupSafe.safeTmpPath('.sql');
   try {
     writePgDump(tmpPath);
+    let buf = fs.readFileSync(tmpPath);
+    unlinkQuiet(tmpPath);
+    if (encrypt) buf = backupSafe.encryptBuffer(buf);
     logAdmin(req, 'db.backup_download', 'database', null, filename);
-    res.setHeader('Content-Type', 'application/sql');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    const stream = fs.createReadStream(tmpPath);
-    stream.on('error', (err) => {
-      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-      if (!res.headersSent) fail(res, err.message || 'Yedek indirilemedi', 500);
-    });
-    stream.on('end', () => {
-      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-    });
-    stream.pipe(res);
+    return sendBackupBuffer(res, buf, filename);
   } catch (err) {
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    unlinkQuiet(tmpPath);
     return fail(res, err.message || 'Yedek indirilemedi (pg_dump). Supabase Dashboard → Database → Backups kullanın.', 500);
   }
+});
+
+router.get('/backup/list', requireRole('admin'), adminToolLimiter, async (req, res) => {
+  const dir = backupSafe.backupsDir();
+  const items = [];
+  if (fs.existsSync(dir)) {
+    for (const name of fs.readdirSync(dir)) {
+      const safe = backupSafe.safeBackupBasename(name);
+      if (!safe || safe.endsWith('.sha256')) continue;
+      const full = backupSafe.resolveBackupFile(safe);
+      if (!full) continue;
+      let checksum = null;
+      try {
+        const side = `${full}.sha256`;
+        if (fs.existsSync(side)) checksum = String(fs.readFileSync(side, 'utf8')).trim().split(/\s+/)[0];
+        else checksum = backupSafe.sha256File(full);
+      } catch { /* ignore */ }
+      let size = 0;
+      try { size = fs.statSync(full).size; } catch { /* ignore */ }
+      items.push({ name: safe, checksum, sizeBytes: size });
+    }
+  }
+  return ok(res, {
+    items,
+    ephemeral: true,
+    encryption: backupSafe.encryptionConfigured(),
+  });
 });
 
 const dbRestoreUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: DB_BACKUP_MAX_BYTES, files: 1 },
+  fileFilter(_req, file, cb) {
+    const name = backupSafe.safeBackupBasename(path.basename(String(file.originalname || '')));
+    if (!name) return cb(new Error('Geçersiz yedek dosya adı'));
+    cb(null, true);
+  },
 });
 
-router.post('/backup/restore', requireRole('admin'), adminToolLimiter, dbRestoreUpload.single('file'), async (req, res) => {
-  logAdmin(req, 'db.restore_blocked', 'database', null, 'sqlite restore disabled');
-  return fail(
-    res,
-    'SQLite .db geri yükleme kaldırıldı. PostgreSQL için Supabase Dashboard → SQL Editor / Backups kullanın, veya sunucuda pg_restore çalıştırın.',
-    400,
-  );
+function restoreUpload(req, res, next) {
+  dbRestoreUpload.single('file')(req, res, (err) => {
+    if (err) return fail(res, err.message || 'Yedek yüklenemedi', 400);
+    next();
+  });
+}
+
+router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUpload, async (req, res) => {
+  const original = String(req.file?.originalname || '');
+  const safeName = backupSafe.safeBackupBasename(path.basename(original));
+  if (!safeName) {
+    return fail(res, 'Geçersiz yedek dosya adı', 400);
+  }
+  if (!req.file?.buffer?.length) {
+    return fail(res, 'Yedek dosyası gerekli', 400);
+  }
+  if (/\.db$/i.test(original)) {
+    return fail(res, 'SQLite .db geri yükleme kaldırıldı. PostgreSQL .sql veya .sql.enc yükleyin.', 400);
+  }
+
+  const expected = String(req.body?.checksum || req.query.checksum || '').trim();
+  const actual = backupSafe.sha256Buffer(req.file.buffer);
+  if (!expected) {
+    return fail(res, 'SHA-256 checksum gerekli', 400);
+  }
+  if (!backupSafe.checksumsMatch(expected, actual)) {
+    logAdmin(req, 'db.restore_checksum_mismatch', 'database', null, safeName);
+    return fail(res, 'Checksum eşleşmedi; dosya reddedildi', 400);
+  }
+
+  const dryRun = /^(1|true|yes)$/i.test(String(req.body?.dryRun || req.query.dryRun || ''));
+  let plain;
+  try {
+    plain = backupSafe.decryptBuffer(req.file.buffer);
+  } catch (err) {
+    return fail(res, err.message || 'Şifre çözülemedi', err.status || 400);
+  }
+  if (!backupSafe.looksLikePgDump(plain)) {
+    return fail(res, 'Dosya geçerli bir PostgreSQL yedeği değil', 400);
+  }
+
+  if (dryRun) {
+    logAdmin(req, 'db.restore_dry_run', 'database', null, safeName);
+    return ok(res, {
+      dryRun: true,
+      applied: false,
+      checksum: actual,
+      encrypted: backupSafe.isEncryptedBackup(req.file.buffer),
+      bytes: plain.length,
+      message: 'Doğrulama tamam (checksum + dump). Uygulanmadı.',
+    });
+  }
+
+  const tmpPath = backupSafe.safeTmpPath('.sql');
+  try {
+    fs.writeFileSync(tmpPath, plain);
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error('DATABASE_URL gerekli');
+    const result = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-f', tmpPath], {
+      encoding: 'utf8',
+      timeout: SCRIPT_TIMEOUT_MS,
+      maxBuffer: 32 * 1024 * 1024,
+    });
+    unlinkQuiet(tmpPath);
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+      throw new Error((result.stderr || result.stdout || 'psql başarısız').slice(0, 500));
+    }
+    logAdmin(req, 'db.restore_applied', 'database', null, safeName);
+    return ok(res, {
+      dryRun: false,
+      applied: true,
+      checksum: actual,
+      message: 'Geri yükleme uygulandı. Sayfayı yenileyin.',
+    });
+  } catch (err) {
+    unlinkQuiet(tmpPath);
+    return fail(res, err.message || 'Geri yükleme başarısız. Supabase Dashboard → Database → Backups kullanın.', 500);
+  }
 });
 
 router.post('/tools/cache-clear', requireRole('admin'), adminToolLimiter, async (req, res) => {

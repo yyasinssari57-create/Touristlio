@@ -89,8 +89,8 @@ app.use(helmet({
         ...recaptchaSrc,
         ...gaSrc,
       ],
-      // index.html + admin.html still carry ~220 inline handlers; a nonce cannot cover attributes.
-      scriptSrcAttr: ["'unsafe-inline'"],
+      // Inline on* handlers removed (bind-actions.js). Do not re-add 'unsafe-inline'.
+      scriptSrcAttr: ["'none'"],
       // unsafe-inline: index.html critical <style> + admin panel visibility toggles (style="" / el.style)
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       styleSrcAttr: ["'unsafe-inline'"],

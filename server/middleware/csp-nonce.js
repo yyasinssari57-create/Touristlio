@@ -4,8 +4,7 @@
  * `script-src` drops 'unsafe-inline' and trusts `'nonce-<value>'` instead, so an
  * injected <script> tag cannot run without the current request's nonce.
  *
- * `script-src-attr` still allows inline handlers: index.html and admin.html carry
- * ~220 onclick/onchange attributes, and a nonce cannot cover attributes.
+ * `script-src-attr` is `'none'`. Clicks/changes use data-act + bind-actions.js.
  */
 
 const crypto = require('crypto');

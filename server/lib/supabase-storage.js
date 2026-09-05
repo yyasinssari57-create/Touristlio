@@ -45,7 +45,23 @@ function normalizeKey(stored) {
     }
   } catch { /* ignore */ }
   s = s.replace(/^\/uploads\//, '').replace(/^uploads\//, '').replace(/^\/+/, '');
+  if (s.includes('..') || s.startsWith('/') || s.includes('\\')) return '';
   return s;
+}
+
+/** Short-lived signed URL for a storage object. Used if a backup ever lives in the existing bucket. */
+async function createSignedUrl(objectPath, expiresIn = 120) {
+  const key = normalizeKey(objectPath);
+  if (!key) return null;
+  const encoded = key.split('/').map(encodeURIComponent).join('/');
+  const parsed = await storageFetch(`/object/sign/${BUCKET}/${encoded}`, {
+    method: 'POST',
+    json: { expiresIn: Math.max(30, Math.min(Number(expiresIn) || 120, 300)) },
+  });
+  const signed = parsed && (parsed.signedURL || parsed.signedUrl);
+  if (!signed) return null;
+  if (/^https?:\/\//i.test(signed)) return signed;
+  return `${supabaseUrl()}/storage/v1${signed.startsWith('/') ? signed : `/${signed}`}`;
 }
 
 async function storageFetch(pathname, { method = 'GET', body, contentType, json } = {}) {
@@ -221,6 +237,7 @@ module.exports = {
   ensureBucket,
   uploadObject,
   uploadObjectUpsert,
+  createSignedUrl,
   removeObject,
   listObjects,
   listAllObjects,

@@ -25,12 +25,13 @@
   <div class="tl-hp" aria-hidden="true">
     <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"/></label>
   </div>
-  <button class="btn bp" id="loginSubmit" type="button" onclick="doLogin()" data-i18n="login">Giriş Yap</button>
-  <p class="auth-page-link"><button type="button" class="link-btn" onclick="forgotPass()" data-i18n="forgotPassword">Şifremi unuttum</button></p>
+  <button class="btn bp" id="loginSubmit" type="button" data-act="doLogin" data-i18n="login">Giriş Yap</button>
+  <p class="auth-page-link"><button type="button" class="link-btn" data-act="forgotPass" data-i18n="forgotPassword">Şifremi unuttum</button></p>
   <p class="auth-page-link"><span data-i18n="noAccount">Hesabınız yok mu?</span> <a href="/register" data-i18n="authTabReg">Kayıt Ol</a></p>
   <p class="auth-page-link"><a href="/">← Touristlio</a></p>
 </div>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/bind-actions.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>

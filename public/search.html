@@ -20,7 +20,7 @@
       <img src="/images/logo-round.webp?v=6" alt="Touristlio ana sayfaya git" class="brand-mark" data-i18n-alt="logoHomeAlt" width="46" height="46" loading="lazy" decoding="async" />
     </a>
     <div class="nav-r">
-      <div class="lsw" role="group" data-i18n-aria="langSwitchAria" aria-label="Dil"><button type="button" class="lb" onclick="setSearchLang('en',this)" data-i18n-aria="langEnAria" aria-label="English" aria-pressed="false">EN</button><button type="button" class="lb on" onclick="setSearchLang('tr',this)" data-i18n-aria="langTrAria" aria-label="Türkçe" aria-pressed="true">TR</button></div>
+      <div class="lsw" role="group" data-i18n-aria="langSwitchAria" aria-label="Dil"><button type="button" class="lb" data-act="setSearchLang" data-el data-arg="en" data-i18n-aria="langEnAria" aria-label="English" aria-pressed="false">EN</button><button type="button" class="lb on" data-act="setSearchLang" data-el data-arg="tr" data-i18n-aria="langTrAria" aria-label="Türkçe" aria-pressed="true">TR</button></div>
       <a href="/" class="btn nav-btn-ghost" data-i18n="explore">Keşfet</a>
     </div>
   </div>
@@ -59,6 +59,7 @@
 </main>
 
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/bind-actions.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/explore-query.js?v=__APP_VERSION__"></script>
 <script src="/js/img.js?v=__APP_VERSION__"></script>
