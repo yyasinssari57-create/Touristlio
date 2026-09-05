@@ -41,6 +41,7 @@
     "verify:admin-role": "node server/scripts/verify-admin-role.js",
     "verify:admin-security": "node server/scripts/verify-admin-security.js",
     "verify:mobile": "node server/scripts/verify-mobile-layout.js",
+    "verify:filter-sheet": "node server/scripts/verify-filter-sheet.js",
     "verify:a11y": "node server/scripts/verify-accessibility.js",
     "verify:skeleton": "node server/scripts/verify-skeleton.js",
     "verify:links": "node server/scripts/verify-broken-links.js",

@@ -89,7 +89,7 @@
 
   function nameIconControls(root) {
     const scope = root && root.querySelectorAll ? root : document;
-    const sel = '.aclose, .pc-save, .pd-save, .nav-toggle, .avatar-crop-zoom-btn, .place-crop-zoom-btn';
+    const sel = '.aclose, .pc-save, .pd-save, .nav-toggle, .filter-sheet-close, .avatar-crop-zoom-btn, .place-crop-zoom-btn';
     const nodes = [];
     if (scope.matches && scope.matches(sel)) nodes.push(scope);
     if (scope.querySelectorAll) scope.querySelectorAll(sel).forEach((el) => nodes.push(el));
