@@ -347,7 +347,7 @@ nano .env
 | `SITE_URL` | `https://touristlio.com` | Sitede tarayıcıda gördüğünüz adres (**https**, sondaki `/` yok). |
 | `CORS_ORIGIN` | `https://touristlio.com` | Genelde `SITE_URL` ile aynı. |
 | `COOKIE_SECURE` | `true` | HTTPS çerezleri. |
-| `COOKIE_SAMESITE` | `lax` | Varsayılan güvenlik. |
+| `COOKIE_SAMESITE` | `strict` | Giriş/admin aynı origin. Eski `lax` için env ile override. |
 | `REQUIRE_EMAIL_VERIFICATION` | `true` | Kayıtta e-posta doğrulama — SMTP gerekir. |
 | `SEED_ON_START` | `true` | Veritabanı boşsa yerler ve admin otomatik dolar. |
 | `SITEMAP_ON_START` | `true` | Başlangıçta sitemap üretir. |

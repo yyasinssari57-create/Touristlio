@@ -2,6 +2,24 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Gemini Faz 1 (güvenlik / DB / medya / harita)
+
+Gemini PRD yalnızca Faz 1. UI/CSS/Next.js yok. Express + vanilla JS + Render + Supabase PostgreSQL.
+
+1. **Şifre / çerez** — Argon2id (`m=65536,t=3,p=1`) + bcrypt yükseltme zaten vardı. `tl_token` / `tl_csrf` / `tl_sid` artık ortak `cookie-opts`: **HttpOnly** (CSRF hariç; çift gönderim), production **Secure**, varsayılan **SameSite=Strict**. OAuth yok; giriş/admin aynı origin POST + XHR. `COOKIE_SAMESITE` ile override. JWT secret uydurulmadı.
+2. **Veritabanı** — `009_jsonb_gin`: gerçek `jsonb` sütununa GIN (şu an yok; categories TEXT). `idx_places_lat_lng` btree. PostGIS `geography` / SP-GiST **yok** (Supabase eklentisi + harita kırılma riski; `lat`/`lng` DOUBLE PRECISION duruyor).
+3. **Medya** — Sharp EXIF silme, 1920×1080, WebP, magic byte duruyor. **AVIF eklenmedi** (eski tarayıcı + `picture`/CSS oranı değişir).
+4. **Harita** — Leaflet + MarkerCluster local vendor **kaldı**. MapLibre / Supercluster görsel/UX değişikliği — Faz 1 yasak.
+
+`npm run verify:faz1` (+ `verify:passwords` / `verify:indexes`).
+
+### Leftover
+- Render’da eski `COOKIE_SAMESITE=lax` varsa kod varsayılanı ezilir; kaldır veya `strict` yaz.
+- E-posta linkinden ilk tam sayfa GET Strict çerezi göndermez; doğrulama URL token + aynı origin `POST /api/auth/verify-email`.
+- `tl_cookie_ok` / `cookie_consent` JS çerezleri Lax (HttpOnly değil; onay bandı).
+- PostGIS + JSONB’ye çeviri + GIN ifade index’i yok (sorgu `LIKE`, harita `lat`/`lng`).
+- AVIF ve MapLibre Yasin onayı + Faz 2+ bekler.
+
 ## site-audit-fix (2026-09)
 
 Canlı + kod taraması. Tat değil, doğrulanmış hatalar.
@@ -54,7 +72,7 @@ Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, e
 - Tamamlandı: yeni şifreler **Argon2id** (`m=65536,t=3,p=1`). Eski bcrypt (`$2a$` / `$2b$`, cost 10 veya 12) girişte doğrulanır, sonra sessizce Argon2id’ye yükseltilir.
 - AES hiçbir zaman kullanılmadı; `createCipher` yok. UI “AES-256” yazmıyor — “Güvenli şifreleme ile korunuyor”.
 - JWT `tl_token` **HttpOnly** çerez (JSON body’de token yok). Süre 7 gün kaldı; 15 dakika oturumu yarıda keser.
-- sameSite varsayılan `lax` (strict, e-posta doğrulama dönüşlerinde çerezi düşürebilir). `COOKIE_SAMESITE` ile değiştirilebilir.
+- sameSite varsayılan `strict` (Gemini Faz 1). E-posta doğrulama URL token kullanır. `COOKIE_SAMESITE=lax` ile eski davranış.
 - 8–11 karakterlik eski şifreler login’de geçerli; 12 karakter kuralı sadece kayıt / reset / şifre değiştir / moderatör oluşturma.
 - Varsayılan `ADMIN_PASSWORD` (`ChangeMe123!`) 12 karakter; üretimde mutlaka `.env` ile değiştirilmeli.
 - `argon2` native bağlama; Render build’de derlenir. bcryptjs yalnızca eski hash doğrulama için duruyor.
@@ -486,7 +504,7 @@ Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, e
   - `idx_places_country_city_score_lc` `(LOWER(country), LOWER(city), tiola_rating)` — LIKE sorguları.
   - Filtreleme: `idx_places_category_published` `(category, status)` — `(category_id, is_published)`.
   - Blog: `idx_blogs_created_at` `(created_at)` (`idx_blogs_status (status, created_at)` zaten vardı).
-  - JSON etiketler: `idx_places_categories` TEXT (GIN yok). Kategori üyeliği `category =` + `categories LIKE`.
+  - JSON etiketler: `idx_places_categories` TEXT. `009_jsonb_gin` yalnızca gerçek JSONB sütununa GIN ekler (şimdilik yok).
   - Sıralama/LIMIT: `idx_places_tiola_rating`.
 - ORTA-3 leftover: `GET /api/places` ve `GET /api/search` artık SQL `COUNT` + `LIMIT/OFFSET` (`searchPlacesPage`). Bellekte slice yalnızca FTS yoksa.
 - `npm run verify:indexes` — PRAGMA index_info, EXPLAIN QUERY PLAN, SQL LIMIT, canlı liste.
@@ -495,7 +513,8 @@ Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, e
 ### Leftover
 - SQLite `LIKE '%x%'` baştaki joker yüzünden her zaman index kullanmayabilir; `turkey%` öneki + expression index var.
 - `az` sıralama SQL `COLLATE NOCASE` (Türkçe `localeCompare` değil).
-- JSON dizi üyeliği GIN değil; `LIKE %"slug"%`.
+- JSON dizi üyeliği GIN değil; `LIKE %"slug"%`. TEXT→JSONB dönüşümü yok (Gemini Faz 1 leftover).
+- PostGIS yok; `idx_places_lat_lng` btree. Harita `lat`/`lng` kullanmaya devam eder.
 - Discover (`gezilecek-yerler`) `page` + `limit=20` (ORTA-3 leftover kapatıldı).
 - Markers API 500 pin tavanı aynı.
 - Admin listeleri kendi sayfalama; public helper’dan ayrı.

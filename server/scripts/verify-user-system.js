@@ -303,6 +303,11 @@ async function checkLive(base) {
   if (!tokenCookie || !/HttpOnly/i.test(String(tokenCookie))) {
     fail(`register Set-Cookie is not HttpOnly: ${String(tokenCookie || '').slice(0, 120)}`);
   } else ok('register JWT cookie is HttpOnly');
+  const { cookieSameSite } = require('../lib/cookie-opts');
+  const sameSiteRe = new RegExp(`SameSite=${cookieSameSite()}`, 'i');
+  if (!tokenCookie || !sameSiteRe.test(String(tokenCookie))) {
+    fail(`register Set-Cookie SameSite missing ${cookieSameSite()}: ${String(tokenCookie || '').slice(0, 160)}`);
+  } else ok(`register JWT cookie SameSite=${cookieSameSite()}`);
   if (unwrap(register.json).token) fail('register JSON still returns a JWT body token');
   else ok('register JSON does not return a JWT');
 

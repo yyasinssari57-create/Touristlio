@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { db } = require('../../db');
+const { sessionCookieOptions } = require('../../lib/cookie-opts');
 
 const VALID_EVENTS = new Set(['page_view', 'tab_click', 'heartbeat', 'session_end', 'web_vital']);
 const VALID_TABS = new Set(['explore', 'places', 'blog', 'profile', 'detail']);
@@ -12,15 +13,6 @@ const TAB_LABELS = {
   profile: 'Profil',
   detail: 'Detay',
 };
-
-function sessionCookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    secure: process.env.NODE_ENV === 'production',
-  };
-}
 
 function ensureSessionId(req, res) {
   let sid = req.cookies?.tl_sid;

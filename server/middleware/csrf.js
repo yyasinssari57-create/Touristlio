@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { fail } = require('../lib/apiResponse');
 const { logAbnormal } = require('../lib/anti-bot-log');
+const { csrfCookieOptions } = require('../lib/cookie-opts');
 
 const CSRF_COOKIE = 'tl_csrf';
 const CSRF_HEADER = 'x-csrf-token';
@@ -72,14 +73,7 @@ function csrfProtection(req, res, next) {
 }
 
 function cookieOpts() {
-  return {
-    httpOnly: false,
-    secure: process.env.COOKIE_SECURE === 'true'
-      || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'),
-    sameSite: process.env.COOKIE_SAMESITE || 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: '/',
-  };
+  return csrfCookieOptions();
 }
 
 function newCsrfToken() {

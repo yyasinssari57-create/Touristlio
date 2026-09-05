@@ -34,11 +34,16 @@ async function checkDatabase() {
   const applied = await db.prepare('SELECT 1 FROM schema_migrations WHERE id = ?').get('008_filter_indexes');
   if (!applied) fail('schema_migrations missing 008_filter_indexes');
   else ok('migration 008_filter_indexes applied');
+  const applied009 = await db.prepare('SELECT 1 FROM schema_migrations WHERE id = ?').get('009_jsonb_gin');
+  if (!applied009) fail('schema_migrations missing 009_jsonb_gin');
+  else ok('migration 009_jsonb_gin applied');
 
   const indexRows = await db.prepare(`
     SELECT indexname AS name FROM pg_indexes WHERE schemaname = 'public'
   `).all();
   const names = new Set(indexRows.map((r) => r.name));
+  if (!names.has('idx_places_lat_lng')) fail('missing index idx_places_lat_lng');
+  else ok('index idx_places_lat_lng (lat/lng btree, no PostGIS)');
   if (!names.has('idx_places_country_city_score')) fail('missing index idx_places_country_city_score');
   else ok('index idx_places_country_city_score');
   if (!names.has('idx_places_country_city_score_lc')) {
@@ -118,6 +123,11 @@ if (!migration.includes('idx_places_country_city_score')
 if (!migration.includes('GIN') && !migration.includes('idx_places_categories')) {
   fail('migration missing JSON/GIN analog note or index');
 } else ok('JSON category tags: TEXT index (no SQLite GIN)');
+
+const mig009 = fs.readFileSync(path.join(ROOT, 'db', 'migrations', '009_jsonb_gin.js'), 'utf8');
+if (!mig009.includes("data_type = 'jsonb'") || !mig009.includes('USING GIN') || !mig009.includes('idx_places_lat_lng')) {
+  fail('009_jsonb_gin.js missing safe JSONB GIN probe or lat/lng index');
+} else ok('009_jsonb_gin.js: JSONB GIN only when typed jsonb + lat/lng btree');
 
 const where = buildPlacesWhere({
   country: 'turkey', category: 'nature', score: 4, categoryMode: 'discover',
