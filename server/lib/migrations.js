@@ -315,6 +315,10 @@ async function runMigrations(db) {
     });
 
     await runFileMigrations(db);
+    await runOptional('postgisGeom', async () => {
+      const { ensurePostgisGeom } = require('./place-geom');
+      await ensurePostgisGeom(db);
+    });
   } catch (err) {
     logger.error({
       msg: 'runMigrations failed',

@@ -8,6 +8,7 @@ const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
 const { cacheKey, wrap, PLACES_TTL_MS } = require('../lib/cache');
 const { getStatsMap } = require('../lib/stats-cache');
 const { findNearbyPlaces, findSimilarPlaces } = require('../lib/geo');
+const { findNearbyPlacesSql } = require('../lib/place-geom');
 const { getWeather } = require('../services/weatherService');
 const { currencyForCountry, timezoneForCountry, parseEntryFeeTry } = require('../lib/currency');
 const { getLiveData, getAdminPayload, mergeWeather, mergeLocalInfo, mergeInfoPanel } = require('../services/liveDataService');
@@ -79,7 +80,8 @@ router.get('/:id', authOptional, async (req, res) => {
   const mapper = (r) => mapWithStats(r, statsMap);
   const place = mapper(row);
   const allRows = await db.prepare('SELECT * FROM places').all();
-  const nearby = findNearbyPlaces(allRows, row, mapper, 6);
+  const nearby = (await findNearbyPlacesSql(row, mapper, 6))
+    || findNearbyPlaces(allRows, row, mapper, 6);
   const similar = findSimilarPlaces(allRows, row, mapper, 6);
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
   let weather = null;

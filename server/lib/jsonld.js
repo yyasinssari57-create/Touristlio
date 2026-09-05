@@ -155,6 +155,7 @@ function touristAttraction(place, lang = 'tr') {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'TouristAttraction',
+    '@id': url,
     name: place.name,
     description: String(desc || '').slice(0, 5000) || undefined,
     url,
@@ -165,6 +166,15 @@ function touristAttraction(place, lang = 'tr') {
       addressRegion: place.district || undefined,
       addressCountry: place.country || undefined,
     }),
+    containedInPlace: place.city
+      ? compact({
+        '@type': 'City',
+        name: place.city,
+        containedInPlace: place.country
+          ? { '@type': 'Country', name: place.country }
+          : undefined,
+      })
+      : undefined,
   };
   if (place.lat != null && place.lng != null && Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng))) {
     schema.geo = {
@@ -173,6 +183,9 @@ function touristAttraction(place, lang = 'tr') {
       longitude: Number(place.lng),
     };
   }
+  const fee = String(place.entryFee || place.entry_fee || '');
+  if (/ücretsiz/i.test(fee) || /\bfree\b/i.test(fee)) schema.isAccessibleForFree = true;
+  else if (fee) schema.isAccessibleForFree = false;
   const count = Number(place.tiolaCount) || 0;
   const rating = Number(place.tiolaRating);
   if (count > 0 && Number.isFinite(rating) && rating > 0) {
@@ -297,6 +310,13 @@ function jsonLdForPlace(place, tiolas = [], lang = 'tr') {
     .slice(0, MAX_REVIEWS)
     .map((t) => reviewSchema(t, place))
     .filter(Boolean);
+  if (attraction && reviews.length) {
+    attraction.review = reviews.map((r) => {
+      const copy = { ...r };
+      delete copy['@context'];
+      return copy;
+    });
+  }
   return [attraction, breadcrumbList(place, lang), faqPage(place, lang), ...reviews].filter(Boolean);
 }
 

@@ -2,6 +2,22 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Gemini Faz 4 (PostGIS / JSON-LD / N+1)
+
+Gemini “Faz 4”. Express + vanilla JS. Tasarım / UI yok. Next.js yok.
+
+1. **PostGIS** — `places.location` TEXT (adres) duruyor. Yeni nullable `geom geography(Point, 4326)`. `CREATE EXTENSION postgis` try/catch; yoksa site açılır. Backfill + trigger + admin dual-write. İndeks: SP-GiST, olmazsa GIST. `lat`/`lng` Leaflet, API, sitemap için duruyor. Yakın yerler: PostGIS varsa `ST_DWithin`/`ST_Distance`, yoksa mevcut haversine (`geo.js` aynı).
+2. **JSON-LD** — İkinci sistem yok. KRİTİK-7 / YÜKSEK-4: Place zaten `TouristAttraction` + `AggregateRating` + `Review` (TR + `/en`). Faz 4: `@id`, `containedInPlace` (City/Country), `geo` GeoCoordinates, Review hem ayrı blok hem `attraction.review`.
+3. **N+1** — `listCategories` her slug için `countCategoryUsage` (places taraması) yapıyordu. Tek `COUNT(DISTINCT)` JOIN. `categories` TEXT kaldı (`LIKE %"slug"%`). Liste/arama/keşfet hâlâ `SELECT p.*` + satırdan parse; API şekli aynı.
+
+`npm run verify:faz4` (veya `node scripts/verify-gemini-faz4.mjs`).
+
+### Leftover
+- PostGIS Supabase Dashboard → Database → Extensions’ta kapalıysa `geom` oluşmaz; site yine çalışır. Yasin panelden **postgis** açıp Render’da restart etmeli.
+- `categories` TEXT → JSONB + GIN yok (Faz 1 leftover; LIKE duruyor).
+- Detay yakını hâlâ gerekirse tüm `places` çeker (similar + haversine yedek). Supercluster yok.
+- SPA istemci JSON-LD (app.js) sunucu builder’ın kopyası; birleştirilmedi.
+
 ## Gemini Faz 3 (Performans / Core Web Vitals)
 
 Gemini “Faz 3: Performans (Core Web Vitals)”. Express + vanilla JS. React / Next yok. Tasarım yok.
@@ -58,7 +74,7 @@ Gemini “2. GÜVENLİ VE ONAYLI GELİŞTİRMELER”. Express + vanilla JS. Next
 Gemini PRD yalnızca Faz 1. UI/CSS/Next.js yok. Express + vanilla JS + Render + Supabase PostgreSQL.
 
 1. **Şifre / çerez** — Argon2id (`m=65536,t=3,p=1`) + bcrypt yükseltme zaten vardı. `tl_token` / `tl_csrf` / `tl_sid` artık ortak `cookie-opts`: **HttpOnly** (CSRF hariç; çift gönderim), production **Secure**, varsayılan **SameSite=Strict**. OAuth yok; giriş/admin aynı origin POST + XHR. `COOKIE_SAMESITE` ile override. JWT secret uydurulmadı.
-2. **Veritabanı** — `009_jsonb_gin`: gerçek `jsonb` sütununa GIN (şu an yok; categories TEXT). `idx_places_lat_lng` btree. PostGIS `geography` / SP-GiST **yok** (Supabase eklentisi + harita kırılma riski; `lat`/`lng` DOUBLE PRECISION duruyor).
+2. **Veritabanı** — `009_jsonb_gin`: gerçek `jsonb` sütununa GIN (şu an yok; categories TEXT). `idx_places_lat_lng` btree. PostGIS `geom` + SP-GiST/GIST **Faz 4**’te isteğe bağlı (extension yoksa atlanır; `lat`/`lng` durur).
 3. **Medya** — Sharp EXIF silme, 1920×1080, WebP, magic byte duruyor. **AVIF eklenmedi** (eski tarayıcı + `picture`/CSS oranı değişir).
 4. **Harita** — Leaflet + MarkerCluster local vendor **kaldı**. MapLibre / Supercluster görsel/UX değişikliği — Faz 1 yasak.
 
@@ -68,7 +84,7 @@ Gemini PRD yalnızca Faz 1. UI/CSS/Next.js yok. Express + vanilla JS + Render + 
 - Render’da eski `COOKIE_SAMESITE=lax` varsa kod varsayılanı ezilir; kaldır veya `strict` yaz.
 - E-posta linkinden ilk tam sayfa GET Strict çerezi göndermez; doğrulama URL token + aynı origin `POST /api/auth/verify-email`.
 - `tl_cookie_ok` / `cookie_consent` JS çerezleri Lax (HttpOnly değil; onay bandı).
-- PostGIS + JSONB’ye çeviri + GIN ifade index’i yok (sorgu `LIKE`, harita `lat`/`lng`).
+- JSONB’ye çeviri + GIN ifade index’i yok (sorgu `LIKE`). PostGIS `geom` Faz 4’te isteğe bağlı.
 - AVIF ve MapLibre Yasin onayı + Faz 2+ bekler.
 
 ## site-audit-fix (2026-09)

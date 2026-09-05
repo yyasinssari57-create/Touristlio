@@ -131,6 +131,13 @@ async function backfillMissingPlaceCoords(database) {
     }
   });
   await tx(rows);
+  try {
+    const { syncPlaceGeom } = require('./place-geom');
+    for (const row of rows) {
+      const { lat, lng } = ensurePlaceCoords(row);
+      await syncPlaceGeom(database, row.id, lat, lng);
+    }
+  } catch { /* PostGIS optional */ }
   return rows.length;
 }
 
