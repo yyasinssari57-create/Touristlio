@@ -258,6 +258,22 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Cloudflare / Render CDN kendi cache kuralı eklerse HTML/API `no-store` yine kazanmalı; Yasin panelinden doğrula.
 - `server/scripts/awaitify-db.py` commit edilmedi.
 
+## v2 DÜŞÜK-3 (404 sayfası)
+
+- Tamamlandı (v1 DÜŞÜK-4 özel 404 + “Ana sayfaya dön” üzerine; iskelet loader değil):
+  - Bilinmeyen path, eksik mekân/blog, `/404` ve `/404.html` artık **HTTP 404** + markalı `404.html` (yumuşak 200 SPA değil).
+  - SEO başlık denetim kopyası: **Sayfa Bulunamadı — Touristlio** (EN: Page not found — Touristlio). Önce homepage sloganı enjekte ediliyordu.
+  - `noindex, nofollow` duruyor. Ana sayfa + Gezilecek Yerler + yasal linkler duruyor.
+  - Dil değişince i18n artık 404 başlığını sloganla ezmiyor (`err404Title`).
+  - Görsel h1 hâlâ **404** (tasarım değişmedi).
+  - `npm run verify:404` (+ mevcut `verify:links`)
+
+### Leftover
+- 500 sayfası başlığı ayrı; bu madde yalnızca 404.
+- `POST` bilinmeyen path Express varsayılan 404 metni (HTML sayfa GET/HEAD).
+- HEAD bilinmeyen path `app.get('*')` dışında kalabilir; `/404` ve `404.html` HEAD 404.
+- Canlıda eski taranmış URL’ler 404’e düşer — Search Console’da yeniden gönder.
+
 ## v2 ORTA-4 (0 Tiola gösterimi)
 
 - Tamamlandı (ORTA-1 kart puanı üzerine; v1 ORTA-4 anti-bot ile karıştırma):

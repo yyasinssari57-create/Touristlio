@@ -117,12 +117,18 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   html = injectErrorDetail(html, seo.errorDetail);
   const req = res.req;
   const pathname = (req && (req.originalUrl || req.url) || '/').split('?')[0];
-  const { injectSeoHead, langFromPath } = require('./seo');
+  const { injectSeoHead, langFromPath, notFoundCopy } = require('./seo');
   const { autoJsonLd } = require('./jsonld');
   const noindex = /login|register|profile|verify-email|reset-password|admin|404\.html|500\.html/.test(relativePath);
   const lang = seo.lang || req?.tlLang || langFromPath(pathname);
   const seoRest = { ...seo };
   delete seoRest.errorDetail;
+  if (relativePath === '404.html') {
+    if (!res.statusCode || res.statusCode < 400) res.status(404);
+    const nf = notFoundCopy(lang === 'en' ? 'en' : 'tr');
+    if (!seoRest.title) seoRest.title = nf.title;
+    if (!seoRest.description) seoRest.description = nf.description;
+  }
   if (relativePath === 'index.html') {
     try {
       const settingsService = require('../modules/settings/settings.service');
@@ -173,7 +179,8 @@ function htmlPageRoutesMiddleware(publicDir) {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Length': String(size),
       });
-      return res.status(200).end();
+      const status = relativePath === '404.html' ? 404 : 200;
+      return res.status(status).end();
     }
 
     return sendPublicHtml(res, root, relativePath);
@@ -199,7 +206,8 @@ function publicHtmlMiddleware(publicDir) {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Length': String(size),
       });
-      return res.status(200).end();
+      const status = /(?:^|\/)404\.html$/i.test(rel) ? 404 : 200;
+      return res.status(status).end();
     }
     return sendPublicHtml(res, root, rel);
   };

@@ -41,9 +41,20 @@ function absUrl(url) {
   return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
 }
 
+function notFoundCopy(lang) {
+  const en = lang === 'en';
+  return {
+    title: en ? 'Page not found — Touristlio' : 'Sayfa Bulunamadı — Touristlio',
+    description: en ? 'The page you requested was not found.' : 'Aradığınız sayfa bulunamadı.',
+  };
+}
+
 function pageDefaults(pathname, lang) {
   const p = normalizePath(pathname);
   const en = lang === 'en';
+  if (p === '/404' || p === '/404.html') {
+    return notFoundCopy(en ? 'en' : 'tr');
+  }
   if (p === '/search') {
     return en
       ? { title: 'Search destinations — Touristlio', description: 'Search Touristlio destinations with filters and shareable URLs.' }
@@ -211,4 +222,6 @@ module.exports = {
   injectSeoHead,
   buildSeoHead,
   ogTypeFor,
+  notFoundCopy,
+  pageDefaults,
 };
