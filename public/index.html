@@ -165,6 +165,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <label class="sr-only" for="mapSearchInput" data-i18n="mapSearchAria">Harita arama</label>
         <input type="search" id="mapSearchInput" class="map-search-inp" data-i18n-placeholder="searchPh" placeholder="Haritada ara..." aria-label="Harita arama"/>
         <button type="button" class="btn bo bsm" id="mapLocateBtn" data-i18n="mapLocate">📍 Konumum</button>
+        <button type="button" class="btn bo bsm filter-sheet-open" id="filterSheetOpenMap" hidden aria-haspopup="dialog" aria-expanded="false" aria-controls="filterSheet" data-i18n="filterSheetOpen">Filtrele</button>
       </div>
       <div class="map-filter-bar" id="mapFilterBar">
         <div class="explore-filter-strip" id="mapFilterStrip" role="toolbar" aria-label="Harita filtreleri"></div>
@@ -184,6 +185,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="results-bar">
         <h3 id="results-count" aria-live="polite"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
         <div class="results-bar-actions">
+          <button type="button" class="btn bo bsm filter-sheet-open" id="filterSheetOpenExplore" hidden aria-haspopup="dialog" aria-expanded="false" aria-controls="filterSheet" data-i18n="filterSheetOpen">Filtrele</button>
           <button type="button" class="btn bo bsm" id="clearFiltersBtn" onclick="resetFilters()" data-i18n="filterClear" hidden>Filtreler Temizle</button>
           <label class="sr-only" for="sortSel" data-i18n="sortAria">Sıralama</label>
           <select class="sort-sel" id="sortSel" onchange="sortChange(this.value)">
@@ -213,7 +215,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 
   <!-- FILTER TAB -->
   <div class="explore-section" id="es-filter" hidden aria-hidden="true">
-    <div class="filter-tab-wrap">
+    <div class="filter-tab-wrap" id="filterTabWrap">
       <div class="filter-tab-title" data-i18n="filterTitle">🎛️ Gelişmiş Filtreleme</div>
       <div class="filter-tab-sub" data-i18n="filterSub">Ülke, şehir, ilçe ve daha fazlasına göre filtrele</div>
 
@@ -339,7 +341,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
 
       <div class="filter-actions">
-        <button class="btn bp" onclick="applyFilters();showExploreTab('discover',document.getElementById('et-discover'))" data-i18n="filterShow">🔍 Sonuçları Göster</button>
+        <button class="btn bp" type="button" onclick="applyExploreFiltersAndShow()" data-i18n="filterShow">🔍 Sonuçları Göster</button>
         <button class="btn bo" onclick="resetFilters()" data-i18n="filterClear">Filtreler Temizle</button>
       </div>
     </div>
@@ -391,6 +393,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <div class="discover-hd-actions">
               <button type="button" class="btn bo bsm" id="discoverBackBtn" style="display:none" data-i18n="discoverClearCity">← Tüm yerler</button>
               <button type="button" class="btn bo bsm" id="discoverCitiesBtn" data-i18n="discoverPickCity">🏙️ Şehirler</button>
+              <button type="button" class="btn bo bsm filter-sheet-open" id="filterSheetOpenDiscover" hidden aria-haspopup="dialog" aria-expanded="false" aria-controls="filterSheet" data-i18n="filterSheetOpen">Filtrele</button>
             </div>
             <div>
               <h1 id="discoverCityTitle" data-i18n="discoverGlobalTitle">Tüm gezilecek yerler</h1>
@@ -776,6 +779,19 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
     <div class="footer-copy" data-i18n="footerCopy">© 2026 Touristlio · Tüm hakları saklıdır</div>
   </footer>
 </main>
+
+<div class="filter-sheet-backdrop" id="filterSheetBackdrop" hidden aria-hidden="true"></div>
+<div class="filter-sheet" id="filterSheet" role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle" hidden aria-hidden="true">
+  <div class="filter-sheet-handle" aria-hidden="true"></div>
+  <header class="filter-sheet-hd">
+    <h2 id="filterSheetTitle" class="filter-sheet-title" data-i18n="filterSheetTitle">Filtrele</h2>
+    <button type="button" class="filter-sheet-close" id="filterSheetClose" data-i18n-aria="closeAria" aria-label="Kapat">✕</button>
+  </header>
+  <div class="filter-sheet-body" id="filterSheetBody"></div>
+  <footer class="filter-sheet-ft">
+    <button type="button" class="btn bp" id="filterSheetApply" data-i18n="filterApply">Uygula</button>
+  </footer>
+</div>
 
 <script src="/vendor/leaflet/leaflet.js?v=__APP_VERSION__"></script>
 <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js?v=__APP_VERSION__"></script>

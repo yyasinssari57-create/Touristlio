@@ -620,6 +620,20 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - CrUX / Search Console hız raporu Chrome kullanıcılarından gelir; `web-vitals` RUM’u onaylı oturumlarla sınırlı.
 - Numaralı denetim maddeleri (KRİTİK → DÜŞÜK-6) bu maddeyle bitti. Kalan Yasin-only ops: env anahtarları, SMTP, Render, Cloudflare, GA4, reCAPTCHA, stacked PR merge.
 
+## v2 tasarım-1 (mobil filtre → alt çekmece)
+
+- Tamamlandı (Yasin yalnızca bu tasarım notunu onayladı; OG kart / Tiola sıralama / sponsored / ekstra rozet yok):
+  - ≤900px (hamburger kırılımı): Keşfet ve Gezilecek Yerler’de **Filtrele** mevcut filtreleri alt çekmeceye taşır (chip, kategori, gelişmiş ülke/şehir/yıldız). İkinci filtre sistemi yok; `TL_EXPLORE_QUERY` aynı.
+  - Karartılmış backdrop; backdrop / Kapat / Uygula kapatır. Açıkken `overflow: hidden` (nav menü ile aynı), kapanınca açılır.
+  - Masaüstü/tablet (≥901px) şerit ve Gelişmiş Filtrele sekmesi aynı. Mobilde o sekme çekmeceyi açar.
+  - i18n TR/EN: Filtrele / Uygula / Kapat. `role="dialog"` `aria-modal` odak + Escape.
+- `npm run verify:filter-sheet`
+
+### Leftover
+- Hava / erişilebilirlik chip’leri hâlâ görsel (listeyi filtrelemez) — önceki davranış.
+- Canlı telefon kaydırması Yasin’de (bu ortam gerçek cihaz değil).
+- Tasarım notları 2–5 (paylaşım OG kartı, Tiola yazar sıralaması, sponsored/affiliate, ekstra rozet) **yapılmadı**.
+
 ## Genel
 - Görevler bitince bu listedeki her maddeyi sırayla açıp kapat.
 - Tam denetim kopyası: `/workspace/touristlio_cursor_audit.md`
