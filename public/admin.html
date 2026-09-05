@@ -1099,6 +1099,21 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+function displayLabel(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return value.map(displayLabel).filter(Boolean).join(', ');
+  }
+  if (typeof value === 'object') {
+    const pick = value.nameTr || value.name_tr || value.name || value.label
+      || value.title || value.nameEn || value.name_en || value.slug || value.id;
+    return displayLabel(pick);
+  }
+  return '';
+}
+
 /** Same-origin only — never use SITE_URL or absolute apex URL for admin fetches. */
 const API = '/api';
 let currentUser = null;
@@ -2999,7 +3014,7 @@ async function loadBlogPostsList() {
         <div style="flex:1">
           <strong>${escapeHtml(b.title)}</strong>
           ${b.featured ? ' <span style="font-size:.7rem;color:var(--b)">★ Öne çıkan</span>' : ''}
-          <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(b.slug || '')} · ${escapeHtml(BLOG_STATUS_LABELS[b.status] || b.status)} · ${escapeHtml(b.authorName || b.userName)}</p>
+          <p style="font-size:.78rem;color:var(--t3)">${escapeHtml(b.slug || '')}${displayLabel(b.categoryLabel || b.category) ? ` · ${escapeHtml(displayLabel(b.categoryLabel || b.category))}` : ''} · ${escapeHtml(BLOG_STATUS_LABELS[b.status] || b.status)} · ${escapeHtml(b.authorName || b.userName)}</p>
           <p style="font-size:.85rem;color:var(--t2)">${escapeHtml(b.excerpt || '')}</p>
         </div>
         <div class="admin-actions">
@@ -3462,7 +3477,7 @@ async function loadPlacesList() {
         <td>${escapeHtml(p.name)}</td>
         <td>${escapeHtml(p.city)}</td>
         <td>${escapeHtml(p.country)}</td>
-        <td>${escapeHtml(p.category)}</td>
+        <td>${escapeHtml(displayLabel(p.category))}</td>
         <td>${escapeHtml(STATUS_LABELS[p.status] || p.status || 'Yayında')}</td>
         <td class="admin-actions">
           <button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" onclick="openPlaceEdit(${p.id})">Düzenle</button>
@@ -4533,8 +4548,8 @@ async function openBlogEdit(id) {
     }
     const data = await api('/admin/blogs/' + id);
     const b = data.blog;
-    const catOpts = (blogCategoryOptions.length ? blogCategoryOptions : [{ slug: b.category || 'guide', nameTr: b.category || 'guide' }])
-      .map((c) => `<option value="${escapeHtml(c.slug)}" ${c.slug === b.category ? 'selected' : ''}>${escapeHtml(c.nameTr || c.slug)}</option>`)
+    const catOpts = (blogCategoryOptions.length ? blogCategoryOptions : [{ slug: displayLabel(b.category) || 'guide', nameTr: displayLabel(b.category) || 'guide' }])
+      .map((c) => `<option value="${escapeHtml(c.slug)}" ${c.slug === displayLabel(b.category) ? 'selected' : ''}>${escapeHtml(c.nameTr || c.slug)}</option>`)
       .join('');
     openModal('Blog düzenle', `
       <div class="admin-form">
@@ -4550,7 +4565,7 @@ async function openBlogEdit(id) {
         <input class="ain" id="edBlogAuthor" value="${escapeHtml(b.authorName || b.userName || '')}" aria-label="Yazar"/>
         <input class="ain" id="edBlogPlaceId" value="${b.placeId || ''}" aria-label="Mekân ID" inputmode="numeric"/>
         <input class="ain full" id="edBlogImage" value="${escapeHtml(b.imageUrl || '')}" aria-label="Kapak görseli"/>
-        <input class="ain full" id="edBlogTags" value="${escapeHtml((b.tags || []).join(', '))}" aria-label="Etiketler"/>
+        <input class="ain full" id="edBlogTags" value="${escapeHtml((b.tags || []).map(displayLabel).filter(Boolean).join(', '))}" aria-label="Etiketler"/>
         <label class="full adm-settings-toggle" style="display:flex;align-items:center;gap:8px;font-size:.85rem">
           <input type="checkbox" id="edBlogFeatured" ${b.featured ? 'checked' : ''} aria-label="Öne çıkan"/> Öne çıkan
         </label>

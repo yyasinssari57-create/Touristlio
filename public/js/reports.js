@@ -21,6 +21,9 @@
   }
 
   function lang() {
+    if (window.TL_I18N && typeof window.TL_I18N.resolveLang === 'function') {
+      return window.TL_I18N.resolveLang();
+    }
     try {
       const stored = localStorage.getItem('tl_lang');
       if (stored === 'en' || stored === 'tr') return stored;

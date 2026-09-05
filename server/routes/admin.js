@@ -1500,20 +1500,22 @@ router.post('/tools/validate', requireRole('admin'), adminToolLimiter, async (re
   return ok(res, { output: (result.stdout || '').slice(0, 2000) });
 });
 
-async function mapAdminBlog(row) {
+async function mapAdminBlog(row, lang = 'tr') {
+  const category = blogDb.categorySlugFromUnknown(row.category);
   return {
     id: row.id,
     userId: row.user_id,
     userName: row.user_name,
     authorName: row.author_name || row.user_name,
-    category: row.category,
+    category,
+    categoryLabel: await blogDb.blogCategoryLabel(category, lang),
     slug: row.slug,
     title: row.title,
     excerpt: row.excerpt,
     body: row.body,
     imageUrl: row.image_url,
     placeId: row.place_id,
-    tags: await blogDb.parseTagsStored(row.tags),
+    tags: blogDb.parseTagsStored(row.tags),
     featured: !!row.featured,
     status: row.status,
     publishedAt: row.published_at,
@@ -1637,7 +1639,7 @@ router.post('/blogs', checkPermission('admin.content'), async (req, res) => {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     userId ? Number(userId) : req.user.id,
-    category || 'guide',
+    blogDb.categorySlugFromUnknown(category) || 'guide',
     cleanTitle,
     uniqueSlug,
     cleanExcerpt,
@@ -1655,7 +1657,7 @@ router.post('/blogs', checkPermission('admin.content'), async (req, res) => {
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(info.lastInsertRowid);
   logAdmin(req, 'blog.create', 'blog', info.lastInsertRowid, cleanTitle);
-  return ok(res, { blog: mapAdminBlog(row) }, 201);
+  return ok(res, { blog: await mapAdminBlog(row) }, 201);
 });
 
 router.get('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
@@ -1666,7 +1668,7 @@ router.get('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(id);
   if (!row) return fail(res, 'Blog bulunamadı', 404);
-  return ok(res, { blog: mapAdminBlog(row) });
+  return ok(res, { blog: await mapAdminBlog(row) });
 });
 
 router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
@@ -1712,7 +1714,7 @@ router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
       place_id = ?, tags = ?, featured = ?, author_name = ?, status = ?, published_at = ?
     WHERE id = ?
   `).run(
-    category || existing.category,
+    (category != null ? (blogDb.categorySlugFromUnknown(category) || existing.category) : existing.category),
     cleanTitle,
     nextSlug,
     cleanExcerpt,
@@ -1731,7 +1733,7 @@ router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
     JOIN users u ON u.id = b.user_id WHERE b.id = ?
   `).get(id);
   logAdmin(req, 'blog.update', 'blog', id, cleanTitle);
-  return ok(res, { blog: mapAdminBlog(row) });
+  return ok(res, { blog: await mapAdminBlog(row) });
 });
 
 router.delete('/blogs/:id', checkPermission('admin.content'), async (req, res) => {

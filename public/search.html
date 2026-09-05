@@ -67,7 +67,7 @@
 <script src="/js/toast.js?v=__APP_VERSION__"></script>
 <script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script>
-let lang = localStorage.getItem('tl_lang') || 'tr';
+let lang = window.TL_I18N.bootLocale({ syncPath: true });
 let page = 1;
 const LIMIT = (window.TL_EXPLORE_QUERY && window.TL_EXPLORE_QUERY.DEFAULT_PAGE_LIMIT) || 20;
 let total = 0;
@@ -77,15 +77,15 @@ function t(k) { return window.TL_I18N.t(lang, k); }
 function geoText(v) { return window.TL_I18N.geoText ? window.TL_I18N.geoText(lang, v) : (v || ''); }
 
 function setSearchLang(l, btn) {
-  lang = l;
-  localStorage.setItem('tl_lang', l);
+  lang = window.TL_I18N.persistLang(l);
   document.querySelectorAll('.lb').forEach(b => {
     b.classList.remove('on');
     b.setAttribute('aria-pressed', 'false');
   });
   btn.classList.add('on');
   btn.setAttribute('aria-pressed', 'true');
-  window.TL_I18N.apply(l);
+  window.TL_I18N.apply(lang);
+  window.TL_I18N.syncPathToLang(lang);
   runSearch(false);
 }
 
@@ -106,7 +106,8 @@ function updateUrl() {
   if (p.category !== 'all') qs.set('category', p.category);
   if (p.sort !== 'popularity') qs.set('sort', p.sort);
   if (page > 1) qs.set('page', String(page));
-  history.replaceState(null, '', '/search?' + qs.toString());
+  const path = window.TL_I18N.pathForLang('/search', lang);
+  history.replaceState(null, '', path + (qs.toString() ? '?' + qs.toString() : ''));
   const title = p.q ? `${p.q} — Touristlio` : (lang === 'en' ? 'Search — Touristlio' : 'Arama — Touristlio');
   document.title = title;
 }
@@ -215,6 +216,11 @@ const SEARCH_DEBOUNCE_MS = 300;
   if (qs.get('sort')) document.getElementById('searchSort').value = qs.get('sort');
   if (qs.get('page')) page = Math.max(Number(qs.get('page')) || 1, 1);
   window.TL_I18N.apply(lang);
+  document.querySelectorAll('.lb').forEach((b) => {
+    const on = (lang === 'en' && b.textContent.trim() === 'EN') || (lang === 'tr' && b.textContent.trim() === 'TR');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
   runSearch(false);
 })();
 </script>

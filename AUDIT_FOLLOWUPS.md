@@ -2,6 +2,22 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Gemini Sprint 0 (logic / API — tasarım yok)
+
+Gemini “2. GÜVENLİ VE ONAYLI GELİŞTİRMELER”. Express + vanilla JS. Next.js SSR yok.
+
+1. **[object Object] blog** — `mapBlog` `categoryLabel` artık `await`. Prisma/i18n nesnesi → `blogs.category` TEXT slug, `tags` string[]. İstemci `displayLabel` (`.name` / `nameTr` / `nameEn`). Admin liste + düzenleme aynı.
+2. **Dil + rota** — Tek çözümleyici `TL_I18N.resolveLang`: URL `/en` kazanır, yoksa `tl_lang`, yoksa `tr`. `setLang` yolu senkron tutar (`/` ↔ `/en/`, `/places/x` ↔ `/en/places/x`, `/blog/x` ↔ `/en/blog/x`). Flash: `html lang` + `data-tl-lang` head’de erken (inline boot + `sendPublicHtml`).
+3. **Anahtarlar** — Commit’li gizli anahtar yok. Secret’lar `.env` / Render (gitignore). `.env.example` yer tutucu. Public reCAPTCHA **site** key HTML’de normal; **secret** env’de.
+
+`npm run verify:sprint0`
+
+### Leftover
+- Git geçmişinde sızıntı yok; yine de Render’daki `SUPABASE_SERVICE_KEY` / `JWT_SECRET` / `SMTP_PASS` / `BREVO_API_KEY` / `RECAPTCHA_SECRET` periyodik rotate (alışkanlık).
+- reCAPTCHA site key public-by-design; secret asla `public/js`’e konmaz.
+- Mapbox / Google Maps kullanılmıyor (Leaflet + OSM); örnek env satırları boş.
+- `.env.local` (Next.js) yok ve açılmayacak.
+
 ## Gemini Faz 1 (güvenlik / DB / medya / harita)
 
 Gemini PRD yalnızca Faz 1. UI/CSS/Next.js yok. Express + vanilla JS + Render + Supabase PostgreSQL.

@@ -34,6 +34,17 @@ function injectAppVersion(html) {
   return html.replace(/__APP_VERSION__/g, getAppVersion());
 }
 
+/** Same resolver as public/js/i18n.js — URL /en wins, else tl_lang, else tr. */
+const EARLY_LANG_BOOT = `<script data-tl-lang-boot>(function(){try{var p=location.pathname||'/';var en=p==='/en'||p.indexOf('/en/')===0;var s='';try{s=localStorage.getItem('tl_lang')||'';}catch(e){}var lang=en?'en':(s==='en'?'en':'tr');document.documentElement.lang=lang;document.documentElement.setAttribute('data-tl-lang',lang);}catch(e){}})();</script>`;
+
+function injectEarlyLangBoot(html) {
+  if (!html || html.includes('data-tl-lang-boot')) return html;
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head[^>]*>/i, (open) => `${open}\n${EARLY_LANG_BOOT}`);
+  }
+  return EARLY_LANG_BOOT + html;
+}
+
 function injectClientErrorBoundary(html) {
   const isProd = process.env.NODE_ENV === 'production';
   let next = html;
@@ -107,6 +118,7 @@ function injectHeroBackground(html, url) {
 
 async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   let html = readPublicHtml(publicDir, relativePath);
+  html = injectEarlyLangBoot(html);
   html = injectClientErrorBoundary(html);
   html = injectAnalyticsScripts(html, relativePath);
   html = injectErrorDetail(html, seo.errorDetail);
@@ -220,6 +232,8 @@ module.exports = {
   publicHtmlMiddleware,
   NO_CACHE_HEADERS,
   injectAppVersion,
+  injectEarlyLangBoot,
+  EARLY_LANG_BOOT,
   injectClientErrorBoundary,
   injectAnalyticsScripts,
   injectErrorDetail,

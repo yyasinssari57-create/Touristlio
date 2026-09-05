@@ -20,22 +20,20 @@ const MAX_BODY = 20000;
 const PUBLIC_BLOG_STATUS = 'approved';
 
 async function categoryLabel(slug, lang) {
-  const row = await db.prepare('SELECT name_tr, name_en, icon FROM blog_categories WHERE slug = ? AND is_active = 1').get(slug);
-  if (!row) return slug || '';
-  const name = lang === 'en' ? (row.name_en || row.name_tr) : row.name_tr;
-  return row.icon ? `${row.icon} ${name}` : name;
+  return blogDb.blogCategoryLabel(slug, lang);
 }
 
 async function mapBlog(row, lang = 'tr', userId = null) {
-  const tags = await blogDb.parseTagsStored(row.tags);
+  const category = blogDb.categorySlugFromUnknown(row.category);
+  const tags = blogDb.parseTagsStored(row.tags);
   const displayAuthor = row.author_name || row.author_name_user || 'Anonim';
   const likes = await enrichBlogLikes(row, userId);
   return {
     id: row.id,
     userId: row.user_id,
     slug: row.slug,
-    category: row.category,
-    categoryLabel: categoryLabel(row.category, lang),
+    category,
+    categoryLabel: await categoryLabel(category, lang),
     title: row.title,
     excerpt: row.excerpt,
     body: row.body,
@@ -200,7 +198,7 @@ router.post('/', authRequired, [
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     req.user.id,
-    category || 'guide',
+    blogDb.categorySlugFromUnknown(category) || 'guide',
     cleanTitle,
     slug,
     cleanExcerpt,

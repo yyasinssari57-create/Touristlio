@@ -9,7 +9,14 @@
   ].join(',');
 
   function lang() {
-    try { return localStorage.getItem('tl_lang') || 'tr'; } catch { return 'tr'; }
+    if (global.TL_I18N && typeof global.TL_I18N.resolveLang === 'function') {
+      return global.TL_I18N.resolveLang();
+    }
+    try {
+      var p = location.pathname || '/';
+      if (p === '/en' || p.indexOf('/en/') === 0) return 'en';
+      return localStorage.getItem('tl_lang') === 'en' ? 'en' : 'tr';
+    } catch { return 'tr'; }
   }
 
   function t(key, fallback) {
