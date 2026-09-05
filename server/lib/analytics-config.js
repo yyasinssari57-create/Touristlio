@@ -1,4 +1,6 @@
-/** Public analytics config: GA4 + Search Console (DÜŞÜK-6). Measurement IDs are not secrets. */
+/** Public analytics config: GA4 + Search Console (DÜŞÜK-6 / v2 ORTA-3).
+ *  Measurement IDs are not secrets. Empty env keeps GA4 off — do not invent a G- id.
+ */
 
 const WEB_VITALS_PACKAGE = 'web-vitals';
 const GA_ID_RE = /^G-[A-Z0-9]{4,20}$/i;

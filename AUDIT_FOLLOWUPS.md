@@ -191,6 +191,21 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Admin hamburger yok; topnav yatay kayar.
 - Canlı 320px telefon testi Yasin’de (bu ortam gerçek cihaz yok).
 
+## v2 ORTA-3 (Google Analytics — rıza sonrası)
+
+- Tamamlandı (DÜŞÜK-6 üzerine; denetim kopyası yeniden yazılmadı):
+  - Denetim `localStorage cookie_consent` → gerçek anahtar `tl_cookie_ok` (`1` / `0`). Kabul/red aynı anda `cookie_consent=accepted|rejected` yazar.
+  - Denetim `loadAnalytics` → `analytics.js` içinde rıza kapılı `loadAnalytics` (DOMContentLoaded + çerez kabulü). GA4 ID `/api/config/public` üzerinden gelir; G- kodu HTML/JS’e gömülmez.
+  - Kabul: `tl_cookie_ok=1` + `cookie_consent=accepted` + `loadAnalytics()`. Red: `tl_cookie_ok=0` + `cookie_consent=rejected` — gtag yüklenmez.
+  - `GA_MEASUREMENT_ID` boşken GA4 kapalı; CSP Google host’ları yalnızca geçerli `G-` ID varken açılır.
+  - `.env.example` değeri boş duruyor (`GA_MEASUREMENT_ID=`). Yorumda format: `GA_MEASUREMENT_ID=G-XXXXXXXXXX`.
+- `npm run verify:analytics`
+
+### Leftover
+- Canlıda GA4 **yok** (Render env boş). Yasin Google Analytics 4’te Measurement ID üretip `GA_MEASUREMENT_ID` yazmalı.
+- Sahte `G-` ID uydurulmadı. ID yokken yalnızca birinci taraf izleme (yine rıza sonrası) çalışır.
+- DÜŞÜK-6 Search Console / web-vitals aynı kaldı; bu madde yalnızca rıza sonrası GA4 boşluklarını hizalar.
+
 ## v2 ORTA-1 (erişilebilirlik WCAG)
 
 - Tamamlandı (DÜŞÜK-2 skip-link / label / aria üzerine):

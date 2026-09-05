@@ -1,5 +1,5 @@
 /**
- * [DÜŞÜK-6] Analytics: GA4 (consent-gated), Search Console meta, web-vitals.
+ * [DÜŞÜK-6 / v2 ORTA-3] Analytics: GA4 after cookie consent, Search Console meta, web-vitals.
  * Usage: node server/scripts/verify-analytics.js
  * Optional: VERIFY_ANALYTICS_URL=http://127.0.0.1:3066 node server/scripts/verify-analytics.js
  */
@@ -65,6 +65,48 @@ const cookieJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'cookie-banner.
 if (!cookieJs.includes('tl-cookie-consent') || !cookieJs.includes('tl_cookie_ok')) {
   fail('cookie-banner missing consent event');
 } else ok('cookie-banner notifies analytics');
+if (!cookieJs.includes("cookie_consent") || !cookieJs.includes("'accepted'") || !cookieJs.includes("'rejected'")) {
+  fail('cookie-banner missing cookie_consent accepted/rejected (v2 ORTA-3)');
+} else ok('accept/reject persist cookie_consent (audit key)');
+if (!cookieJs.includes('cookieAccept') || !cookieJs.includes('cookieReject')) {
+  fail('cookie-banner missing accept/reject buttons');
+} else ok('cookie-banner accept/reject buttons');
+if (!cookieJs.includes('loadAnalytics')) {
+  fail('cookie accept does not call loadAnalytics');
+} else ok('cookie accept calls loadAnalytics');
+
+if (!analyticsJs.includes('function loadAnalytics') || !analyticsJs.includes('if (!hasConsent()) return')) {
+  fail('loadAnalytics missing or not consent-gated');
+} else ok('loadAnalytics is consent-gated (v2 ORTA-3 name)');
+if (/gtag\(\s*['"]config['"]\s*,\s*['"]G-/.test(analyticsJs) || /gtag\/js\?id=G-/.test(analyticsJs)) {
+  fail('analytics.js hardcodes a GA measurement ID');
+} else ok('no hardcoded GA measurement ID in analytics.js');
+
+const envExample = fs.readFileSync(path.join(ROOT, '.env.example'), 'utf8');
+if (!/^GA_MEASUREMENT_ID=\s*$/m.test(envExample)) {
+  fail('.env.example must keep GA_MEASUREMENT_ID empty until a real G- id exists');
+} else ok('.env.example GA_MEASUREMENT_ID stays empty');
+if (!envExample.includes('GA_MEASUREMENT_ID=G-XXXXXXXXXX')) {
+  fail('.env.example missing G-XXXXXXXXXX comment');
+} else ok('.env.example documents G-XXXXXXXXXX format');
+
+const publicHtmlDir = path.join(ROOT, 'public');
+function walkHtml(dir, acc) {
+  for (const name of fs.readdirSync(dir)) {
+    const full = path.join(dir, name);
+    const st = fs.statSync(full);
+    if (st.isDirectory()) walkHtml(full, acc);
+    else if (name.endsWith('.html')) acc.push(full);
+  }
+  return acc;
+}
+const htmlFiles = walkHtml(publicHtmlDir, []);
+const gaEmbed = htmlFiles.filter((f) => {
+  const html = fs.readFileSync(f, 'utf8');
+  return html.includes('googletagmanager.com') || /gtag\s*\(/.test(html);
+});
+if (gaEmbed.length) fail(`static HTML embeds gtag: ${gaEmbed.map((f) => path.relative(ROOT, f)).join(', ')}`);
+else ok('public HTML has no static gtag snippet');
 
 const visitor = fs.readFileSync(path.join(ROOT, 'server/modules/analytics/visitor.service.js'), 'utf8');
 if (!visitor.includes("'web_vital'") || !visitor.includes('VALID_VITALS')) {

@@ -50,6 +50,7 @@ window.TL_COOKIE = (function () {
     persistChoice(true);
     bar?.remove();
     notify();
+    window.TL_ANALYTICS?.loadAnalytics?.();
   }
 
   function reject(bar) {
