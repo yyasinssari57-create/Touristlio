@@ -223,6 +223,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `banned_words` ve yüklenen dosya silmesi hâlâ kalıcı (sözlük / disk).
 - Kategori kullanımda taşınıp pasifleşir (eski otomatik taşıma).
 
+## v2 DÜŞÜK-1 (kod temizliği)
+
+- Tamamlandı (v1 DÜŞÜK-5 üzerine; yeniden yazılmadı, yalnızca boşluklar):
+  - Production tarayıcı: `console.log` / `debug` / `info` / **warn** no-op. `console.error` duruyor.
+  - Sunucu seed (açılışta çalışır) `console.log` → `logger.info`. CLI `npm run seed` “Seed complete.” aynı.
+  - `npx depcheck`: silinecek paket yok. `web-vitals` require edilmez; `public/vendor/web-vitals` + `analytics.js` kullanır — silinmedi.
+  - CSS: v1 birleştirmesi duruyor. Medya sorgusu kopyaları (`style.css` + `inline-overrides.css`) bilinçli bırakıldı.
+  - `.env.example` güncellendi: `TRUST_PROXY`, `COOKIE_*`, `DISABLE_WWW_REDIRECT`, `DISABLE_HTTPS_REDIRECT`, `SEED_ON_START`, `STORAGE_PERSISTENT`, `APP_VERSION`. CORS yorumu www. Değer uydurulmadı.
+  - `npm run verify:cleanup`
+
+### Leftover
+- İstemci `escapeHtml` hâlâ birden fazla dosyada.
+- CLI `verify:*` / yer script’leri `console.log` kullanır (tarayıcı değil).
+- `inline-overrides.css` büyük; medya sorgusu tekrarları birleştirilmedi.
+- `pino-pretty` yalnızca development.
+- `server/scripts/awaitify-db.py` commit edilmedi.
+
 ## v2 ORTA-4 (0 Tiola gösterimi)
 
 - Tamamlandı (ORTA-1 kart puanı üzerine; v1 ORTA-4 anti-bot ile karıştırma):
@@ -564,7 +581,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 ### Leftover
 - İstemci `escapeHtml` hâlâ birden fazla dosyada (ekstra script etiketi istemedik).
-- `console.warn` production'da açık (harita / kategori meta).
+- `console.warn` production kapatması v2 DÜŞÜK-1’de.
 - CLI `verify:*` / seed script'leri `console.log` kullanmaya devam eder (tarayıcı değil).
 - `inline-overrides.css` büyük; yalnızca `style.css` içindeki tekrarlar birleştirildi.
 - `pino-pretty` yalnızca development transport.

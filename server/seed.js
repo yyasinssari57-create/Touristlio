@@ -6,6 +6,7 @@ const { createUser, findUserByEmail, hashPassword } = require('./auth');
 const { enrichContentFields } = require('./lib/place-content');
 const { slugify } = require('./lib/catalog-db');
 const { uniquePlaceSlug, slugFromPlace } = require('./lib/place-lookup');
+const logger = require('./lib/logger');
 
 const placesPath = path.join(__dirname, 'data', 'places.json');
 const blogsSeed = [
@@ -92,7 +93,7 @@ async function seedPlaces(options = {}) {
     }
   });
   await tx(places);
-  console.log('Seeded', places.length, 'places');
+  logger.info({ msg: 'Seeded places', count: places.length });
 }
 
 async function markEmailVerified(userId) {
@@ -115,12 +116,12 @@ async function seedAdmin() {
     );
     await markEmailVerified(existing.id);
     await clearLockout(existing.id);
-    console.log('Admin updated from .env:', email);
+    logger.info({ msg: 'Admin updated from .env', email });
     return;
   }
   const user = await createUser({ name, email, password, role: 'admin' });
   await markEmailVerified(user.id);
-  console.log('Admin created:', email, '(password from .env or default ChangeMe123!)');
+  logger.info({ msg: 'Admin created', email });
 }
 
 async function syncLegacyAdminPassword(password) {
@@ -133,7 +134,7 @@ async function syncLegacyAdminPassword(password) {
   await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, legacy.id);
   await markEmailVerified(legacy.id);
   await clearLockout(legacy.id);
-  console.log('Legacy admin password synced:', legacyEmail);
+  logger.info({ msg: 'Legacy admin password synced', email: legacyEmail });
 }
 
 async function seedDemoBlogs() {
@@ -162,7 +163,7 @@ async function seedDemoBlogs() {
       b.author || null,
     );
   }
-  console.log('Seeded', blogsSeed.length, 'demo blogs');
+  logger.info({ msg: 'Seeded demo blogs', count: blogsSeed.length });
 }
 
 async function runFullSeed(options = {}) {

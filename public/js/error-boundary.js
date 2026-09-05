@@ -64,6 +64,7 @@
       c.log = noop;
       c.debug = noop;
       c.info = noop;
+      c.warn = noop;
     } catch { /* ignore */ }
   }
   silenceProdConsole();
