@@ -57,6 +57,52 @@ if (!indexSrc.includes("baseUri: [\"'self'\"]")) fail("base-uri 'self' missing")
 else ok("base-uri 'self'");
 if (!indexSrc.includes('reportOnly: cspReportOnly')) fail('no report-only rollout switch');
 else ok('CSP_REPORT_ONLY switch present');
+if (/scriptSrcAttr:\s*\[[^\]]*'unsafe-inline'/s.test(indexSrc)) {
+  fail("script-src-attr still allows 'unsafe-inline'");
+} else ok("script-src-attr has no 'unsafe-inline'");
+if (!indexSrc.includes("scriptSrcAttr: [\"'none'\"]")) {
+  fail("script-src-attr 'none' missing");
+} else ok("script-src-attr is 'none'");
+
+const bindJs = fs.readFileSync(path.join(ROOT, 'public/js/bind-actions.js'), 'utf8');
+if (!bindJs.includes("document.addEventListener('click'") || !bindJs.includes('data-act')) {
+  fail('bind-actions.js missing delegated click / data-act');
+} else ok('bind-actions.js wires data-act');
+
+function walkHtml(dir, acc) {
+  for (const name of fs.readdirSync(dir)) {
+    const full = path.join(dir, name);
+    const st = fs.statSync(full);
+    if (st.isDirectory()) {
+      if (name === 'vendor') continue;
+      walkHtml(full, acc);
+      continue;
+    }
+    if (!/\.html$/i.test(name)) continue;
+    acc.push(full);
+  }
+  return acc;
+}
+const htmlFiles = walkHtml(path.join(ROOT, 'public'), []);
+let onclickHits = 0;
+const onclickFiles = [];
+for (const full of htmlFiles) {
+  const src = fs.readFileSync(full, 'utf8');
+  const n = (src.match(/\sonclick\s*=/gi) || []).length;
+  if (n) {
+    onclickHits += n;
+    onclickFiles.push(path.relative(ROOT, full));
+  }
+}
+if (onclickHits) {
+  fail(`public HTML still has ${onclickHits} onclick= (${onclickFiles.join(', ')})`);
+} else ok('public HTML has no onclick= attributes');
+
+const indexHtml = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
+const adminHtml = fs.readFileSync(path.join(ROOT, 'public/admin.html'), 'utf8');
+if (!indexHtml.includes('/js/bind-actions.js') || !adminHtml.includes('/js/bind-actions.js')) {
+  fail('index/admin do not load bind-actions.js');
+} else ok('index + admin load bind-actions.js');
 
 const sender = fs.readFileSync(path.join(ROOT, 'server/lib/send-public-html.js'), 'utf8');
 if (!sender.includes('injectNonce(html, nonceFromRes(res))')) {
@@ -138,6 +184,10 @@ async function checkLive() {
       }
       if (scriptSrc.includes("'unsafe-inline'")) {
         fail(`GET ${p} script-src still has unsafe-inline`);
+        continue;
+      }
+      if (/script-src-attr[^;]*'unsafe-inline'/.test(csp)) {
+        fail(`GET ${p} script-src-attr still has unsafe-inline`);
         continue;
       }
       const m = /'nonce-([A-Za-z0-9+/=]+)'/.exec(scriptSrc);

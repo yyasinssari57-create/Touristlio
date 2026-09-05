@@ -146,10 +146,10 @@
     const menuId = `rpt-menu-${targetType}-${targetId}`;
     const items = [];
     if (canDel) {
-      items.push(`<button type="button" class="report-menu-danger" role="menuitem" onclick="event.stopPropagation();TL_CONTENT.open('${targetType}',${targetId},'${safeLabel.replace(/"/g, '&quot;')}');TL_REPORTS.closeMenus()">${t('deleteBtn') || 'Sil'}</button>`);
+      items.push(`<button type="button" class="report-menu-danger" role="menuitem" data-stop data-act="TL_CONTENT.open" data-arg="${targetType}" data-arg2="${targetId}" data-arg3="${safeLabel.replace(/"/g, '&quot;')}" data-then="TL_REPORTS.closeMenus">${t('deleteBtn') || 'Sil'}</button>`);
     }
     if (canReport) {
-      items.push(`<button type="button" role="menuitem" onclick="event.stopPropagation();TL_REPORTS.open('${targetType}',${targetId},'${safeLabel.replace(/"/g, '&quot;')}');TL_REPORTS.closeMenus()">${t('reportBtn') || 'Şikayet et'}</button>`);
+      items.push(`<button type="button" role="menuitem" data-stop data-act="TL_REPORTS.open" data-arg="${targetType}" data-arg2="${targetId}" data-arg3="${safeLabel.replace(/"/g, '&quot;')}" data-then="TL_REPORTS.closeMenus">${t('reportBtn') || 'Şikayet et'}</button>`);
     }
 
     return `<div class="report-menu-wrap">

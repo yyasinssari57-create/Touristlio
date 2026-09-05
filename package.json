@@ -33,6 +33,7 @@
     "verify:passwords": "node server/scripts/verify-password-hash.js",
     "verify:faz1": "node server/scripts/verify-gemini-faz1.js",
     "verify:sprint0": "node server/scripts/verify-gemini-sprint0.js",
+    "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
     "verify:csp": "node server/scripts/verify-csp.js",

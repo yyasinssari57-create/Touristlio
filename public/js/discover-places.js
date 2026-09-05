@@ -246,8 +246,8 @@ window.TL_DISCOVER = (function () {
       return `
             <article class="discover-place-card" data-id="${p.id}" tabindex="0" role="button">
               ${window.TL_IMG?.tag
-                ? window.TL_IMG.tag(placeImg(p), { alt: name, kind: 'thumb', extra: typeof imgFallback === 'function' ? `onerror="imgFallback(this,'${p.category}',${p.id})"` : '' })
-                : `<img src="${placeImg(p)}" alt="${escapeHtml(name)}" width="96" height="72" loading="lazy"${typeof imgFallback === 'function' ? ` onerror="imgFallback(this,'${p.category}',${p.id})"` : ''}/>`}
+                ? window.TL_IMG.tag(placeImg(p), { alt: name, kind: 'thumb', extra: typeof imgFallback === 'function' ? `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` : '' })
+                : `<img src="${placeImg(p)}" alt="${escapeHtml(name)}" width="96" height="72" loading="lazy"${typeof imgFallback === 'function' ? ` data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` : ''}/>`}
               <div>
                 <h4>${escapeHtml(name)}</h4>
                 <p>${escapeHtml(window.TL_I18N?.catLabel(lang, p.category) || catLabel(p.category))} · ${escapeHtml(p.district || p.city || '')}</p>

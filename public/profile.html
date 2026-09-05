@@ -30,7 +30,7 @@
 
   <div class="nav-r"><a href="/" class="btn nav-btn-ghost nav-link-plain" data-i18n="explore">Keşfet</a>
 
-  <button class="btn nav-btn-ghost" id="logoutBtn" onclick="doLogout()" data-i18n="logout">Çıkış</button></div>
+  <button class="btn nav-btn-ghost" id="logoutBtn" data-act="doLogout" data-i18n="logout">Çıkış</button></div>
 
 </div></nav>
 
@@ -121,7 +121,7 @@
               <div id="avatarColorRow" class="av-color-row"></div>
               <div class="avatar-upload-row">
                 <label class="btn bo bsm" for="avatarFile"><span data-i18n="avatarUpload">Fotoğraf yükle</span><input type="file" id="avatarFile" accept="image/jpeg,image/png,image/webp" hidden/></label>
-                <button type="button" class="btn bp bsm" id="btnSaveAvatar" onclick="saveAvatarPreset()" data-i18n="avatarSave">Kaydet</button>
+                <button type="button" class="btn bp bsm" id="btnSaveAvatar" data-act="saveAvatarPreset" data-i18n="avatarSave">Kaydet</button>
               </div>
               <p class="avatar-upload-hint" data-i18n="avatarHint">Yuvarlak kırpılmış görünüm · max 3 MB</p>
             </div>
@@ -137,7 +137,7 @@
             <span id="settingsEmail" class="settings-email">—</span>
             <span id="settingsEmailBadge" class="settings-badge"></span>
           </div>
-          <button type="button" class="btn bo bsm" id="btnResendVerify" style="display:none" onclick="resendVerificationEmail()" data-i18n="settingsResendVerify">Doğrulama e-postası gönder</button>
+          <button type="button" class="btn bo bsm" id="btnResendVerify" style="display:none" data-act="resendVerificationEmail" data-i18n="settingsResendVerify">Doğrulama e-postası gönder</button>
         </div>
         <div class="settings-block">
           <h4 class="settings-subtitle" data-i18n="settingsChangeEmail">E-posta değiştir</h4>
@@ -145,7 +145,7 @@
           <input class="ain settings-inp" id="emailNew" type="email" autocomplete="email" data-i18n-placeholder="settingsNewEmail" placeholder="Yeni e-posta"/>
           <label class="sr-only" for="emailPass" data-i18n="settingsConfirmPassword">Onay için mevcut şifre</label>
           <input class="ain settings-inp" id="emailPass" type="password" autocomplete="current-password" data-i18n-placeholder="settingsConfirmPassword" placeholder="Onay için mevcut şifre"/>
-          <button type="button" class="btn bp bsm" id="btnSaveEmail" onclick="submitChangeEmail()" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
+          <button type="button" class="btn bp bsm" id="btnSaveEmail" data-act="submitChangeEmail" data-i18n="settingsSaveEmail">E-postayı güncelle</button>
         </div>
       </section>
 
@@ -157,13 +157,13 @@
           <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
           <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">Yeni şifre (min 12 karakter)</label>
           <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 12 karakter)"/>
-          <button type="button" class="btn bp bsm" id="btnSavePassword" onclick="submitChangePassword()" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
+          <button type="button" class="btn bp bsm" id="btnSavePassword" data-act="submitChangePassword" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
         </div>
         <p class="settings-note" data-i18n="settingsNote">Şifre en az 12 karakter, bir büyük harf ve bir rakam içermelidir.</p>
       </section>
 
       <div class="settings-block settings-logout-block">
-        <button type="button" class="btn bo bsm bdanger" onclick="doLogout()" data-i18n="settingsLogout">Çıkış Yap</button>
+        <button type="button" class="btn bo bsm bdanger" data-act="doLogout" data-i18n="settingsLogout">Çıkış Yap</button>
       </div>
 
     </div>
@@ -173,6 +173,7 @@
 </div>
 
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
+<script src="/js/bind-actions.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
 <script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script src="/js/auth-client.js?v=__APP_VERSION__"></script>

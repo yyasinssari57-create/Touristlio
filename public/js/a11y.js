@@ -4,7 +4,7 @@
 (function (global) {
   const WIDGET_SEL = [
     '.ntab', '.etab', '.atab', '.hpl', '.lb', '.fpill', '.cpill', '.fchip',
-    '.dtab', '.ptab', '.sd-item', '.bcat-chip', '.pc-save', '.pc[onclick]',
+    '.dtab', '.ptab', '.sd-item', '.bcat-chip', '.pc-save', '.pc[data-act]',
     '.discover-cat-chip', '.discover-place-card', '.star-btn', '[role="button"]',
   ].join(',');
 
@@ -127,9 +127,9 @@
       if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
       if (!el.getAttribute('role')) el.setAttribute('role', 'button');
     };
-    if (scope.matches && (scope.matches(WIDGET_SEL) || scope.hasAttribute('onclick'))) add(scope);
+    if (scope.matches && (scope.matches(WIDGET_SEL) || scope.hasAttribute('data-act'))) add(scope);
     if (scope.querySelectorAll) {
-      scope.querySelectorAll(WIDGET_SEL + ', [onclick]').forEach(add);
+      scope.querySelectorAll(WIDGET_SEL + ', [data-act]').forEach(add);
     }
     nameIconControls(scope);
   }
@@ -139,7 +139,7 @@
     const el = e.target;
     if (!el || !el.matches) return;
     if (el.matches('a, button, input, select, textarea, summary, [contenteditable="true"]')) return;
-    const isWidget = el.matches(WIDGET_SEL) || el.getAttribute('role') === 'button' || el.hasAttribute('onclick');
+    const isWidget = el.matches(WIDGET_SEL) || el.getAttribute('role') === 'button' || el.hasAttribute('data-act');
     if (!isWidget) return;
     e.preventDefault();
     el.click();
