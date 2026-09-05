@@ -94,6 +94,23 @@ for (const action of ['tools.cache_clear', 'tools.sitemap', 'place.info_boxes', 
 }
 
 const adminHtml = read('public/admin.html');
+if (/form-security\.js/.test(adminHtml) || /recaptchaToken/.test(adminHtml) || /grecaptcha/.test(adminHtml)) {
+  fail('admin.html must not depend on reCAPTCHA for login');
+} else ok('admin.html login has no reCAPTCHA widget/token');
+if (!/api\('\/auth\/login'/.test(adminHtml) || !/email: document\.getElementById\('admEmail'\)/.test(adminHtml)) {
+  fail('admin login must POST email+password to /auth/login');
+} else ok('admin login POSTs email+password only');
+
+const authRoutes = read('server/modules/auth/auth.routes.js');
+const loginBlock = authRoutes.match(/router\.post\(\s*'\/login'[\s\S]*?controller\.login\s*\)/);
+if (!loginBlock) fail('POST /login route missing');
+else if (loginBlock[0].includes('recaptchaGuard')) {
+  fail('admin shares /auth/login — recaptchaGuard there blocks /admin');
+} else ok('shared /auth/login is not recaptcha-gated');
+if (!authSvc.includes("'E-posta veya şifre hatalı'") || authSvc.includes('Güvenlik doğrulaması başarısız')) {
+  fail('wrong password must stay a normal login error');
+} else ok('wrong password is E-posta veya şifre hatalı, not güvenlik');
+
 if (adminHtml.includes('Kalıcı sil') || adminHtml.includes('Tiola yorumunu kalıcı olarak')) {
   fail('admin UI still promises permanent place delete');
 } else ok('admin UI copy is archive / deactivate');
