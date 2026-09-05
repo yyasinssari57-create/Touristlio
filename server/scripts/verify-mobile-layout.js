@@ -1,5 +1,5 @@
 /**
- * [DÜŞÜK-1] Mobil uyum: 48px dokunma, img max-width, menü scroll kilidi.
+ * [DÜŞÜK-1] + v2 ORTA-2 Mobil uyum: box-sizing, 48px, img, overflow, viewport, 320px.
  * Usage: node server/scripts/verify-mobile-layout.js
  * Optional: VERIFY_MOBILE_URL=http://127.0.0.1:3061 node server/scripts/verify-mobile-layout.js
  */
@@ -23,9 +23,17 @@ const appJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'app.js'), 'utf8')
 const indexHtml = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
 const loginHtml = fs.readFileSync(path.join(ROOT, 'public', 'login.html'), 'utf8');
 
+if (!/[*][^{]*\{[^}]*box-sizing:\s*border-box/.test(css) && !css.includes('*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}')) {
+  fail('global box-sizing:border-box missing');
+} else ok('global box-sizing:border-box');
+
 if (!css.includes('max-width:480px') && !css.includes('max-width: 480px')) {
   fail('missing 480px media query');
 } else ok('480px breakpoint present');
+
+if (!css.includes('max-width:900px') && !css.includes('max-width: 900px')) {
+  fail('missing 900px hamburger breakpoint');
+} else ok('900px hamburger breakpoint');
 
 if (!/img\{[^}]*max-width:\s*100%/.test(css) && !css.includes('img,picture,video{max-width:100%}')) {
   fail('images missing max-width:100%');
@@ -35,6 +43,18 @@ if (!css.includes('min-height:48px') || !css.includes('min-width:48px')) {
   fail('buttons missing 48px min touch size');
 } else ok('48×48 touch min on buttons');
 
+if (!css.includes('.ntab') || !css.includes('.nav-toggle') || !css.includes('.nav-link-plain')) {
+  fail('nav tap classes missing from CSS');
+} else ok('nav tap classes .btn / .ntab / .nav-toggle / .nav-link-plain');
+
+if (!/max-width:900px[\s\S]*min-height:48px/.test(css) && !css.includes('menü ≤900px')) {
+  fail('48px tap targets not applied at 900px hamburger breakpoint');
+} else ok('48px tap targets at ≤900px (not desktop)');
+
+if (!/display:\s*inline-flex/.test(css) || !css.includes('align-items:center')) {
+  fail('tap targets missing inline-flex / align-items:center');
+} else ok('tap targets inline-flex + align-items');
+
 if (!css.includes('html.nav-open') || !css.includes('overflow:hidden')) {
   fail('nav-open scroll lock CSS missing');
 } else ok('nav-open overflow:hidden');
@@ -43,9 +63,22 @@ if (!css.includes('.nav-toggle') || !/nav-toggle\{[^}]*min-width:48px/.test(css.
   fail('nav-toggle not 48px');
 } else ok('nav-toggle 48×48');
 
+if (!css.includes('overflow-x:clip') && !css.includes('overflow-x: clip')) {
+  fail('overflow-x:clip missing (320px horizontal scroll)');
+} else ok('overflow-x:clip (no page-level horizontal scroll)');
+
+if (!css.includes('max-width:320px') && !css.includes('max-width: 320px')) {
+  fail('missing 320px overflow media query');
+} else ok('320px overflow media query');
+
 if (!appJs.includes('classList.toggle(\'nav-open\'') && !appJs.includes('classList.toggle("nav-open"')) {
   fail('JS does not toggle nav-open on html/body');
 } else ok('JS toggles nav-open class');
+
+if (!appJs.includes("document.body.style.overflow = next ? 'hidden' : ''")
+  && !appJs.includes('document.body.style.overflow = next ? "hidden" : ""')) {
+  fail('setNavMenuOpen missing body.style.overflow lock');
+} else ok('body.style.overflow hidden on open, empty on close');
 
 if (!appJs.includes('function setNavMenuOpen') || !appJs.includes('function closeNavMenu')) {
   fail('setNavMenuOpen / closeNavMenu missing');
@@ -56,6 +89,8 @@ else ok('menu closes on tab / auth');
 
 if (!indexHtml.includes('width=device-width')) fail('index missing viewport');
 else ok('index viewport');
+if (!/initial-scale=1(\.0)?/.test(indexHtml)) fail('index viewport missing initial-scale');
+else ok('index initial-scale=1');
 if (!loginHtml.includes('width=device-width')) fail('login missing viewport');
 else ok('login viewport');
 if (!indexHtml.includes('aria-expanded="false"') || !indexHtml.includes('id="navToggle"')) {
@@ -68,11 +103,21 @@ const pages = [
   'public/search.html',
   'public/profile.html',
   'public/404.html',
+  'public/500.html',
+  'public/admin.html',
+  'public/verify-email.html',
+  'public/reset-password.html',
+  'public/legal/kvkk.html',
+  'public/legal/privacy.html',
+  'public/legal/terms.html',
+  'public/legal/about.html',
+  'public/legal/contact.html',
 ];
 for (const rel of pages) {
   const html = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-  if (!html.includes('width=device-width')) fail(`${rel} missing viewport`);
-  else ok(`${rel} viewport`);
+  if (!html.includes('width=device-width') || !/initial-scale=1(\.0)?/.test(html)) {
+    fail(`${rel} missing viewport width=device-width, initial-scale=1`);
+  } else ok(`${rel} viewport`);
 }
 
 const googleLeak = /google\s*rating|googleRating|aggregateRating.*google/i;

@@ -176,6 +176,21 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Ekvator / Greenwich (lat veya lng tam 0) olan gerçek noktalar da elenir — denetim “0 olmamalı”.
 - `public/sitemap.xml` gitignore’da; canlı kaynak rota. Deploy sonrası `https://www.touristlio.com/sitemap.xml` 200 doğrula.
 
+## v2 ORTA-2 (mobil uyum)
+
+- Tamamlandı (DÜŞÜK-1 48px / overflow-x / viewport üzerine; yalnızca boşluklar):
+  - Global `* { box-sizing: border-box }` ve `img { max-width: 100% }` zaten vardı — silinmedi.
+  - Viewport tüm kamu HTML’de `width=device-width, initial-scale=1.0` (denetim `1`).
+  - 48×48 dokunma hamburger kırılımına alındı (`≤900px`): `.btn`, `.ntab`, `.nav-toggle`, `.nav-link-plain`, `.nav-btn-*` + `inline-flex` / `align-items:center`. Masaüstü şerit aynı. İkon/chip hâlâ `::after` (görsel kutu büyümez).
+  - Menü açıkken `document.body.style.overflow = 'hidden'`, kapanınca `''` (CSS `nav-open` kilidi duruyor).
+  - 320px: `overflow-x: clip` + çerez / tur saati / harita popup `min-width:0`.
+- `npm run verify:mobile`
+
+### Leftover
+- Chip 48px isabet komşu pill ile örtüşebilir (görsel boyut bilinçli).
+- Admin hamburger yok; topnav yatay kayar.
+- Canlı 320px telefon testi Yasin’de (bu ortam gerçek cihaz yok).
+
 ## v2 ORTA-1 (erişilebilirlik WCAG)
 
 - Tamamlandı (DÜŞÜK-2 skip-link / label / aria üzerine):

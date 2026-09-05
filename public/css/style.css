@@ -419,6 +419,12 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
   .brand-mark,.nav-brand-center .brand-mark{height:42px;width:auto;}
   .nav-tabs{flex-direction:column;align-items:stretch;width:100%;}
   .ntab{border-radius:8px;padding:10px 12px;text-align:center;}
+  /* v2 ORTA-2: menü ≤900px açılır — 48×48 dokunma; masaüstü şerit aynı kalır */
+  .btn,.nav-toggle,.nav-btn-ghost,.nav-btn-primary,.ntab,.nav-link-plain,.etab,.atab,.ptab,
+  .page-num,.faq-q,.aguest,.cookie-actions .btn,.auth-page-box .btn{
+    min-height:48px;min-width:48px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
   .nav-menu .nav-r{flex-wrap:wrap;justify-content:center;width:100%;}
   .profile-wrap{padding:calc(var(--nav-h) + 24px) 16px 40px;}
   .hero{padding:calc(var(--nav-h) + 28px) 16px 44px;min-height:auto;}
@@ -758,11 +764,10 @@ img,video{height:auto;}
 html.nav-open,body.nav-open{overflow:hidden;overscroll-behavior:none;}
 
 @media (max-width:480px){
-  /* 48×48 dokunma alanı: görsel padding/şekil aynı, min kutu büyür */
-  .btn,.nav-toggle,.nav-btn-ghost,.nav-btn-primary,.ntab,.etab,.atab,.ptab,
-  .page-num,.faq-q,.aguest,.cookie-actions .btn,.auth-page-box .btn,
+  /* 48×48: DÜŞÜK-1 chip/admin; nav/buton 48px artık ≤900px (yukarıda) */
   .admin-topnav button,.discover-cat-chip,.map-cat-chip{
     min-height:48px;min-width:48px;
+    display:inline-flex;align-items:center;justify-content:center;
   }
   /* Küçük chip/pill ve kapatma: görsel kutu aynı, görünmez genişletilmiş isabet */
   .hpl,.fpill,.cpill,.gpill,.fchip,.bcat-chip,.lb,.dtab,.profile-chip-btn,.aclose,.pc-save,.pd-save{
@@ -783,4 +788,13 @@ html.nav-open,body.nav-open{overflow:hidden;overscroll-behavior:none;}
   .map-search-inp,.search-page-form input,.search-page-form select{min-width:0;}
   .discover-place-card img{max-width:88px;}
   .pc-img img,.bcard img,.tiola-card img,.pd-hero img,.city-card img{max-width:100%;}
+}
+
+/* v2 ORTA-2: 320px — yatay kaydırma yok (min-width tavanları) */
+@media (max-width:320px){
+  html,body{overflow-x:clip;max-width:100%;}
+  .cookie-banner{padding:12px;}
+  .cookie-banner p{min-width:0;}
+  .tour-time{min-width:0;}
+  .map-popup{min-width:0;}
 }
