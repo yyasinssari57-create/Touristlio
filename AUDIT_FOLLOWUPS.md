@@ -231,7 +231,7 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
   - `npx depcheck`: silinecek paket yok. `web-vitals` require edilmez; `public/vendor/web-vitals` + `analytics.js` kullanır — silinmedi.
   - CSS: v1 birleştirmesi duruyor. Medya sorgusu kopyaları (`style.css` + `inline-overrides.css`) bilinçli bırakıldı.
   - `.env.example` güncellendi: `TRUST_PROXY`, `COOKIE_*`, `DISABLE_WWW_REDIRECT`, `DISABLE_HTTPS_REDIRECT`, `SEED_ON_START`, `STORAGE_PERSISTENT`, `APP_VERSION`. CORS yorumu www. Değer uydurulmadı.
-  - `npm run verify:cleanup`
+  - `npm run verify:cleanup` (yerel sunucu bekleme 400 deneme — DB yavaş açılınca 10 sn yetmiyordu)
 
 ### Leftover
 - İstemci `escapeHtml` hâlâ birden fazla dosyada.
