@@ -188,7 +188,14 @@ async function checkLive(base) {
     const port = process.env.VERIFY_CACHE_PORT || '3068';
     const base = `http://127.0.0.1:${port}`;
     const child = spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')], {
-      env: { ...process.env, PORT: port, NODE_ENV: 'test' },
+      cwd: ROOT,
+      env: {
+        ...process.env,
+        PORT: port,
+        NODE_ENV: 'development',
+        SITEMAP_ON_START: 'false',
+        LIVE_DATA_CRON: 'false',
+      },
       stdio: 'ignore',
     });
     try {
