@@ -149,6 +149,12 @@ async function checkLive(base) {
     fail(`list cards missing fields on ${missingFields.length} posts`);
   } else if (blogs.length) ok(`list posts have title, category, author, excerpt, slug (${blogs.length})`);
   else ok('list empty (no seeded blogs in this DB)');
+  const objectLabels = blogs.filter((b) => typeof b.category !== 'string'
+    || typeof b.categoryLabel !== 'string'
+    || String(b.categoryLabel).includes('[object ')
+    || (b.tags || []).some((t) => typeof t !== 'string'));
+  if (objectLabels.length) fail(`category/tag rendered as object on ${objectLabels.length} posts`);
+  else if (blogs.length) ok('categoryLabel + tags are strings (no [object Object])');
   if (blogs.some((b) => b.isPublished === false)) fail('public list isPublished=false');
   else if (blogs.length) ok('public list isPublished=true');
 
@@ -173,7 +179,13 @@ async function checkLive(base) {
     if (apiDetail.status !== 200 || !one.blog) fail(`GET /api/blogs/${sample.slug} failed`);
     else if (one.blog.status !== 'approved' || one.blog.isPublished !== true) {
       fail('detail API returned unpublished post');
+    } else if (typeof one.blog.category !== 'string' || typeof one.blog.categoryLabel !== 'string'
+      || String(one.blog.categoryLabel).includes('[object ')
+      || (one.blog.tags || []).some((t) => typeof t !== 'string')) {
+      fail('detail API category/tag is not a string');
     } else ok('GET /api/blogs/:slug published post');
+    if (listing.body.includes('data-tl-lang-boot')) ok('GET /blog early lang boot');
+    else fail('GET /blog missing early lang boot');
   } else {
     console.log('  · skipped live /blog/:slug (no approved posts)');
   }
