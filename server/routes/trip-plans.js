@@ -5,6 +5,7 @@ const { authRequired, authOptional } = require('../middleware/auth');
 const { parsePositiveInt } = require('../lib/sanitize');
 const { mapPlaceRow } = require('../lib/place-map');
 const { findNearbyPlaces } = require('../lib/geo');
+const { findNearbyPlacesSql } = require('../lib/place-geom');
 
 const router = express.Router();
 
@@ -72,7 +73,8 @@ router.get('/suggest/nearby', authOptional, async (req, res) => {
   let origin = placeId ? await db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) : null;
   if (!origin && city) origin = all.find((r) => r.city?.toLowerCase().includes(String(city).toLowerCase()));
   if (!origin) return res.json({ places: all.slice(0, Number(limit) || 6).map(mapPlace) });
-  const nearby = findNearbyPlaces(all, origin, mapPlace, Number(limit) || 6);
+  const nearby = (await findNearbyPlacesSql(origin, mapPlace, Number(limit) || 6))
+    || findNearbyPlaces(all, origin, mapPlace, Number(limit) || 6);
   res.json({ places: nearby });
 });
 

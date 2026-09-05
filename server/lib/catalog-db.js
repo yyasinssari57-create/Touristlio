@@ -203,46 +203,57 @@ async function deleteCity(id, { hard = false } = {}) {
   return { ok: true, deleted: false };
 }
 
+function categoryTagLike(slug) {
+  return `%"${String(slug || '').replace(/"/g, '')}"%`;
+}
+
+/** Single-query usage count. categories stays TEXT (JSON array string). */
 async function countCategoryUsage(slug) {
   const db = getDb();
-  const direct = (await db.prepare(`
+  const row = await db.prepare(`
     SELECT COUNT(*) AS c FROM places
-    WHERE category = ? AND COALESCE(status, 'published') != 'archived'
-  `).get(slug)).c;
+    WHERE COALESCE(status, 'published') != 'archived'
+      AND (
+        category = ?
+        OR (categories IS NOT NULL AND categories LIKE ?)
+      )
+  `).get(slug, categoryTagLike(slug));
+  return Number(row && row.c) || 0;
+}
+
+/** One aggregate for every category — no per-slug place scan. */
+async function loadCategoryPlaceCounts(database) {
+  const db = getDb(database);
   const rows = await db.prepare(`
-    SELECT categories FROM places
-    WHERE category != ? AND COALESCE(status, 'published') != 'archived'
-      AND categories IS NOT NULL AND categories != '' AND categories != '[]'
-  `).all(slug);
-  let extra = 0;
-  for (const row of rows) {
-    try {
-      const cats = JSON.parse(row.categories);
-      if (Array.isArray(cats) && cats.includes(slug)) extra += 1;
-    } catch { /* ignore bad JSON */ }
-  }
-  return direct + extra;
+    SELECT pc.slug, COUNT(DISTINCT p.id) AS c
+    FROM place_categories pc
+    LEFT JOIN places p
+      ON COALESCE(p.status, 'published') != 'archived'
+     AND (
+       p.category = pc.slug
+       OR (p.categories IS NOT NULL AND p.categories LIKE '%"' || pc.slug || '"%')
+     )
+    GROUP BY pc.slug
+  `).all();
+  return new Map((rows || []).map((r) => [r.slug, Number(r.c) || 0]));
 }
 
 async function listCategories({ includeInactive = false } = {}) {
   const db = getDb();
   const where = includeInactive ? '' : ' WHERE is_active = 1';
   const rows = await db.prepare(`SELECT * FROM place_categories${where} ORDER BY sort_order, name_tr`).all();
-  const out = [];
-  for (const r of rows) {
-    out.push({
-      id: r.id,
-      slug: r.slug,
-      nameTr: r.name_tr,
-      nameEn: r.name_en || r.slug,
-      icon: r.icon || '',
-      imageUrl: r.image_url || null,
-      sortOrder: r.sort_order,
-      isActive: !!r.is_active,
-      placeCount: await countCategoryUsage(r.slug),
-    });
-  }
-  return out;
+  const counts = await loadCategoryPlaceCounts(db);
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    nameTr: r.name_tr,
+    nameEn: r.name_en || r.slug,
+    icon: r.icon || '',
+    imageUrl: r.image_url || null,
+    sortOrder: r.sort_order,
+    isActive: !!r.is_active,
+    placeCount: counts.get(r.slug) || 0,
+  }));
 }
 
 async function createCategory(body) {
@@ -386,6 +397,7 @@ module.exports = {
   reorderCategories,
   deleteCategory,
   countCategoryUsage,
+  loadCategoryPlaceCounts,
   reassignPlacesFromCategory,
   DEFAULT_CATEGORIES,
 };

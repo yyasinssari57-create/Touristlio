@@ -724,11 +724,12 @@ function injectPlaceJsonLd(p, tiolas) {
   const attraction = {
     '@context': 'https://schema.org',
     '@type': 'TouristAttraction',
+    '@id': origin + placePublicPath(p),
     name: p.name,
     description: placeField(p, 'overview') || placeField(p, 'description') || undefined,
     url: origin + placePublicPath(p),
     image: img,
-    address: { '@type': 'PostalAddress', addressLocality: geoLabel(p.city) || p.city, addressCountry: geoLabel(p.country) || p.country },
+    address: { '@type': 'PostalAddress', addressLocality: geoLabel(p.city) || p.city, addressRegion: geoLabel(p.district) || p.district, addressCountry: geoLabel(p.country) || p.country },
   };
   if (p.lat != null && p.lng != null) {
     attraction.geo = { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng };
@@ -768,11 +769,23 @@ function injectPlaceJsonLd(p, tiolas) {
       })),
     });
   }
+  const placeReviews = [];
   (tiolas || []).forEach((ti) => {
     if (ti.status && ti.status !== 'approved') return;
     if (ti.parentId) return;
-    blocks.push(reviewJsonLd(ti, p));
+    const review = reviewJsonLd(ti, p);
+    if (review) {
+      placeReviews.push(review);
+      blocks.push(review);
+    }
   });
+  if (placeReviews.length) {
+    attraction.review = placeReviews.map((r) => {
+      const copy = { ...r };
+      delete copy['@context'];
+      return copy;
+    });
+  }
   setJsonLdBlocks(blocks);
 }
 

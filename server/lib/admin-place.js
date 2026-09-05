@@ -194,6 +194,10 @@ async function insertPlace(body) {
     status,
   );
   await persistPlaceSlug(id, enriched);
+  try {
+    const { syncPlaceGeom } = require('./place-geom');
+    await syncPlaceGeom(db, id, enriched.lat, enriched.lng);
+  } catch { /* PostGIS optional */ }
   return { id, name: enriched.name };
 }
 
@@ -256,6 +260,10 @@ async function updatePlace(id, body) {
     id,
   );
   await persistPlaceSlug(id, enriched);
+  try {
+    const { syncPlaceGeom } = require('./place-geom');
+    await syncPlaceGeom(db, id, enriched.lat, enriched.lng);
+  } catch { /* PostGIS optional */ }
   return await getAdminPlace(id);
 }
 
