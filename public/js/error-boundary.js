@@ -25,12 +25,20 @@
   };
 
   function lang() {
+    if (window.TL_I18N && typeof window.TL_I18N.resolveLang === 'function') {
+      return window.TL_I18N.resolveLang();
+    }
+    try {
+      var p = location.pathname || '/';
+      if (p === '/en' || p.indexOf('/en/') === 0) return 'en';
+    } catch { /* ignore */ }
+    var htmlLang = (document.documentElement && (document.documentElement.getAttribute('data-tl-lang') || document.documentElement.lang)) || '';
+    if (htmlLang.toLowerCase().indexOf('en') === 0) return 'en';
     try {
       var stored = localStorage.getItem('tl_lang');
       if (stored === 'en' || stored === 'tr') return stored;
     } catch { /* private mode */ }
-    var htmlLang = (document.documentElement && document.documentElement.lang) || '';
-    return htmlLang.toLowerCase().indexOf('en') === 0 ? 'en' : 'tr';
+    return 'tr';
   }
 
   function t(key) {

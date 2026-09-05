@@ -41,7 +41,7 @@
 <script src="/js/toast.js?v=__APP_VERSION__"></script>
 <script src="/js/form-security.js?v=__APP_VERSION__"></script>
 <script>
-const lang = localStorage.getItem('tl_lang') || 'tr';
+const lang = window.TL_I18N.bootLocale();
 window.TL_I18N.apply(lang);
 function t(k){ return window.TL_I18N.t(lang,k); }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

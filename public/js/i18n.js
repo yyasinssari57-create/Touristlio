@@ -1,4 +1,84 @@
 window.TL_I18N = (function () {
+  let activeLang = null;
+
+  function pathIsEnglish(pathname) {
+    const p = pathname == null
+      ? (typeof location !== 'undefined' ? location.pathname : '/')
+      : pathname;
+    return p === '/en' || (typeof p === 'string' && p.indexOf('/en/') === 0);
+  }
+
+  function stripLangPrefix(pathname) {
+    const p = pathname || '/';
+    if (p === '/en' || p === '/en/') return '/';
+    if (p.indexOf('/en/') === 0) return p.slice(3) || '/';
+    return p || '/';
+  }
+
+  function pathForLang(pathname, lang) {
+    const rest = stripLangPrefix(pathname);
+    if (lang === 'en') return rest === '/' ? '/en/' : `/en${rest}`;
+    return rest || '/';
+  }
+
+  function storedLang() {
+    try {
+      const s = localStorage.getItem('tl_lang');
+      return s === 'en' ? 'en' : (s === 'tr' ? 'tr' : '');
+    } catch {
+      return '';
+    }
+  }
+
+  /** URL /en wins; else tl_lang; else tr. */
+  function resolveLang(pathname, stored) {
+    const p = pathname != null
+      ? pathname
+      : (typeof location !== 'undefined' ? location.pathname : '/');
+    if (pathIsEnglish(p)) return 'en';
+    const s = stored != null ? stored : storedLang();
+    return s === 'en' ? 'en' : 'tr';
+  }
+
+  function persistLang(lang) {
+    const next = lang === 'en' ? 'en' : 'tr';
+    try { localStorage.setItem('tl_lang', next); } catch { /* private mode */ }
+    activeLang = next;
+    return next;
+  }
+
+  function applyDocumentLang(lang) {
+    const next = lang === 'en' ? 'en' : 'tr';
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.lang = next;
+      document.documentElement.setAttribute('data-tl-lang', next);
+    }
+    activeLang = next;
+    return next;
+  }
+
+  function syncPathToLang(lang, opts) {
+    if (typeof location === 'undefined' || typeof history === 'undefined') return false;
+    const next = pathForLang(location.pathname, lang);
+    if (next === location.pathname) return false;
+    const url = next + (location.search || '') + (location.hash || '');
+    if (opts && opts.replace === false) history.pushState(history.state, '', url);
+    else history.replaceState(history.state, '', url);
+    return true;
+  }
+
+  function bootLocale(opts) {
+    const lang = resolveLang();
+    persistLang(lang);
+    applyDocumentLang(lang);
+    if (!opts || opts.syncPath !== false) syncPathToLang(lang);
+    return lang;
+  }
+
+  function currentLang() {
+    return activeLang || resolveLang();
+  }
+
   const dict = {
     tr: {
       login: 'Giriş Yap', join: 'Katıl', explore: 'Keşfet', discoverPlaces: 'Gezilecek Yerler', blog: 'Blog', profile: 'Profilim', admin: 'Admin',
@@ -684,7 +764,7 @@ window.TL_I18N = (function () {
   }
 
   function apply(lang) {
-    document.documentElement.lang = lang;
+    applyDocumentLang(lang);
     document.title = lang === 'en'
       ? 'Touristlio — Don\'t Just Visit. Feel It.'
       : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
@@ -730,7 +810,6 @@ window.TL_I18N = (function () {
       if (k) opt.textContent = t(lang, k);
     });
     applyGeo(lang);
-    document.documentElement.setAttribute('data-tl-lang', lang);
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.content = lang === 'en'
@@ -762,5 +841,10 @@ window.TL_I18N = (function () {
     }
   }
 
-  return { dict, t, catLabel, CAT_KEYS, apply, geoName, geoText, applyGeo };
+  return {
+    dict, t, catLabel, CAT_KEYS, apply, geoName, geoText, applyGeo,
+    pathIsEnglish, stripLangPrefix, pathForLang, resolveLang, persistLang,
+    applyDocumentLang, syncPathToLang, bootLocale, currentLang,
+    get lang() { return currentLang(); },
+  };
 })();

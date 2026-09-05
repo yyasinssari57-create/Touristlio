@@ -20,7 +20,9 @@
   };
 
   function t(key) {
-    const lang = window.TL_I18N?.lang || localStorage.getItem('tl_lang') || 'tr';
+    const lang = (window.TL_I18N && window.TL_I18N.currentLang)
+      ? window.TL_I18N.currentLang()
+      : (window.TL_I18N?.lang || localStorage.getItem('tl_lang') || 'tr');
     return window.TL_I18N?.t?.(lang, key) || key;
   }
 

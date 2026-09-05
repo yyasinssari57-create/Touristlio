@@ -91,9 +91,9 @@ let blogSearchTimer;
 let activeBlogSlug = null;
 let savedIds = new Set();
 let authMode = 'login';
-const pathIsEn = location.pathname === '/en' || location.pathname.startsWith('/en/');
-let lang = pathIsEn ? 'en' : (localStorage.getItem('tl_lang') || 'tr');
-if (pathIsEn) localStorage.setItem('tl_lang', 'en');
+let lang = window.TL_I18N
+  ? window.TL_I18N.bootLocale({ syncPath: true })
+  : ((location.pathname === '/en' || location.pathname.startsWith('/en/')) ? 'en' : 'tr');
 let lastOsmHint = false;
 let searchTimer;
 let filterRequestId = 0;
@@ -183,8 +183,24 @@ function geoText(value) {
     : (value || '');
 }
 
+function displayLabel(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return value.map(displayLabel).filter(Boolean).join(', ');
+  }
+  if (typeof value === 'object') {
+    const pick = lang === 'en'
+      ? (value.nameEn || value.name_en || value.en || value.name || value.label || value.title || value.nameTr || value.name_tr || value.slug)
+      : (value.nameTr || value.name_tr || value.tr || value.name || value.label || value.title || value.nameEn || value.name_en || value.slug);
+    return displayLabel(pick);
+  }
+  return '';
+}
+
 function localizeTag(tag) {
-  const raw = String(tag || '').trim();
+  const raw = displayLabel(tag).trim();
   if (!raw) return '';
   const geo = geoLabel(raw);
   if (geo && geo !== raw) return geo;
@@ -2478,10 +2494,10 @@ async function renderBlog() {
       const dateIso = b.publishedAt || b.createdAt || '';
       return `
       <a class="bcard${isFeat ? ' feat' : ''}" href="${escapeHtml(href)}" data-content-type="blog" data-content-id="${b.id}" onclick="event.preventDefault();openBlogDetail('${slugAttr}')">
-        ${responsiveImg(safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id }), { className: 'bimg', kind: 'card' })}
+        ${responsiveImg(safeUrl(b.imageUrl) || placeImg({ category: displayLabel(b.category) || 'guide', id: b.id }), { className: 'bimg', kind: 'card' })}
         ${b.featured ? `<div class="bfeat-badge">${escapeHtml(labels.featuredLbl)}</div>` : ''}
         <div class="bbody">
-          <div class="bcat-lbl">${escapeHtml(b.categoryLabel || b.category || '')}</div>
+          <div class="bcat-lbl">${escapeHtml(displayLabel(b.categoryLabel) || displayLabel(b.category) || '')}</div>
           <div class="btitle">${escapeHtml(b.title)}</div>
           <div class="bexc">${escapeHtml(b.excerpt || '')}</div>
           <div class="bmeta"><div class="bauthor">${authorChip}</div>${dateStr ? `<time class="bdate" datetime="${escapeHtml(dateIso)}">${escapeHtml(dateStr)}</time>` : ''}</div>
@@ -2514,8 +2530,8 @@ async function openBlogDetail(slug, skipRoute) {
     if (!b) {
       throw Object.assign(new Error(t('blogEmpty') || 'Blog bulunamadı'), { status: 404 });
     }
-    const img = safeUrl(b.imageUrl) || placeImg({ category: b.category || 'guide', id: b.id });
-    const tags = (b.tags || []).map((tag) => `<span class="bd-tag">${escapeHtml(tag)}</span>`).join('');
+    const img = safeUrl(b.imageUrl) || placeImg({ category: displayLabel(b.category) || 'guide', id: b.id });
+    const tags = (b.tags || []).map((tag) => `<span class="bd-tag">${escapeHtml(displayLabel(tag))}</span>`).join('');
     const menuBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
     const authorChip = renderProfileChip(b.userId, b.authorName, {
       name: b.authorName,
@@ -2528,7 +2544,7 @@ async function openBlogDetail(slug, skipRoute) {
     bodyEl.innerHTML = `
       <div data-content-type="blog" data-content-id="${b.id}">
       ${img ? responsiveImg(img, { className: 'bd-cover', kind: 'detail' }) : ''}
-      <div class="bd-cat">${escapeHtml(b.categoryLabel || b.category || '')}</div>
+      <div class="bd-cat">${escapeHtml(displayLabel(b.categoryLabel) || displayLabel(b.category) || '')}</div>
       <h1 class="bd-title">${escapeHtml(b.title)}</h1>
       <div class="bd-meta">${authorChip}${b.publishedAt ? ' · ' + formatDate(b.publishedAt) : ''}</div>
       ${b.excerpt ? `<p style="color:var(--t2);font-size:.85rem;margin-bottom:12px">${escapeHtml(b.excerpt)}</p>` : ''}
@@ -3520,15 +3536,16 @@ function refreshAfterLang() {
 }
 
 function setLang(l, btn) {
-  lang = l;
-  localStorage.setItem('tl_lang', l);
+  lang = window.TL_I18N ? window.TL_I18N.persistLang(l) : (l === 'en' ? 'en' : 'tr');
   document.querySelectorAll('.lb').forEach((b) => {
     b.classList.remove('on');
     b.setAttribute('aria-pressed', 'false');
   });
-  btn.classList.add('on');
-  btn.setAttribute('aria-pressed', 'true');
-  window.TL_I18N.apply(l);
+  if (btn) {
+    btn.classList.add('on');
+    btn.setAttribute('aria-pressed', 'true');
+  }
+  window.TL_I18N.apply(lang);
   refreshAfterLang();
   syncRoute(true);
 }

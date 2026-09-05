@@ -185,7 +185,7 @@
 
 <script>
 
-const lang = localStorage.getItem('tl_lang') || 'tr';
+const lang = window.TL_I18N.bootLocale();
 
 window.TL_I18N.apply(lang);
 

@@ -282,7 +282,7 @@
         ${presetPickerInner(p, selectedColor)}
       </button>`).join('');
     const label = section.labelKey
-      ? (window.TL_I18N?.t(localStorage.getItem('tl_lang') || 'tr', section.labelKey) || section.labelKey)
+      ? (window.TL_I18N?.t(window.TL_I18N.resolveLang ? window.TL_I18N.resolveLang() : (localStorage.getItem('tl_lang') || 'tr'), section.labelKey) || section.labelKey)
       : section.label;
     if (!label) {
       return `<div class="av-pick-section av-pick-section-none">${buttons}</div>`;

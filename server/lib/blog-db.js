@@ -150,20 +150,92 @@ async function uniqueBlogSlug(db, base, excludeId) {
   }
 }
 
+/** Prisma / i18n objects → string. blogs.category is TEXT; tags are TEXT/JSON string[]. */
+function labelFromUnknown(value, lang = 'tr') {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}'))
+      || (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+      try {
+        return labelFromUnknown(JSON.parse(trimmed), lang);
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return value.map((v) => labelFromUnknown(v, lang)).filter(Boolean)[0] || '';
+  }
+  if (typeof value === 'object') {
+    const enFirst = lang === 'en';
+    const keys = enFirst
+      ? ['nameEn', 'name_en', 'en', 'name', 'title', 'label', 'nameTr', 'name_tr', 'tr', 'slug', 'id']
+      : ['nameTr', 'name_tr', 'tr', 'name', 'title', 'label', 'nameEn', 'name_en', 'en', 'slug', 'id'];
+    for (const k of keys) {
+      if (value[k] != null && value[k] !== '') {
+        const found = labelFromUnknown(value[k], lang);
+        if (found) return found;
+      }
+    }
+  }
+  return '';
+}
+
+function categorySlugFromUnknown(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const slug = value.slug != null && typeof value.slug !== 'object'
+      ? value.slug
+      : (value.code != null && typeof value.code !== 'object' ? value.code : null);
+    if (slug != null && slug !== '') return sanitizeText(String(slug), 60);
+    return sanitizeText(labelFromUnknown(value), 60);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        return categorySlugFromUnknown(JSON.parse(trimmed));
+      } catch {
+        return sanitizeText(trimmed, 60);
+      }
+    }
+    return sanitizeText(trimmed, 60);
+  }
+  return sanitizeText(String(value), 60);
+}
+
+function tagToString(t) {
+  if (t == null || t === '') return '';
+  if (typeof t === 'string') return sanitizeText(t, 40);
+  if (typeof t === 'number' || typeof t === 'boolean') return sanitizeText(String(t), 40);
+  if (typeof t === 'object') return sanitizeText(labelFromUnknown(t), 40);
+  return '';
+}
+
 function parseTagsInput(value) {
   if (value == null || value === '') return [];
   if (Array.isArray(value)) {
-    return value.map((t) => sanitizeText(t, 40)).filter(Boolean).slice(0, 20);
+    return value.map(tagToString).filter(Boolean).slice(0, 20);
+  }
+  if (typeof value === 'object') {
+    if (Array.isArray(value.tags)) return value.tags.map(tagToString).filter(Boolean).slice(0, 20);
+    const one = tagToString(value);
+    return one ? [one] : [];
   }
   const raw = String(value).trim();
   if (!raw) return [];
   if (raw.startsWith('[')) {
     try {
       const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) return arr.map((t) => sanitizeText(t, 40)).filter(Boolean).slice(0, 20);
+      if (Array.isArray(arr)) return arr.map(tagToString).filter(Boolean).slice(0, 20);
     } catch { /* fall through */ }
   }
-  return raw.split(/[,;]+/).map((t) => sanitizeText(t, 40)).filter(Boolean).slice(0, 20);
+  return raw.split(/[,;]+/).map((t) => tagToString(t)).filter(Boolean).slice(0, 20);
 }
 
 function serializeTags(tags) {
@@ -172,12 +244,25 @@ function serializeTags(tags) {
 
 function parseTagsStored(value) {
   if (!value) return [];
+  if (Array.isArray(value)) return value.map(tagToString).filter(Boolean).slice(0, 20);
+  if (typeof value === 'object') return parseTagsInput(value);
   try {
     const arr = JSON.parse(value);
-    return Array.isArray(arr) ? arr : [];
+    if (Array.isArray(arr)) return arr.map(tagToString).filter(Boolean).slice(0, 20);
+    return parseTagsInput(arr);
   } catch {
     return parseTagsInput(value);
   }
+}
+
+async function blogCategoryLabel(slugOrObj, lang = 'tr') {
+  const slug = categorySlugFromUnknown(slugOrObj);
+  if (!slug) return '';
+  const db = getDb();
+  const row = await db.prepare('SELECT name_tr, name_en, icon FROM blog_categories WHERE slug = ? AND is_active = 1').get(slug);
+  if (!row) return slug;
+  const name = lang === 'en' ? (row.name_en || row.name_tr) : row.name_tr;
+  return row.icon ? `${row.icon} ${name}` : name;
 }
 
 async function backfillBlogSlugs(database) {
@@ -198,9 +283,13 @@ module.exports = {
   updateBlogCategory,
   deleteBlogCategory,
   uniqueBlogSlug,
+  labelFromUnknown,
+  categorySlugFromUnknown,
+  tagToString,
   parseTagsInput,
   serializeTags,
   parseTagsStored,
+  blogCategoryLabel,
   backfillBlogSlugs,
   slugify,
 };

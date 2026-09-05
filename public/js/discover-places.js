@@ -1,6 +1,8 @@
 window.TL_DISCOVER = (function () {
   const API = '/api';
-  let lang = localStorage.getItem('tl_lang') || 'tr';
+  let lang = (window.TL_I18N && window.TL_I18N.resolveLang)
+    ? window.TL_I18N.resolveLang()
+    : (localStorage.getItem('tl_lang') || 'tr');
   let selectedCity = null;
   let activeCategory = null;
   let places = [];
@@ -337,7 +339,9 @@ window.TL_DISCOVER = (function () {
   }
 
   async function onTabShown() {
-    lang = localStorage.getItem('tl_lang') || 'tr';
+    lang = (window.TL_I18N && window.TL_I18N.resolveLang)
+      ? window.TL_I18N.resolveLang()
+      : (localStorage.getItem('tl_lang') || 'tr');
     await loadDiscoverCategories();
     renderCategoryFilters();
     window.TL_MAP_DISCOVER?.init('discoverMap');
