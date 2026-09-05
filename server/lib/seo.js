@@ -82,6 +82,36 @@ function pageDefaults(pathname, lang) {
       ? { title: 'Terms — Touristlio', description: 'Terms of use for Touristlio.' }
       : { title: 'Kullanım Şartları — Touristlio', description: 'Touristlio kullanım şartları.' };
   }
+  if (p === '/login') {
+    return en
+      ? { title: 'Sign in — Touristlio', description: 'Sign in to save places and write Tiolas on Touristlio.' }
+      : { title: 'Giriş — Touristlio', description: 'Yer kaydetmek ve Tiola yazmak için Touristlio’ya giriş yapın.' };
+  }
+  if (p === '/register') {
+    return en
+      ? { title: 'Create account — Touristlio', description: 'Create a Touristlio account to save places and write Tiolas.' }
+      : { title: 'Kayıt — Touristlio', description: 'Yer kaydetmek ve Tiola yazmak için Touristlio hesabı oluşturun.' };
+  }
+  if (p === '/profile') {
+    return en
+      ? { title: 'Profile — Touristlio', description: 'Your Touristlio profile, Tiolas and saved places.' }
+      : { title: 'Profil — Touristlio', description: 'Touristlio profiliniz, Tiola’larınız ve kayıtlı yerleriniz.' };
+  }
+  if (p === '/admin') {
+    return en
+      ? { title: 'Admin — Touristlio', description: 'Touristlio admin panel.' }
+      : { title: 'Admin — Touristlio', description: 'Touristlio yönetim paneli.' };
+  }
+  if (p === '/verify-email') {
+    return en
+      ? { title: 'Verify email — Touristlio', description: 'Confirm your Touristlio email address.' }
+      : { title: 'E-posta doğrula — Touristlio', description: 'Touristlio e-posta adresinizi doğrulayın.' };
+  }
+  if (p === '/reset-password') {
+    return en
+      ? { title: 'Reset password — Touristlio', description: 'Choose a new Touristlio password.' }
+      : { title: 'Şifre sıfırla — Touristlio', description: 'Touristlio için yeni şifre belirleyin.' };
+  }
   return en ? HOME_EN : HOME_TR;
 }
 
@@ -136,7 +166,7 @@ function buildSeoHead({ pathname, lang, title, description, image, noindex, ogTy
     `<meta name="robots" content="${robots}"/>`,
     gsc ? `<meta name="google-site-verification" content="${escapeAttr(gsc)}"/>` : '',
     `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
-    hreflangLinks(pathname),
+    noindex ? '' : hreflangLinks(pathname),
     `<meta property="og:type" content="${escapeAttr(type)}"/>`,
     `<meta property="og:site_name" content="Touristlio"/>`,
     `<meta property="og:locale" content="${locale}"/>`,

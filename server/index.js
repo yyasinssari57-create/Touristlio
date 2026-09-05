@@ -20,6 +20,7 @@ const { sendPublicHtml, publicHtmlMiddleware, htmlPageRoutesMiddleware } = requi
 const { getAppVersion } = require('./lib/app-version');
 const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require('./lib/cors-origins');
 const { canonicalHostMiddleware } = require('./middleware/canonical-host');
+const { canonicalPageRedirectMiddleware } = require('./middleware/canonical-page-redirects');
 const { cspNonceMiddleware } = require('./middleware/csp-nonce');
 const { recaptchaConfig, publicRecaptchaConfig } = require('./middleware/recaptcha');
 const { publicAnalyticsConfig, gaCspSources } = require('./lib/analytics-config');
@@ -159,14 +160,17 @@ app.use('/uploads', uploadsStaticHeaders, (req, res, next) => {
   return res.redirect(302, storage.publicObjectUrl(rel));
 }, uploadsSrcsetFallback(UPLOADS_DIR), express.static(UPLOADS_DIR));
 
-const { buildSitemapXml, buildRobotsTxt } = require('./lib/sitemap');
+const { buildSitemapXml, buildRobotsTxt, SITEMAP_CACHE_CONTROL } = require('./lib/sitemap');
 app.get('/robots.txt', async (_req, res) => {
+  res.set('Cache-Control', SITEMAP_CACHE_CONTROL);
   res.type('text/plain; charset=utf-8').send(buildRobotsTxt());
 });
 app.get('/sitemap.xml', async (_req, res) => {
+  res.set('Cache-Control', SITEMAP_CACHE_CONTROL);
   res.type('application/xml; charset=utf-8').send(await buildSitemapXml());
 });
 
+app.use(canonicalPageRedirectMiddleware());
 app.use(htmlPageRoutesMiddleware(PUBLIC_DIR));
 app.use(publicHtmlMiddleware(PUBLIC_DIR));
 app.use(express.static(PUBLIC_DIR, {

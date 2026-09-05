@@ -8,6 +8,7 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 const { HTML_PAGE_ROUTES } = require('../lib/send-public-html');
+const { PAGE_REDIRECTS, canonicalPageTarget } = require('../middleware/canonical-page-redirects');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -62,9 +63,17 @@ if (!HTML_PAGE_ROUTES['/'] || HTML_PAGE_ROUTES['/'] !== 'index.html') {
 } else ok('GET / serves index.html');
 
 ['/about', '/contact', '/privacy', '/terms', '/kvkk'].forEach((alias) => {
-  if (!HTML_PAGE_ROUTES[alias]) fail(`missing alias ${alias}`);
-  else ok(`alias ${alias} → ${HTML_PAGE_ROUTES[alias]}`);
+  const dest = PAGE_REDIRECTS[alias];
+  if (!dest || !dest.startsWith('/legal/')) fail(`missing 301 alias ${alias}`);
+  else ok(`alias ${alias} → 301 ${dest}`);
 });
+if (canonicalPageTarget('/about', 'en') !== '/en/legal/about.html') {
+  fail('EN /about should 301 to /en/legal/about.html');
+} else ok('EN /about → /en/legal/about.html');
+if (canonicalPageTarget('/index.html', 'tr') !== '/') fail('/index.html should 301 to /');
+else ok('/index.html → /');
+if (canonicalPageTarget('/search.html', 'en') !== '/en/search') fail('/en/search.html map');
+else ok('/search.html EN → /en/search');
 
 if (searchHtml.includes('/?place=') || profileHtml.includes('/?place=')) {
   fail('old /?place= links still in search/profile HTML');
@@ -176,12 +185,6 @@ async function checkHttp(base) {
     '/legal/privacy.html',
     '/legal/kvkk.html',
     '/legal/terms.html',
-    '/about',
-    '/contact',
-    '/privacy',
-    '/terms',
-    '/kvkk',
-    '/legal/about',
     '/en/legal/contact.html',
   ];
   for (const route of expect200) {
@@ -189,6 +192,31 @@ async function checkHttp(base) {
       const r = await fetchText(base + route);
       if (r.status !== 200) fail(`${route} → ${r.status}`);
       else ok(`HTTP ${route} 200`);
+    } catch (e) {
+      fail(`${route} ${e.message}`);
+    }
+  }
+
+  const expect301 = [
+    ['/about', '/legal/about.html'],
+    ['/contact', '/legal/contact.html'],
+    ['/privacy', '/legal/privacy.html'],
+    ['/terms', '/legal/terms.html'],
+    ['/kvkk', '/legal/kvkk.html'],
+    ['/legal/about', '/legal/about.html'],
+    ['/index.html', '/'],
+    ['/search.html', '/search'],
+    ['/login.html', '/login'],
+    ['/en/about', '/en/legal/about.html'],
+    ['/en/index.html', '/en/'],
+  ];
+  for (const [route, dest] of expect301) {
+    try {
+      const r = await fetchText(base + route);
+      if (r.status !== 301 && r.status !== 302) fail(`${route} → ${r.status} (want 301)`);
+      else if (!String(r.location).split('?')[0].endsWith(dest)) {
+        fail(`${route} Location ${r.location} (want ${dest})`);
+      } else ok(`HTTP ${route} 301 → ${dest}`);
     } catch (e) {
       fail(`${route} ${e.message}`);
     }
@@ -209,6 +237,10 @@ async function checkHttp(base) {
   const missingHtml = await fetchText(base + '/legal/missing-page.html');
   if (missingHtml.status !== 404) fail(`missing .html → ${missingHtml.status}`);
   else ok('missing .html HTTP 404');
+
+  const fourFile = await fetchText(base + '/404.html');
+  if (fourFile.status !== 404) fail(`/404.html → ${fourFile.status} (want 404)`);
+  else ok('/404.html HTTP 404');
 
   const placesSlash = await fetchText(base + '/places');
   if (placesSlash.status !== 302 && placesSlash.status !== 301) {

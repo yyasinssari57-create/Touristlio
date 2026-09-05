@@ -2,6 +2,20 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## site-audit-fix (2026-09)
+
+Canlı + kod taraması. Tat değil, doğrulanmış hatalar.
+
+- Sitemap’e `/en/places/:slug`, `/en/blog/:slug` ve EN listing/yasal ikizleri eklendi (hreflang 200 iken sitemap’te yoktu).
+- Yinelenen kanonik: `/about` `/contact` `/index.html` `/search.html` vb. artık 301 → sitemap/footer URL.
+- `/login` `/admin` `/404` başlığı artık ana sayfa sloganı değil.
+- `robots.txt` giriş/kayıt/profil/admin (TR+EN) yollarını Disallow eder. noindex zaten vardı.
+- Sitemap / robots `Cache-Control: public, max-age=3600`.
+- noindex sayfalarda hreflang yok.
+- `npm run verify:audit` (+ `verify:sitemap` / `verify:og` / `verify:links` / `verify:cache`).
+
+Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, ekstra rozet); hava chip’leri; hero 16/9; CSP `script-src-attr`; Instagram `sameAs`; `/admin` HTML herkese açık (API kilitli); GA4/reCAPTCHA/SMTP env Yasin’de.
+
 ## KRİTİK-1 (veri)
 - Canlı Render DB hâlâ boş olabilir: `places.json` deploy edilmeli; Render Free disk kalıcı değil.
 - Seed görsellerinde tekrarlayan Unsplash URL’leri var (merge çıktısında duplicate).
