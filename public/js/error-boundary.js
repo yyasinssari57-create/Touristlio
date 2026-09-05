@@ -113,7 +113,7 @@
       src = String(err.filename || err.fileName || '');
     }
     var hay = (stack + ' ' + src).toLowerCase();
-    if (/\/js\/map\.js|\/js\/map-discover\.js|\/vendor\/leaflet/.test(hay)) return 'map';
+    if (/\/js\/map\.js|\/js\/map-discover\.js|\/js\/map-loader\.js|\/vendor\/leaflet/.test(hay)) return 'map';
     if (/loadtiolafeed|rendertiolacard|renderrevlist|tiolafeed/.test(hay)) return 'tiolas';
     if (/posttiola|buildauthform|updaterevform|contactform|dologinsubmit|doregsubmit/.test(hay)) return 'form';
     return null;

@@ -16,6 +16,10 @@ window.TL_DISCOVER = (function () {
 
   let discoverCats = [];
 
+  async function ensureMapLibs() {
+    if (window.TL_MAP_LOADER?.ensure) await window.TL_MAP_LOADER.ensure();
+  }
+
   async function fetchJson(path) {
     const res = await fetch(API + path, { credentials: 'include' });
     const data = await res.json().catch(() => ({}));
@@ -324,11 +328,14 @@ window.TL_DISCOVER = (function () {
     if (activeCategory && !discoverCats.some((c) => (c.id || c.slug) === activeCategory)) {
       activeCategory = null;
     }
-    if (window.TL_MAP_DISCOVER) {
+    if (document.getElementById('page-places')?.classList.contains('active')) {
       try {
-        window.TL_MAP_DISCOVER.init('discoverMap');
-        window.TL_MAP_DISCOVER.setTurkeyView();
-        window.TL_MAP_DISCOVER.loadMarkers('/places/map/markers?country=Turkey');
+        await ensureMapLibs();
+        if (window.TL_MAP_DISCOVER) {
+          window.TL_MAP_DISCOVER.init('discoverMap');
+          window.TL_MAP_DISCOVER.setTurkeyView();
+          window.TL_MAP_DISCOVER.loadMarkers('/places/map/markers?country=Turkey');
+        }
       } catch (err) {
         window.TL_ERROR_BOUNDARY?.capture('map', err);
       }
@@ -344,6 +351,7 @@ window.TL_DISCOVER = (function () {
       : (localStorage.getItem('tl_lang') || 'tr');
     await loadDiscoverCategories();
     renderCategoryFilters();
+    await ensureMapLibs();
     window.TL_MAP_DISCOVER?.init('discoverMap');
     setTimeout(() => {
       window.TL_MAP_DISCOVER?.invalidate();

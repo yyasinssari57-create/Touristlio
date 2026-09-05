@@ -9,7 +9,7 @@ const catalogDb = require('../../lib/catalog-db');
 const { slugify } = catalogDb;
 const { getCityImage, TURKEY_CITY_META } = require('../../lib/city-images');
 const { DISCOVER_GROUPS, FILTER_GROUPS, GROUP_VISIBILITY, matchesFilterGroup } = require('../../lib/place-content');
-const { cacheKey, wrap, clear } = require('../../lib/cache');
+const { cacheKey, wrap, clear, PLACES_TTL_MS } = require('../../lib/cache');
 const { getStatsMap, invalidateStatsCache } = require('../../lib/stats-cache');
 const { searchPlacesPage } = require('../../lib/places-search');
 const { parseListPagination, paginationMeta } = require('../../lib/pagination');
@@ -303,31 +303,34 @@ async function listPlaces(queryParams) {
 
     };
 
-  }, STATS_CACHE_TTL);
+  }, PLACES_TTL_MS);
 
 }
 
 
 
 async function listMarkers(queryParams, lang = 'tr') {
-  const statsMap = await getStatsMap();
-  const { rows, inMemoryFallback } = await searchPlacesPage({
-    ...queryParams,
-    categoryMode: 'discover',
-    orderSql: ' ORDER BY p.id ASC',
-    limit: 500,
-    offset: 0,
-  });
-  let places;
-  if (inMemoryFallback) {
-    places = filterPlaces(rows, queryParams, statsMap).places.slice(0, 500);
-  } else {
-    places = rows.map((r) => mapPlace(r, statsMap));
-  }
-  return places.map((p) => {
-    const coords = ensurePlaceCoords(p);
-    return mapMarker({ ...p, lat: coords.lat, lng: coords.lng }, lang);
-  }).filter((m) => m.lat != null && m.lng != null);
+  const key = cacheKey(`places-markers-${CACHE_VERSION}`, { ...queryParams, lang });
+  return wrap(key, async () => {
+    const statsMap = await getStatsMap();
+    const { rows, inMemoryFallback } = await searchPlacesPage({
+      ...queryParams,
+      categoryMode: 'discover',
+      orderSql: ' ORDER BY p.id ASC',
+      limit: 500,
+      offset: 0,
+    });
+    let places;
+    if (inMemoryFallback) {
+      places = filterPlaces(rows, queryParams, statsMap).places.slice(0, 500);
+    } else {
+      places = rows.map((r) => mapPlace(r, statsMap));
+    }
+    return places.map((p) => {
+      const coords = ensurePlaceCoords(p);
+      return mapMarker({ ...p, lat: coords.lat, lng: coords.lng }, lang);
+    }).filter((m) => m.lat != null && m.lng != null);
+  }, PLACES_TTL_MS);
 }
 
 
@@ -465,6 +468,9 @@ function invalidateMetaCategories() {
 
 function invalidatePlacesCache() {
   clear(`places-list-${CACHE_VERSION}`);
+  clear(`places-markers-${CACHE_VERSION}`);
+  clear('search:');
+  clear('search-route:');
   invalidateMetaCategories();
   invalidateStatsCache();
 }

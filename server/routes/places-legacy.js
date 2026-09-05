@@ -5,7 +5,7 @@ const { findPlaceRow, PLACE_PARAM_RESERVED } = require('../lib/place-lookup');
 const { authOptional, authRequired } = require('../middleware/auth');
 const { ok } = require('../lib/apiResponse');
 const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
-const { cacheKey, wrap } = require('../lib/cache');
+const { cacheKey, wrap, PLACES_TTL_MS } = require('../lib/cache');
 const { getStatsMap } = require('../lib/stats-cache');
 const { findNearbyPlaces, findSimilarPlaces } = require('../lib/geo');
 const { getWeather } = require('../services/weatherService');
@@ -43,7 +43,7 @@ async function searchHandler(req, res) {
       .slice(0, limit)
       .map(mapper);
     return { places: matches, count: matches.length };
-  });
+  }, PLACES_TTL_MS);
   res.json(result);
 }
 

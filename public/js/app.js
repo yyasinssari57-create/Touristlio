@@ -543,6 +543,10 @@ function isExploreMapTabActive() {
   return document.getElementById('es-map')?.classList.contains('active');
 }
 
+async function ensureMapLibs() {
+  if (window.TL_MAP_LOADER?.ensure) await window.TL_MAP_LOADER.ensure();
+}
+
 function placeField(p, base) {
   if (!p) return '';
   if (lang === 'en') {
@@ -1296,6 +1300,7 @@ function restoreExploreFiltersFromUrl(search) {
 }
 
 async function loadMapMarkers() {
+  await ensureMapLibs();
   if (!window.TL_MAP) return;
   window.TL_MAP.setMapFilters?.({
     category: activeCat,
@@ -1752,7 +1757,14 @@ async function showMainTab(tab, skipRoute) {
   }
   if (tab === 'profile') tasks.push(Promise.resolve(updateProfilePage()));
   if (tab === 'explore') tasks.push(loadTiolaFeed());
-  if (tab === 'places') window.TL_DISCOVER?.onTabShown();
+  if (tab === 'places') {
+    const bootDiscover = (async () => {
+      await ensureMapLibs();
+      if (window.TL_DISCOVER?.onTabShown) await window.TL_DISCOVER.onTabShown();
+    })();
+    tasks.push(bootDiscover);
+    if (skipRoute) bootDiscover.catch((e) => console.warn(e));
+  }
   window.scrollTo(0, 0);
   if (!skipRoute) syncRoute(true);
   if (!skipRoute) {
@@ -1787,8 +1799,10 @@ async function showExploreTab(name, el, skipRoute) {
   const tasks = [];
   if (name === 'tiolas') tasks.push(loadTiolaFeed());
   if (name === 'categories') tasks.push(loadCategoryStats());
-  if (name === 'map' && window.TL_MAP) {
+  if (name === 'map') {
     tasks.push((async () => {
+      await ensureMapLibs();
+      if (!window.TL_MAP) return;
       await loadMapMarkers();
       requestAnimationFrame(() => {
         window.TL_MAP.invalidateExplore('exploreMapFull');
@@ -2244,6 +2258,7 @@ async function openDetail(id, skipRoute) {
     }
     setCanonical(`${location.origin}${placePublicPath(p)}`);
     syncDetailSaveBtn();
+    await ensureMapLibs();
     if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
     const score = formatTiolaScore(p);
     const ts = document.getElementById('pdTS');
