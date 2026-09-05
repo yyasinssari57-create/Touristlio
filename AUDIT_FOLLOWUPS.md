@@ -240,6 +240,24 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - `pino-pretty` yalnızca development.
 - `server/scripts/awaitify-db.py` commit edilmedi.
 
+## v2 DÜŞÜK-2 (Cache-Control başlıkları)
+
+- Tamamlandı (mevcut `staticAssetHeaders` / HTML no-cache üzerine; v1 DÜŞÜK-2 erişilebilirlik ile karıştırma):
+  - HTML zaten `no-cache, no-store, must-revalidate` (`sendPublicHtml` + `.html` static). Helmet Cache-Control yazmıyor — dokunulmadı.
+  - JS/CSS zaten `public, max-age=31536000, immutable` (`?v=__APP_VERSION__`). Denetimin 1 gün kopyası uygulanmadı — sürümlemeli dosya 1 yıl güvenli.
+  - Görseller/font zaten `public, max-age=86400`. Denetimin `/images` 1 yıl kopyası uygulanmadı — `hero.webp` hash’siz; admin/değişimde 1 yıl bayat kalırdı.
+  - **Boşluk kapatıldı:** `GET /api/*` → `Cache-Control: no-store` (`apiNoStoreHeaders`).
+  - **Boşluk kapatıldı:** `/uploads` artık `public, max-age=86400` (aynı yol üzerine yazılabilir; 1 yıl immutable değil).
+  - Ayrı `/images` `/css` `/js` mount yok; tek `express.static` + `setHeaders` duruyor.
+  - `npm run verify:cache`
+
+### Leftover
+- Denetim görseller 1 yıl / JS-CSS 1 gün; ürün tersi (görsel 1 gün, sürümlemeli JS/CSS 1 yıl). Bilinçli.
+- `hero.webp` ve logo `?v=6` hash değil; dosya değişince Ctrl+Shift+R veya sürüm bump.
+- Sitemap / robots.txt özel Cache-Control yok (dinamik rota, Express varsayılanı).
+- Cloudflare / Render CDN kendi cache kuralı eklerse HTML/API `no-store` yine kazanmalı; Yasin panelinden doğrula.
+- `server/scripts/awaitify-db.py` commit edilmedi.
+
 ## v2 ORTA-4 (0 Tiola gösterimi)
 
 - Tamamlandı (ORTA-1 kart puanı üzerine; v1 ORTA-4 anti-bot ile karıştırma):

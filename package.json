@@ -45,6 +45,7 @@
     "verify:skeleton": "node server/scripts/verify-skeleton.js",
     "verify:links": "node server/scripts/verify-broken-links.js",
     "verify:cleanup": "node server/scripts/verify-code-cleanup.js",
+    "verify:cache": "node server/scripts/verify-cache-headers.js",
     "verify:analytics": "node server/scripts/verify-analytics.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
