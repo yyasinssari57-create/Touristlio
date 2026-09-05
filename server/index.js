@@ -15,7 +15,7 @@ const { clear: clearCache } = require('./lib/cache');
 const { csrfProtection, csrfTokenHandler, issueCsrfCookie } = require('./middleware/csrf');
 const { uploadsStaticHeaders } = require('./middleware/uploads-static');
 const { uploadsSrcsetFallback } = require('./middleware/uploads-srcset');
-const { staticAssetHeaders } = require('./middleware/static-cache');
+const { staticAssetHeaders, apiNoStoreHeaders } = require('./middleware/static-cache');
 const { sendPublicHtml, publicHtmlMiddleware, htmlPageRoutesMiddleware } = require('./lib/send-public-html');
 const { getAppVersion } = require('./lib/app-version');
 const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require('./lib/cors-origins');
@@ -139,6 +139,7 @@ app.use(async (req, res, next) => {
 const { maintenanceMiddleware } = require('./middleware/maintenance');
 app.use(maintenanceMiddleware);
 app.use('/api/', apiLimiter);
+app.use('/api/', apiNoStoreHeaders);
 
 app.use(async (req, res, next) => {
   const start = Date.now();
