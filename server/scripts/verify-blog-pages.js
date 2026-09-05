@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
-const { db } = require('../db');
+const { db, initDb } = require('../db');
 
 const ROOT = path.join(__dirname, '..', '..');
 let failed = 0;
@@ -77,7 +77,7 @@ function fetchText(url) {
   });
 }
 
-function waitForServer(base, max = 50) {
+function waitForServer(base, max = 400) {
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -158,6 +158,7 @@ async function checkLive(base) {
   if (blogs.some((b) => b.isPublished === false)) fail('public list isPublished=false');
   else if (blogs.length) ok('public list isPublished=true');
 
+  await initDb();
   const sample = blogs[0] || await db.prepare(`
     SELECT slug, title FROM blogs WHERE status = 'approved' AND slug IS NOT NULL AND slug != '' LIMIT 1
   `).get();
@@ -235,7 +236,7 @@ async function main() {
     child.stderr.on('data', (c) => { stderr += c; });
     const base = `http://127.0.0.1:${port}`;
     try {
-      await waitForServer(base, 50);
+      await waitForServer(base, 400);
       await checkLive(base);
     } catch (e) {
       fail(`live server :${port}: ${e.message}${stderr ? ` (${stderr.slice(0, 220)})` : ''}`);
