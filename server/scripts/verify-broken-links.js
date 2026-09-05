@@ -153,7 +153,7 @@ function fetchText(url) {
   });
 }
 
-function waitForServer(base, max = 50) {
+function waitForServer(base, max = 400) {
   return new Promise((resolve, reject) => {
     let n = 0;
     const tick = () => {
@@ -258,7 +258,14 @@ async function checkHttp(base) {
     const port = process.env.VERIFY_LINKS_PORT || '3064';
     const base = `http://127.0.0.1:${port}`;
     const child = spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')], {
-      env: { ...process.env, PORT: port, NODE_ENV: 'test' },
+      cwd: ROOT,
+      env: {
+        ...process.env,
+        PORT: port,
+        NODE_ENV: 'test',
+        SITEMAP_ON_START: 'false',
+        LIVE_DATA_CRON: 'false',
+      },
       stdio: 'ignore',
     });
     try {
