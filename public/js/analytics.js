@@ -1,5 +1,7 @@
 /** Visitor analytics — page views, tab clicks, session duration, Core Web Vitals.
- *  KVKK: do not send events, load GA4, or report web-vitals until cookie consent (`tl_cookie_ok=1`).
+ *  KVKK / v2 ORTA-3: do not send events, load GA4, or report web-vitals until cookie consent.
+ *  Real key is `tl_cookie_ok=1` (DÜŞÜK-6). Audit name `cookie_consent=accepted` is also accepted.
+ *  `loadAnalytics` is the audit name for the consent-gated start (DOMContentLoaded + banner accept).
  *  Library: 'web-vitals' (vendored IIFE).
  */
 (function () {
@@ -178,9 +180,16 @@
     });
   }
 
+  /** Audit ORTA-3 name. No-op without consent; never hardcodes a G- id. */
+  function loadAnalytics() {
+    if (!hasConsent()) return;
+    startTracking();
+  }
+
   window.TL_ANALYTICS = {
     hasConsent,
     startTracking,
+    loadAnalytics,
     trackTab(tab) {
       if (!tab || tab === 'detail' || !hasConsent()) return;
       track('tab_click', { tab });
@@ -189,12 +198,13 @@
     },
   };
 
-  window.addEventListener('tl-cookie-consent', () => {
-    if (hasConsent()) startTracking();
+  window.addEventListener('tl-cookie-consent', (ev) => {
+    if (ev?.detail?.accepted === false) return;
+    loadAnalytics();
   });
 
   function boot() {
-    if (hasConsent()) startTracking();
+    loadAnalytics();
   }
 
   if (document.readyState === 'loading') {
