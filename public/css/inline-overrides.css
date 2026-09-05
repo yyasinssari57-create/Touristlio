@@ -836,6 +836,11 @@ body.admin-body:not(.admin-session) {
   color: var(--star2);
   margin: 4px 0;
 }
+.tiola-rating-box .dr-stars.empty {
+  font-size: .85rem;
+  letter-spacing: 0;
+  color: var(--t3);
+}
 .blog-detail-box {
   max-width: 720px;
   width: 92vw;

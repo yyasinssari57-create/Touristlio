@@ -160,11 +160,19 @@ async function runSearch(resetPage) {
     totalPages = payload.totalPages || Math.max(1, Math.ceil(total / LIMIT) || 1);
     document.getElementById('results-count').textContent = `${total} ${t('placesFound')}${p.q ? ': ' + p.q : ''}`;
     if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
-    const html = (payload.places || []).map(pl => `
+    const html = (payload.places || []).map(pl => {
+      const count = Number(pl?.tiolaCount) || 0;
+      const rating = Number(pl?.tiolaRating);
+      const has = count > 0 && Number.isFinite(rating) && rating > 0;
+      const scoreHtml = has
+        ? `<div class="rat"><span class="rn">${rating.toFixed(1)}</span><span class="rc">(${count} ${t('tiolaCount')})</span></div>`
+        : `<div class="rat rat--empty"><span class="rn-empty">${t('noReviewsYet')}</span></div>`;
+      return `
       <a class="pc" href="/places/${encodeURIComponent(pl.slug || pl.id)}">
         <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(pl.imageUrl, { alt: pl.name, kind: 'card' }) : `<img src="${pl.imageUrl}" alt="${pl.name}" width="400" height="300" loading="lazy"/>`}</div>
-        <div class="pc-body"><div class="pc-loc">📍 ${geoText(pl.location)}</div><div class="pc-name">${pl.name}</div></div>
-      </a>`).join('');
+        <div class="pc-body"><div class="pc-loc">📍 ${geoText(pl.location)}</div><div class="pc-name">${pl.name}</div>${scoreHtml}</div>
+      </a>`;
+    }).join('');
     grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/explore#explore/map" class="btn bo bsm" style="margin-top:12px;display:inline-flex">${t('mapExploreBtn')}</a></div>`;
     renderSearchPager();
     updateUrl();

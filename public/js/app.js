@@ -785,10 +785,13 @@ function renderNearbyCards(list) {
   if (!el) return;
   el.innerHTML = (list || []).map((x) => {
     const s = formatTiolaScore(x);
+    const scoreBit = s.has
+      ? ` · <span class="st">${s.stars}</span> ${s.num} (${s.count})`
+      : ` · <span class="rn-empty">${escapeHtml(s.emptyLabel)}</span>`;
     return `
     <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openDetail(${x.id})">
       ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
-      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${x.distanceKm != null ? ` · ${x.distanceKm} km` : ''} · <span class="st">${s.stars}</span> ${s.num} (${s.count})</div></div>
+      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${x.distanceKm != null ? ` · ${x.distanceKm} km` : ''}${scoreBit}</div></div>
     </div>`;
   }).join('') || `<p class="empty-hint">${t('nearbyEmpty')}</p>`;
 }
@@ -798,10 +801,13 @@ function renderSimilarCards(list) {
   if (!el) return;
   el.innerHTML = (list || []).map((x) => {
     const s = formatTiolaScore(x);
+    const scoreBit = s.has
+      ? ` · <span class="st">${s.stars}</span> ${s.num} (${s.count})`
+      : ` · <span class="rn-empty">${escapeHtml(s.emptyLabel)}</span>`;
     return `
     <div class="nearby-item" onclick="openDetail(${x.id})" role="button" tabindex="0">
       ${responsiveImg(placeImg(x), { className: 'ni-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${x.category}',${x.id})"` })}
-      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)} · <span class="st">${s.stars}</span> ${s.num} (${s.count})</div></div>
+      <div><div class="ni-name">${escapeHtml(x.name)}</div><div class="ni-cat">${catLabel(x.category)}${scoreBit}</div></div>
     </div>`;
   }).join('') || `<p class="empty-hint">${t('similarEmpty')}</p>`;
 }
@@ -984,19 +990,30 @@ function stars(n) {
   return '★'.repeat(filled) + '☆'.repeat(5 - filled);
 }
 
+function placeHasTiolaScore(p) {
+  const count = Number(p?.tiolaCount) || 0;
+  const rating = Number(p?.tiolaRating);
+  return count > 0 && Number.isFinite(rating) && rating > 0;
+}
+
 function formatTiolaScore(p) {
   const count = Number(p?.tiolaCount) || 0;
   const rating = Number(p?.tiolaRating);
-  const has = count > 0 && Number.isFinite(rating) && rating > 0;
+  const has = placeHasTiolaScore(p);
   return {
-    stars: stars(has ? rating : 0),
-    num: has ? Number(rating).toFixed(1) : '0.0',
+    has,
+    stars: has ? stars(rating) : '',
+    num: has ? Number(rating).toFixed(1) : '',
     count,
+    emptyLabel: t('noReviewsYet'),
   };
 }
 
 function renderTiolaRatingLine(p) {
   const s = formatTiolaScore(p);
+  if (!s.has) {
+    return `<div class="rat rat--empty"><span class="rl">${t('touristlio')}</span><span class="rn-empty">${escapeHtml(s.emptyLabel)}</span></div>`;
+  }
   return `<div class="rat"><span class="rl">${t('touristlio')}</span><span class="st">${s.stars}</span><span class="rn">${s.num}</span><span class="rc">(${s.count} ${t('tiolaCount')})</span></div>`;
 }
 
@@ -1369,11 +1386,14 @@ function onSearch(val) {
       } else {
         drop.innerHTML = res.map((p) => {
           const s = formatTiolaScore(p);
+          const scoreHtml = s.has
+            ? `${s.stars} ${s.num} (${s.count} ${t('tiolaCount')})`
+            : escapeHtml(s.emptyLabel);
           return `
           <div class="sd-item" tabindex="0" role="option" onmousedown="pickSearch(${p.id})" onclick="pickSearch(${p.id})">
             ${responsiveImg(placeImg(p), { alt: p.name, className: 'sd-img', kind: 'thumb', extra: `onerror="imgFallback(this,'${p.category}',${p.id})"` })}
             <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(geoText(p.location))}</div>
-            <div class="sd-rat">${s.stars} ${s.num} (${s.count} ${t('tiolaCount')})</div></div>
+            <div class="sd-rat">${scoreHtml}</div></div>
           </div>`;
         }).join('');
       }
@@ -2205,8 +2225,15 @@ async function openDetail(id, skipRoute) {
     syncDetailSaveBtn();
     if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
     const score = formatTiolaScore(p);
-    document.getElementById('pdTS').textContent = `${score.stars} ${score.num}`;
-    document.getElementById('pdTC').textContent = `${score.count} ${t('tiolaCount')}`;
+    const ts = document.getElementById('pdTS');
+    const tc = document.getElementById('pdTC');
+    const cta = document.getElementById('firstTiolaCta');
+    if (ts) {
+      ts.classList.toggle('empty', !score.has);
+      ts.textContent = score.has ? `${score.stars} ${score.num}` : t('noReviewsYet');
+    }
+    if (tc) tc.textContent = score.has ? `${score.count} ${t('tiolaCount')}` : '';
+    if (cta) cta.hidden = score.has;
     document.getElementById('icCountry').textContent = geoLabel(p.country);
     document.getElementById('icCity').textContent = geoLabel(p.city);
     document.getElementById('icCat').textContent = p.categoryDisplay || catLabel(p.category);
@@ -2276,6 +2303,17 @@ async function renderRevList() {
   } catch (e) {
     if (!e.status) window.TL_ERROR_BOUNDARY?.capture('tiolas', e);
   }
+}
+
+function startFirstTiola() {
+  if (!user) {
+    openAuth();
+    return;
+  }
+  const form = document.getElementById('tiolaDetailForm');
+  const txt = document.getElementById('rfTxt');
+  form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (txt && !txt.disabled) txt.focus();
 }
 
 function setTiolaFormActive(active) {

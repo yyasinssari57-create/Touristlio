@@ -81,11 +81,11 @@ window.TL_DISCOVER = (function () {
     const count = Number(p?.tiolaCount) || 0;
     const rating = Number(p?.tiolaRating);
     const has = count > 0 && Number.isFinite(rating) && rating > 0;
-    const filled = has ? Math.max(0, Math.min(5, Math.round(rating))) : 0;
+    if (!has) return t('noReviewsYet') || 'Henüz değerlendirme yok';
+    const filled = Math.max(0, Math.min(5, Math.round(rating)));
     const stars = '★'.repeat(filled) + '☆'.repeat(5 - filled);
-    const num = has ? rating.toFixed(1) : '0.0';
     const label = t('tiolaCount') || 'Tiola';
-    return `${stars} ${num} (${count} ${label})`;
+    return `${stars} ${rating.toFixed(1)} (${count} ${label})`;
   }
 
   function buildQuery(page) {
