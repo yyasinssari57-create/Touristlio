@@ -206,6 +206,23 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 - Sahte `G-` ID uydurulmadı. ID yokken yalnızca birinci taraf izleme (yine rıza sonrası) çalışır.
 - DÜŞÜK-6 Search Console / web-vitals aynı kaldı; bu madde yalnızca rıza sonrası GA4 boşluklarını hizalar.
 
+## v2 ORTA-5 (admin paneli güvenliği)
+
+- Tamamlandı (mevcut `requireRole` / argon2id / CSRF / rate limit üzerine; yalnızca boşluklar):
+  - Tüm `/api/admin` zaten `authRequired` + `requireRole(...PANEL_ROLES)`. UI gizleme yetmez; API 403 `Yetki yok`. Hassas uçlar `requireRole('admin')`.
+  - Brute force zaten vardı: 5 hatalı giriş → 15 dk `locked_until`. Eksik olan **log**: `event: failed_login` (maskeli e-posta, IP, kilit). Şifre loglanmaz.
+  - Silme artık soft: yer `status='archived'` (`archivePlace`; denetim `deleted_at` yok), blog `status='deleted'`, şehir/kategori `is_active=0`. Tiola kaldırma zaten `rejected`.
+  - `admin_audit_log` (denetim `admin_logs`) duruyor; eksik yazan mutasyonlar eklendi (info-box, medya, araçlar, blog sayfası).
+- `npm run verify:admin-security` (+ `verify:admin-role`)
+
+### Leftover
+- `/admin` HTML herkese açık; panel JS ile kilitli. Korunan yüzey API.
+- `deleted_at` kolonu eklenmedi — şemada `status` / `is_active`.
+- `deletePlace()` hard fonksiyonu duruyor; HTTP onu çağırmıyor.
+- IP `authLimiter` 20 / 15 dk (hesap kilidi 5 / 15 ayrı).
+- `banned_words` ve yüklenen dosya silmesi hâlâ kalıcı (sözlük / disk).
+- Kategori kullanımda taşınıp pasifleşir (eski otomatik taşıma).
+
 ## v2 ORTA-4 (0 Tiola gösterimi)
 
 - Tamamlandı (ORTA-1 kart puanı üzerine; v1 ORTA-4 anti-bot ile karıştırma):

@@ -367,8 +367,8 @@ async function deleteCategory(id, { reassignTo } = {}) {
     }
     await reassignPlacesFromCategory(cat.slug, targetCat.slug);
   }
-  await db.prepare('DELETE FROM place_categories WHERE id = ?').run(id);
-  return { ok: true, deleted: true, reassigned: used > 0 ? used : 0 };
+  await db.prepare('UPDATE place_categories SET is_active = 0 WHERE id = ?').run(id);
+  return { ok: true, deleted: false, deactivated: true, reassigned: used > 0 ? used : 0 };
 }
 
 module.exports = {

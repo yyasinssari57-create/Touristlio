@@ -633,7 +633,8 @@
               <option value="blog.delete">Blog sil</option>
               <option value="place.create">Yer ekle</option>
               <option value="place.update">Yer güncelle</option>
-              <option value="place.delete">Yer sil</option>
+              <option value="place.delete">Yer sil (eski)</option>
+              <option value="place.archive">Yer arşivle</option>
               <option value="places.import">Yer içe aktar</option>
               <option value="category.create">Kategori ekle</option>
               <option value="category.update">Kategori güncelle</option>
@@ -1173,6 +1174,15 @@ const AUDIT_ACTION_LABELS = {
   'place.create': 'Yer ekledi',
   'place.update': 'Yeri güncelledi',
   'place.delete': 'Yeri sildi',
+  'place.archive': 'Yeri arşivledi',
+  'place.photos': 'Yer görseli yükledi',
+  'place.info_boxes': 'Yer bilgi kutularını güncelledi',
+  'media.upload': 'Medya yükledi',
+  'tools.cache_clear': 'Önbelleği temizledi',
+  'tools.sitemap': 'Sitemap yeniledi',
+  'tools.validate': 'Yer doğrulaması çalıştırdı',
+  'settings.blog_page': 'Blog sayfasını güncelledi',
+  'db.restore_blocked': 'Eski yedek geri yüklemeyi denedi',
   'places.import': 'Yer içe aktardı',
   'category.create': 'Kategori ekledi',
   'category.update': 'Kategori güncelledi',
@@ -2951,7 +2961,7 @@ async function saveBlogCategoryEdit(id) {
 }
 
 async function deleteBlogCategory(id, slug) {
-  if (!confirm(`"${slug}" kategorisini silmek istiyor musunuz?`)) return;
+  if (!confirm(`"${slug}" kategorisi listeden kalkacak (pasif). Devam edilsin mi?`)) return;
   try {
     await api('/admin/blog-categories/' + id, { method: 'DELETE' });
     await loadBlogCategoriesList();
@@ -3034,7 +3044,7 @@ async function addBlogPost() {
 }
 
 async function deleteBlogPost(id) {
-  if (!confirm('Bu blog yazısını silmek istiyor musunuz?')) return;
+  if (!confirm('Bu blog yazısı siteden kalkacak (kalıcı silinmez). Devam edilsin mi?')) return;
   try {
     await api('/admin/blogs/' + id, { method: 'DELETE' });
     await loadBlogPostsList();
@@ -3638,16 +3648,16 @@ async function confirmDeletePlace(id) {
   try {
     const data = await api('/admin/places/' + id);
     const p = data.place;
-    const tiolaWarn = p.tiolaCount
-      ? `<p style="color:#b91c1c;font-weight:600">⚠ DİKKAT: Bu işlem ${p.tiolaCount} Tiola yorumunu kalıcı olarak silecek!</p>`
+    const tiolaNote = p.tiolaCount
+      ? `<p>Bu yerde ${p.tiolaCount} Tiola var. Yorumlar silinmez; yer siteden kalkar.</p>`
       : '';
-    openModal('Yeri sil', `
-      <p><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.city)}, ${escapeHtml(p.country)}) kalıcı olarak silinecek.</p>
-      ${tiolaWarn}
-      <p style="font-size:.8rem;color:var(--t2)">Bu işlem geri alınamaz.</p>`,
+    openModal('Yeri arşivle', `
+      <p><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.city)}, ${escapeHtml(p.country)}) siteden kaldırılacak.</p>
+      ${tiolaNote}
+      <p style="font-size:.8rem;color:var(--t2)">Kayıt kalıcı silinmez. İsterseniz sonra tekrar yayınlayabilirsiniz.</p>`,
       [
         { label: 'İptal', onClick: closeModal },
-        { label: 'Kalıcı sil', primary: true, onClick: () => deletePlace(id) },
+        { label: 'Arşivle', primary: true, onClick: () => deletePlace(id) },
       ]
     );
   } catch (e) { showErr(e.message); }
@@ -3818,10 +3828,10 @@ function confirmDeleteCity(id, name, placeCount) {
     );
     return;
   }
-  openModal('Şehri sil', `<p><strong>${escapeHtml(name)}</strong> kalıcı olarak silinecek.</p>`,
+  openModal('Şehri kaldır', `<p><strong>${escapeHtml(name)}</strong> listeden kaldırılacak (pasif). Geri alınabilir.</p>`,
     [
       { label: 'İptal', onClick: closeModal },
-      { label: 'Sil', primary: true, onClick: () => deleteCity(id) },
+      { label: 'Kaldır', primary: true, onClick: () => deleteCity(id) },
     ]
   );
 }
@@ -3953,12 +3963,12 @@ function confirmDeleteCategory(id, slug, placeCount) {
       <select class="ain" id="reassignCat" aria-label="Hedef kategori" style="margin-top:6px">${opts}</select>`,
       [
         { label: 'İptal', onClick: closeModal },
-        { label: 'Taşı ve sil', primary: true, onClick: () => deleteCategory(id, document.getElementById('reassignCat').value) },
+        { label: 'Taşı ve kaldır', primary: true, onClick: () => deleteCategory(id, document.getElementById('reassignCat').value) },
       ]
     );
     return;
   }
-  openModal('Kategoriyi sil', `<p><strong>${escapeHtml(slug)}</strong> silinecek.</p>`,
+  openModal('Kategoriyi kaldır', `<p><strong>${escapeHtml(slug)}</strong> listeden kaldırılacak (pasif). Geri alınabilir.</p>`,
     [
       { label: 'İptal', onClick: closeModal },
       { label: 'Sil', primary: true, onClick: () => deleteCategory(id) },

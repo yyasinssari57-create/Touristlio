@@ -134,8 +134,8 @@ async function deleteBlogCategory(id, { reassignTo } = {}) {
     }
     await db.prepare('UPDATE blogs SET category = ? WHERE category = ?').run(target.slug, cat.slug);
   }
-  await db.prepare('DELETE FROM blog_categories WHERE id = ?').run(id);
-  return { ok: true, deleted: true, reassigned: used > 0 ? used : 0 };
+  await db.prepare('UPDATE blog_categories SET is_active = 0 WHERE id = ?').run(id);
+  return { ok: true, deleted: false, deactivated: true, reassigned: used > 0 ? used : 0 };
 }
 
 async function uniqueBlogSlug(db, base, excludeId) {

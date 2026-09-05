@@ -270,6 +270,7 @@ async function countPlaceTiolas(id) {
   return (await db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE place_id = ?').get(id)).c;
 }
 
+/** Hard delete — not used by admin HTTP. Panel DELETE archives via archivePlace. */
 async function deletePlace(id) {
   const row = await db.prepare('SELECT id, name FROM places WHERE id = ?').get(id);
   if (!row) return null;
