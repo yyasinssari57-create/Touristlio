@@ -39,7 +39,10 @@ router.post('/register', formLimiter, authLimiter, recaptchaGuard('register'), h
   }),
 ], controller.register);
 
-router.post('/login', authLimiter, recaptchaGuard('login'), [
+// Login is email+password + lockout (5/15). reCAPTCHA stays on public forms
+// (register, forgot, contact, tiola). /admin has no widget and must not be
+// blocked when RECAPTCHA_* keys are set for those forms.
+router.post('/login', authLimiter, [
   emailRule(),
   body('password').notEmpty().withMessage('Şifre gerekli'),
 ], controller.login);

@@ -109,6 +109,16 @@ if (!indexHtml.includes('id="rfTxt"') || !indexHtml.includes('name="website"')) 
   fail('place Tiola form missing honeypot');
 } else ok('place Tiola form honeypot markup');
 
+const authRoutes = fs.readFileSync(path.join(ROOT, 'server', 'modules', 'auth', 'auth.routes.js'), 'utf8');
+const loginBlock = authRoutes.match(/router\.post\(\s*'\/login'[\s\S]*?controller\.login\s*\)/);
+if (!loginBlock) fail('POST /api/auth/login route missing');
+else if (loginBlock[0].includes('recaptchaGuard')) {
+  fail('POST /api/auth/login must not require reCAPTCHA (admin /admin has no widget)');
+} else ok('POST /api/auth/login has no recaptchaGuard');
+if (!authRoutes.includes("recaptchaGuard('register')") || !authRoutes.includes("recaptchaGuard('forgot')")) {
+  fail('register/forgot must keep recaptchaGuard');
+} else ok('register + forgot keep recaptchaGuard');
+
 const tiolaRoutes = fs.readFileSync(path.join(ROOT, 'server', 'routes', 'tiolas.js'), 'utf8');
 if (!tiolaRoutes.includes("recaptchaGuard('tiola')")) fail('POST /api/tiolas missing recaptchaGuard');
 else ok('POST /api/tiolas recaptchaGuard(tiola)');
@@ -274,6 +284,19 @@ async function checkRecaptchaRequired(base) {
   if (!String(missing.json.error || '').toLowerCase().includes('güvenlik')) {
     fail(`expected güvenlik error, got ${JSON.stringify(missing.json)}`);
   } else ok('reCAPTCHA error copy');
+
+  const loginNoToken = await postJson(`${root}/api/auth/login`, {
+    email: 'admin-login-verify@touristlio.local',
+    password: 'WrongPassNotUsed123',
+  });
+  const loginErr = String(loginNoToken.json.error || '');
+  if (loginNoToken.status === 400 && /güvenlik/i.test(loginErr)) {
+    fail('login must not return recaptcha güvenlik error when token is missing');
+  } else if (loginNoToken.status !== 401) {
+    fail(`login without recaptcha expected 401, got ${loginNoToken.status} ${loginNoToken.body.slice(0, 180)}`);
+  } else if (!/E-posta veya şifre/i.test(loginErr)) {
+    fail(`wrong password should say E-posta veya şifre, got ${JSON.stringify(loginNoToken.json)}`);
+  } else ok('login without recaptcha token is normal 401 (not güvenlik)');
 }
 
 function mergeCookies(jar, setCookie) {
