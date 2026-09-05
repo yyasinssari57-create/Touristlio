@@ -171,6 +171,7 @@ window.TL_I18N = (function () {
       privacyP1: 'Touristlio olarak kişisel verilerinizi KVKK ve GDPR kapsamında işliyoruz.',
       privacyP2: 'Hesap bilgileri, Tiola içerikleri ve çerez tercihleri yalnızca hizmet sunumu ve güvenlik amacıyla kullanılır.',
       privacyP3: 'Onayınız olursa sayfa görüntüleme, sekme olayları ve Core Web Vitals ölçülür. Google Analytics 4 yalnızca yapılandırıldığında ve aynı onaydan sonra yüklenir. Reddederseniz bu izleme çalışmaz.',
+      err404Title: 'Sayfa Bulunamadı — Touristlio',
       err404: 'Aradığınız sayfa bulunamadı.', err500: 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.',
       errOops: 'Bir şeyler ters gitti', errHomeCta: 'Ana Sayfaya Dön', errReload: 'Sayfayı Yenile',
       errHome: 'Ana sayfaya dön', errPlaces: 'Gezilecek Yerler', errRetry: 'Tekrar dene', logout: 'Çıkış',
@@ -454,6 +455,7 @@ window.TL_I18N = (function () {
       privacyP1: 'We process personal data under KVKK and GDPR.',
       privacyP2: 'Account data, Tiola content and cookie preferences are used only to provide and secure the service.',
       privacyP3: 'With your consent we measure page views, tab events and Core Web Vitals. Google Analytics 4 loads only when configured and after the same consent. If you reject, this tracking stays off.',
+      err404Title: 'Page not found — Touristlio',
       err404: 'Page not found.', err500: 'Server error. Please try again later.',
       errOops: 'Something went wrong', errHomeCta: 'Back to Home', errReload: 'Reload Page',
       errHome: 'Back to home', errPlaces: 'Places to visit', errRetry: 'Try again', logout: 'Log out',
@@ -683,9 +685,14 @@ window.TL_I18N = (function () {
 
   function apply(lang) {
     document.documentElement.lang = lang;
-    document.title = lang === 'en'
-      ? 'Touristlio — Don\'t Just Visit. Feel It.'
-      : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
+    const errorH1 = (document.querySelector('body.error-page h1')?.textContent || '').trim();
+    if (errorH1 === '404') {
+      document.title = t(lang, 'err404Title');
+    } else if (!document.body.classList.contains('error-page')) {
+      document.title = lang === 'en'
+        ? 'Touristlio — Don\'t Just Visit. Feel It.'
+        : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
+    }
     document.querySelectorAll('[data-i18n]').forEach((el) => {
       const key = el.getAttribute('data-i18n');
       const val = t(lang, key);

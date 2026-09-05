@@ -44,6 +44,7 @@
     "verify:a11y": "node server/scripts/verify-accessibility.js",
     "verify:skeleton": "node server/scripts/verify-skeleton.js",
     "verify:links": "node server/scripts/verify-broken-links.js",
+    "verify:404": "node server/scripts/verify-404.js",
     "verify:cleanup": "node server/scripts/verify-code-cleanup.js",
     "verify:cache": "node server/scripts/verify-cache-headers.js",
     "verify:analytics": "node server/scripts/verify-analytics.js",
