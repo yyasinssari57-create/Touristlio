@@ -3238,6 +3238,7 @@ function setNavMenuOpen(open) {
   menu.classList.toggle('open', next);
   document.documentElement.classList.toggle('nav-open', next);
   document.body.classList.toggle('nav-open', next);
+  document.body.style.overflow = next ? 'hidden' : '';
   if (toggle) toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
 }
 
