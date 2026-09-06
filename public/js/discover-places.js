@@ -323,6 +323,7 @@ window.TL_DISCOVER = (function () {
     if (!page) return;
     document.getElementById('discoverCitiesBtn')?.addEventListener('click', loadCities);
     document.getElementById('discoverBackBtn')?.addEventListener('click', clearCityFilter);
+    document.getElementById('discoverEmptyClear')?.addEventListener('click', clearCityFilter);
     document.getElementById('discoverLoadMoreBtn')?.addEventListener('click', () => loadPlacesAndMap(true));
     await loadDiscoverCategories();
     if (activeCategory && !discoverCats.some((c) => (c.id || c.slug) === activeCategory)) {

@@ -2,6 +2,10 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Empty states CTA
+
+0 sonuç ekranına yönlendirme butonu (tasarım aynı). “0 yer bulundu” / keşfet / gezilecek yerler boş listesinde **Filtreler Temizle**; favori boşsa **Keşfet**; mekân detayında 0 Tiola zaten **İlk Tiola'yı sen yaz!**. `npm run verify:empty-states`.
+
 ## Onaylı risk maddeleri (1 / 4 / 5)
 
 Yasin onayladı: H1, honeypot/klavye çerçevesi, blog özet tekrarı. **Madde 3 (CLS / destinasyonları gizleme) yok.**

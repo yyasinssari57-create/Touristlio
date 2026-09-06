@@ -209,7 +209,10 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <p class="page-info" id="explorePageInfo"></p>
         <button type="button" class="btn bo" id="loadMoreBtn" style="display:none" data-act="loadMorePlaces" data-i18n="loadMore">Daha Fazla Yükle</button>
       </div>
-      <div class="no-res" id="noRes" style="display:none" data-i18n="noResults">🔍 Sonuç bulunamadı. Farklı filtreler deneyin.</div>
+      <div class="no-res" id="noRes" style="display:none">
+        <p data-i18n="noResults">🔍 Sonuç bulunamadı. Farklı filtreler deneyin.</p>
+        <button type="button" class="btn bo bsm" id="noResClear" style="margin-top:12px" data-act="resetFilters" data-i18n="filterClear">Filtreler Temizle</button>
+      </div>
       <div class="osm-hint" id="osmHint" style="display:none"></div>
     </div>
   </div>
@@ -410,6 +413,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <div class="discover-empty" id="discoverEmpty" style="display:none">
             <div class="empty-icon">🗺️</div>
             <p data-i18n="discoverEmpty">Bu filtrede yer bulunamadı.</p>
+            <button type="button" class="btn bo bsm" id="discoverEmptyClear" style="margin-top:12px" data-i18n="filterClear">Filtreler Temizle</button>
           </div>
         </div>
       </div>
@@ -660,7 +664,8 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <div class="ptab-c" id="ptab-saved">
         <div class="pgrid" id="savedGrid"></div>
-        <div class="empty-state" id="savedEmpty"><div class="empty-icon">❤️</div><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.<br>Kartlardaki 🤍 ikonuna tıklayın.</p></div>
+        <div class="empty-state" id="savedEmpty"><div class="empty-icon">❤️</div><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.<br>Kartlardaki 🤍 ikonuna tıklayın.</p>
+        <a href="/" class="btn bo bsm" style="margin-top:12px" data-prevent data-act="showMainTab" data-arg="explore" data-i18n="explore">Keşfet</a></div>
       </div>
       <div class="ptab-c" id="ptab-write">
         <div class="write-card">
