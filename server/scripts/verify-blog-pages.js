@@ -42,6 +42,24 @@ if (!appJs.includes('class="bdate"') || !appJs.includes('b.publishedAt')) {
 if (!appJs.includes('function openBlogDetail') || !appJs.includes('function closeBlogDetail')) {
   fail('detail open/close missing');
 } else ok('openBlogDetail / closeBlogDetail');
+if (!appJs.includes('function bodyWithoutExcerpt') || !appJs.includes('bodyWithoutExcerpt(b.excerpt, b.body)')) {
+  fail('blog detail must strip excerpt from body to avoid repeat');
+} else ok('blog detail strips repeated excerpt from body');
+
+function bodyWithoutExcerpt(excerpt, body) {
+  const e = String(excerpt || '').trim();
+  let b = String(body || '').trim();
+  if (!e || !b) return b;
+  if (b === e) return '';
+  if (b.startsWith(e)) b = b.slice(e.length).replace(/^[\s\r\n]+/, '');
+  return b;
+}
+if (bodyWithoutExcerpt('Kısa özet', 'Kısa özet') !== '') fail('excerpt==body should hide body copy');
+else ok('excerpt==body shows once');
+if (bodyWithoutExcerpt('Kısa özet', 'Kısa özet\n\nDevamı') !== 'Devamı') fail('body prefix excerpt not stripped');
+else ok('body prefix excerpt stripped');
+if (bodyWithoutExcerpt('A', 'Bambaşka') !== 'Bambaşka') fail('distinct body lost');
+else ok('distinct body kept');
 if (!appJs.includes('await applyRouteFromUrl({ skipFilters: true })')) {
   fail('init missing applyRouteFromUrl');
 } else ok('init applies /blog route from URL');

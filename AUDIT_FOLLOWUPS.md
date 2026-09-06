@@ -6,6 +6,15 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 0 sonuç ekranına yönlendirme butonu (tasarım aynı). “0 yer bulundu” / keşfet / gezilecek yerler boş listesinde **Filtreler Temizle**; favori boşsa **Keşfet**; mekân detayında 0 Tiola zaten **İlk Tiola'yı sen yaz!**. `npm run verify:empty-states`.
 
+## Onaylı risk maddeleri (1 / 4 / 5)
+
+Yasin onayladı: H1, honeypot/klavye çerçevesi, blog özet tekrarı. **Madde 3 (CLS / destinasyonları gizleme) yok.**
+
+1. **H1** — `index.html` statik olarak tek H1 (hero). Diğer sayfa başlıkları H2; `syncPageHeading` açık görünümde tek H1 yapar. Görünüm aynı (CSS h1/h2 ortak).
+4. **a11y** — honeypot `.tl-hp` + `aria-hidden` + clip; `button:focus-visible` çerçevesi.
+5. **Blog** — `bodyWithoutExcerpt`: özet gövdede tekrar etmez.
+
+`npm run verify:h1 && npm run verify:a11y && npm run verify:blog`.
 
 ## Gemini Faz 4 (PostGIS / JSON-LD / N+1)
 

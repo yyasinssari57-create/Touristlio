@@ -30,6 +30,14 @@ else ok('skip-link CSS');
 if (!css.includes(':focus-visible')) fail('CSS missing :focus-visible');
 else ok('focus-visible outline');
 
+if (!css.includes('button:focus-visible') || !css.includes('.btn:focus-visible')) {
+  fail('CSS missing button:focus-visible outline');
+} else ok('button:focus-visible outline');
+
+if (!css.includes('.tl-hp') || !css.includes('clip-path:inset(50%)')) {
+  fail('honeypot .tl-hp must be fully clipped/hidden');
+} else ok('honeypot CSS fully hidden');
+
 if (!css.includes('--t3:#5a7894') && !css.includes('--t3: #5a7894')) {
   fail('muted text --t3 still too light for contrast');
 } else ok('muted text contrast (--t3 darkened)');

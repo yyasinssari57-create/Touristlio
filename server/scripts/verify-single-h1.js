@@ -62,6 +62,9 @@ if (/<h1[^>]*class="brand-name"/i.test(index) || /<h1[^>]*class="brand-name"/i.t
   ok('brand/logo text is not an h1');
 }
 
+if (h1Count(index) !== 1) fail(`index.html should have exactly one h1, found ${h1Count(index)}`);
+else ok('index.html has a single static h1');
+
 if (/<h1[^>]*data-i18n-html="heroTitle"[^>]*>[\s\S]*?Hisset\.[\s\S]*?<\/h1>/i.test(index)) {
   ok('homepage slogan is the h1');
 } else {
@@ -80,10 +83,16 @@ if (/<h2[^>]*id="blogHeroTitle"[^>]*>Seyahat[\s\S]*Hikayeleri[\s\S]*<\/h2>/i.tes
   fail('Seyahat Hikayeleri section heading must be h2');
 }
 
-if (/<h1[^>]*class="pd-title"[^>]*id="pdTitle"/i.test(index)) {
-  ok('place name target is h1');
+if (/<h[12][^>]*class="pd-title"[^>]*id="pdTitle"/i.test(index) && /<h2[^>]*id="pdTitle"/i.test(index)) {
+  ok('place name target starts as h2 (promoted on detail view)');
 } else {
-  fail('place detail title must be h1');
+  fail('place detail title must start as h2 in homepage HTML');
+}
+
+if (!app.includes('function syncPageHeading') || !app.includes('function retagHeading')) {
+  fail('syncPageHeading / retagHeading missing');
+} else {
+  ok('active view heading is promoted to a single h1');
 }
 
 if (/<h1[^>]*class="bd-title"/i.test(app)) {
@@ -130,7 +139,7 @@ if (discover.includes('citiesStep.hidden = !showCities')
   fail('places city/result steps do not synchronize hidden');
 }
 
-if (/\.blog-hero-card h2/.test(css) && /\.discover-hd h1,\.discover-hd h2/.test(css)) {
+if (/\.blog-hero-card h1,\.blog-hero-card h2/.test(css) && /\.discover-hd h1,\.discover-hd h2/.test(css)) {
   ok('h2 replacements keep their visual styles');
 } else {
   fail('h2 replacement styles missing');
