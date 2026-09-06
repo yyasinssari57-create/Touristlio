@@ -54,6 +54,7 @@
     "verify:cleanup": "node server/scripts/verify-code-cleanup.js",
     "verify:cache": "node server/scripts/verify-cache-headers.js",
     "verify:analytics": "node server/scripts/verify-analytics.js",
+    "verify:empty-states": "node server/scripts/verify-empty-states.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
     "live-data:refresh": "node -e \"require('./server/db').initDb().then(() => require('./server/services/liveDataService').refreshAllPlaces()).then((n) => { console.log('done', n); process.exit(0); }).catch((e) => { console.error(e); process.exit(1); })\"",

@@ -2,6 +2,11 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Empty states CTA
+
+0 sonuç ekranına yönlendirme butonu (tasarım aynı). “0 yer bulundu” / keşfet / gezilecek yerler boş listesinde **Filtreler Temizle**; favori boşsa **Keşfet**; mekân detayında 0 Tiola zaten **İlk Tiola'yı sen yaz!**. `npm run verify:empty-states`.
+
+
 ## Gemini Faz 4 (PostGIS / JSON-LD / N+1)
 
 Gemini “Faz 4”. Express + vanilla JS. Tasarım / UI yok. Next.js yok.
