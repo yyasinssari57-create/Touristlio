@@ -124,7 +124,7 @@
 
   function honeypotHtml() {
     return '<div class="tl-hp" aria-hidden="true">'
-      + '<label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" value=""/></label>'
+      + '<label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" value="" aria-hidden="true"/></label>'
       + '</div>';
   }
 

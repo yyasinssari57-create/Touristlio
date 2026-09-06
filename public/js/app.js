@@ -1495,6 +1495,44 @@ function blogListPath() {
   return lang === 'en' ? '/en/blog' : '/blog';
 }
 
+function retagHeading(el, level) {
+  if (!el) return null;
+  const want = 'H' + level;
+  if (el.tagName === want) return el;
+  const next = document.createElement('h' + level);
+  for (const attr of el.attributes) next.setAttribute(attr.name, attr.value);
+  while (el.firstChild) next.appendChild(el.firstChild);
+  el.replaceWith(next);
+  return next;
+}
+
+function syncPageHeading(tab) {
+  const hero = document.querySelector('#page-explore [data-i18n-html="heroTitle"]');
+  const discover = document.getElementById('discoverCityTitle');
+  const blogHero = document.getElementById('blogHeroTitle');
+  const blogSr = document.querySelector('#blogListing [data-i18n="blog"]');
+  const profile = document.querySelector('#page-profile [data-i18n="profile"]');
+  const pd = document.getElementById('pdTitle');
+  const blogTitle = document.querySelector('#blogDetailBody .bd-title');
+  const articleOn = tab === 'blog' && !!activeBlogSlug;
+  retagHeading(hero, tab === 'explore' ? 1 : 2);
+  retagHeading(discover, tab === 'places' ? 1 : 2);
+  retagHeading(blogHero, tab === 'blog' && !articleOn ? 1 : 2);
+  retagHeading(blogSr, 2);
+  retagHeading(profile, tab === 'profile' ? 1 : 2);
+  retagHeading(pd, tab === 'detail' ? 1 : 2);
+  retagHeading(blogTitle, articleOn ? 1 : 2);
+}
+
+function bodyWithoutExcerpt(excerpt, body) {
+  const e = String(excerpt || '').trim();
+  let b = String(body || '').trim();
+  if (!e || !b) return b;
+  if (b === e) return '';
+  if (b.startsWith(e)) b = b.slice(e.length).replace(/^[\s\r\n]+/, '');
+  return b;
+}
+
 function showBlogListing() {
   const listing = document.getElementById('blogListing');
   const article = document.getElementById('blogArticle');
@@ -1502,6 +1540,7 @@ function showBlogListing() {
   listing?.setAttribute('aria-hidden', 'false');
   article?.setAttribute('hidden', '');
   article?.setAttribute('aria-hidden', 'true');
+  syncPageHeading('blog');
 }
 
 function showBlogArticle() {
@@ -1511,6 +1550,7 @@ function showBlogArticle() {
   listing?.setAttribute('aria-hidden', 'true');
   article?.removeAttribute('hidden');
   article?.setAttribute('aria-hidden', 'false');
+  syncPageHeading('blog');
 }
 
 function publicOrigin() {
@@ -1779,6 +1819,7 @@ async function showMainTab(tab, skipRoute) {
     if (skipRoute) bootDiscover.catch((e) => console.warn(e));
   }
   window.scrollTo(0, 0);
+  syncPageHeading(tab);
   if (!skipRoute) syncRoute(true);
   if (!skipRoute) {
     try {
@@ -2569,14 +2610,15 @@ async function openBlogDetail(slug, skipRoute) {
     }, 'tiola-mini');
     const bodyEl = document.getElementById('blogDetailBody');
     if (!bodyEl) return;
+    const restBody = bodyWithoutExcerpt(b.excerpt, b.body);
     bodyEl.innerHTML = `
       <div data-content-type="blog" data-content-id="${b.id}">
       ${img ? responsiveImg(img, { className: 'bd-cover', kind: 'detail' }) : ''}
       <div class="bd-cat">${escapeHtml(displayLabel(b.categoryLabel) || displayLabel(b.category) || '')}</div>
       <h1 class="bd-title">${escapeHtml(b.title)}</h1>
       <div class="bd-meta">${authorChip}${b.publishedAt ? ' · ' + formatDate(b.publishedAt) : ''}</div>
-      ${b.excerpt ? `<p style="color:var(--t2);font-size:.85rem;margin-bottom:12px">${escapeHtml(b.excerpt)}</p>` : ''}
-      <div class="bd-body">${escapeHtml(b.body || '')}</div>
+      ${b.excerpt ? `<p class="bd-excerpt">${escapeHtml(b.excerpt)}</p>` : ''}
+      ${restBody ? `<div class="bd-body">${escapeHtml(restBody)}</div>` : ''}
       ${tags ? `<div class="bd-tags">${tags}</div>` : ''}
       ${b.placeId ? `<p style="margin-top:16px"><button class="btn bp bsm" type="button" data-before="closeBlogDetail" data-act="openDetail" data-arg="${b.placeId}">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
       <div class="tiola-actions-row bd-like-row" data-stop>

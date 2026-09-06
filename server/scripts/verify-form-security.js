@@ -81,8 +81,9 @@ if (prevSecret == null) delete process.env.RECAPTCHA_SECRET;
 else process.env.RECAPTCHA_SECRET = prevSecret;
 
 const contactHtml = fs.readFileSync(path.join(ROOT, 'public', 'legal', 'contact.html'), 'utf8');
-if (!contactHtml.includes('name="website"') || !contactHtml.includes('tl-hp')) fail('contact form missing honeypot');
-else ok('contact honeypot markup');
+if (!contactHtml.includes('name="website"') || !contactHtml.includes('tl-hp') || !contactHtml.includes('aria-hidden="true"')) {
+  fail('contact form missing honeypot');
+} else ok('contact honeypot markup');
 if (!contactHtml.includes('/js/form-security.js')) fail('contact.html missing form-security.js');
 else ok('contact loads form-security.js');
 if (!contactHtml.includes('[^\\s@]+@') || !contactHtml.includes('EMAIL_RE')) {
@@ -105,9 +106,12 @@ else ok('form-security.js reCAPTCHA helper');
 const indexHtml = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
 if (!indexHtml.includes('/js/form-security.js')) fail('index.html missing form-security.js');
 else ok('index.html loads form-security.js');
-if (!indexHtml.includes('id="rfTxt"') || !indexHtml.includes('name="website"')) {
+if (!indexHtml.includes('id="rfTxt"') || !indexHtml.includes('name="website"') || !indexHtml.includes('class="tl-hp"')) {
   fail('place Tiola form missing honeypot');
 } else ok('place Tiola form honeypot markup');
+if (!indexHtml.includes('aria-hidden="true"') || !fsJs.includes('aria-hidden="true"')) {
+  fail('honeypot missing aria-hidden');
+} else ok('honeypot aria-hidden on markup + helper');
 
 const authRoutes = fs.readFileSync(path.join(ROOT, 'server', 'modules', 'auth', 'auth.routes.js'), 'utf8');
 const loginBlock = authRoutes.match(/router\.post\(\s*'\/login'[\s\S]*?controller\.login\s*\)/);
