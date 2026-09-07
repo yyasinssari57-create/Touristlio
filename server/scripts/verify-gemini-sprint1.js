@@ -58,6 +58,12 @@ if (!adminJs.includes('X-Checksum-SHA256') || !adminJs.includes('checksumsMatch'
 if (!adminJs.includes('dryRun') || !adminJs.includes('db.restore_dry_run')) {
   fail('restore dry-run missing');
 } else ok('restore dry-run validates without apply');
+if (!adminJs.includes('db.restore_snapshot') || !adminJs.includes('db.restore_rollback_ok') || !adminJs.includes('db.restore_failed')) {
+  fail('restore snapshot / rollback audit missing');
+} else ok('restore takes a snapshot and rolls back on failure');
+if (!adminJs.includes('Geri yükleme öncesi kopya alınamadı')) {
+  fail('restore must abort if pre-restore dump fails');
+} else ok('restore aborts when snapshot cannot be taken');
 if (!adminJs.includes('decryptBuffer')) {
   fail('restore decrypt hook missing');
 } else ok('restore uses backup-safe decrypt hook');

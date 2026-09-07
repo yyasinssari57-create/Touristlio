@@ -2,6 +2,14 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ1-1 (yedek)
+
+Sprint 1 yedek güvenliği duruyor (allowlist, SHA-256, dry-run, isteğe bağlı AES). `owner` rolü yok — yedek `admin`. Yeni bucket / JSON dump yok.
+
+Boşluk: gerçek restore öncesi `pg_dump` kopyası; `psql` düşerse kopya geri yüklenir. Snapshot alınamazsa restore iptal. Audit: `db.restore_snapshot` / `rollback_ok|failed` / `restore_failed`.
+
+`npm run verify:sprint1`.
+
 ## Claude Master PRD — FAZ0-2 (dil / rota)
 
 Mevcut `TL_I18N` duruyor (LocaleManager / `/locales/*.json` yok — o dosyalar projede yok, yazılmadı).

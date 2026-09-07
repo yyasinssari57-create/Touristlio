@@ -1584,11 +1584,22 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
     });
   }
 
+  const url = process.env.DATABASE_URL;
+  if (!url) return fail(res, 'DATABASE_URL gerekli', 500);
+
   const tmpPath = backupSafe.safeTmpPath('.sql');
+  const snapshotPath = backupSafe.safeTmpPath('.snapshot.sql');
+  const snapshotId = path.basename(snapshotPath);
+  try {
+    writePgDump(snapshotPath);
+    logAdmin(req, 'db.restore_snapshot', 'database', null, snapshotId);
+  } catch (err) {
+    unlinkQuiet(snapshotPath);
+    return fail(res, err.message || 'Geri yükleme öncesi kopya alınamadı; işlem iptal.', 500);
+  }
+
   try {
     fs.writeFileSync(tmpPath, plain);
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error('DATABASE_URL gerekli');
     const result = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-f', tmpPath], {
       encoding: 'utf8',
       timeout: SCRIPT_TIMEOUT_MS,
@@ -1599,16 +1610,39 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
     if (result.status !== 0) {
       throw new Error((result.stderr || result.stdout || 'psql başarısız').slice(0, 500));
     }
+    unlinkQuiet(snapshotPath);
     logAdmin(req, 'db.restore_applied', 'database', null, safeName);
     return ok(res, {
       dryRun: false,
       applied: true,
       checksum: actual,
+      snapshotId,
+      rolledBack: false,
       message: 'Geri yükleme uygulandı. Sayfayı yenileyin.',
     });
   } catch (err) {
     unlinkQuiet(tmpPath);
-    return fail(res, err.message || 'Geri yükleme başarısız. Supabase Dashboard → Database → Backups kullanın.', 500);
+    let rolledBack = false;
+    try {
+      if (fs.existsSync(snapshotPath)) {
+        const rb = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-f', snapshotPath], {
+          encoding: 'utf8',
+          timeout: SCRIPT_TIMEOUT_MS,
+          maxBuffer: 32 * 1024 * 1024,
+        });
+        rolledBack = !rb.error && rb.status === 0;
+        logAdmin(req, rolledBack ? 'db.restore_rollback_ok' : 'db.restore_rollback_failed', 'database', null, snapshotId);
+      }
+    } catch (rbErr) {
+      logger.warn({ msg: 'Restore rollback failed', err: rbErr.message });
+      logAdmin(req, 'db.restore_rollback_failed', 'database', null, snapshotId);
+    }
+    unlinkQuiet(snapshotPath);
+    logAdmin(req, 'db.restore_failed', 'database', null, safeName);
+    const hint = rolledBack
+      ? 'Geri yükleme başarısız, önceki durum geri alındı.'
+      : 'Geri yükleme başarısız. Supabase Dashboard → Database → Backups kullanın.';
+    return fail(res, `${err.message || 'Geri yükleme başarısız'}. ${hint}`, 500);
   }
 });
 
