@@ -115,22 +115,37 @@ if (fs.existsSync(path.join(ROOT, '.env.local'))) {
   fail('.env.local should not exist in this stack');
 } else ok('no .env.local');
 
+function walkPublicSource(dir, acc = []) {
+  for (const name of fs.readdirSync(dir)) {
+    if (name === 'vendor') continue;
+    const full = path.join(dir, name);
+    if (fs.statSync(full).isDirectory()) walkPublicSource(full, acc);
+    else if (/\.(js|html)$/i.test(name)) acc.push(path.relative(ROOT, full).replace(/\\/g, '/'));
+  }
+  return acc;
+}
+
+const publicSources = walkPublicSource(path.join(ROOT, 'public'));
+if (publicSources.length < 10) fail('public source walk found too few files');
+else ok(`scanned ${publicSources.length} public html/js files (vendor skipped)`);
+
 const secretLike = [
-  { rel: 'public/js/app.js', src: appJs },
-  { rel: 'public/js/i18n.js', src: i18nJs },
-  { rel: 'public/index.html', src: indexHtml },
-  { rel: 'public/admin.html', src: read('public/admin.html') },
+  ...publicSources.map((rel) => ({ rel, src: read(rel) })),
   { rel: 'server/index.js', src: read('server/index.js') },
   { rel: 'render.yaml', src: read('render.yaml') },
 ];
 const leaked = [];
 const leakRe = /AIzaSy[0-9A-Za-z_-]{20,}|sk_live_[0-9A-Za-z]+|pk\.ey[0-9A-Za-z._-]{20,}|xkeysib-[0-9A-Za-z-]{20,}|sb_secret_[0-9A-Za-z._-]{16,}|ghp_[0-9A-Za-z]{20,}/g;
+const nameLeakRe = /SUPABASE_SERVICE_KEY\s*[:=]\s*['"][^'"]+['"]|SMTP_PASS\s*[:=]\s*['"][^'"]+['"]|JWT_SECRET\s*[:=]\s*['"][^'"]+['"]|RECAPTCHA_SECRET\s*[:=]\s*['"][^'"]+['"]/;
 for (const file of secretLike) {
   const hits = file.src.match(leakRe);
   if (hits) leaked.push(`${file.rel}: ${hits[0].slice(0, 12)}…`);
+  if (file.rel.startsWith('public/') && nameLeakRe.test(file.src)) {
+    leaked.push(`${file.rel}: env secret assigned in client`);
+  }
 }
 if (leaked.length) fail(`possible committed secret: ${leaked.join('; ')}`);
-else ok('no Google/Mapbox/Brevo/Supabase secret literals in public/server entry files');
+else ok('no Google/Mapbox/Brevo/Supabase secret literals in public HTML/JS');
 
 const formSec = read('public/js/form-security.js');
 if (formSec.includes('RECAPTCHA_SECRET') || /secret['"]?\s*[:=]\s*['"][A-Za-z0-9_-]{20,}/.test(formSec)) {

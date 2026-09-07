@@ -2,6 +2,12 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ1-3 (anahtar sızıntı)
+
+Tarayıcıda (`public/`, vendor hariç) gerçek `sb_secret` / `sk_live` / `AIza` / `xkeysib` / `ghp_` yok. Service key yalnızca sunucu (`supabase-storage.js` + env). Yeni `@supabase/supabase-js` client yazılmadı.
+
+`verify:sprint0` artık tüm public HTML/JS tarar. reCAPTCHA **site** key `/api/config` ile gelir; **secret** env’de.
+
 ## Claude Master PRD — FAZ1-1 (yedek)
 
 Sprint 1 yedek güvenliği duruyor (allowlist, SHA-256, dry-run, isteğe bağlı AES). `owner` rolü yok — yedek `admin`. Yeni bucket / JSON dump yok.
