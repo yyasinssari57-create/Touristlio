@@ -79,6 +79,12 @@ const indexHtml = read('public/index.html');
 if (!indexHtml.includes('data-tl-lang-boot')) {
   fail('index.html missing early lang boot script');
 } else ok('index.html early lang + data-tl-lang');
+if (!indexHtml.includes('data-i18n-html="blogHeroTitle"') || !indexHtml.includes('data-i18n="blogSub"')) {
+  fail('blog hero title/sub missing data-i18n (EN/TR stay mixed)');
+} else ok('blog hero title/sub follow apply() language');
+if (!indexHtml.includes('data-i18n-placeholder="blogSearchPh"')) {
+  fail('blog search placeholder not i18n-bound');
+} else ok('blog search placeholder follows language');
 
 const sender = read('server/lib/send-public-html.js');
 if (!sender.includes('injectEarlyLangBoot') || !sender.includes('data-tl-lang-boot')) {

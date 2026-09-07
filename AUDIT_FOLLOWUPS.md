@@ -2,6 +2,16 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ0-2 (dil / rota)
+
+Mevcut `TL_I18N` duruyor (LocaleManager / `/locales/*.json` yok — o dosyalar projede yok, yazılmadı).
+
+- URL `/en` kazanır; `setLang` `persistLang` + `apply` + `syncRoute` (`/blog` ↔ `/en/blog`).
+- `html lang` + hreflang zaten vardı.
+- Boşluk: blog hero/özet/arama `data-i18n` yoktu; `/en/blog` açıkken “Seyahat Hikayeleri” Türkçe kalıyordu. Şimdi `apply()` ile değişir. Kategori chip EN’de `nameTr` yedeklemez.
+
+`npm run verify:sprint0`. Claude i18n.js’i sıfırdan yazmadı.
+
 ## Empty states CTA
 
 0 sonuç ekranına yönlendirme butonu (tasarım aynı). “0 yer bulundu” / keşfet / gezilecek yerler boş listesinde **Filtreler Temizle**; favori boşsa **Keşfet**; mekân detayında 0 Tiola zaten **İlk Tiola'yı sen yaz!**. `npm run verify:empty-states`.
