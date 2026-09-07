@@ -2518,12 +2518,12 @@ async function loadBlogPage() {
       const allLabel = page.catAll || t('blogCatAll');
       const cats = blogMeta.categories || [];
       chips.innerHTML = `<button type="button" class="bcat-chip ${blogCat === 'all' ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="all">${escapeHtml(allLabel)}</button>`
-        + cats.map((c) => `<button type="button" class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="${escapeHtml(c.slug)}">${escapeHtml(c.label || c.nameTr)}</button>`).join('');
+        + cats.map((c) => `<button type="button" class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="${escapeHtml(c.slug)}">${escapeHtml(c.label || (lang === 'en' ? (c.nameEn || c.nameTr) : (c.nameTr || c.nameEn)) || '')}</button>`).join('');
     }
     const writeCat = document.getElementById('blogCat');
     if (writeCat && blogMeta.categories?.length) {
       writeCat.innerHTML = blogMeta.categories.map((c) =>
-        `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.label || c.nameTr)}</option>`
+        `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.label || (lang === 'en' ? (c.nameEn || c.nameTr) : (c.nameTr || c.nameEn)) || '')}</option>`
       ).join('');
     }
   } catch (e) {
@@ -3608,8 +3608,9 @@ function refreshAfterLang() {
 function setLang(l, btn) {
   lang = window.TL_I18N ? window.TL_I18N.persistLang(l) : (l === 'en' ? 'en' : 'tr');
   document.querySelectorAll('.lb').forEach((b) => {
-    b.classList.remove('on');
-    b.setAttribute('aria-pressed', 'false');
+    const on = b.getAttribute('data-arg') === lang || b.textContent.trim().toLowerCase() === lang;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
   if (btn) {
     btn.classList.add('on');
