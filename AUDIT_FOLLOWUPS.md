@@ -2,6 +2,76 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude FAZ2-1 (JavaScript code splitting)
+
+Claude Master PRD "FAZ 2 — Performans ve Core Web Vitals" → [FAZ2-1] JS code splitting.
+Express + vanilla JS, build tool/bundler yok (webpack/vite/esbuild eklenmedi).
+
+**Önce gerçek durum çıkarıldı** (`public/index.html`, `public/admin.html`, `public/js/app.js`,
+`public/*.html`, `public/vendor/` okunarak):
+
+1. **En büyük her-zaman-yüklü yük zaten bölünmüştü.** Leaflet (`~148 KB`) + leaflet.markercluster
+   (`~33 KB`) + `map.js`/`map-discover.js`, önceki bir çalışmada (bkz. yukarıdaki "Gemini Faz 3"
+   bölümü, `public/js/map-loader.js`) ana sayfanın ilk yüklemesinden çıkarılmış; `TL_MAP_LOADER.ensure()`
+   yalnızca kullanıcı **Harita sekmesine tıklayınca** (`#et-map`) veya **Gezilecek Yerler** sayfasındaki
+   harita paneli açılınca classic `<script>` (Leaflet UMD) + `import()` (`map.js`) ile yükleniyor.
+   Bu PR'da buraya dokunulmadı; `npm run verify:faz3` hâlâ yeşil (regresyon yok, doğrulandı).
+2. **Ayrı bir "blog editörü" modülü yok** — blog yazma, `app.js` içindeki küçük bir form (başlık +
+   kategori + textarea), bölünecek ayrı/ağır bir kütüphane değil. PRD'nin örnek senaryosundaki
+   `blog-editor.js` bu depoda karşılığı olmadığı için uygulanmadı (dürüstçe: yapacak bir şey yoktu).
+3. **`analytics.js` / `cookie-banner.js`'e `defer` eklemek güvenli DEĞİL bulundu ve YAPILMADI.**
+   `app.js`'in `init()` fonksiyonu, ilk `await`'ten ÖNCE senkron olarak
+   `window.TL_COOKIE.render(lang)` çağırıyor ve `showMainTab()` (yine `init()` içinden, `await`'siz)
+   `window.TL_ANALYTICS?.trackTab(tab)` çağırıyor. `app.js` deferlenmeden sadece `analytics.js`/
+   `cookie-banner.js`'i deferlemek, bu globalleri `app.js` onlara ihtiyaç duyduğunda henüz tanımsız
+   bırakırdı — **çerez onay bandı ilk ziyarette hiç görünmezdi** (KVKK riski) ve ilk `page_view`
+   events'i kaybolurdu. PRD'nin kendi uyarısı ("script right after it depends on synchronous
+   execution") tam bu senaryoyu işaret ediyordu; bu yüzden dokunulmadı.
+4. **Gerçek, güvenli fırsat: `avatar-crop.js` (~9.8 KB).** `public/index.html` VE `public/profile.html`
+   bunu her sayfa yüklemesinde statik `<script>` ile yüklüyordu, ama yalnızca kullanıcı Profil →
+   Ayarlar → "Fotoğraf yükle" ile bir avatar dosyası SEÇTİĞİNDE kullanılıyor (`window.TL_AVATAR_CROP
+   ?.open(...)`, dosya `input[type=file].onchange` içinde). Bu, var olan gerçek bir tetikleyici
+   (dosya seçme) — PRD'nin "only apply lazy-loading where there is a genuine, pre-existing gate"
+   kuralına tam uyuyor.
+
+**Yapılan değişiklik:** `avatar-crop.js`'in statik `<script>` etiketi hem `index.html` hem
+`profile.html`'den kaldırıldı. Yerine `app.js` (ve `profile.html`'in kendi inline script'i) içine,
+`map-loader.js`'teki mevcut classic-script-injection deseniyle (`document.createElement('script')`
++ cache'lenmiş promise, aynı `?v=` sürümleme) birebir aynı yöntemle küçük bir `ensureAvatarCropLib()`
+eklendi. Avatar dosya input'unun `onchange` handler'ı artık `await ensureAvatarCropLib()` yapıp
+ardından `window.TL_AVATAR_CROP.open(...)`'u çağırıyor — kullanıcı deneyiminde HİÇBİR görünür
+fark yok (dosya seçtikten sonra kırpma ekranı zaten bir API/DOM işlemi bekliyordu; birkaç KB'lık
+script indirmesi bu beklemeye eklenen, gözle görülmeyen bir gecikme).
+
+**Ölçülebilir etki:** Ana sayfa ve Profil sayfasının ilk yüklemesinde ~9.8 KB JS artık hiç
+indirilmiyor (ziyaretçilerin büyük çoğunluğu avatar fotoğrafı hiç yüklemiyor). Haritadaki asıl
+büyük kazanım (Leaflet + MarkerCluster, ~181 KB) zaten önceki sprintte yapılmıştı.
+
+**Doğrulama:**
+- `npm run verify:faz2-1` (yeni) — statik + canlı sunucu kontrolleri (`avatar-crop.js` ne
+  `index.html` ne `profile.html`'de eager; `ensureAvatarCropLib()` ikisinde de var; dosya hâlâ
+  `/js/avatar-crop.js`'ten on-demand erişilebilir).
+- `npm run verify:faz3` — harita lazy-load'da regresyon yok (hâlâ yeşil).
+- `npm run verify:forms`, `verify:images`, `verify:a11y`, `verify:user-system`, `verify:skeleton`,
+  `verify:cleanup` — hepsi yeşil.
+- Headless Chrome ile canlı tarayıcı testi (puppeteer-core, geçici — repo'ya eklenmedi): ana sayfa
+  ilk yüklemede `leaflet.js`/`markercluster.js`/`avatar-crop.js` hiçbiri istenmiyor; Harita
+  sekmesine tıklayınca Leaflet + MarkerCluster yükleniyor ve harita gerçekten render oluyor
+  (`.leaflet-pane` DOM'da); `ensureAvatarCropLib()` çağrılınca `avatar-crop.js` indiriliyor ve
+  `window.TL_AVATAR_CROP.open` tanımlı hâle geliyor; konsol hatası yok (bir önceden var olan,
+  bu PR'dan bağımsız `favicon.ico` 404'ü hariç — `main` dalında da mevcut, bu PR'ın kapsamı değil).
+
+### Leftover
+- `favicon.ico` 404 (bu PR'dan önce de vardı, kapsam dışı — ayrı küçük bir düzeltme olabilir).
+- `analytics.js` / `cookie-banner.js` deferlenebilir ama ancak `app.js`'in `init()` akışındaki
+  `TL_COOKIE.render` / `trackTab` çağrıları `await`'ten sonraya taşınır ya da `app.js` de aynı
+  sırayla deferlenirse — bu, bu FAZ2-1 maddesinin kapsamı dışına taşan, ayrı/daha dikkatli bir
+  refactor gerektirir.
+- Admin paneline (`admin.html`, ~5000 satır) bilerek dokunulmadı: ayrı bir sayfa, yalnızca Yasin
+  admin'e giderken yükleniyor, herkese açık sayfaları hiç etkilemiyor.
+
+`npm run verify:faz2-1` (+ `verify:faz3`).
+
 ## Admin paneli: "hâlâ olmuyor görsel ekleme" + "kısa sürede çıkış yapıyor" (PR #67 sonrası ikinci bildirim)
 
 **Bildirim (Yasin, PR #67 — 5 MB → 12 MB düzeltmesi deploy edildikten sonra):**
