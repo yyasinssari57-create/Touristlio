@@ -2,6 +2,124 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Admin paneli: "hâlâ olmuyor görsel ekleme" + "kısa sürede çıkış yapıyor" (PR #67 sonrası ikinci bildirim)
+
+**Bildirim (Yasin, PR #67 — 5 MB → 12 MB düzeltmesi deploy edildikten sonra):**
+"hala olmuyor görsel ekleme" + "admin panelinde kısa sürede hesaptan çıkış yapıyor onu uzat".
+
+### Soru: iki bildirim aynı kök nedenin mi parçası?
+
+**Kısmen evet, ama birebir "JWT süresi 15-30 dakika gibi kısaymış" varsayımı DOĞRU DEĞİLDİ.**
+İnceleme öncesi hipotez, JWT `exp` ile çerez `maxAge`'in uyuşmadığı klasik bir hataydı — ama
+kontrol edilince `server/auth.js`'teki JWT zaten 7 gün, `server/lib/cookie-opts.js`'teki `tl_token`
+çerezi de zaten 7 gündü (`WEEK_MS`) — **ikisi zaten birbiriyle uyumluydu**, 15-30 dakikalık bir süre
+hiç yoktu. Admin girişi de normal kullanıcılarla AYNI `/api/auth/login` ucunu, aynı `signToken()`'ı
+kullanıyor — ayrı/daha kısa bir "admin oturumu" sistemi yok.
+
+**Ama gerçek ve çok daha olası kök neden bulundu:** `server/auth.js`'teki `ensureJwtSecret()`,
+production'da `JWT_SECRET` ortam değişkeni ayarlı/güçlü değilse **her süreç başlangıcında rastgele
+yeni bir secret üretiyordu** (sadece bir konsol uyarısıyla, görünür bir hata olmadan). Render (ve
+çoğu host) **her deploy'da** süreci yeniden başlatır — yani `JWT_SECRET` Render Environment'ta
+ayarlı değilse, **her restart** (her deploy, muhtemelen bazı planlarda boşta kaldıktan sonraki
+otomatik restart da) önceden verilmiş TÜM JWT'leri (admin dahil) JWT'nin kendi `exp` alanı hâlâ
+günlerce geçerliyken bile anında geçersiz kılıyordu. Bu, "oturumum kısa sürede bitiyor" hissiyle
+TAM örtüşüyor ve PR #67'nin deploy'u (bir restart) muhtemelen tam da Yasin'in yükleme denediği
+sırada oturumunu sıfırlamış olabilir — **iki bildirim muhtemelen aynı kök nedenin iki farklı
+belirtisi**: restart → secret değişir → eski token geçersiz → sonraki istek (örn. görsel yükleme)
+401 ile başarısız olur ama (aşağıdaki ikinci bulgu nedeniyle) bu 401 görünmez, "hiçbir şey olmuyor"
+gibi görünür.
+
+Bu, canlı Render ortamında `JWT_SECRET`'ın gerçekten ayarlanıp ayarlanmadığı bu sandbox'tan
+doğrulanamadığı için **kesin KANIT değil, ama kod + davranış kanıtıyla çok güçlü bir aday** —
+sandbox'ta bire bir simüle edilip doğrulandı (aşağıya bakın).
+
+### Düzeltme 1 — JWT secret artık restart'larda kalıcı (asıl düzeltme)
+
+`server/lib/jwt-secret-store.js` eklendi: üretilen secret artık mevcut `site_settings` tablosuna
+yazılıyor; `server/index.js`'teki `boot()` → `reconcileJwtSecret()` DB hazır olduğunda önce bu
+tabloyu kontrol ediyor — kayıtlı bir secret varsa onu kullanıyor (yeni rastgele biri yerine), yoksa
+şimdi üretileni kaydediyor. Sonuç: `JWT_SECRET` Render'da hâlâ ayarlanmamış olsa bile, bir sonraki
+restart artık oturumları sıfırlamıyor. `JWT_SECRET`'ı Render Environment'ta gerçek bir değerle
+ayarlamak yine de ÖNERİLİR (DB'ye bağımlı olmayan, daha sağlam çözüm) — ama bu düzeltme bir
+güvenlik ağı sağlıyor.
+
+**Sandbox'ta doğrulandı:** `JWT_SECRET` boş bırakılarak prod modunda sunucu iki kez art arda
+başlatıldı (gerçek bir Render redeploy'unu simüle ediyor). Düzeltmeden ÖNCEKİ davranışla
+(doğrulama için ayrıca test edildi): ilk başlatmada alınan admin token'ı, ikinci başlatmadan sonra
+`401` ile reddediliyordu (secret değişmişti). Düzeltmeden SONRA: aynı senaryoda ikinci başlatmadan
+sonra aynı token hâlâ `200` ile kabul ediliyor (log: "Reused previously-generated JWT secret from
+the database so existing sessions survive this restart").
+
+### Düzeltme 2 — oturum süresi 7 günden 30 güne çıkarıldı (Yasin'in açık isteği)
+
+Yukarıdaki asıl düzeltmeyle JWT/çerez süresinin kendisi artık asıl sorun değildi, ama Yasin açıkça
+"uzat" dediği ve 7 gün zaten makul olsa da daha rahat bir pay istediği için: `server/auth.js`'teki
+`signToken()` `expiresIn` 7d → 30d, `server/lib/cookie-opts.js`'teki `tl_token` (auth) VE `tl_csrf`
+(double-submit CSRF) çerezlerinin `maxAge`'i de aynı şekilde 30 güne (`MONTH_MS` — kod tabanında
+zaten var olan bir sabit, analitik oturum çerezinde kullanılıyordu) çıkarıldı. Admin ve normal
+kullanıcılar aynı giriş sistemini paylaştığı için bu, normal kullanıcı oturumlarını da uzatıyor —
+bu kasıtlı ve zararsız (çoğu sitede tüm oturumlar aynı süreyi kullanır), ayrı bir "admin token'ı"
+sistemi icat etmek bu kapsam için gereksiz karmaşıklık olurdu. `tl_csrf` de `tl_token` ile birlikte
+uzatıldı — aksi halde (ikisi senkronize değilse) 7 gün sonra oturum hâlâ geçerliyken Tiola
+oluşturma/beğenme gibi CSRF-token korumalı uçlar (double-submit) "İstek reddedildi (CSRF)" ile
+başarısız olurdu; bu da aynı sınıftan ayrı bir gizli hataydı, önceden önlendi.
+
+### Düzeltme 3 — ayrı, gerçek bir ön-yüz hatası: düzenle modallarında hata mesajı görünmüyordu
+
+`public/admin.html`'de Yer/Şehir/Kategori **"Düzenle"** modallarının (`savePlaceEdit`,
+`saveCityEdit`, `saveCategoryEdit` ve bunların içindeki anlık kapak görseli yükleme) `catch`
+blokları `showErr(e.message)` kullanıyordu — bu, sayfa başındaki `#globalErr` öğesini hedefliyor.
+Ama `.admin-modal-overlay` CSS'i `position:fixed;inset:0;z-index:200` — yani modal açıkken
+`#globalErr` **modalın tam arkasında, görünmez** kalıyor. Sonuç: oturum süresi dolmuş olsun ya da
+olmasın, yükleme başarısız olsun ya da olmasın, modal açıkken oluşan HER hata sessizce yutuluyordu
+— kaydet butonu tekrar aktif oluyordu ama hiçbir mesaj görünmüyordu. Bu, Yasin'in "görseli seçtim,
+hiçbir şey olmadı" tarifiyle birebir örtüşüyor ve büyük olasılıkla PR #67'nin 12 MB düzeltmesinden
+SONRA da "hâlâ olmuyor" hissinin asıl sebebiydi (örn. restart sonrası geçersiz oturumla "Kaydet"e
+basınca 401 dönüyordu ama hiç görünmüyordu).
+
+**İlginç not:** Blog sayfası/kategorisi/yazısı formları ZATEN doğru yapılmıştı
+(`showFormErr('blogPostFormErr', ...)` vb.) çünkü onlar modal değil, sayfa içi sekme formları.
+"Ekle" (yeni oluşturma) formları da zaten doğruydu (`placeFormErr`, `cityFormErr`, `catFormErr`).
+Sorun yalnızca üç **"Düzenle"** modalındaydı.
+
+**Düzeltme:** Her üç düzenle modalına, "Ekle" formlarında zaten kullanılan aynı `.admin-form-err`
+deseniyle kendi hata kutusu eklendi (`edFormErr`, `edCtFormErr`, `edCatFormErr`) ve ilgili
+`catch` blokları artık `showFormErr(...)` ile hatayı **modalın içinde, kullanıcının baktığı yerde**
+gösteriyor. `bindCityImageInput()` artık opsiyonel bir `formErrId` parametresi alıyor, böylece
+şehir/kategori düzenle modallarındaki anlık görsel yükleme hataları da aynı şekilde görünür (sayfa
+içi "Ekle" formlarındaki görsel seçiciler değişmedi — onlar zaten modal dışında, doğru çalışıyordu).
+Görsel/CSS/layout değişikliği YOK — kutu varsayılan olarak gizli, sadece bir hata oluştuğunda
+görünür oluyor (önceden hiç görünmeyen bir mesajı artık görünür kılıyor).
+
+### Doğrulama
+
+- `node server/scripts/verify-admin-session.js` (yeni): statik olarak 30 günlük JWT/çerez hizasını,
+  `jwt-secret-store.js`'in varlığını, `reconcileJwtSecret()`'in `boot()`'tan çağrıldığını ve üç
+  düzenle modalındaki yeni hata kutularını/`showFormErr` bağlamasını doğruluyor; canlı sunucuyla
+  (a) taze girişin gerçekten ~30 günlük token+çerez ürettiğini, (b) süresi dolmuş/bozuk bir token
+  ile admin yükleme ucuna (`/api/admin/media`) gidildiğinde net `401` + `sessionExpired:true` +
+  anlaşılır Türkçe mesaj döndüğünü VE `tl_token` çerezinin temizlendiğini, (c) normal (süresi
+  dolmamış) bir oturumla medya/hero/şehir/kategori/yer fotoğrafı yüklemenin hâlâ uçtan uca
+  çalıştığını (PR #67 + bu düzeltme birlikte) doğruluyor.
+- `node server/scripts/verify-admin-image-upload.js` (PR #67) — regresyon yok, hâlâ geçiyor.
+- `npm run verify:admin-security`, `verify:faz1-5`, `verify:forms`, `verify:user-system` — hepsi
+  regresyonsuz geçiyor (`verify:user-system` zaten süresi dolmuş JWT'nin `401 sessionExpired`
+  verdiğini ve çerezi temizlediğini test ediyordu — hâlâ geçiyor).
+- JWT secret kalıcılığı ayrıca manuel olarak iki ardışık süreç başlatmayla (production modu,
+  `JWT_SECRET` boş) simüle edildi — düzeltmeden önce ikinci başlatmadan sonra ilk oturumun token'ı
+  `401` dönüyordu, düzeltmeden sonra `200` dönüyor (yukarıya bakın).
+
+### Dürüstlük notu — canlıda (Render) doğrulanamayan kısım
+
+Bu sandbox'ta gerçek Render ortamı veya onun `JWT_SECRET` / `SUPABASE_URL` / `SUPABASE_SERVICE_KEY`
+değerleri yok. Yukarıdaki JWT-secret-rotasyonu teorisi kod davranışıyla ve yerel simülasyonla güçlü
+şekilde destekleniyor ama Render'ın GERÇEKTEN `JWT_SECRET`'sız çalıştığı ya da ne sıklıkta restart
+olduğu buradan kanıtlanamaz. Düzeltme her iki durumda da (ayarlı/ayarsız) zararsız ve geriye dönük
+uyumlu: `JWT_SECRET` zaten ayarlıysa `reconcileJwtSecret()` hiçbir şey yapmadan çıkıyor. Yasin'e
+Render → Environment'ta `JWT_SECRET` adında, uzun/rastgele bir değerin (ör. `npm run
+generate:jwt-secret` çıktısı) gerçekten var olup olmadığını kontrol etmesi, yoksa eklemesi önerilir
+— bu, veritabanına hiç bağımlı olmayan en sağlam çözümdür.
+
 ## Admin paneli: görsel yükleme çalışmıyor (Yasin bildirdi)
 
 **Bildirim:** "admin panelinden görsel ekle diyince çalışmıyor sanırım eklemiyor çünkü" — hangi sayfa, hangi hata belirtilmedi.
