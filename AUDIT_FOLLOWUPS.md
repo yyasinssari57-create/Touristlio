@@ -2,6 +2,23 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ1-4 (rate limit / tüm kritik endpoint'ler)
+
+Gap analizi: PRD'nin 6 limiter kategorisinin **hepsi zaten vardı** (v1 YÜKSEK-7, v2 YÜKSEK-2, ORTA-4, v2 ORTA-5). Yeni limiter eklenmedi; mevcut korumalar doğrulandı ve tek bir bilinçli "ekleme" kararı belgelendi.
+
+- **auth (login/register)**: `authLimiter` IP başına 20 / 15 dk, tüm kritik auth uçlarına bağlı (`/register`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`, `/change-password`, `/change-email`, `/resend-verification`). Login'de ayrıca hesap bazlı kilit: 5 yanlış şifre → 15 dk `locked_until` (423, v2 ORTA-5). PRD'nin `skipSuccessfulRequests` fikri zaten hesap-kilidiyle karşılanıyor; IP limiterına eklenmedi (yanlış şifrede normal kullanıcı kilitlenmesin diye — YÜKSEK-7 kararı, değişmedi).
+- **passwordReset**: `/forgot-password` zaten `formLimiter` (3 / 5 dk, kayıt+iletişim ile ortak IP kovası) + `authLimiter` kullanıyor — PRD'nin önerdiği 5/saatten daha sıkı. `/reset-password` geçerli bir token gerektirdiği için yalnızca `authLimiter`; token olmadan brute-force zaten imkânsız. Ayrı bir `passwordReset` limiterı **eklenmedi** (gerçek boşluk yok).
+- **tiola**: `tiolaFormLimiter` (gönderim, 3 / 5 dk) ve `tiolaVoteLimiter` (beğeni, ORTA-4, 5 / dk) aynen duruyor, **dokunulmadı**.
+- **search**: `searchLimiter` (60 / dk) zaten `GET /api/search` ve `GET /api/places/search` üzerinde — PRD'nin istediği değerle birebir aynı. **Dokunulmadı**.
+- **contact**: `contactLimiter` = `formLimiter` (3 / 5 dk) zaten `POST /api/contact` üzerinde. **Dokunulmadı**.
+- **genel `/api/*` catch-all**: PRD'nin en olası "boşluk" dediği madde aslında projenin en eski limiterı — `apiLimiter` (300 / 15 dk, `RATE_LIMIT_MAX` ile ayarlanabilir) ilk commit'ten beri `app.use('/api/', apiLimiter)` ile tüm `/api/*` uçlarını kapsıyor. **Yeni eklenmedi**, zaten vardı.
+
+### Bilinçli karar: bot User-Agent istisnası eklenmedi
+
+PRD'nin örnek kodu genel limiterda "bot UA ise GET isteklerini atla" öneriyor (Googlebot/Bingbot). Bunu **eklemedik**: User-Agent başlığı istemci tarafından serbestçe ayarlanabilir, "Googlebot" taklidi yapan bir kötüye kullanıcı tam da `apiLimiter`'ın durdurmaya çalıştığı trafiği sınırsız hale getirir — bu bir koruma değil, bypass kapısı olur. Mevcut 300 istek / 15 dk payı gerçek arama motoru botları için zaten yeterli (bu ölçekte bir katalog sitesi için Googlebot/Bingbot bu tavana pratikte ulaşmaz) ve kritik uçların (arama, iletişim, Tiola) zaten kendi route-özel limiterları var — bu limiterlar UA'dan bağımsız çalıştığı için istisnaya ihtiyaç da yok.
+
+`npm run verify:faz1-4` — mevcut tüm limiter ayarlarının (window/max) değişmediğini statik olarak doğrular, her limiterın doğru route'a bağlı olduğunu kontrol eder, bot-UA istisnası eklenmediğini teyit eder ve yerel bir test sunucusunda (prod Supabase'e dokunmadan) `authLimiter` + `searchLimiter` için gerçek 429 yanıtını doğrular. Ayrıca `npm run verify:forms` (contactLimiter + tiolaFormLimiter 429) ve `npm run verify:votes` (tiolaVoteLimiter 5/dk) ile regresyon yok.
+
 ## Claude Master PRD — FAZ1-3 (anahtar sızıntı)
 
 Tarayıcıda (`public/`, vendor hariç) gerçek `sb_secret` / `sk_live` / `AIza` / `xkeysib` / `ghp_` yok. Service key yalnızca sunucu (`supabase-storage.js` + env). Yeni `@supabase/supabase-js` client yazılmadı.
