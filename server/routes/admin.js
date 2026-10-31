@@ -37,7 +37,7 @@ const { publicImageUrl } = require('../lib/media-url');
 const supabaseStorage = require('../lib/supabase-storage');
 const backupSafe = require('../lib/backup-safe');
 const logger = require('../lib/logger');
-const { refreshPlaceStatsForTiola } = require('../lib/tiola-stats');
+const { refreshPlaceStatsForTiola, recomputePlaceTiolaStatsBatch } = require('../lib/tiola-stats');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
@@ -272,6 +272,22 @@ router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req,
   return ok(res, { rejected: true, rejectionReason: reason });
 });
 
+/**
+ * Bulk moderation (approve/reject/remove) for /tiolas/bulk and /blogs/bulk.
+ *
+ * Claude Master PRD FAZ2-4 (N+1 query cleanup): the original version looped
+ * over `ids` doing one SELECT + one UPDATE + one stats recompute (2 more
+ * queries) + one notification INSERT + one audit-log INSERT + one
+ * moderation-history INSERT *per item* — a 20-item batch ran ~100+ separate
+ * DB round-trips. This now does one batched `UPDATE ... WHERE id = ANY($1)`
+ * (or one lookup + one batched UPDATE for reject/remove, since those need to
+ * read each row's current status/owner first), one shared stats recompute
+ * for the distinct places touched, and one multi-row INSERT each for
+ * notifications / audit log / moderation history. Per-recipient emails stay
+ * a loop — sending N emails is not something a single SQL query can do, and
+ * the PRD only asks to remove per-item DATABASE round-trips, not all
+ * iteration over the (small, in-memory) result set.
+ */
 router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) => {
   const { ids, action, reason } = req.body || {};
   if (!Array.isArray(ids) || !ids.length) return fail(res, 'ID listesi gerekli');
@@ -282,99 +298,110 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
     return fail(res, 'Neden gerekli');
   }
 
-  let processed = 0;
   const errors = [];
-
+  const validIds = [];
   for (const rawId of ids) {
     const id = Number(rawId);
-    if (!Number.isFinite(id)) {
-      errors.push({ id: rawId, error: 'Geçersiz ID' });
-      continue;
-    }
-    try {
-      if (action === 'approve') {
-        const r = await db.prepare(`
-          UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
-          WHERE id = ? AND status IN ('pending', 'spam')
-        `).run(req.user.id, id);
-        if (!r.changes) { errors.push({ id, error: 'Onaylanamadı' }); continue; }
-        await refreshPlaceStatsForTiola(id);
-        logAdmin(req, 'tiola.approve', 'tiola', id, 'bulk');
-        logModeration(req, 'tiola', id, 'approve', 'bulk');
-        processed += 1;
-      } else if (action === 'reject') {
-        const row = await db.prepare(`
-          SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
-          FROM tiolas t JOIN users u ON u.id = t.user_id LEFT JOIN places p ON p.id = t.place_id
-          WHERE t.id = ?
-        `).get(id);
-        if (!row || !['pending', 'spam'].includes(row.status)) {
-          errors.push({ id, error: 'Reddedilemedi' });
-          continue;
-        }
-        await db.prepare(`
-          UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
-          WHERE id = ? AND status IN ('pending', 'spam')
-        `).run(req.user.id, cleanReason, id);
-        await refreshPlaceStatsForTiola(id);
-        const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
-        await notifications.createNotification({
-          userId: row.user_id,
-          type: 'tiola_rejected',
-          title: 'Tiola reddedildi',
-          body: `${placeLabel}: ${cleanReason}`,
-          link: '/profile',
-        });
-        try {
-          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
-          await sendTiolaRejectionEmail(row.user_email, {
-            userName: row.user_name,
-            placeName: placeLabel,
-            reason: cleanReason,
-            profileUrl: `${siteUrl}/profile`,
-          });
-        } catch { /* optional */ }
-        logAdmin(req, 'tiola.reject', 'tiola', id, cleanReason);
-        logModeration(req, 'tiola', id, 'reject', cleanReason);
-        processed += 1;
-      } else if (action === 'remove') {
-        const row = await db.prepare(`
-          SELECT t.*, u.email AS user_email, u.name AS user_name, p.name AS place_name
-          FROM tiolas t JOIN users u ON u.id = t.user_id LEFT JOIN places p ON p.id = t.place_id
-          WHERE t.id = ?
-        `).get(id);
-        if (!row || row.status !== 'approved') {
-          errors.push({ id, error: 'Kaldırılamadı' });
-          continue;
-        }
-        await db.prepare(`
-          UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
-          WHERE id = ? AND status = 'approved'
-        `).run(req.user.id, cleanReason, id);
-        await refreshPlaceStatsForTiola(id);
-        const placeLabel = row.place_name || row.city_tag || 'Genel Tiola';
-        await notifications.createNotification({
-          userId: row.user_id,
-          type: 'tiola_removed',
-          title: 'Tiola kaldırıldı',
-          body: `${placeLabel}: ${cleanReason}`,
-          link: '/profile',
-        });
-        try {
-          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
-          await sendTiolaRejectionEmail(row.user_email, {
-            userName: row.user_name,
-            placeName: placeLabel,
-            reason: cleanReason,
-            profileUrl: `${siteUrl}/profile`,
-          });
-        } catch { /* optional */ }
-        logAdmin(req, 'tiola.remove', 'tiola', id, cleanReason);
-        logModeration(req, 'tiola', id, 'remove', cleanReason);
-        processed += 1;
+    if (!Number.isFinite(id)) errors.push({ id: rawId, error: 'Geçersiz ID' });
+    else validIds.push(id);
+  }
+
+  let processed = 0;
+  let eligible = [];
+
+  try {
+    if (action === 'approve') {
+      const rows = validIds.length ? await db.prepare(`
+        UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
+        WHERE id = ANY(?::int[]) AND status IN ('pending', 'spam')
+        RETURNING id, place_id
+      `).all(req.user.id, validIds) : [];
+      const okIds = new Set(rows.map((r) => r.id));
+      for (const id of validIds) {
+        if (!okIds.has(id)) errors.push({ id, error: 'Onaylanamadı' });
       }
+      eligible = rows;
+      processed = rows.length;
+    } else {
+      const eligibleStatuses = action === 'reject' ? ['pending', 'spam'] : ['approved'];
+      const candidates = validIds.length ? await db.prepare(`
+        SELECT t.id, t.user_id, t.place_id, t.status, t.city_tag,
+               u.email AS user_email, u.name AS user_name, p.name AS place_name
+        FROM tiolas t JOIN users u ON u.id = t.user_id LEFT JOIN places p ON p.id = t.place_id
+        WHERE t.id = ANY(?::int[])
+      `).all(validIds) : [];
+      const byId = new Map(candidates.map((r) => [r.id, r]));
+      for (const id of validIds) {
+        const row = byId.get(id);
+        if (!row || !eligibleStatuses.includes(row.status)) {
+          errors.push({ id, error: action === 'reject' ? 'Reddedilemedi' : 'Kaldırılamadı' });
+        } else {
+          eligible.push(row);
+        }
+      }
+      if (eligible.length) {
+        await db.prepare(`
+          UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+          WHERE id = ANY(?::int[])
+        `).run(req.user.id, cleanReason, eligible.map((r) => r.id));
+        processed = eligible.length;
+      }
+    }
+  } catch (err) {
+    for (const id of validIds) {
+      if (!errors.some((e) => e.id === id) && !eligible.some((r) => r.id === id)) {
+        errors.push({ id, error: err.message || 'Hata' });
+      }
+    }
+    return ok(res, { processed, errors });
+  }
+
+  if (eligible.length) {
+    try {
+      await recomputePlaceTiolaStatsBatch(eligible.map((r) => r.place_id).filter((pid) => pid != null));
     } catch (err) {
-      errors.push({ id, error: err.message || 'Hata' });
+      logger.error({ msg: 'admin tiolas/bulk stats recompute failed', err: err.message });
+    }
+
+    if (action !== 'approve') {
+      const notifType = action === 'reject' ? 'tiola_rejected' : 'tiola_removed';
+      const notifTitle = action === 'reject' ? 'Tiola reddedildi' : 'Tiola kaldırıldı';
+      try {
+        await notifications.createNotificationsBatch(eligible.map((row) => ({
+          userId: row.user_id,
+          type: notifType,
+          title: notifTitle,
+          body: `${row.place_name || row.city_tag || 'Genel Tiola'}: ${cleanReason}`,
+          link: '/profile',
+        })));
+      } catch (err) {
+        logger.error({ msg: 'admin tiolas/bulk notification batch failed', err: err.message });
+      }
+
+      const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+      for (const row of eligible) {
+        try {
+          await sendTiolaRejectionEmail(row.user_email, {
+            userName: row.user_name,
+            placeName: row.place_name || row.city_tag || 'Genel Tiola',
+            reason: cleanReason,
+            profileUrl: `${siteUrl}/profile`,
+          });
+        } catch { /* e-posta isteğe bağlı */ }
+      }
+    }
+
+    const auditAction = action === 'approve' ? 'tiola.approve' : (action === 'reject' ? 'tiola.reject' : 'tiola.remove');
+    const detail = action === 'approve' ? 'bulk' : cleanReason;
+    try {
+      await auditLog.logBatch(eligible.map((row) => ({
+        adminId: req.user.id, adminName: req.user.name, action: auditAction, targetType: 'tiola', targetId: row.id, detail,
+      })));
+      await moderationHistory.logBatch(eligible.map((row) => ({
+        contentType: 'tiola', contentId: row.id, action, adminId: req.user.id, adminName: req.user.name, reason: detail,
+      })));
+    } catch (err) {
+      logger.error({ msg: 'admin tiolas/bulk audit/history batch failed', err: err.message });
     }
   }
 
@@ -489,6 +516,7 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
   return ok(res, { rejected: true, rejectionReason: reason });
 });
 
+/** See the /tiolas/bulk route above for the FAZ2-4 N+1 cleanup rationale. */
 router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) => {
   const { ids, action, reason } = req.body || {};
   if (!Array.isArray(ids) || !ids.length) return fail(res, 'ID listesi gerekli');
@@ -499,94 +527,112 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
     return fail(res, 'Neden gerekli');
   }
 
-  let processed = 0;
   const errors = [];
-
+  const validIds = [];
   for (const rawId of ids) {
     const id = Number(rawId);
-    if (!Number.isFinite(id)) {
-      errors.push({ id: rawId, error: 'Geçersiz ID' });
-      continue;
-    }
-    try {
-      if (action === 'approve') {
-        const r = await db.prepare(`
-          UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
-            published_at = COALESCE(published_at, datetime('now'))
-          WHERE id = ? AND status IN ('pending', 'spam')
-        `).run(req.user.id, id);
-        if (!r.changes) { errors.push({ id, error: 'Onaylanamadı' }); continue; }
-        logAdmin(req, 'blog.approve', 'blog', id, 'bulk');
-        logModeration(req, 'blog', id, 'approve', 'bulk');
-        processed += 1;
-      } else if (action === 'reject') {
-        const row = await db.prepare(`
-          SELECT b.*, u.email AS user_email, u.name AS user_name
-          FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ?
-        `).get(id);
-        if (!row || !['pending', 'spam'].includes(row.status)) {
-          errors.push({ id, error: 'Reddedilemedi' });
-          continue;
-        }
-        await db.prepare(`
-          UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
-          WHERE id = ? AND status IN ('pending', 'spam')
-        `).run(req.user.id, cleanReason, id);
-        await notifications.createNotification({
-          userId: row.user_id,
-          type: 'blog_rejected',
-          title: 'Blog reddedildi',
-          body: `${row.title}: ${cleanReason}`,
-          link: '/profile',
-        });
-        try {
-          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
-          await sendBlogRejectionEmail(row.user_email, {
-            userName: row.user_name,
-            title: row.title,
-            reason: cleanReason,
-            profileUrl: `${siteUrl}/profile`,
-          });
-        } catch { /* optional */ }
-        logAdmin(req, 'blog.reject', 'blog', id, cleanReason);
-        logModeration(req, 'blog', id, 'reject', cleanReason);
-        processed += 1;
-      } else if (action === 'remove') {
-        const row = await db.prepare(`
-          SELECT b.*, u.email AS user_email, u.name AS user_name
-          FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ?
-        `).get(id);
-        if (!row || row.status !== 'approved') {
-          errors.push({ id, error: 'Kaldırılamadı' });
-          continue;
-        }
-        await db.prepare(`
-          UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-            rejection_reason = ?, published_at = NULL
-          WHERE id = ? AND status = 'approved'
-        `).run(req.user.id, cleanReason, id);
-        await notifications.createNotification({
-          userId: row.user_id,
-          type: 'blog_removed',
-          title: 'Blog kaldırıldı',
-          body: `${row.title}: ${cleanReason}`,
-          link: '/profile',
-        });
-        try {
-          const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
-          await sendBlogRejectionEmail(row.user_email, {
-            userName: row.user_name,
-            title: row.title,
-            reason: cleanReason,
-            profileUrl: `${siteUrl}/profile`,
-          });
-        } catch { /* optional */ }
-        logAdmin(req, 'blog.remove', 'blog', id, cleanReason);
-        logModeration(req, 'blog', id, 'remove', cleanReason);
-        processed += 1;
+    if (!Number.isFinite(id)) errors.push({ id: rawId, error: 'Geçersiz ID' });
+    else validIds.push(id);
+  }
+
+  let processed = 0;
+  let eligible = [];
+
+  try {
+    if (action === 'approve') {
+      const rows = validIds.length ? await db.prepare(`
+        UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
+          published_at = COALESCE(published_at, datetime('now'))
+        WHERE id = ANY(?::int[]) AND status IN ('pending', 'spam')
+        RETURNING id
+      `).all(req.user.id, validIds) : [];
+      const okIds = new Set(rows.map((r) => r.id));
+      for (const id of validIds) {
+        if (!okIds.has(id)) errors.push({ id, error: 'Onaylanamadı' });
       }
+      eligible = rows;
+      processed = rows.length;
+    } else {
+      const eligibleStatuses = action === 'reject' ? ['pending', 'spam'] : ['approved'];
+      const candidates = validIds.length ? await db.prepare(`
+        SELECT b.id, b.user_id, b.title, b.status, u.email AS user_email, u.name AS user_name
+        FROM blogs b JOIN users u ON u.id = b.user_id WHERE b.id = ANY(?::int[])
+      `).all(validIds) : [];
+      const byId = new Map(candidates.map((r) => [r.id, r]));
+      for (const id of validIds) {
+        const row = byId.get(id);
+        if (!row || !eligibleStatuses.includes(row.status)) {
+          errors.push({ id, error: action === 'reject' ? 'Reddedilemedi' : 'Kaldırılamadı' });
+        } else {
+          eligible.push(row);
+        }
+      }
+      if (eligible.length) {
+        const eligibleIds = eligible.map((r) => r.id);
+        if (action === 'reject') {
+          await db.prepare(`
+            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+            WHERE id = ANY(?::int[])
+          `).run(req.user.id, cleanReason, eligibleIds);
+        } else {
+          await db.prepare(`
+            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
+              rejection_reason = ?, published_at = NULL
+            WHERE id = ANY(?::int[])
+          `).run(req.user.id, cleanReason, eligibleIds);
+        }
+        processed = eligible.length;
+      }
+    }
+  } catch (err) {
+    for (const id of validIds) {
+      if (!errors.some((e) => e.id === id) && !eligible.some((r) => r.id === id)) {
+        errors.push({ id, error: err.message || 'Hata' });
+      }
+    }
+    return ok(res, { processed, errors });
+  }
+
+  if (eligible.length) {
+    if (action !== 'approve') {
+      const notifType = action === 'reject' ? 'blog_rejected' : 'blog_removed';
+      const notifTitle = action === 'reject' ? 'Blog reddedildi' : 'Blog kaldırıldı';
+      try {
+        await notifications.createNotificationsBatch(eligible.map((row) => ({
+          userId: row.user_id,
+          type: notifType,
+          title: notifTitle,
+          body: `${row.title}: ${cleanReason}`,
+          link: '/profile',
+        })));
+      } catch (err) {
+        logger.error({ msg: 'admin blogs/bulk notification batch failed', err: err.message });
+      }
+
+      const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+      for (const row of eligible) {
+        try {
+          await sendBlogRejectionEmail(row.user_email, {
+            userName: row.user_name,
+            title: row.title,
+            reason: cleanReason,
+            profileUrl: `${siteUrl}/profile`,
+          });
+        } catch { /* optional */ }
+      }
+    }
+
+    const auditAction = action === 'approve' ? 'blog.approve' : (action === 'reject' ? 'blog.reject' : 'blog.remove');
+    const detail = action === 'approve' ? 'bulk' : cleanReason;
+    try {
+      await auditLog.logBatch(eligible.map((row) => ({
+        adminId: req.user.id, adminName: req.user.name, action: auditAction, targetType: 'blog', targetId: row.id, detail,
+      })));
+      await moderationHistory.logBatch(eligible.map((row) => ({
+        contentType: 'blog', contentId: row.id, action, adminId: req.user.id, adminName: req.user.name, reason: detail,
+      })));
     } catch (err) {
-      errors.push({ id, error: err.message || 'Hata' });
+      logger.error({ msg: 'admin blogs/bulk audit/history batch failed', err: err.message });
     }
   }
 

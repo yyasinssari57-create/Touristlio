@@ -8,6 +8,24 @@ async function createNotification({ userId, type, title, body, link }) {
   return info.lastInsertRowid;
 }
 
+/**
+ * Same as createNotification(), but writes every entry in a single
+ * multi-row INSERT — used by bulk admin actions (/tiolas/bulk, /blogs/bulk)
+ * so each affected user still gets their own notification row without one
+ * DB round-trip per item (Claude Master PRD FAZ2-4 — N+1 query cleanup).
+ */
+async function createNotificationsBatch(entries) {
+  const rows = (entries || [])
+    .filter((e) => e && e.userId && e.type && e.title)
+    .map((e) => [e.userId, e.type, e.title, e.body || null, e.link || null]);
+  if (!rows.length) return;
+  const placeholders = rows.map(() => '(?, ?, ?, ?, ?)').join(', ');
+  await db.prepare(`
+    INSERT INTO user_notifications (user_id, type, title, body, link)
+    VALUES ${placeholders}
+  `).run(...rows.flat());
+}
+
 async function listForUser(userId, { unreadOnly = false, limit = 30 } = {}) {
   let sql = 'SELECT * FROM user_notifications WHERE user_id = ?';
   if (unreadOnly) sql += ' AND read_at IS NULL';
@@ -39,6 +57,7 @@ async function markAllRead(userId) {
 
 module.exports = {
   createNotification,
+  createNotificationsBatch,
   listForUser,
   markRead,
   markAllRead,

@@ -113,6 +113,40 @@ async function allStoredPlaceStats() {
   }
 }
 
+/**
+ * Recompute tiola_count/tiola_rating for a specific set of places in one
+ * shared GROUP BY query (instead of one COUNT/AVG query per place) — used by
+ * bulk admin actions so a 20-item /tiolas/bulk approve/reject no longer
+ * triggers one "SELECT place_id" + one COUNT/AVG + one UPDATE per tiola
+ * (Claude Master PRD FAZ2-4 — N+1 query cleanup). Still issues one UPDATE
+ * per *distinct* place (not per tiola) so each place's cached columns stay
+ * correct, including resetting places with zero remaining approved tiolas.
+ */
+async function recomputePlaceTiolaStatsBatch(placeIds) {
+  const ids = [...new Set((placeIds || []).map(Number).filter((id) => Number.isFinite(id) && id > 0))];
+  if (!ids.length) return [];
+  const rows = await db.prepare(`
+    SELECT place_id AS placeId, COUNT(*) AS count, ROUND(AVG(stars), 1) AS avg
+    FROM tiolas
+    WHERE ${RATED_WHERE} AND place_id = ANY(?::int[])
+    GROUP BY place_id
+  `).all(ids);
+  const statsByPlace = new Map(rows.map((r) => [r.placeId, {
+    tiolaCount: r.count || 0,
+    tiolaRating: r.avg != null ? roundAvg(r.avg) : null,
+  }]));
+  const update = await db.prepare('UPDATE places SET tiola_count = ?, tiola_rating = ? WHERE id = ?');
+  const tx = db.transaction(async (list) => {
+    for (const id of list) {
+      const stats = statsByPlace.get(id) || { tiolaCount: 0, tiolaRating: null };
+      await update.run(stats.tiolaCount, stats.tiolaRating, id);
+    }
+  });
+  await tx(ids);
+  invalidatePlaceListCaches();
+  return ids.map((id) => ({ placeId: id, ...(statsByPlace.get(id) || { tiolaCount: 0, tiolaRating: null }) }));
+}
+
 async function backfillAllPlaceTiolaStats() {
   await db.exec('UPDATE places SET tiola_count = 0, tiola_rating = NULL');
   const rows = await db.prepare(`
@@ -138,6 +172,7 @@ module.exports = {
   persistPlaceTiolaStats,
   readStoredPlaceTiolaStats,
   recomputePlaceTiolaStats,
+  recomputePlaceTiolaStatsBatch,
   refreshPlaceStatsForTiola,
   allStoredPlaceStats,
   backfillAllPlaceTiolaStats,

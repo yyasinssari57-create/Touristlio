@@ -16,6 +16,31 @@ async function log({ contentType, contentId, action, adminId, adminName, reason 
   );
 }
 
+/**
+ * Same as log(), but writes every entry in a single multi-row INSERT —
+ * used by bulk admin actions (/tiolas/bulk, /blogs/bulk) so moderation
+ * history stays per-item while avoiding one DB round-trip per item
+ * (Claude Master PRD FAZ2-4 — N+1 query cleanup).
+ */
+async function logBatch(entries) {
+  const rows = (entries || [])
+    .filter((e) => e && e.contentType && e.contentId && e.action && e.adminId)
+    .map((e) => [
+      sanitizeText(e.contentType, 20),
+      Number(e.contentId),
+      sanitizeText(e.action, 40),
+      e.adminId,
+      e.adminName ? sanitizeText(e.adminName, 120) : null,
+      e.reason != null ? sanitizeText(String(e.reason), 2000) : null,
+    ]);
+  if (!rows.length) return;
+  const placeholders = rows.map(() => '(?, ?, ?, ?, ?, ?)').join(', ');
+  await db.prepare(`
+    INSERT INTO moderation_history (content_type, content_id, action, admin_id, admin_name, reason)
+    VALUES ${placeholders}
+  `).run(...rows.flat());
+}
+
 async function listForContent(contentType, contentId, limit = 30) {
   const rows = await db.prepare(`
     SELECT mh.*, u.name AS admin_display_name
@@ -47,4 +72,4 @@ function actionLabel(action) {
   return ACTION_LABELS[action] || action;
 }
 
-module.exports = { log, listForContent, actionLabel, ACTION_LABELS };
+module.exports = { log, logBatch, listForContent, actionLabel, ACTION_LABELS };
