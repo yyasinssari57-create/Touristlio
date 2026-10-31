@@ -23,9 +23,10 @@
  *      (kaçırılmamış tırnak/HTML → bozuk JSON, yaygın gerçek dünya hatası).
  *   6) SPA client-side re-render sonrası JSON-LD "bayatlamıyor" mu —
  *      public/js/app.js'in her client-side route değişiminde
- *      setJsonLdBlocks(...) çağırdığını statik olarak doğrular (ayrı
- *      sunucu HTTP isteği her sayfa için zaten doğru server-side render
- *      ediyor; bu adım SPA içi geçişlerin de senkron kaldığını teyit eder).
+ *      setJsonLdBlocks(...) çağırdığını statik olarak doğrular. Ayrıca
+ *      EN blog makalesinde istemci Article URL'sinin /en önekini ve
+ *      inLanguage alanını düşürmediğini (sunucu şemasını ezip yanlış
+ *      TR URL bırakmadığını) kontrol eder.
  *
  * Usage: node server/scripts/verify-faz3-1-jsonld.js
  * Optional: VERIFY_FAZ31_JSONLD_URL=http://127.0.0.1:3089 node server/scripts/verify-faz3-1-jsonld.js
@@ -79,6 +80,57 @@ if (/document\.querySelectorAll\('script\[data-tl-jsonld\]'\)\.forEach\(\(s\) =>
   ok('client-side setJsonLdBlocks, server-rendered bloğu da data-tl-jsonld ile temizleyip tek bir script seti bırakıyor (çift/çakışan JSON-LD yok)');
 } else {
   fail('server ve client JSON-LD script etiketleri aynı data-tl-jsonld işaretçisini paylaşmıyor — çift JSON-LD riski');
+}
+
+const articleFn = appJsSrc.match(/function articleJsonLd\(b\) \{[\s\S]*?\n\}/);
+if (articleFn && articleFn[0].includes('blogPublicPath(b)') && articleFn[0].includes("inLanguage: lang === 'en' ? 'en' : 'tr'")) {
+  ok('client Article JSON-LD, EN rotasında /en URL ve inLanguage kullanıyor (sunucu şemasıyla aynı)');
+} else {
+  fail('client Article JSON-LD, sunucudaki /en URL veya inLanguage alanını düşürüyor — SPA hidrasyonu EN makaleyi TR URL ile ezer');
+}
+
+if (/skipRoute && activeBlogSlug/.test(appJsSrc)) {
+  ok('blog makalesi geri yüklenirken sunucu Article bloğu, veri gelene kadar CollectionPage ile ezilmiyor');
+} else {
+  fail('blog makalesi açılırken sunucu Article JSON-LD\'si hemen CollectionPage ile değiştiriliyor');
+}
+
+const { touristAttraction, articleSchema, serializeJsonLd } = require('../lib/jsonld');
+const zeroGeo = touristAttraction({ name: 'Null Island', slug: 'null-island', id: 1, lat: 0, lng: 0 }, 'tr');
+if (zeroGeo && !zeroGeo.geo) ok('builder: lat=0/lng=0 için geo yok');
+else fail(`builder: (0,0) için geo eklenmemeli: ${JSON.stringify(zeroGeo && zeroGeo.geo)}`);
+
+const realGeo = touristAttraction({ name: 'Ayasofya', slug: 'ayasofya-istanbul', id: 1, lat: 41.0082, lng: 28.9784 }, 'tr');
+if (realGeo?.geo?.['@type'] === 'GeoCoordinates' && realGeo.geo.latitude === 41.0082) {
+  ok('builder: gerçek koordinatta geo var');
+} else fail('builder: gerçek koordinatta geo eksik');
+
+const noTiola = touristAttraction({ name: 'X', slug: 'x', id: 1, lat: 41, lng: 29, tiolaCount: 0, tiolaRating: 0 }, 'tr');
+if (noTiola && !noTiola.aggregateRating) ok('builder: tiola yoksa aggregateRating yok');
+else fail('builder: tiola yokken aggregateRating eklenmemeli');
+
+const withTiola = touristAttraction({ name: 'X', slug: 'x', id: 1, lat: 41, lng: 29, tiolaCount: 4, tiolaRating: 4.5 }, 'tr');
+if (withTiola?.aggregateRating?.reviewCount === 4 && withTiola.aggregateRating.ratingValue === '4.5') {
+  ok('builder: gerçek tiola varken aggregateRating var');
+} else fail('builder: gerçek tiola varken aggregateRating eksik');
+
+const enArticle = articleSchema({ title: 'Hello', slug: 'hello-world', excerpt: 'A short excerpt' }, 'en');
+if (enArticle?.inLanguage === 'en' && /\/en\/blog\/hello-world$/.test(enArticle.url || '')) {
+  ok('builder: EN Article url /en/blog/... ve inLanguage=en');
+} else fail(`builder: EN Article uyumsuz: ${JSON.stringify({ url: enArticle && enArticle.url, inLanguage: enArticle && enArticle.inLanguage })}`);
+
+const trArticle = articleSchema({ title: 'Merhaba', slug: 'merhaba', excerpt: 'Kısa' }, 'tr');
+if (trArticle?.inLanguage === 'tr' && /\/blog\/merhaba$/.test(trArticle.url || '') && !/\/en\/blog\//.test(trArticle.url || '')) {
+  ok('builder: TR Article url /blog/... ve inLanguage=tr');
+} else fail('builder: TR Article url veya inLanguage hatalı');
+
+const escaped = serializeJsonLd({ reviewBody: '</script><script>alert(1)' });
+try {
+  JSON.parse(escaped);
+  if (escaped.includes('</script>')) fail('serializeJsonLd </script> kaçışını yapmıyor');
+  else ok('serializeJsonLd < karakterini kaçırıyor ve JSON geçerli kalıyor');
+} catch (e) {
+  fail(`serializeJsonLd geçersiz JSON üretti: ${e.message}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +191,7 @@ async function findFixtures() {
   const fixtures = {
     placeWithoutReviews: 'ayasofya-istanbul',
     placeWithReviews: null,
+    placeWithGeo: null,
     blogSlug: null,
     zeroCoordSlug: null,
   };
@@ -168,6 +221,16 @@ async function findFixtures() {
       ORDER BY id LIMIT 1
     `).get();
     if (zeroCoord?.slug) fixtures.zeroCoordSlug = zeroCoord.slug;
+
+    const withGeo = await db.prepare(`
+      SELECT slug FROM places
+      WHERE slug IS NOT NULL AND slug != '' AND COALESCE(status, '') != 'archived'
+        AND lat IS NOT NULL AND lng IS NOT NULL
+        AND lat <> 0 AND lng <> 0
+        AND abs(lat) <= 90 AND abs(lng) <= 180
+      ORDER BY id LIMIT 1
+    `).get();
+    if (withGeo?.slug) fixtures.placeWithGeo = withGeo.slug;
 
     const blog = await db.prepare(`
       SELECT slug FROM blogs WHERE status = 'approved' AND slug IS NOT NULL ORDER BY id LIMIT 1
@@ -235,7 +298,29 @@ async function curlCheck(port) {
     ok('gerçek yorumu olan bir mekân fixture\'ı yok (atlandı) — DB\'de approved Tiola bulunamadı');
   }
 
-  // 4) (0,0) koordinatlı gerçek bir satır — geo KESİNLİKLE görünmemeli.
+  // 4) Gerçek koordinat — geo VAR.
+  if (fixtures.placeWithGeo) {
+    const res = await get(`/places/${encodeURIComponent(fixtures.placeWithGeo)}`);
+    if (res.status === 200) {
+      const blocks = parseScripts(res.body);
+      const attraction = blocks.find((b) => b['@type'] === 'TouristAttraction');
+      if (attraction?.geo?.['@type'] === 'GeoCoordinates'
+        && Number(attraction.geo.latitude) !== 0
+        && Number(attraction.geo.longitude) !== 0) {
+        ok(`Gerçek koordinatlı mekân (${fixtures.placeWithGeo}): geo VAR`);
+      } else if (!attraction) {
+        fail(`Gerçek koordinatlı mekân (${fixtures.placeWithGeo}): TouristAttraction bulunamadı`);
+      } else {
+        fail(`Gerçek koordinatlı mekân (${fixtures.placeWithGeo}): geo eksik veya 0: ${JSON.stringify(attraction.geo)}`);
+      }
+    } else {
+      fail(`GET /places/${fixtures.placeWithGeo} → HTTP ${res.status}`);
+    }
+  } else {
+    fail('gerçek koordinatlı bir mekân fixture\'ı bulunamadı');
+  }
+
+  // 5) (0,0) koordinatlı gerçek bir satır — geo KESİNLİKLE görünmemeli.
   if (fixtures.zeroCoordSlug) {
     const res = await get(`/places/${encodeURIComponent(fixtures.zeroCoordSlug)}`);
     if (res.status === 200) {
@@ -255,19 +340,22 @@ async function curlCheck(port) {
     ok('(0,0) koordinatlı test satırı yok (atlandı) — temiz bir DB\'de bu normal');
   }
 
-  // 5) Blog detay — TR + EN, Article var.
+  // 6) Blog detay — TR + EN, Article var ve URL dile uyuyor.
   if (fixtures.blogSlug) {
     for (const [label, prefix] of [['TR', ''], ['EN', '/en']]) {
       const res = await get(`${prefix}/blog/${encodeURIComponent(fixtures.blogSlug)}`);
       if (res.status === 200) {
         const blocks = parseScripts(res.body);
         const article = blocks.find((b) => b['@type'] === 'Article');
-        if (article?.headline && article.inLanguage === (label === 'EN' ? 'en' : 'tr')) {
-          ok(`Blog detay (${label}): Article var, inLanguage="${article.inLanguage}"`);
+        const wantLang = label === 'EN' ? 'en' : 'tr';
+        const url = String(article?.url || '');
+        const urlOk = label === 'EN' ? /\/en\/blog\//.test(url) : (/\/blog\//.test(url) && !/\/en\/blog\//.test(url));
+        if (article?.headline && article.inLanguage === wantLang && urlOk) {
+          ok(`Blog detay (${label}): Article var, inLanguage="${article.inLanguage}", url dile uyuyor`);
         } else if (!article) {
           fail(`Blog detay (${label}): Article bulunamadı`);
         } else {
-          fail(`Blog detay (${label}): inLanguage beklenenle uyuşmuyor (${article.inLanguage})`);
+          fail(`Blog detay (${label}): inLanguage/url uyumsuz (inLanguage=${article.inLanguage}, url=${url})`);
         }
       } else {
         fail(`GET ${prefix}/blog/${fixtures.blogSlug} (${label}) → HTTP ${res.status}`);

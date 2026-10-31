@@ -705,7 +705,8 @@ function reviewJsonLd(ti, place) {
 
 function articleJsonLd(b) {
   const origin = schemaOrigin();
-  const url = `${origin}/blog/${encodeURIComponent(b.slug || b.id)}`;
+  // Same locale path as blogPublicPath / server articleSchema (canonicalFor).
+  const url = `${origin}${blogPublicPath(b)}`;
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -713,7 +714,7 @@ function articleJsonLd(b) {
     description: (b.excerpt || '').slice(0, 300) || undefined,
     image: absSchemaUrl(b.imageUrl),
     datePublished: b.publishedAt || b.createdAt,
-    dateModified: b.publishedAt || b.createdAt,
+    dateModified: b.updatedAt || b.publishedAt || b.createdAt,
     author: { '@type': 'Person', name: b.authorName || 'Touristlio' },
     publisher: {
       '@type': 'Organization',
@@ -722,6 +723,7 @@ function articleJsonLd(b) {
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     url,
+    inLanguage: lang === 'en' ? 'en' : 'tr',
   };
 }
 
@@ -1868,8 +1870,10 @@ async function showMainTab(tab, skipRoute) {
     setMetaContent('meta[property="og:type"]', (tab === 'blog' && activeBlogSlug) ? 'article' : 'website', { property: 'og:type' });
   }
   if (tab === 'explore') injectHomeJsonLd();
-  else if (tab === 'blog') setJsonLdBlocks([collectionPageJsonLd()]);
-  else if (tab !== 'detail') setJsonLdBlocks(homeJsonLdBase());
+  else if (tab === 'blog') {
+    // Restoring /blog/:slug keeps the server Article until openBlogDetail replaces it.
+    if (!(skipRoute && activeBlogSlug)) setJsonLdBlocks([collectionPageJsonLd()]);
+  } else if (tab !== 'detail') setJsonLdBlocks(homeJsonLdBase());
   const tasks = [];
   if (tab === 'blog') {
     if (!skipRoute) {
@@ -2736,6 +2740,7 @@ async function openBlogDetail(slug, skipRoute) {
   } catch (e) {
     activeBlogSlug = null;
     showBlogListing();
+    setJsonLdBlocks([collectionPageJsonLd()]);
     if (e.status === 404) {
       window.TL_TOAST?.error?.(e.message) || alert(e.message);
       if (!skipRoute) writeRouteToUrl({ main: 'blog' }, true);

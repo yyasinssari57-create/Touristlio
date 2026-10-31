@@ -12,8 +12,10 @@ depo EJS/template kullanmıyor — gerçek implementasyon `server/lib/jsonld.js`
 (üretilen statik HTML'e doğrudan string enjeksiyonu). Önceki kapsamlı denetimde
 bu zaten "TAMAMLANDI" listesine girmişti ve PRD'nin istediğinden daha kapsamlı
 olduğu doğru çıktı (BreadcrumbList + FAQPage + Review de var, PRD'de bunlar yok).
-Bu PR o değerlendirmeyi PRD'nin tam kontrol listesine karşı doğruladı ve **bir
-gerçek, canlı veriyle doğrulanmış hata** buldu + düzeltti.
+Bu PR o değerlendirmeyi PRD'nin tam kontrol listesine karşı doğruladı ve **iki
+gerçek hata** buldu + düzeltti: `(0,0)` koordinatının `geo` olarak yazılması,
+ve SPA'nın İngilizce blog makalesinde sunucunun doğru `Article` bloğunu yanlış
+URL ile ezmesi.
 
 ### Kontrol listesi — PRD'nin istediği 3 sayfa tipi, hepsi server-side mi?
 
@@ -62,29 +64,31 @@ Bu zaten doğruydu — değişiklik yapılmadı.
   teyit ediyor; gerçek koordinatlı bir mekânda (`ayasofya-istanbul`,
   41.0/28.98) `geo`'nun normal şekilde var olduğunu da ayrıca doğruluyor.
 
-### SPA client-side navigasyon "bayatlama" riski — İNCELENDİ, GERÇEK BİR HATA YOK
+### SPA client-side navigasyon — iki gerçek hata bulundu, ikisi de düzeltildi
 
-Bu, görevin en kritik sorusuydu: bu bir SPA (`history.pushState` ile
-client-side rota değişimi var — `public/js/app.js`), yani server-rendered
-JSON-LD'nin, kullanıcı sayfa içinde başka bir mekâna/blog yazısına
-tıkladığında (tam sayfa yenilemeden) bayat kalması teorik olarak mümkündü.
+Bu bir SPA (`history.pushState`, `public/js/app.js`). Her doğrudan URL isteği
+(Google'ın sayfayı ilk indirdiği HTML) sunucuda doğru JSON-LD alıyor. Sayfa
+JS çalışınca `setJsonLdBlocks()` sunucunun `<script data-tl-jsonld>` etiketini
+silip kendi ürettiği blokla değiştiriyor. Çift/çakışan iki blok kalmıyor.
+Mekân sayfasında bu değiştirme doğru mekâna güncelleniyor (`openDetail` →
+`injectPlaceJsonLd`). Asıl hata blog makalesindeydi:
 
-İnceleme sonucu: **bu zaten doğru şekilde ele alınmış.** `public/js/app.js`
-içindeki `setJsonLdBlocks()` fonksiyonu, her ilgili client-side rota
-değişiminde (`showMainTab()` → explore/blog/places; `openDetail()` → mekân
-detayı; `loadBlogPost()` → blog detayı; `renderRevList()` → yeni yorum
-yüklendiğinde) ÖNCE eski `<script data-tl-jsonld>` bloklarını siliyor, SONRA
-o anki (yeni) içerikle yeniden oluşturuyor. Server-rendered script etiketi de
-aynı `data-tl-jsonld="1"` işaretçisini taşıyor, yani client-side kod kendi
-ürettiği VE sunucunun ürettiği bloğu birlikte temizleyip tek, güncel bir set
-bırakıyor — asla iki çakışan JSON-LD seti veya bayat bir blok kalmıyor.
+1. **EN makale URL'si ve dili düşüyordu.** `articleJsonLd()` adresi her zaman
+   `/blog/...` yazıyordu; `/en` önekini ve `inLanguage` alanını koymuyordu.
+   `/en/blog/:slug` açılınca sunucunun doğru `Article` bloğu (url `/en/blog/...`,
+   `inLanguage: "en"`) silinip yerine Türkçe URL'li, dilsiz bir `Article`
+   konuyordu. JS çalıştıran tarayıcı son DOM'da yanlış kanonik görürdü.
+   Düzeltme: istemci de `blogPublicPath()` kullanıyor (mekân sayfasındaki
+   `placePublicPath()` ile aynı kural) ve `inLanguage` ekliyor.
+2. **Makale açılırken ara adımda şema `CollectionPage` oluyordu.**
+   `showMainTab('blog')`, makale verisi gelmeden sunucu `Article` bloğunu
+   liste şemasıyla değiştiriyordu. Geri yükleme yolunda (`/blog/:slug` ilk
+   açılış) bu silme artık yapılmıyor; `openBlogDetail` doğru `Article`'ı
+   yazıyor. İstek başarısız olursa liste şeması o zaman konuyor.
 
-Bu, denetimde zaten not edilen "iki paralel JSON-LD üretici" teknik borcunun
-(server `jsonld.js` + client `app.js`) GERÇEKTEN bir fonksiyonel hataya değil,
-sadece kod tekrarına yol açtığını doğruluyor — PRD'nin bahsettiği gibi.
-**Bu PR bu tekrarı GİDERMEDİ** (ayrı bir refactor işi, FAZ3-1'in kapsamı değil)
-ama iki tarafın birbiriyle AYNI kuralları uyguladığını (geo zero-guard dahil)
-ve asla çakışmadığını doğruladı/garantiledi.
+İki paralel üretici (`jsonld.js` + `app.js`) hâlâ duruyor — bu bir kod
+tekrarı, FAZ3-1'de birleştirilmedi. Aynı kuralları uyguluyorlar (geo
+`(0,0)` koruması dahil) ve aynı sayfada iki ayrı blok bırakmıyorlar.
 
 ### Ekstra inceleme — FAQPage / Review (PRD'de yok, ama aynı yüzey)
 
@@ -114,12 +118,13 @@ dokunulmadı.)
 - `server/lib/jsonld.js` — `touristAttraction()`'daki `geo` koşulu artık
   `server/lib/sitemap.js`'teki `isValidSitemapCoord()`'u kullanıyor (yeni satır
   sayısı: 1 import + koşul değişikliği; görünür hiçbir UI/metin değişmedi).
-- `public/js/app.js` — `injectPlaceJsonLd()`'deki `geo` koşulu, sunucuyla aynı
-  `(0,0)` + sınır kontrolünü uyguluyor (görünür hiçbir UI/metin değişmedi;
-  sadece JSON-LD içeriği, invisible/crawler-only veri).
+- `public/js/app.js` — (a) `injectPlaceJsonLd()` geo koşulu sunucuyla aynı
+  `(0,0)` + sınır kontrolü; (b) `articleJsonLd()` artık `blogPublicPath()` ve
+  `inLanguage` kullanıyor; (c) blog makalesi geri yüklenirken sunucu `Article`
+  bloğu veri gelene kadar silinmiyor. Görünür metin, renk, yerleşim değişmedi.
 - `server/scripts/verify-faz3-1-jsonld.js` (yeni) + `package.json`
-  (`verify:faz3-1` script'i) — canlı sunucu üzerinden PRD'nin tam kontrol
-  listesini doğrulayan test.
+  (`verify:faz3-1` script'i) — canlı HTML'den JSON-LD parse eder; geo,
+  aggregateRating, TR/EN Article URL ve JSON geçerliliğini doğrular.
 - `AUDIT_FOLLOWUPS.md` — bu bölüm.
 
 ### Kapsam dışı (bilinçli)
