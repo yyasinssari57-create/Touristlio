@@ -9,7 +9,12 @@
   const PREVIEW_H = Math.round(PREVIEW_W / ASPECT);
   const MAX_ZOOM_FACTOR = 3;
   const ZOOM_STEP = 0.05;
-  const MAX_FILE_BYTES = 5 * 1024 * 1024;
+  // Crop always exports a resized ~1280px JPEG (well under the server's upload
+  // limit), so the ORIGINAL file picked here can be much larger than that.
+  // Modern phone photos routinely exceed the old 5 MB cap, which silently
+  // rejected valid uploads before the crop step even ran. Match the hero
+  // image picker's 12 MB allowance (public/admin.html compressHeroImageFile).
+  const MAX_FILE_BYTES = 12 * 1024 * 1024;
 
   let state = {
     img: null,
@@ -98,7 +103,7 @@
   function validateFile(file) {
     if (!file) return false;
     if (file.size > MAX_FILE_BYTES) {
-      alert('Dosya en fazla 5 MB olabilir.');
+      alert('Dosya en fazla 12 MB olabilir.');
       return false;
     }
     if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
