@@ -290,6 +290,110 @@ büyük kazanım (Leaflet + MarkerCluster, ~181 KB) zaten önceki sprintte yapı
 
 `npm run verify:faz2-1` (+ `verify:faz3`).
 
+## Claude Master PRD — FAZ2-2 (Görsel Optimizasyon Pipeline — Sharp)
+
+Claude Master PRD "FAZ 2 — Performans ve Core Web Vitals" → [FAZ2-2] Sharp tabanlı görsel işleme
+pipeline'ı. PRD örnek dosya yolu olarak `server/middleware/imageProcessor.js` + `processImage(buffer, options)`
+veriyor; gerçek depo yapısı bu değil (`server/lib/image-process.js` + `server/lib/image-mime.js` +
+`server/middleware/process-image-upload.js` + `server/lib/image-uploader.js`), ama işlevsel karşılık
+tam olarak eşleşiyor. Önceki denetimin "ALREADY-COMPLETED" listesine aldığı madde doğrulandı —
+PRD'nin 6 kontrol noktası tek tek koddan kanıtlanarak incelendi (varsayım değil).
+
+### Gerçek pipeline ve tüm yükleme uçları
+
+`grep -rn "sharp("` ve `grep -rn "fileType\|file-type"` ile tüm kullanım yerleri tarandı:
+- Asıl işleme mantığı **tek bir yerde**: `server/lib/image-process.js` (`webpPipeline()`,
+  `processImageFile()`, `processImageBuffer()`). Magic-byte doğrulaması `server/lib/image-mime.js`
+  (`file-type` paketi) — ve bu doğrulama `processImageFile`/`processImageBuffer`'ın İÇİNDE
+  (`assertAllowedMagicBytes(Buffer)`) çağrılıyor, yani aynı kod yolunda, ayrı/ilgisiz bir yerde değil.
+- **Beş gerçek yükleme ucunun hepsi** aynı paylaşılan pipeline'dan geçiyor — `server/middleware/process-image-upload.js`
+  (`processImageUpload()` → `processUploadedFile()` → `processImageBuffer`/`processImageFile`) ile:
+  1. Admin yer/şehir/kategori fotoğrafları — `POST /api/admin/places/:id/photos` (`server/routes/admin.js:722`)
+  2. Admin medya (yer/şehir/kategori görseli) — `POST /api/admin/media` (`server/routes/admin.js:759`)
+  3. Admin hero görseli — `POST /api/admin/hero-image` (`server/routes/admin.js:766`)
+  4. Kullanıcı avatar fotoğrafı — `POST /api/auth/avatar-upload` (`server/modules/auth/auth.routes.js:84-92`)
+  5. Tiola fotoğrafı — `POST /api/tiolas` (`server/routes/tiolas.js:265`)
+  Blog yazısı için ayrı bir dosya-yükleme ucu **yok** — `blogs.js`'teki `imageUrl` sadece bir URL
+  metin alanı (yer/kategori görseline referans), dosya yükleme değil, dolayısı ile pipeline'ı
+  atlaması diye bir durum söz konusu değil.
+- FAZ1-5'teki "orphaned modüler rota" deseni (`server/modules/users`, `server/modules/moderation`)
+  burada **tekrarlanmıyor**: `server/modules/users`/`moderation` hiçbir görsel/dosya yükleme kodu
+  içermiyor (`grep -rn "avatar|photo|image|upload"` boş/ilgisiz sonuç verdi) — yani uploads için
+  "orphaned" bir ikinci kod yolu yok, tüm görsel yükleme tek merkezi pipeline üzerinden gidiyor.
+
+### 6 kontrol noktası — tek tek kanıt
+
+1. **Magic-byte allowlist (file-type):** ✅ TAMAM. `server/lib/image-mime.js:1-11` — `FileType.fromBuffer()`
+   ile JPEG/PNG/WebP allowlist'i (`ALLOWED_IMAGE_MIMES`); `server/lib/image-process.js`'teki
+   `assertAllowedMagicBytes`/`assertAllowedMagicBytesBuffer` aynı kütüphaneyle pipeline'ın İÇİNDE
+   tekrar kontrol ediyor (multer `fileFilter`'ın uzantı/MIME-header kontrolünü atlatan sahte
+   dosyalara karşı ikinci katman). `verify-images.js`'teki "spoofed .jpg içinde PNG" testiyle
+   doğrulanmış durumdaydı.
+2. **Piksel-boyutu sıkıştırma-bombası koruması (.resize() ÖNCESİ):** ⚠️ KISMEN TAMAMDI → DÜZELTİLDİ.
+   Sharp'ın kendi varsayılan `limitInputPixels` koruması zaten vardı ve test edildi: 20000×20000
+   bir görsel oluşturulup okunmaya çalışıldığında Sharp "Input image exceeds pixel limit" hatası
+   veriyordu — yani TAM korumasız değildi. Ama bu varsayılan sınır ~16383×16383 (268.402.689 piksel)
+   — PRD'nin istediği 10000×10000'den belirgin biçimde daha gevşek; 12000×12000 gibi bir görsel
+   (144 megapiksel, ham RGB'de ~400+ MB bellek) hiçbir hataya takılmadan geçiyordu (sandbox'ta
+   doğrulandı). **Eklenen minimal düzeltme:** `server/lib/image-process.js`'e `MAX_INPUT_DIMENSION = 10000`
+   ve `assertSafeDimensions()` eklendi; bu fonksiyon `sharp(input).metadata()` ile genişlik/yüksekliği
+   okuyup PRD'nin istediği 10000×10000 sınırını `.resize()` çağrılmadan ÖNCE, hem `processImageFile`
+   hem `processImageBuffer`'ın başında kontrol ediyor (`image-process.js` satır ~108-116). Sharp'ın
+   kendi varsayılan limiti de (ekstra güvenlik ağı olarak) kaldırılmadı, değiştirilmedi.
+3. **EXIF rotation, metadata silinmeden ÖNCE uygulanıyor mu:** ✅ TAMAM. `webpPipeline()`
+   (`image-process.js`) zincirinde `.rotate()` ilk adım, `.webp()` (çıkış/strip anı) son adım —
+   sandbox'ta orientation=6 (90° CW) etiketli bir test JPEG'i işlenip çıkışın piksel boyutlarının
+   gerçekten takas edildiği (20×10 girdi → 10×20 çıktı) doğrulandı; yani döndürme piksellere
+   gerçekten uygulanıyor, sadece etiket silinmiyor.
+4. **TÜM metadata (GPS dahil) siliniyor mu:** ✅ TAMAM — ve kodun kendi yorum satırındaki iddia
+   (satır 76-78) sandbox'ta test edilip DOĞRULANDI: bu Sharp sürümünde (`0.35.4`) `.withMetadata(false)`
+   çağrısı GARİP bir şekilde EXIF'i KORUYOR (sadece orientation'ı 1'e resetliyor, EXIF bloğu buffer'da
+   hâlâ duruyor) — PRD'nin önerdiği `.withMetadata(false)` kalıbı bu sürümde YANLIŞ olurdu.
+   Pipeline bunun yerine `withMetadata()`'yı HİÇ ÇAĞIRMAYARAK Sharp'ın varsayılan (sessiz, tam strip)
+   davranışına güveniyor — test: sahte GPS IFD (enlem/boylam) + kamera marka bilgisi gömülü bir JPEG
+   işlendi, çıkışta `sharp().metadata().exif` tamamen `undefined`, çıkış byte dizisinde GPS IFD tag'i
+   (`0x8825`) veya "GPSLatitude"/kamera marka string'i hiç bulunamadı. Yani gerçek sonuç PRD'nin
+   istediğinden DAHA SIKI: tek tek GPS alanı silmek değil, EXIF bloğunun KENDİSİ hiç yazılmıyor.
+5. **Sabit maksimum boyut (1920×1080), withoutEnlargement ile tutarlı:** ✅ TAMAM.
+   `MAX_WIDTH=1920`/`MAX_HEIGHT=1080` + `{ fit: 'inside', withoutEnlargement: true }` — tüm işleme
+   yollarının (dosya/buffer) ortak kullandığı AYNI `webpPipeline()` fonksiyonunda, yukarıdaki 5
+   yükleme ucunun hepsi için. Test: 3000×2200 girdi → 1473×1080'e küçültüldü (sınır içinde); 50×40
+   girdi → 50×40 kaldı (büyütülmedi).
+6. **Çıkış formatı tutarlı WebP mi:** ✅ TAMAM (bilinçli bir istisnayla). `webpPipeline()` her zaman
+   `.webp({ quality: 82 })` ile bitiyor. GIF, PRD'nin "allowlist'e dahil et ama WebP'ye çevirirken
+   animasyonu bozma" önerisinin aksine, **allowlist'in dışında tutulup tamamen reddediliyor**
+   (`ALLOWED_PROCESS_MIMES` = sadece jpeg/png/webp; `image-mime.js`'teki `imageFileFilter`/`ALLOWED_IMAGE_MIMES`
+   de aynı). Bu, PRD'nin kendi notuyla da ("if GIF is deliberately excluded... that's a reasonable,
+   intentional exception, not a bug") uyumlu, bilinçli bir ürün kararı — animasyonlu GIF desteği bu
+   projede hiç yok, statik GIF'e çevirip animasyonu kırmak yerine en baştan reddediliyor. `verify-images.js`
+   bunu zaten test ediyordu ("GIF rejected").
+
+### Yapılan DEĞİŞİKLİK (sadece 1 nokta — madde 2)
+
+`server/lib/image-process.js`: `MAX_INPUT_DIMENSION` sabiti (10000) + `assertSafeDimensions()`
+fonksiyonu eklendi, `processImageFile`/`processImageBuffer`'ın en başında (magic-byte kontrolünden
+sonra, `.resize()`'dan önce) çağrılıyor. UI/UX'e, mevcut çıkış kalitesine, boyutlandırmaya veya
+herhangi bir yükleme ucunun davranışına (normal boyuttaki hiçbir gerçek fotoğraf 10000×10000'i
+aşmaz) görünür bir etkisi yok — sadece anormal/kötü niyetli uç durum için ek bir güvenlik katmanı.
+Diğer 5 kontrol noktasına **hiçbir kod değişikliği yapılmadı** (zaten PRD'nin istediğini karşılıyordu).
+
+### Dokunulmayanlar (bilinçli)
+
+- i18n, Argon2id, H1/a11y/blog-excerpt, yedek/geri yükleme, secret-scan, rate limiting, RBAC/audit-log,
+  admin görsel yükleme/oturum düzeltmeleri, FAZ2-1 (lazy-loading) — **dokunulmadı**.
+- GIF allowlist'e eklenmedi (bilinçli, yukarıda gerekçelendirildi).
+- Sharp'ın kendi varsayılan `limitInputPixels` koruması kaldırılmadı/değiştirilmedi — yeni kontrol
+  buna EK, onun YERİNE değil.
+- FAZ2-3, FAZ2-4, FAZ3, FAZ4 — bu PR'ın kapsamı dışında, dokunulmadı.
+
+**Doğrulama:** Yeni `node server/scripts/verify-faz2-2-image-pipeline.js` (`npm run verify:faz2-2`) —
+rotation, GPS/metadata strip, sıkıştırma-bombası koruması (yeni eklenen kontrol dahil), 1920×1080
+sınırı + withoutEnlargement, WebP çıkış formatı, magic-byte reddi; hepsi gerçek küçük test görselleriyle
+(sahte EXIF/GPS JPEG, 3000×2200 JPEG, 50×40 JPEG, 10500px genişlikte PNG, düz metin dosyası, .jpg
+uzantılı PNG). Regresyon: `npm run verify:images`, `npm run verify:admin-image-upload` (canlı admin
+girişi + gerçek `/api/admin/media`, `/api/admin/hero-image`, `/api/admin/places/:id/photos` yüklemeleri),
+`npm run verify:admin-security` — üçü de yeşil.
+
 ## Admin paneli: "hâlâ olmuyor görsel ekleme" + "kısa sürede çıkış yapıyor" (PR #67 sonrası ikinci bildirim)
 
 **Bildirim (Yasin, PR #67 — 5 MB → 12 MB düzeltmesi deploy edildikten sonra):**
