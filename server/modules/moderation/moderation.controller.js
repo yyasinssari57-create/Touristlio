@@ -1,5 +1,17 @@
 const { ok } = require('../../lib/apiResponse');
 const moderationService = require('./moderation.service');
+const auditLog = require('../../lib/auditLog');
+
+function logAdmin(req, action, targetType, targetId) {
+  return auditLog.log({
+    adminId: req.user.id,
+    adminName: req.user.name,
+    action,
+    targetType,
+    targetId,
+    detail: null,
+  });
+}
 
 async function pendingTiolas(_req, res) {
   return ok(res, { items: await moderationService.listPendingTiolas() });
@@ -11,21 +23,25 @@ async function pendingBlogs(_req, res) {
 
 async function approveTiola(req, res) {
   await moderationService.approveTiola(req.params.id, req.user.id);
+  logAdmin(req, 'tiola.approve', 'tiola', req.params.id);
   return ok(res, { approved: true });
 }
 
 async function rejectTiola(req, res) {
   await moderationService.rejectTiola(req.params.id, req.user.id);
+  logAdmin(req, 'tiola.reject', 'tiola', req.params.id);
   return ok(res, { rejected: true });
 }
 
 async function approveBlog(req, res) {
   await moderationService.approveBlog(req.params.id, req.user.id);
+  logAdmin(req, 'blog.approve', 'blog', req.params.id);
   return ok(res, { approved: true });
 }
 
 async function rejectBlog(req, res) {
   await moderationService.rejectBlog(req.params.id, req.user.id);
+  logAdmin(req, 'blog.reject', 'blog', req.params.id);
   return ok(res, { rejected: true });
 }
 
