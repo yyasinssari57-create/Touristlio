@@ -5,6 +5,7 @@
 const { siteBaseUrl, absUrl, canonicalFor, stripEnPrefix } = require('./seo');
 const { sanitizeText } = require('./sanitize');
 const { slugify } = require('./slugify');
+const { isValidSitemapCoord } = require('./sitemap');
 
 const LOGO_PATH = '/images/logo.webp';
 const AGENCY_DESCRIPTION = 'Sadece Ziyaret Etme. Hisset. Topluluk tabanlı seyahat rehberliği.';
@@ -176,7 +177,7 @@ function touristAttraction(place, lang = 'tr') {
       })
       : undefined,
   };
-  if (place.lat != null && place.lng != null && Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng))) {
+  if (isValidSitemapCoord(place.lat, place.lng)) {
     schema.geo = {
       '@type': 'GeoCoordinates',
       latitude: Number(place.lat),

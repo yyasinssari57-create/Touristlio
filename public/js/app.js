@@ -761,8 +761,12 @@ function injectPlaceJsonLd(p, tiolas) {
     image: img,
     address: { '@type': 'PostalAddress', addressLocality: geoLabel(p.city) || p.city, addressRegion: geoLabel(p.district) || p.district, addressCountry: geoLabel(p.country) || p.country },
   };
-  if (p.lat != null && p.lng != null) {
-    attraction.geo = { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng };
+  const latNum = Number(p.lat);
+  const lngNum = Number(p.lng);
+  // Keep in sync with server/lib/sitemap.js isValidSitemapCoord — (0,0) is Null Island, not a real place.
+  if (p.lat != null && p.lng != null && Number.isFinite(latNum) && Number.isFinite(lngNum)
+    && latNum !== 0 && lngNum !== 0 && Math.abs(latNum) <= 90 && Math.abs(lngNum) <= 180) {
+    attraction.geo = { '@type': 'GeoCoordinates', latitude: latNum, longitude: lngNum };
   }
   const count = Number(p.tiolaCount) || 0;
   const rating = Number(p.tiolaRating);
