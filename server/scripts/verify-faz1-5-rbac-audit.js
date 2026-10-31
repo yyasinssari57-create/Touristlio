@@ -64,6 +64,11 @@ if (!/router\.use\(\s*authRequired\s*,\s*requireRole\(\.\.\.PANEL_ROLES\)\s*\)/.
 
 // Her POST/PUT/DELETE/PATCH admin.js rotasının bir logAdmin() çağrısı var mı?
 // (route bloğu, bir sonraki route tanımına kadar taranır)
+// FAZ2-4 (N+1 cleanup) sonrası /tiolas/bulk ve /blogs/bulk artık N adet
+// logAdmin() yerine tek bir auditLog.logBatch() çağrısıyla HER öğe için ayrı
+// admin_audit_log satırı yazıyor (bkz. server/lib/auditLog.js logBatch) —
+// aynı garantiyi (her mutasyon audit log'a yazılır) korur, bu yüzden bu
+// desen de kabul ediliyor.
 {
   const lines = adminJs.split('\n');
   const routeRe = /^router\.(post|put|delete|patch)\('([^']+)'/;
@@ -76,12 +81,12 @@ if (!/router\.use\(\s*authRequired\s*,\s*requireRole\(\.\.\.PANEL_ROLES\)\s*\)/.
   let missing = 0;
   for (let idx = 0; idx < routes.length - 1; idx += 1) {
     const block = lines.slice(routes[idx].i, routes[idx + 1].i).join('\n');
-    if (!/logAdmin\(/.test(block)) {
+    if (!/logAdmin\(|auditLog\.logBatch\(/.test(block)) {
       fail(`admin.js: ${routes[idx].method.toUpperCase()} ${routes[idx].pathName} logAdmin çağırmıyor`);
       missing += 1;
     }
   }
-  if (!missing) ok(`admin.js: tüm ${routes.length - 1} mutasyon rotası logAdmin() çağırıyor (admin_audit_log)`);
+  if (!missing) ok(`admin.js: tüm ${routes.length - 1} mutasyon rotası logAdmin() (veya bulk için auditLog.logBatch()) çağırıyor (admin_audit_log)`);
 }
 
 // ---------------------------------------------------------------------------
