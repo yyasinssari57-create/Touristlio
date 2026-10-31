@@ -2,6 +2,41 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ1-5 (RBAC / admin audit log)
+
+**Şeffaflık notu:** Bu maddenin orijinal PRD metni (Claude'un yazdığı Touristlio Cursor Master PRD) bu sandbox'ta mevcut değildi — önceki bir sohbette yüklenmiş ama diske kalıcı olarak geçmemiş. `AUDIT_FOLLOWUPS.md`, git geçmişi ve `/home/ubuntu/.cursor/projects/workspace/uploads/` aranmış, bulunamamıştır. Kapsam, önceki ajanın bağlamından çıkarıldı: **"RBAC zorlaması + hassas admin eylemleri için audit log"**. Bu nedenle madde ismi/kapsamı PRD'nin orijinaliyle %100 örtüşmeyebilir — ama güvenlik açısından en kritik, mantıklı yorumdur.
+
+### Gap analizi: `/api/admin` (gerçek admin paneli) zaten tam korumalıydı
+
+`server/routes/admin.js` — admin panelinin GERÇEKTEN kullandığı tek rota dosyası:
+- Tüm rotalar `router.use(authRequired, requireRole(...PANEL_ROLES))` ile baştan korunuyor (blanket), üstüne her rota kendi `checkPermission(...)` veya `requireRole('admin')`'ini ekliyor.
+- **Statik tarama: ~50 mutasyon rotasının (POST/PUT/PATCH/DELETE) HEPSİ `logAdmin()` çağırıyor** → `admin_audit_log` tablosuna yazıyor (v2 ORTA-5 / `cursor/admin-security-10f2` işi — zaten vardı, dokunulmadı).
+- Rol (`req.user.role`) her istekte sunucu tarafında DB'den taze okunuyor (`findUserById`), istemciden gelen bir değer asla güvenilmiyor — RBAC implementasyonu güvenli.
+- **Bu dosyada eksik middleware bulunan TEK bir rota bile yoktu.** Yani "admin panelinde korumasız bir uç var mı" sorusunun cevabı: hayır.
+
+### Gerçek boşluk: kullanılmayan ama ERİŞİLEBİLİR modüler rotalar (`server/modules/`)
+
+Projede eski bir "modüler refactor" denemesinden kalan, **admin paneli JS'i tarafından hiç çağrılmayan ama `server/index.js`'te mount edilmiş** (dolayısıyla doğru token'la herkes tarafından çağrılabilir) üç dosya bulundu ve incelendi:
+
+1. **`server/modules/users/users.routes.js` → `PATCH /api/users/:id/role` — EN CİDDİ BULGU:**
+   - Rol listesi `['member', 'editor', 'moderator', 'staff', 'admin']` idi — **`admin` dahil!** Kendi rolünü değiştirme engeli yoktu, mevcut bir admin hesabının rolünü koruma yoktu, **audit log'a hiç yazmıyordu**.
+   - Bu rota yalnızca `checkPermission('admin.users')` ile korunuyordu. `server/middleware/rbac.js`'teki `ROLE_DEFAULT_PERMS` yedek listesi `moderator` ve `staff`'a `admin.users` izni veriyordu — ki bu, `server/db.js`'teki GERÇEK seed (`rolePerms`) ile **çelişiyordu** (seed bu izni hiç vermiyor). Pratikte DB'de seed çalıştığı için `role_permissions` tablosu doğru (admin.users yok) geliyordu, ama bu iki kaynağın çelişmesi kendi başına bir risk + gelecekte birinin yedek listeyi "düzelteyim" derken gerçek açığı üretme ihtimali taşıyordu.
+   - **Düzeltme:** `admin.js`'teki kanıtlanmış mantıkla birebir hizalandı — `ASSIGNABLE_ROLES` (admin hariç), `isProtectedUserRole` (mevcut admin korunur), kendi-rol değişikliği engeli, her değişiklik `admin_audit_log`'a yazılıyor (`user.role_change`). Rotaya ayrıca **`requireRole('admin')`** eklendi (defansif ikinci kat — tek başına `checkPermission` yeterli olsa da). `rbac.js`'teki yedek liste de seed'le hizalandı (moderator/staff'tan `admin.users` çıkarıldı).
+   - **Risk, gerçek anlamda sömürülebilir miydi?** DB'de seed her zaman çalıştığı için (server açılışında otomatik), canlıda bir moderator/staff hesabının bu spesifik ucu `admin.users` izniyle geçebilmesi günümüzde mümkün değildi — ama kod iki farklı yerde (seed vs. yedek liste) çelişen bir gerçeği tutuyordu ve rol-atama ucunun kendisi zaten "admin" rolünü serbestçe atayabiliyordu (hangi rol çağırırsa çağırsın). Bu, "düzeltilmemiş olsa kritik, gelecekte kolayca tetiklenebilecek bir ayrıcalık yükseltme açığı" olarak değerlendirildi ve kapatıldı.
+
+2. **`server/modules/moderation/moderation.routes.js`** (Tiola/blog onay-red, admin panelindeki "Moderasyon" sekmesi gerçekte `/api/admin/tiolas/...` kullanıyor, bu modül değil):
+   - RBAC doğruydu (`checkPermission('admin.moderate')`), ama onay/red eylemleri **audit log'a hiç yazmıyordu**. Eklendi: `tiola.approve` / `tiola.reject` / `blog.approve` / `blog.reject`.
+
+3. **CSRF:** `/api/users` ve `/api/moderation`, `/api/admin`'in aksine `csrfProtection` middleware'i almıyordu. İkisi de admin'e özel mutasyon içerdiği için `/api/admin` ile aynı korumaya kavuşturuldu.
+
+### Dokunulmayanlar (bilinçli)
+
+- `/api/settings` (`PUT /`) — aynı "kullanılmayan modül" ailesinden, audit log yazmıyor. **Bilinçli olarak dokunulmadı**: `admin.settings` izni hiçbir rolün varsayılanında yok (yalnızca `admin` rolü, `checkPermission` içindeki erken dönüşle geçer) → ayrıcalık yükseltme riski taşımıyor; PRD'nin açıkça saydığı kategoriler (rol değişimi, silme, yedek/geri yükleme, içerik moderasyonu) arasında değil. Minimal/katı kapsam kararı — AUDIT_FOLLOWUPS.md'de not edildi, ileride istenirse ayrı bir madde olabilir.
+- `admin_audit_log` tablosu **yeni eklenmedi** — zaten vardı (v2 ORTA-5), yeni migration/SQL gerekmedi. Yasin'in Supabase'de hiçbir şey çalıştırmasına gerek yok.
+- FAZ1-1 (yedek), FAZ1-2 (Argon2id), FAZ1-3 (anahtar sızıntı), FAZ1-4 (rate limit), i18n, H1/a11y/blog-excerpt — **dokunulmadı**.
+
+`npm run verify:faz1-5` — statik olarak (a) `/api/admin`'in blanket korumasını ve tüm mutasyon rotalarının `logAdmin` çağırdığını, (b) `/api/users` rol ucunun düzeltmelerini, (c) `rbac.js`/`db.js` seed hizasını, (d) `moderation.controller.js`'in audit log eklerini, (e) yeni CSRF mount'larını doğrular; ardından gerçek bir yerel sunucuda (prod Supabase'e dokunmadan) unauth/member/moderator/admin ile canlı 401/403/200 ve `admin_audit_log`'a gerçekten satır yazıldığını doğrular. Regresyon: `npm run verify:forms`, `verify:votes`, `verify:faz1-4`, `verify:sprint1`, `verify:admin-security`, `verify:admin-role` — hepsi geçti.
+
 ## Claude Master PRD — FAZ1-4 (rate limit / tüm kritik endpoint'ler)
 
 Gap analizi: PRD'nin 6 limiter kategorisinin **hepsi zaten vardı** (v1 YÜKSEK-7, v2 YÜKSEK-2, ORTA-4, v2 ORTA-5). Yeni limiter eklenmedi; mevcut korumalar doğrulandı ve tek bir bilinçli "ekleme" kararı belgelendi.

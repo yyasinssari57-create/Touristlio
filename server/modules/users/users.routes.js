@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { authRequired } = require('../../middleware/auth');
+const { authRequired, requireRole } = require('../../middleware/auth');
 
 const { checkPermission } = require('../../middleware/rbac');
 
@@ -18,7 +18,9 @@ router.use(authRequired, checkPermission('admin.users'));
 
 router.get('/', controller.list);
 
-router.patch('/:id/role', controller.updateRole);
+// Rol atama yalnızca 'admin' — moderator/staff'ın varsayılan admin.users izni
+// bu uca yetmez (admin.js'teki PATCH /admin/users/:id/role ile aynı kısıt).
+router.patch('/:id/role', requireRole('admin'), controller.updateRole);
 
 
 

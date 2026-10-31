@@ -6,8 +6,10 @@ async function list(_req, res) {
 }
 
 async function updateRole(req, res) {
-  const role = req.body?.role;
-  const result = await usersService.setUserRole(Number(req.params.id), role);
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return fail(res, 'Geçersiz id', 400);
+  const role = String(req.body?.role || '').trim();
+  const result = await usersService.setUserRole(req.user, id, role);
   if (result.error) return fail(res, result.error, result.status);
   return ok(res, result);
 }
