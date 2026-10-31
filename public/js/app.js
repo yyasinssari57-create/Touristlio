@@ -547,6 +547,36 @@ async function ensureMapLibs() {
   if (window.TL_MAP_LOADER?.ensure) await window.TL_MAP_LOADER.ensure();
 }
 
+function assetVersion() {
+  const tag = document.querySelector('script[src*="?v="]');
+  const match = tag && String(tag.src || '').match(/[?&]v=([^&]+)/);
+  return match ? match[1] : '1';
+}
+
+let avatarCropLoading = null;
+function ensureAvatarCropLib() {
+  if (window.TL_AVATAR_CROP) return Promise.resolve();
+  if (avatarCropLoading) return avatarCropLoading;
+  avatarCropLoading = new Promise((resolve, reject) => {
+    const src = `/js/avatar-crop.js?v=${encodeURIComponent(assetVersion())}`;
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('avatar-crop load failed')), { once: true });
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('avatar-crop load failed'));
+    document.head.appendChild(s);
+  }).catch((err) => {
+    avatarCropLoading = null;
+    throw err;
+  });
+  return avatarCropLoading;
+}
+
 function placeField(p, base) {
   if (!p) return '';
   if (lang === 'en') {
@@ -2986,10 +3016,16 @@ function initAvatarSettings(u) {
   const fileInp = document.getElementById('avatarFile');
   if (fileInp && !fileInp._bound) {
     fileInp._bound = true;
-    fileInp.onchange = () => {
+    fileInp.onchange = async () => {
       const file = fileInp.files?.[0];
       fileInp.value = '';
       if (!file) return;
+      try {
+        await ensureAvatarCropLib();
+      } catch (err) {
+        window.TL_TOAST?.error(t('avatarUploadFailed'));
+        return;
+      }
       window.TL_AVATAR_CROP?.open(file, (cropped) => uploadAvatarFile(cropped));
     };
   }
