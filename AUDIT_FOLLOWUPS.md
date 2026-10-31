@@ -2,6 +2,134 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Admin paneli: "Görseli ayarla" ile hiçbir şey olmuyor (Yasin — PR #67/#68 SONRASI yeni, daha spesifik bildirim)
+
+**Bildirim:** "Yer düzenle" modalının "Fotoğraflar" bölümünde (16:9 kırpma; "Mevcut görseller" /
+"Henüz görsel yok.", buton **"Görseli ayarla"** — tekil, çoklu galeri seçici değil) bir görsel
+(765 KB, normal JPEG, 2296×1292, hiçbir boyut sınırının altında) seçilince **kelimenin tam
+anlamıyla hiçbir şey olmuyordu**: hata yok, kırpma/önizleme penceresi açılmıyor, "Henüz görsel
+yok." metni aynı kalıyor. Bu, PR #67'nin (5 MB → 12 MB) ve PR #68'in (gizli hata mesajı) çözdüğü
+sorunlardan **farklı**: burada hiçbir istisna fırlatılmıyor, bu yüzden önceki iki düzeltme bunu
+hiç yakalayamadı.
+
+### Hangi ekran — tam olarak tespit edildi
+
+Ekran görüntüsündeki birebir metinler (`"Mevcut görselleri kaldırabilir veya yeni görsel
+ekleyebilirsiniz (16:9 kırpma)."`, `"Henüz görsel yok."`) `public/admin.html`'de yalnızca BİR
+yerde geçiyor: **Yer "Düzenle" modalı** (`openPlaceEdit()` → `edPhotos` / `edPhotoExisting` /
+`edPhotosBtnLabel`, kırpma motoru `public/js/place-crop.js`). Bu, PR #67'nin kapsadığı
+"Yeni yer ekle" galerisinden (`plPhotos`, 4:3 oranlı `photo-preview-row`) FARKLI bir akış değil —
+**aynı** `place-crop.js` motorunu kullanıyor, ama yalnızca "Düzenle" modalları içinde tetikleniyor
+olması aşağıdaki ikinci hatayı (z-index) açığa çıkarıyor.
+
+### Kök neden — gerçek Chrome ile doğrulandı (iki ayrı, birbirini güçlendiren hata)
+
+Statik kod okuması (olay dinleyici bağlama, `bindPlacePhotoInput`, `window.TL_PLACE_CROP`) hiçbir
+sorun göstermedi — her şey doğru bağlanmış görünüyordu. Hata yalnızca **gerçek bir tarayıcıda**
+(bu sandbox'ta geçici olarak: Playwright + sistem `google-chrome-stable`, **repoya commit
+edilmedi**, sadece doğrulama amaçlı) adım adım iz sürülünce ortaya çıktı:
+
+1. **Kırpma önizleme resmi `loading="lazy"` taşıyordu.** `place-crop.js`'teki kırpma penceresi
+   (`.auth-ov`) varsayılan olarak `display:none`; o pencereyi görünür yapan `.on` sınıfı
+   YALNIZCA `<img id="placeCropImg">`'nin KENDİ `onload` olayının içinde ekleniyor. Tarayıcı,
+   `display:none` bir kapsayıcı içindeki `loading="lazy"` resmi görünürlük kesişimi
+   hesaplayamadığı için **asla yüklemiyor** — `onload` hiç ateşlenmiyor, `.on` hiç ekleniyor,
+   pencere **sonsuza dek görünmez** kalıyor. Konsolda hata yok (tarayıcı resmi "reddetmiyor",
+   sadece hiç talep etmiyor) — kendi kendini besleyen sessiz bir çıkmaz (deadlock). Bu satır
+   `[YÜKSEK-3] Optimize images with WebP, lazy load, and EXIF strip` denetim maddesinde TÜM
+   `<img>` etiketlerine toptan `loading="lazy"` eklenirken yanlışlıkla bu JS-tarafından
+   oluşturulan, isteğe bağlı modal resmine de eklenmiş — gerçek kart/galeri resimleri için doğru
+   olan bu optimizasyon, bu özel örnekte kendi görünürlüğüne bağımlı bir resme uygulanınca işlevi
+   tamamen bozmuş.
+2. **Kırpma penceresinin z-index'i, "Düzenle" modalının z-index'inden DÜŞÜK.** `public/css/
+   inline-overrides.css`, `.admin-modal-overlay`'i (Yer/Şehir/Kategori "Düzenle" modalları) uzun
+   süre önce z-index **620**'ye, `.admin-lightbox`'ı **640**'a yükseltmiş (`744e76e`, "Fix audit
+   issues" commit'i) — ama kırpma penceresinin kullandığı paylaşılan `.auth-ov` sınıfı
+   `style.css`'te hâlâ yalnızca z-index **600**. Yani bir "Düzenle" modalı AÇIKKEN kırpma
+   penceresi açılırsa (tam da bu akış), kırpma penceresi DOM'da teknik olarak var ve `.on`
+   sınıfıyla "açık" ama "Düzenle" modalının overlay'inin **ARKASINDA**, tamamen görünmez
+   kalıyor.
+
+Her iki hata da `place-crop.js`'in "Düzenle" modalları içindeki kullanımlarında (`edPhotos`,
+`edCtImageFile`, `edCatImageFile` — hepsi `#modalOverlay` içinde) birlikte "hiçbir şey olmuyor"
+hissini üretiyor. 1 numaralı lazy-load çıkmazı aslında modal-dışı "Yeni ekle" formlarındaki
+(`plPhotos`, `ctImageFile`, `catImageFile`) aynı kırpma penceresini de etkiliyor — orada ikinci
+(z-index) hata yok ama BİRİNCİ hata (resim hiç yüklenmiyor) orada da aynı şekilde kırpma
+penceresini sonsuza dek görünmez bırakıyordu; yalnızca fark edilmemiş veya "Düzenle" akışı kadar
+sık test edilmemiş olabilir — aynı kod yolu, aynı düzeltmeyle çözüldü.
+
+**İlgili ama kapsam dışı bulgu (dokunulmadı):** `public/js/avatar-crop.js` (profilden avatar
+yükleme, herkese açık site) `place-crop.js`'in birebir kopyası bir desenle AYNI `loading="lazy"`
+hatasını taşıyor (`<img id="avatarCropImg" ... loading="lazy"/>`). Bu PR'ın kapsamı yalnızca
+Yasin'in bildirdiği admin paneli sorunuydu; avatar yükleme ayrı, kullanıcı tarafı bir özellik —
+tek, odaklı bir düzeltme kuralı gereği buraya dokunulmadı. **Leftover:** `avatar-crop.js`'teki
+`loading="lazy"` de muhtemelen aynı nedenle profil avatarı kırpma penceresini hiç açılmaz hale
+getiriyor; ayrı bir takip maddesi olarak ele alınmalı.
+
+### Düzeltme (`public/js/place-crop.js`, tek dosya, 2 satır)
+
+- `#placeCropImg`'den `loading="lazy"` kaldırıldı — bu resim zaten yalnızca kullanıcı bir dosya
+  SEÇTİĞİNDE, JS tarafından talep üzerine oluşturuluyor; "ekranda görünene kadar geciktir"
+  kazancı sıfır (asla "ekran dışında" değil, ya hiç yok ya da kullanıcının tam önünde), ama
+  kendi görünürlüğüne bağımlı bir çıkmaz yaratıyordu.
+- Kırpma penceresine (`ensureModal()` içinde) `ov.style.zIndex = '700'` ile açık, satır-içi bir
+  z-index verildi — paylaşılan `.auth-ov` CSS kuralını (herkese açık giriş/kayıt modalı da
+  kullanıyor) DEĞİŞTİRMEDEN, yalnızca BU kırpma penceresi örneğini admin "Düzenle" modalının
+  (620) ve lightbox'ın (640) üstüne çıkarır. Görsel/tasarım değişikliği yok — pencerenin kendisi
+  birebir aynı görünüyor, sadece artık doğru şekilde GÖRÜNÜYOR.
+
+### Doğrulama
+
+- `node server/scripts/verify-admin-image-picker.js` (yeni, `npm run
+  verify:admin-image-picker`): statik olarak (a) `#placeCropImg`'in `loading="lazy"`
+  taşımadığını, (b) kırpma penceresine açık bir z-index verildiğini VE bu değerin
+  `inline-overrides.css`'teki `.admin-modal-overlay` (620) ve `.admin-lightbox` (640)
+  z-index'lerinin üstünde olduğunu (regresyon muhafızı — ileride biri bu z-index'leri tekrar
+  yükseltirse test kırmızı olur), (c) PR #67'nin 12 MB sınırının hâlâ durduğunu doğrular.
+- `npm run verify:admin-image-upload` (PR #67) ve `npm run verify:admin-session` (PR #68) —
+  regresyonsuz geçiyor (yerel Postgres + gerçek admin oturumuyla).
+- `npm run verify:admin-security` ve `npm run verify:images` — regresyonsuz geçiyor.
+- **Gerçek doğrulama (dürüstlük notu):** statik kod okuması bu hatayı YAKALAYAMAZDI — her iki
+  kök neden de saf bir tarayıcı DOM/CSS görünürlük sorunu (sunucu tarafı bir HTTP isteğiyle test
+  edilemez). Bu sandbox'ta geçici olarak (repoya eklenmedi) Playwright + sistem
+  `google-chrome-stable` ile gerçek bir tarayıcıda uçtan uca doğrulandı: admin oturumu açıp
+  sahte bir yer verisiyle "Düzenle" modalı açıldı, gerçek bir 2296×1292 JPEG dosya seçici
+  üzerinden seçildi — **düzeltmeden ÖNCE** kırpma penceresi DOM'a ekleniyor ama `.on` sınıfı HİÇ
+  gelmiyor, resim `complete:false`/`naturalWidth:0` olarak sonsuza dek takılı kalıyor, ekran
+  görüntüsünde hiçbir değişiklik yok (birebir Yasin'in tarifiyle); **düzeltmeden SONRA** `.on`
+  sınıfı geliyor, resim doğru yükleniyor (`naturalWidth:2296`), kırpma penceresi modalın
+  ÜSTÜNDE görünüyor, "Kırp ve kaydet"e basınca kırpılmış önizleme doğru şekilde listeye ekleniyor
+  ve buton metni "Fotoğraf ekle"ye dönüyor — tüm akış uçtan uca çalışıyor. Bu geçici doğrulama
+  script'i/ekran görüntüleri PR açıklamasında tarif edildi ama repoya commit edilmedi (Playwright
+  `package.json`'a yeni bir bağımlılık olarak eklenmedi — kapsam dışı bir araç kurulumu).
+- Yasin'in canlıda doğrulaması gereken TEK şey: Render → Manual Deploy, tarayıcıda
+  **Ctrl+Shift+R** (bu saf bir JS/CSS dosya değişikliği; versiyon dizesi değişmemiş olabilir,
+  bkz. aşağıdaki ayrı "leftover" notu), sonra Admin → Yerler → herhangi bir yerde "Düzenle" →
+  "Fotoğraflar" bölümünde "Görseli ayarla" → bir fotoğraf seç → artık kırpma penceresi açılmalı.
+
+### Leftover — ayrı, ilgili bir bulgu (bu PR'da düzeltilmedi, kapsam dışı)
+
+- `server/lib/app-version.js`'teki `getAppVersion()` cache-bust sürüm dizesi yalnızca 5 dosyanın
+  (`css/style.css`, `css/inline-overrides.css`, `js/app.js`, `js/error-boundary.js`,
+  `index.html`) mtime'ını izliyor — `admin.html` ve `public/js/*.js` (place-crop.js dahil)
+  **İZLENMİYOR**. PR #67 ve #68'in ikisi de bu 5 dosyadan hiçbirine dokunmadı; eğer Render'ın
+  deploy süreci git checkout sırasında TÜM dosyaların mtime'ını tazelemiyorsa (örn. katmanlı/
+  incremental bir build), `?v=__APP_VERSION__` sürüm dizesi değişmemiş olabilir ve tarayıcılar
+  `max-age=31536000, immutable` ile önbelleğe alınmış ESKİ `place-crop.js`'i sunmaya devam
+  edebilir — bu PR'ın düzeltmesi dahil. Bu sandbox'tan Render'ın gerçek deploy/checkout
+  davranışı doğrulanamıyor; eğer canlıda sorun ısrar ederse Yasin'e **sert yenileme
+  (Ctrl+Shift+R)** önerilir (tarayıcı önbelleğini bypass eder), ayrıca kalıcı çözüm için
+  `getAppVersion()`'ın izlediği dosya listesine `public/admin.html` ve `public/js/**/*.js`
+  eklenmesi ayrı bir takip maddesi olarak düşünülebilir.
+- `public/js/avatar-crop.js` (profil avatarı, kullanıcı tarafı) aynı `loading="lazy"` hatasını
+  taşıyor — yukarıya bakın.
+- Kullanıcı metinleri (hem "Yeni ekle" hem "Düzenle" bölümlerinde) hâlâ "16:9 kırpma" diyor ama
+  `place-crop.js`'teki gerçek `ASPECT` sabiti `4/3` (v2 YÜKSEK-3 kart CLS düzeltmesiyle kartlar
+  4:3'e geçince metin güncellenmemiş — eski bir kopya/kod uyuşmazlığı). Bu, "hiçbir şey olmuyor"
+  hatasının NEDENİ değil (kırpma motoru doğru çalışırsa pencere yine açılırdı, sadece "16:9"
+  dediği oranda değil "4:3" kırpardı) — bu yüzden bu PR'ın "tek, odaklı düzeltme" kuralı gereği
+  metne DOKUNULMADI. İsterse ayrı bir küçük kopya-düzeltme PR'ı olarak ele alınabilir.
+
 ## Claude FAZ2-1 (JavaScript code splitting)
 
 Claude Master PRD "FAZ 2 — Performans ve Core Web Vitals" → [FAZ2-1] JS code splitting.

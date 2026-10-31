@@ -39,6 +39,15 @@
     ov = document.createElement('div');
     ov.id = 'placeCropOv';
     ov.className = 'auth-ov';
+    // The place/city/category "Düzenle" (edit) modals already use
+    // .admin-modal-overlay, which inline-overrides.css raises to z-index 620
+    // (and .admin-lightbox to 640). .auth-ov's own base z-index in style.css
+    // is only 600, so opening this crop dialog from inside an edit modal
+    // rendered it fully behind that modal's overlay — invisible, no error,
+    // exactly the "nothing happens" symptom. Force it above both via an
+    // inline style (scoped to this dialog only; the shared public auth
+    // modal that also uses .auth-ov is unaffected elsewhere).
+    ov.style.zIndex = '700';
     ov.innerHTML = `
       <div class="auth-box place-crop-box" role="dialog" aria-labelledby="placeCropTitle">
         <button type="button" class="aclose" id="placeCropClose" aria-label="Kapat">✕</button>
@@ -46,7 +55,14 @@
         <p class="adm-field-hint place-crop-hint">Sürükleyerek konumlandırın, yakınlaştırarak kırpma alanını ayarlayın.</p>
         <div class="place-crop-stage" id="placeCropStage" style="width:${VIEWPORT_W}px;height:${VIEWPORT_H}px">
           <div class="place-crop-viewport" id="placeCropViewport">
-            <img class="place-crop-img" id="placeCropImg" alt="Kırpılacak fotoğraf" draggable="false" loading="lazy"/>
+            <!-- No loading="lazy" here: this <img> lives inside a dialog that
+                 starts display:none (.auth-ov), and open() only adds the
+                 visible .on class inside THIS image's own onload handler.
+                 Lazy-loaded images never fire onload while their container is
+                 display:none (no viewport intersection to trigger them), so
+                 the dialog could never become visible — a silent deadlock,
+                 no console error, matching the "nothing happens" report. -->
+            <img class="place-crop-img" id="placeCropImg" alt="Kırpılacak fotoğraf" draggable="false"/>
           </div>
           <div class="place-crop-overlay" aria-hidden="true"></div>
         </div>
