@@ -625,6 +625,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .faq-q.open::after{content:'−';}
 .faq-a{padding:0 14px 12px;font-size:.78rem;color:var(--t2);line-height:1.6;}
 .weather-fallback{font-size:.65rem;color:var(--t3);display:block;margin-top:4px;}
+.info-updated{font-size:.65rem;color:var(--t3);display:block;margin-top:6px;}
 .weather-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;}
 .map-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
 .map-search-inp{flex:1;min-width:160px;padding:8px 12px;border:1.5px solid var(--l2);border-radius:10px;font-size:.82rem;}

@@ -41,11 +41,12 @@ async function getWeather(lat, lng, lang = 'tr') {
     return { ...w, label: weatherLabel(w.code, lang), fallback: false };
   } catch {
     return {
-      tempC: 18,
-      windKmh: 8,
-      label: lang === 'en' ? 'Estimated mild' : 'Tahmini ılıman',
+      tempC: null,
+      windKmh: null,
+      label: null,
+      failed: true,
       fallback: true,
-      source: 'estimate',
+      source: 'error',
     };
   }
 }
