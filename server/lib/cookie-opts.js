@@ -5,7 +5,6 @@
  */
 
 const ALLOWED_SAMESITE = new Set(['strict', 'lax', 'none']);
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 function cookieSameSite() {
@@ -28,20 +27,26 @@ function baseCookieOptions(overrides = {}) {
   };
 }
 
-/** Auth JWT (tl_token). */
+/**
+ * Auth JWT (tl_token). Matches signToken()'s 30d expiresIn (server/auth.js)
+ * — keep these two in sync; a cookie that outlives or expires before the
+ * JWT's own `exp` claim causes confusing "logged in but every request
+ * 401s" (cookie > JWT) or "logged out early for no reason" (cookie < JWT)
+ * bugs.
+ */
 function authCookieOptions(overrides = {}) {
   return baseCookieOptions({
     httpOnly: true,
-    maxAge: WEEK_MS,
+    maxAge: MONTH_MS,
     ...overrides,
   });
 }
 
-/** Double-submit CSRF (tl_csrf) — readable by JS on purpose. */
+/** Double-submit CSRF (tl_csrf) — readable by JS on purpose. Kept in sync with authCookieOptions. */
 function csrfCookieOptions(overrides = {}) {
   return baseCookieOptions({
     httpOnly: false,
-    maxAge: WEEK_MS,
+    maxAge: MONTH_MS,
     ...overrides,
   });
 }
