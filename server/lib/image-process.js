@@ -15,6 +15,10 @@ const MAX_HEIGHT = 1080;
 const WEBP_QUALITY = 82;
 const SRCSET_WIDTHS = [480, 800];
 const ALLOWED_PROCESS_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+// [FAZ2-2] Decompression-bomb guard: sharp'ın varsayılan limitInputPixels'i
+// (~16383x16383) zaten büyük boyutları reddeder, ama PRD'nin istediği 10000x10000
+// sınırından daha gevşek. Burada .resize() ÖNCESİNDE açık bir piksel kontrolü var.
+const MAX_INPUT_DIMENSION = 10000;
 
 function webpStem(filePath) {
   return path.basename(filePath).replace(/\.(jpe?g|png|webp)$/i, '');
@@ -44,6 +48,29 @@ async function assertAllowedMagicBytesBuffer(buf) {
     throw err;
   }
   return mime;
+}
+
+/**
+ * [FAZ2-2] .resize() çağrılmadan ÖNCE piksel boyutunu kontrol eder — sıkıştırma
+ * bombası koruması (küçük dosya boyutlu ama devasa piksel sayılı görsel).
+ */
+async function assertSafeDimensions(input) {
+  let meta;
+  try {
+    meta = await sharp(input, { failOn: 'none' }).metadata();
+  } catch {
+    const err = new Error('Görsel okunamadı');
+    err.status = 400;
+    err.code = 'IMAGE_UNREADABLE';
+    throw err;
+  }
+  if ((meta.width && meta.width > MAX_INPUT_DIMENSION) || (meta.height && meta.height > MAX_INPUT_DIMENSION)) {
+    const err = new Error(`Görsel boyutları çok büyük (maks ${MAX_INPUT_DIMENSION}x${MAX_INPUT_DIMENSION} piksel)`);
+    err.status = 400;
+    err.code = 'IMAGE_DIMENSIONS_TOO_LARGE';
+    throw err;
+  }
+  return meta;
 }
 
 /**
@@ -79,6 +106,7 @@ async function writeSrcsetVariants(mainWebpPath) {
 
 async function processImageFile(filePath, { srcset = true } = {}) {
   await assertAllowedMagicBytes(filePath);
+  await assertSafeDimensions(filePath);
   const dir = path.dirname(filePath);
   const stem = webpStem(filePath);
   const filename = `${stem}.webp`;
@@ -126,6 +154,7 @@ async function processImageFile(filePath, { srcset = true } = {}) {
 
 async function processImageBuffer(inputBuffer, { stem, srcset = true } = {}) {
   await assertAllowedMagicBytesBuffer(inputBuffer);
+  await assertSafeDimensions(inputBuffer);
   const safeStem = String(stem || `img-${Date.now()}`).replace(/[^\w.-]+/g, '_');
   const mainBuf = await webpPipeline(inputBuffer).toBuffer();
   const meta = await sharp(mainBuf).metadata();
@@ -295,9 +324,11 @@ async function deleteStoredImage(urlOrKey) {
 module.exports = {
   MAX_WIDTH,
   MAX_HEIGHT,
+  MAX_INPUT_DIMENSION,
   SRCSET_WIDTHS,
   ALLOWED_PROCESS_MIMES,
   assertAllowedMagicBytes,
+  assertSafeDimensions,
   processImageFile,
   processImageBuffer,
   processUploadedFile,
