@@ -1427,7 +1427,7 @@ function renderImagePreview(previewId, url) {
   el.innerHTML = `<div class="photo-thumb place-photo-thumb">${imageSourceBadge(url)}<img src="${escapeHtml(url)}" alt="Kapak önizleme" data-fallback="/images/icon.svg" loading="lazy" decoding="async" /></div>`;
 }
 
-function bindCityImageInput(fileInputId, urlInputId, previewId, hintId) {
+function bindCityImageInput(fileInputId, urlInputId, previewId, hintId, formErrId) {
   const input = document.getElementById(fileInputId);
   const urlInput = document.getElementById(urlInputId);
   if (!input || !urlInput) return;
@@ -1445,7 +1445,12 @@ function bindCityImageInput(fileInputId, urlInputId, previewId, hintId) {
         const fileMap = { ctImage: 'ctImageFile', edCtImage: 'edCtImageFile', catImage: 'catImageFile', edCatImage: 'edCatImageFile' };
         if (btnMap[urlInputId]) updatePhotoBtnLabel(fileMap[urlInputId], btnMap[urlInputId]);
       } catch (e) {
-        showErr(e.message);
+        // formErrId targets an error box inside the open edit modal — the
+        // page-level globalErr sits behind the modal overlay (z-index 200)
+        // and is invisible while a modal is open, which made upload/session
+        // errors here look like "nothing happens" (see AUDIT_FOLLOWUPS.md).
+        if (formErrId) showFormErr(formErrId, e.message);
+        else showErr(e.message);
       }
     };
     if (!window.TL_PLACE_CROP) {
@@ -3521,6 +3526,7 @@ async function openPlaceEdit(id) {
     ).join('');
     openModal('Yer düzenle: ' + p.name, `
       <div class="admin-form">
+        <div id="edFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
         <input class="ain full" id="edName" value="${escapeHtml(p.name)}" aria-label="Ad"/>
         <label class="adm-label-sm" for="edStatus">Yayın durumu</label>
         <select class="ain" id="edStatus" aria-label="Yayın durumu">
@@ -3619,6 +3625,7 @@ async function openPlaceEdit(id) {
 
 async function savePlaceEdit(id) {
   const saveBtn = document.querySelector('#modalActions .btn.bp');
+  clearFormErr('edFormErr');
   setBtnLoading(saveBtn, true, 'Kaydediliyor…');
   try {
     syncCroppedFiles('edPhotos');
@@ -3670,7 +3677,7 @@ async function savePlaceEdit(id) {
     croppedPhotoStore.edPhotos = [];
     await loadPlacesList();
     await refresh();
-  } catch (e) { showErr(e.message); }
+  } catch (e) { showFormErr('edFormErr', e.message); }
   finally { setBtnLoading(saveBtn, false); }
 }
 
@@ -3797,6 +3804,7 @@ async function openCityEdit(id) {
     const c = data.city;
     openModal('Şehir düzenle', `
       <div class="admin-form">
+        <div id="edCtFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
         <input class="ain" id="edCtName" value="${escapeHtml(c.name)}" aria-label="Şehir adı"/>
         <input class="ain" id="edCtCountry" value="${escapeHtml(c.country)}" aria-label="Ülke"/>
         <input class="ain" id="edCtNameEn" value="${escapeHtml(c.nameEn)}" aria-label="İngilizce ad"/>
@@ -3825,13 +3833,14 @@ async function openCityEdit(id) {
       ]
     );
     renderImagePreview('edCtImagePreview', c.imageUrl || '');
-    bindCityImageInput('edCtImageFile', 'edCtImage', 'edCtImagePreview', 'edCtImageHint');
+    bindCityImageInput('edCtImageFile', 'edCtImage', 'edCtImagePreview', 'edCtImageHint', 'edCtFormErr');
     document.getElementById('edCtImage')?.addEventListener('input', () => updateImageUrlHint('edCtImage', 'edCtImageHint', 'edCtImagePreview'));
     updateImageUrlHint('edCtImage', 'edCtImageHint', 'edCtImagePreview');
   } catch (e) { showErr(e.message); }
 }
 
 async function saveCityEdit(id) {
+  clearFormErr('edCtFormErr');
   try {
     await api('/admin/cities/' + id, {
       method: 'PUT',
@@ -3846,7 +3855,7 @@ async function saveCityEdit(id) {
     });
     closeModal();
     await loadCitiesList();
-  } catch (e) { showErr(e.message); }
+  } catch (e) { showFormErr('edCtFormErr', e.message); }
 }
 
 function confirmDeleteCity(id, name, placeCount) {
@@ -3932,6 +3941,7 @@ async function openCategoryEdit(id) {
     if (!c) throw new Error('Kategori bulunamadı');
     openModal('Kategori düzenle', `
       <div class="admin-form">
+        <div id="edCatFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
         <label class="adm-label-sm full" for="edCatSlug">Kod (slug)</label>
         <input class="ain full" id="edCatSlug" value="${escapeHtml(c.slug)}" placeholder="örn. historical, museum" aria-label="Kategori kodu"/>
         <p class="adm-field-hint">İngilizce teknik kod; Türkçe ad ayrı alandadır.</p>
@@ -3958,13 +3968,14 @@ async function openCategoryEdit(id) {
         { label: 'Kaydet', primary: true, onClick: () => saveCategoryEdit(id) },
       ]
     );
-    bindCityImageInput('edCatImageFile', 'edCatImage', 'edCatImagePreview', 'edCatImageHint');
+    bindCityImageInput('edCatImageFile', 'edCatImage', 'edCatImagePreview', 'edCatImageHint', 'edCatFormErr');
     updateImageUrlHint('edCatImage', 'edCatImageHint', 'edCatImagePreview');
     updatePhotoBtnLabel('edCatImageFile', 'edCatImageBtnLabel');
   } catch (e) { showErr(e.message); }
 }
 
 async function saveCategoryEdit(id) {
+  clearFormErr('edCatFormErr');
   try {
     await api('/admin/categories/' + id, {
       method: 'PUT',
@@ -3980,7 +3991,7 @@ async function saveCategoryEdit(id) {
     closeModal();
     await loadCategoriesList();
     await loadCategoryOptions();
-  } catch (e) { showErr(e.message); }
+  } catch (e) { showFormErr('edCatFormErr', e.message); }
 }
 
 function confirmDeleteCategory(id, slug, placeCount) {
