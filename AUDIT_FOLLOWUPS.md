@@ -130,6 +130,96 @@ getiriyor; ayrı bir takip maddesi olarak ele alınmalı.
   dediği oranda değil "4:3" kırpardı) — bu yüzden bu PR'ın "tek, odaklı düzeltme" kuralı gereği
   metne DOKUNULMADI. İsterse ayrı bir küçük kopya-düzeltme PR'ı olarak ele alınabilir.
 
+## Claude FAZ2-3 (Görsel CLS — denetlendi, DEĞİŞİKLİK YOK: zaten tamamdı)
+
+Claude Master PRD "FAZ 2 — Performans ve Core Web Vitals" → [FAZ2-3] Görsel CLS düzeltmesi.
+PRD metni kendi uyarısını taşıyordu: "Bu HTML değişikliği içeriyor. Uygulamadan önce onay iste."
+**Bu madde için Yasin'e onay SORULMADI çünkü denetim sonucu uygulanacak hiçbir HTML/CSS
+değişikliği bulunamadı** — PRD'nin istediği üç CSS kuralı ve lazy/eager stratejisi, geçmiş bir
+çalışma döngüsünde ("v2 YÜKSEK-3", PR #41, `d3c9b1e`) zaten eklenmiş ve `main`'de duruyor.
+Bu madde yalnızca doğrulama genişletti; görünür hiçbir şey değişmedi.
+
+**Denetim bulguları (dosya/satır ile):**
+
+1. **Mekân kartları (`place-card-image`) — TAMAM.** `public/css/style.css:181-182`:
+   `.pc-img{aspect-ratio:4/3;...}` + `.pc-img img,.place-card img{...object-fit:cover;
+   aspect-ratio:4/3;...}`. Ayrıca `public/js/img.js`'teki `TL_IMG.tag()` her kart görseline
+   `width="400" height="300"` HTML attribute'u da ekliyor (çift koruma: CSS aspect-ratio + HTML
+   boyutu). Kullanıldığı yerler: ana sayfa (`app.js:1119`), kategoriler (`app.js:533`), yakın/
+   benzer yerler (`app.js:856/872`, `kind:'thumb'`+ sabit `.ni-img{width:34px;height:34px}`),
+   favoriler/kaydedilenler (`app.js:2836/2883`), arama sonuçları (`search.html:174`), profil
+   kaydedilen yerler (`profile.html:364/493`), keşfet şehir kartları (`discover-places.js:176`).
+   Hepsi aynı `TL_IMG.tag()`/`responsiveImg()` yardımcısından geçiyor — tutarlı.
+2. **Blog kartları (`blog-card-image`) — TAMAM, farklı ama eşdeğer teknikle.** PRD `aspect-
+   ratio:16/9` önerdi; kod tabanı onun yerine **sabit piksel yüksekliği** kullanıyor
+   (`public/css/style.css:233-235`: `.bimg{width:100%;object-fit:cover;...}`,
+   `.bcard.feat .bimg{height:380px}`, `.bcard:not(.feat) .bimg{height:165px}`). Her ikisi de
+   CLS'i aynı şekilde önler (resim yüklenmeden ÖNCE kutu boyutu kesinleşiyor); sabit yükseklik
+   hatta aspect-ratio'dan daha garanti çünkü grid genişliği ne olursa olsun sabit kalıyor. Görseller
+   de `TL_IMG.tag(..., { kind:'card' })` üzerinden `width="400" height="300"` + `loading="lazy"`
+   alıyor (`app.js:2596`). Blog detay sayfasında "ilgili yazılar" grid'i YOK (böyle bir özellik bu
+   kod tabanında hiç uygulanmamış) — kontrol edilecek bir CLS yüzeyi değil.
+3. **Hero — TAMAM, PRD'nin önerdiğinden daha güçlü.** PRD `min-height:500px` önerdi; kod tabanı
+   `public/css/style.css:110`: `.hero{min-height:100vh;min-height:100dvh;...}` kullanıyor — tam
+   viewport yüksekliği, görsel yüklenmeden önce de sonra da ASLA değişmeyen bir rezervasyon
+   (500px'ten daha güçlü bir CLS koruması, çünkü viewport'tan küçük hiçbir ekranda daralmıyor).
+   Hero bir `<img>` DEĞİL; CSS `background-image` olan `.hero-slide` katmanları (carousel,
+   `hero-carousel.js`) `.hero` içinde `position:absolute;inset:0` ile duruyor — yani hero görseli
+   kendi kutusunu zaten hiç etkilemiyor (CLS riski yapısal olarak yok).
+4. **Lazy vs eager/fetchpriority — TAMAM.** Hero LCP görseli `<img loading="eager">` değil,
+   `public/index.html:34`: `<link rel="preload" as="image" href="/images/hero.webp"
+   fetchpriority="high"/>` — PRD'nin istediği "yüksek öncelik + erken yükleme" hedefine `<img>`
+   yerine `preload` ile ulaşılmış (carousel'i bozmamak için bilinçli tercih, bkz. "v2 YÜKSEK-3"
+   bölümündeki leftover notu). Diğer TÜM görseller (`public/js/img.js`'teki `TL_IMG.tag()`
+   varsayılanı) `loading="lazy"` + `decoding="async"` alıyor; `o.eager` bayrağı olmadan hiçbir
+   kart/thumb/detay görseli eager yüklenmiyor. Statik HTML `<img>` etiketlerinin TAMAMI
+   (404/500 logo, nav/footer logo, auth sayfaları, admin thumbnail'leri) `loading="lazy"` +
+   `width`/`height` + `alt` taşıyor — `npm run verify:images` bunu otomatik tarıyor.
+5. **Admin paneli görsel listeleri** — yer/kategori/medya/Tiola thumbnail'leri `admin.html`'de
+   satır-içi `style="width:...px;height:...px;object-fit:cover"` ile zaten sabit boyutlu
+   (örn. `admin.html:2397,2721,3768,3897`); CLS riski yok (Yasin'in kendi iş akışı için önemli
+   bir yüzey, ayrıca kontrol edildi).
+
+**Gerçek tarayıcıda ölçüm (Playwright + sistem `google-chrome-stable`, geçici — repoya
+eklenmedi; yavaş 3G'ye yakın network throttling ile, `PerformanceObserver({type:'layout-shift'})`
+her sayfada canlı sunucuya karşı çalıştırıldı, local Postgres + gerçek seed veri, 1106 mekan):**
+
+| Sayfa | Toplam CLS | Görsel kaynaklı CLS |
+|---|---|---|
+| Ana sayfa (mekân kartları + hero) | 0.00005 | **0.00000** |
+| Blog listesi (blog kartları) | 0.24603 | **0.00000** |
+| Arama sonuçları | 0.68225 | **0.00000** |
+| Mekân detay (yakın/benzer kartlar) | 0.01342 | **0.00000** |
+
+Her sayfadaki ölçülen kayma kaynakları (`LayoutShift.sources[].node`) tek tek incelendi: hiçbiri
+`<img>`, `.pc-img`, `.bcard`/`.bimg`, `.hero` veya `.ni-img` değil. Kaynaklar: `nav-tabs`/`authBtn`
+(nav metin genişliği), `.hc` (hero metin kutusu — font/i18n ile ilgili, görselle ilgisi yok),
+`site-footer` (blog sekmesinde görünürlük geçişi — bu da görselle ilgisiz, ayrı bir UI akışı),
+`searchGrid`/`searchPager`/`searchSubmit`/`searchSort`/`searchCat` (arama sayfasında sonuç
+grid'inin yüklenme durumundan gerçek sonuçlara geçişi — yine görsel boyutlandırmayla ilgisiz, ayrı
+bir "loading state" konusu). **Sonuç: görsellerin kendisi hiçbir sayfada ölçülebilir bir layout
+shift'e sebep olmuyor.** (Not: blog/arama sayfalarındaki görsel-dışı CLS kaynakları — footer
+görünürlük geçişi, arama grid'i yüklenme durumu — gerçek ama FAZ2-3'ün kapsamı dışında; ayrı bir
+"loading-state CLS" denetim maddesi olarak not edildi, bu PR'da dokunulmadı.)
+
+**Sonuç: HİÇBİR CSS/HTML değişikliği önerilmedi/uygulanmadı.** Tek değişiklik: `npm run
+verify:images` (`server/scripts/verify-images.js`), blog kartı sabit yüksekliğini (`165px`/
+`380px`) ve `.hero{min-height:100vh}` rezervasyonunu da statik olarak doğrulayacak şekilde
+genişletildi (önceden yalnızca mekân kartı `aspect-ratio:4/3`'ü kontrol ediyordu) — böylece
+gelecekte biri bu CSS'i kazara silerse CI kırmızı yanar.
+
+### Leftover
+- Blog listesi ve arama sonuçları sayfalarında görsel-dışı CLS var (footer görünürlük geçişi
+  ~0.25 toplam; arama grid'inin yüklenme-durumundan-sonuçlara geçişi ~0.68 toplam). Görsel
+  CLS'i değil, ayrı bir "loading state / iskelet ekranı" konusu — ayrı bir denetim maddesi
+  olarak değerlendirilmeli, bu PR'ın kapsamında değil.
+- Mekân detay sayfasının ana görseli (`pdImg`, `public/index.html:456`) `loading="lazy"` —
+  sayfa açılır açılmaz görünür olduğu için teorik olarak `eager` daha uygun olurdu (LCP), ama
+  bu da görsel bir değişiklik değil, sadece bir yükleme önceliği ince ayarı; kapsam dışı
+  bırakıldı (ayrı, küçük, görünmez bir performans maddesi olabilir).
+
+`npm run verify:images`.
+
 ## Claude FAZ2-1 (JavaScript code splitting)
 
 Claude Master PRD "FAZ 2 — Performans ve Core Web Vitals" → [FAZ2-1] JS code splitting.
