@@ -2,6 +2,71 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Admin paneli: görsel yükleme çalışmıyor (Yasin bildirdi)
+
+**Bildirim:** "admin panelinden görsel ekle diyince çalışmıyor sanırım eklemiyor çünkü" — hangi sayfa, hangi hata belirtilmedi.
+
+### Yapılan inceleme
+
+Admin panelindeki **7 görsel yükleme noktasının hepsi** tek tek okundu ve uçtan uca izlendi:
+yer (place) fotoğrafları (`plPhotos` / `edPhotos`), şehir görseli (`ctImageFile` / `edCtImageFile`),
+kategori görseli (`catImageFile` / `edCatImageFile`), hero görseli (`heroImageFile`). Medya kütüphanesi
+yalnızca listeleme/silme; blog kapak görseli yalnızca URL alanı — bu ikisinde dosya seçici yok.
+
+- **Statik:** `public/admin.html` (tek satır-içi `<script>`, 1097–5021) `node --check` ile sözdizimi hatası
+  yok; tekrarlanan `const`/`let` yok. Her `<input type="file">` için `FormData` alan adı (`image`/`photos`)
+  sunucudaki `multer` (`upload.single('image')` / `upload.array('photos', 10)`) ile birebir eşleşiyor.
+  Rotalar `server/index.js`'teki `/api/admin` mount noktasıyla uyumlu. `/api/admin`'deki `csrfProtection`
+  Origin/Referer tabanlı (token değil) — `FormData` istekleri için ekstra başlık gerekmiyor. CSP
+  (`script-src`, `img-src: https:`, `connect-src`) hiçbir yükleme veya önizleme isteğini engellemiyor.
+  `git log` ile `admin.html`, `server/routes/admin.js`, `image-process.js`, `image-uploader.js`,
+  `supabase-storage.js` dosyalarının geçmişi tarandı — PR #58–#66 bu dosyalara dokunmamış, yakın zamanlı
+  bir regresyon bulunamadı.
+- **Canlı:** Bu sandbox'ta gerçek bir Postgres + Express sunucusu ayağa kaldırılıp admin olarak giriş
+  yapıldı, gerçek bir JPEG ile üç uç nokta de doğrudan HTTP ile çağrıldı:
+  `POST /api/admin/media`, `POST /api/admin/hero-image`, `POST /api/admin/places/:id/photos` —
+  **üçü de 200 döndü**, `sharp` EXIF temizleme/1920p sınırlama/WebP dönüşümü çalıştı, disk'e (bu
+  sandbox'ta `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` tanımlı değil, yerel disk fallback'i kullanıldı)
+  yazıldı, DB güncellendi, doğru `url` JSON yanıtı döndü. (`server/scripts/verify-admin-image-upload.js`)
+
+### Bulunan gerçek hata: istemci taraflı 5 MB sınırı çok düşük
+
+`public/js/place-crop.js` (yer/şehir/kategori görseli kırpma modalı), seçilen **orijinal** dosyanın
+5 MB'ı geçmesini `alert()` ile reddediyordu — bu kontrol kırpma/küçültme adımından ÖNCE çalışıyor.
+Oysa kırpma çıktısı her zaman ~1280px genişliğe küçültülüyor (çıktı tipik olarak birkaç yüz KB),
+yani sunucunun gerçek 5 MB yükleme sınırı bu çıktı için zaten bol bol yetiyor — sorun SEÇİLEN
+orijinal dosyada. Modern telefon kameraları (özellikle Android, yüksek çözünürlüklü iPhone fotoğrafları)
+sık sık 6–15 MB JPEG üretir; bu dosyalar kırpma ekranına hiç girmeden `alert()` ile reddediliyordu.
+Hero görseli yükleme (`compressHeroImageFile`, `admin.html`) bu sorunu daha önce 12 MB sınırı +
+otomatik küçültme ile çözmüştü, ama aynı düzeltme yer/şehir/kategori görselleri için hiç yapılmamıştı.
+
+Bir `alert()` kutusu teknik olarak "görünür" bir hata mesajıdır, ama Yasin'in tarif ettiği "görseli
+seçtim, hiçbir şey olmadı" hissiyle tam örtüşüyor: popup'ı fark etmeyen veya mesajı net anlamayan bir
+kullanıcı için sonuç "yüklemiyor" gibi görünür — hele ki aynı ekranda (hero) daha yüksek bir sınırın
+zaten çalıştığını bilmiyorsa.
+
+**Düzeltme:** `place-crop.js`'teki `MAX_FILE_BYTES` 5 MB → 12 MB (hero ile aynı sınır) yükseltildi,
+`admin.html`'deki 4 yerdeki "max 5 MB" ipucu metni "max 12 MB" olarak güncellendi. Sunucu tarafı
+`multer` sınırları (5 MB) **değiştirilmedi** — kırpılmış çıktı için zaten yeterli, sorun hiç oraya
+ulaşmıyordu.
+
+### Dürüstlük notu — kesin kök neden teyit edilemedi
+
+Bu sandbox'ta `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` yok, yani gerçek Supabase Storage çağrısı test
+edilemedi (yalnızca disk fallback'i doğrulandı — kod yolu aynı, `server/lib/supabase-storage.js`
+hem POST hem de 409'da PUT deniyor, hata mesajları `showErr`/`showFormErr` ile her yükleme yolunda
+yakalanıp gösteriliyor). 5 MB sınırı gerçek bir hata ve düzeltildi, ama Yasin'in TAM olarak hangi
+dosyayı hangi ekranda denediği bilinmediği için bunun onun karşılaştığı **tek** sorun olduğu kesin
+değil. Canlıda hâlâ sorun varsa muhtemel sebepler: (a) Render'daki `SUPABASE_SERVICE_KEY` yanlış/süresi
+dolmuş veya bucket izinleri eksik (bu sandbox'tan test edilemez), (b) seçilen dosya HEIC/RAW gibi
+desteklenmeyen bir format (JPEG/PNG/WebP dışı — `alert()` ile açıkça reddediliyor), (c) 12 MB'ı da
+aşan çok büyük bir orijinal dosya. Yasin'e: tarayıcıda F12 → Network sekmesinde ilgili `/api/admin/...`
+isteğinin durumunu ve Console'daki kırmızı hatayı PR açıklamasında istendiği gibi iletmesi istendi.
+
+`npm run verify:admin-image-upload` — yeni eklendi: yerel sunucu + admin oturumu ile üç yükleme
+ucunu da gerçek bir JPEG ile uçtan uca test eder (disk fallback), `place-crop.js`'teki yeni 12 MB
+sınırını statik olarak doğrular, admin.html'deki ipucu metinlerinin güncellendiğini kontrol eder.
+
 ## Claude Master PRD — FAZ1-5 (RBAC / admin audit log)
 
 **Şeffaflık notu:** Bu maddenin orijinal PRD metni (Claude'un yazdığı Touristlio Cursor Master PRD) bu sandbox'ta mevcut değildi — önceki bir sohbette yüklenmiş ama diske kalıcı olarak geçmemiş. `AUDIT_FOLLOWUPS.md`, git geçmişi ve `/home/ubuntu/.cursor/projects/workspace/uploads/` aranmış, bulunamamıştır. Kapsam, önceki ajanın bağlamından çıkarıldı: **"RBAC zorlaması + hassas admin eylemleri için audit log"**. Bu nedenle madde ismi/kapsamı PRD'nin orijinaliyle %100 örtüşmeyebilir — ama güvenlik açısından en kritik, mantıklı yorumdur.

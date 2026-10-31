@@ -116,7 +116,7 @@
                 <span id="plPhotoCount" class="adm-photo-count" aria-live="polite"></span>
               </div>
               <div id="plPhotoPreview" class="photo-preview-row" aria-live="polite"></div>
-              <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · dosya başına max 5 MB</p>
+              <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · dosya başına max 12 MB</p>
             </div>
             <textarea class="ain full adm-textarea-sm" id="plDesc" placeholder="Açıklama (TR)" aria-label="Açıklama Türkçe"></textarea>
             <textarea class="ain full adm-textarea-sm" id="plDescEn" placeholder="Description (EN)" aria-label="Açıklama İngilizce"></textarea>
@@ -164,7 +164,7 @@
                 <input type="file" id="ctImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp" aria-label="Şehir görseli yükle"/>
               </label>
             </div>
-            <p class="photo-upload-hint">JPEG, PNG, WebP · dosya başına max 5 MB</p>
+            <p class="photo-upload-hint">JPEG, PNG, WebP · dosya başına max 12 MB</p>
           </div>
           <button class="btn bp bsm full" type="button" id="btnAddCity" data-act="addCity" aria-label="Şehir ekle">Şehir ekle</button>
           </div>
@@ -3547,7 +3547,7 @@ async function openPlaceEdit(id) {
             <span id="edPhotoCount" class="adm-photo-count" aria-live="polite"></span>
           </div>
           <div id="edPhotoNewPreview" class="photo-preview-row"></div>
-          <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · dosya başına max 5 MB</p>
+          <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · dosya başına max 12 MB</p>
         </div>
         <textarea class="ain full" id="edDesc" aria-label="Açıklama" style="height:60px">${escapeHtml(p.description || '')}</textarea>
 
@@ -3814,7 +3814,7 @@ async function openCityEdit(id) {
               <input type="file" id="edCtImageFile" class="adm-photo-input" accept="image/jpeg,image/png,image/webp" aria-label="Şehir görseli yükle"/>
             </label>
           </div>
-          <p class="photo-upload-hint">JPEG, PNG, WebP · max 5 MB</p>
+          <p class="photo-upload-hint">JPEG, PNG, WebP · max 12 MB</p>
         </div>
         <label style="font-size:.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="edCtActive" ${c.isActive ? 'checked' : ''} aria-label="Aktif"/> Aktif</label>
       </div>
