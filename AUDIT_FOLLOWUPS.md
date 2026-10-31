@@ -2,6 +2,43 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Profil avatarı kırpma penceresi — PR #71'in kapsam dışı bıraktığı leftover kapatıldı
+
+PR #71 (`public/js/place-crop.js`), admin "Düzenle" modalındaki kırpma penceresinin hiç
+görünmemesine neden olan iki hata bulup düzeltti, ve AUDIT_FOLLOWUPS.md'de `avatar-crop.js`'te
+(profil fotoğrafı yükleme) **aynı lazy-load hatasının muhtemelen olduğunu** dürüstçe not edip
+kapsam dışı bıraktı. Bu takip maddesi o leftover'ı kapatıyor.
+
+**Doğrulama sonucu:**
+
+1. **Lazy-load çıkmazı — AYNI HATA, DOĞRULANDI.** `avatar-crop.js`'teki `#avatarCropImg` da
+   `loading="lazy"` taşıyordu; kırpma penceresini (`.auth-ov`) görünür yapan `.on` sınıfı da
+   burada YALNIZCA bu resmin kendi `onload` olayı içinde ekleniyordu. `display:none` kapsayıcı
+   içinde lazy resim asla `onload` ateşlemiyor → pencere sonsuza dek görünmez kalıyor. Gerçek
+   Chrome ile (Playwright + sistem `google-chrome-stable`, bu sandbox'ta geçici, repoya
+   eklenmedi) doğrulandı: düzeltmeden ÖNCE Profil → Ayarlar → fotoğraf seçince kırpma penceresi
+   DOM'da var ama `display:none`/`.on` yok, tamamen görünmez; düzeltmeden SONRA aynı adımlarla
+   pencere açılıyor, yakınlaştırma çalışıyor, "Kaydet" ile kırpılmış dosya üretilip pencere
+   kapanıyor. **Düzeltme:** `#avatarCropImg`'den `loading="lazy"` kaldırıldı — place-crop.js'teki
+   birebir aynı tek satırlık, görsel/tasarım etkisi olmayan düzeltme.
+2. **Z-index çakışması — İNCELENDİ, BU DOSYADA GEREKSİZ (uygulanmadı).** place-crop.js'in
+   z-index sorunu yalnızca kırpma penceresinin bir admin "Düzenle" modalının (`.admin-modal-
+   overlay`/`.admin-lightbox`, z-index 620/640) İÇİNDEN açılabildiği için ortaya çıkıyordu.
+   Avatar kırpma penceresi için bu senaryo yok: `profile.html`'deki `#avatarFile` girişi
+   sayfanın normal akışında, hiçbir modal/overlay içinde değil (avatar yükleme her zaman kendi
+   tam sayfasında). `admin.html` ise `avatar-crop.js`/`TL_AVATAR_CROP`/`avatarFile`'ı hiç
+   kullanmıyor — admin tarafındaki tek avatar özelliği "Profil fotoğrafını kaldır"
+   (`POST /admin/users/:id/remove-avatar`), kırpma adımı OLMAYAN doğrudan bir silme işlemi. Bu
+   yüzden `ov.style.zIndex` eklemek burada gereksiz, spekülatif bir değişiklik olurdu — eklenmedi.
+
+**Doğrulama:** Yeni `server/scripts/verify-avatar-crop-visibility.js`
+(`npm run verify:avatar-crop`) — statik regresyon muhafızı (place-crop.js'in `verify-admin-
+image-picker.js`'iyle aynı desende): `#avatarCropImg`'de `loading="lazy"` kalmadığını, admin.html
+hâlâ avatar-crop.js kullanmadığını, `#avatarFile`'ın bir admin modalı içine taşınmadığını ve
+FAZ2-1'in (PR #69) `ensureAvatarCropLib()` lazy-load mekanizmasının bozulmadığını doğrular.
+Regresyon kontrolü: `verify:admin-image-picker`, `verify:faz2-1`, `verify:admin-image-upload`,
+`verify:admin-security`, `verify:user-system` — hepsi yeşil.
+
 ## Admin paneli: "Görseli ayarla" ile hiçbir şey olmuyor (Yasin — PR #67/#68 SONRASI yeni, daha spesifik bildirim)
 
 **Bildirim:** "Yer düzenle" modalının "Fotoğraflar" bölümünde (16:9 kırpma; "Mevcut görseller" /

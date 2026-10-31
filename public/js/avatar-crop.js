@@ -39,7 +39,14 @@
         <h3 id="avatarCropTitle" class="avatar-crop-title" data-i18n="avatarCropTitle">Fotoğrafı kırp</h3>
         <div class="avatar-crop-stage" id="avatarCropStage">
           <div class="avatar-crop-viewport" id="avatarCropViewport">
-            <img class="avatar-crop-img" id="avatarCropImg" alt="Kırpılacak fotoğraf" draggable="false" loading="lazy"/>
+            <!-- No loading="lazy" here: this <img> lives inside a dialog that
+                 starts display:none (.auth-ov), and open() only adds the
+                 visible .on class inside THIS image's own onload handler.
+                 Lazy-loaded images never fire onload while their container is
+                 display:none (no viewport intersection to trigger them), so
+                 the dialog could never become visible — a silent deadlock,
+                 no console error. Same bug fixed in place-crop.js (PR #71). -->
+            <img class="avatar-crop-img" id="avatarCropImg" alt="Kırpılacak fotoğraf" draggable="false"/>
           </div>
           <div class="avatar-crop-overlay" aria-hidden="true"></div>
         </div>
