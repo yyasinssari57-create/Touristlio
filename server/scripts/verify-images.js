@@ -161,6 +161,28 @@ async function makePngSpoofedAsJpg(filePath) {
   if (!indexHtml.includes('fm=webp')) fail('hero carousel Unsplash slides missing fm=webp');
   else ok('hero carousel Unsplash slides request WebP');
 
+  // [FAZ2-3] CLS audit — confirm blog cards and hero already reserve layout space
+  // (place cards were covered by v2 YÜKSEK-3 checks above; this closes the loop for
+  // blog-card fixed-height and hero min-height so a future regression fails CI).
+  const cssFlat = css.replace(/\s+/g, '');
+  if (!/\.bimg\{[^}]*width:\s*100%/.test(css)) {
+    fail('.bimg missing width:100% (blog card CLS)');
+  } else ok('.bimg width:100% (blog cards)');
+  if (!/\.bcard\.feat\.bimg\{[^}]*height:380px/.test(cssFlat)) {
+    fail('.bcard.feat .bimg missing fixed height 380px (blog card CLS)');
+  } else ok('.bcard.feat .bimg height:380px (featured blog card CLS)');
+  if (!/\.bcard:not\(\.feat\)\.bimg\{[^}]*height:165px/.test(cssFlat)) {
+    fail('.bcard:not(.feat) .bimg missing fixed height 165px (blog card CLS)');
+  } else ok('.bcard:not(.feat) .bimg height:165px (regular blog card CLS)');
+  if (!/\.hero\{[^}]*min-height:\s*100vh/.test(cssFlat)) {
+    fail('.hero missing min-height reservation (hero CLS)');
+  } else ok('.hero min-height:100vh (hero CLS — stronger than fixed 500px since it never collapses)');
+
+  if (!imgJs.includes('card: { width: 400, height: 300 }')) fail('TL_IMG.DIMS.card missing 400x300');
+  else ok('TL_IMG.DIMS.card = 400x300 (used by place + blog + city cards)');
+  if (!imgJs.includes("loading = o.eager ? 'eager' : 'lazy'")) fail('TL_IMG.tag missing eager/lazy switch');
+  else ok('TL_IMG.tag defaults to loading="lazy", opt-in eager (hero handled separately via CSS+preload)');
+
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch { /* ignore */ }
