@@ -190,8 +190,10 @@ app.use('/api/trip-plans', tripPlansRoutes);
 app.use('/api/live-data', liveDataRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/users', usersRoutes);
-app.use('/api/moderation', moderationRoutes);
+// /api/users (rol atama) ve /api/moderation (içerik onay/red) admin'e özel
+// mutasyonlar içerir — /api/admin ile aynı CSRF koruması (FAZ1-5).
+app.use('/api/users', csrfProtection, usersRoutes);
+app.use('/api/moderation', csrfProtection, moderationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reports', reportsRoutes);

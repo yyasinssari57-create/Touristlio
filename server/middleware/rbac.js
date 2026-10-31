@@ -5,14 +5,21 @@ const PANEL_ROLES = ['admin', 'moderator', 'editor', 'staff'];
 const ASSIGNABLE_ROLES = ['member', 'editor', 'moderator', 'staff'];
 const PROTECTED_USER_ROLES = ['admin'];
 
+// NOT: `admin.users` burada kasıtlı olarak YOK — server/db.js'teki gerçek
+// seed (rolePerms) moderator/staff'a bu izni hiç vermiyor; bu liste yalnızca
+// role_permissions tablosunda o rol için SIFIR satır varsa devreye giren bir
+// yedek (effectivePermissions). FAZ1-5 öncesi burada 'admin.users' vardı —
+// seed'den farklıydı ve rol atama uç noktasında (PATCH /api/users/:id/role)
+// gereksiz bir ayrıcalık yükseltme riskine açık kapı bırakıyordu. O uç nokta
+// artık ayrıca requireRole('admin') ile kilitli; bu liste de seed'le hizalandı.
 const ROLE_DEFAULT_PERMS = {
   moderator: [
-    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.users', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
   editor: ['admin.dashboard', 'admin.analytics', 'admin.content'],
   staff: [
-    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.users', 'admin.places', 'admin.cities',
+    'admin.dashboard', 'admin.analytics', 'admin.moderate', 'admin.places', 'admin.cities',
     'admin.categories', 'admin.content',
   ],
 };
