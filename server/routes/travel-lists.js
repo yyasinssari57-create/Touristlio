@@ -3,13 +3,19 @@ const express = require('express');
 const { db } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const { mapPlaceRow } = require('../lib/place-map');
-const { placeStats } = require('../db');
 const { parsePositiveInt } = require('../lib/sanitize');
 
 const router = express.Router();
 
-async function mapPlace(row) {
-  return mapPlaceRow(row, await placeStats(row.id));
+// Claude Master PRD FAZ2-4 (N+1 cleanup): this used to call placeStats(row.id)
+// per row, which re-queries `SELECT tiola_count, tiola_rating FROM places
+// WHERE id = ?` — a query the JOINs below already answer, since they select
+// `p.*` (places.tiola_count / tiola_rating are denormalized cached columns
+// on the row). mapPlaceRow() already falls back to row.tiola_count /
+// row.tiola_rating when no stats map is passed, so this is a pure removal
+// of a redundant query per place, same as places.service.js / search.js.
+function mapPlace(row) {
+  return mapPlaceRow(row);
 }
 
 router.get('/visited/all', authRequired, async (req, res) => {
@@ -17,10 +23,7 @@ router.get('/visited/all', authRequired, async (req, res) => {
     SELECT p.*, vp.visited_at, vp.note FROM visited_places vp
     JOIN places p ON p.id = vp.place_id WHERE vp.user_id = ? ORDER BY vp.visited_at DESC
   `).all(req.user.id);
-  const places = [];
-  for (const r of rows) {
-    places.push({ ...await mapPlace(r), visitedAt: r.visited_at, visitNote: r.note });
-  }
+  const places = rows.map((r) => ({ ...mapPlace(r), visitedAt: r.visited_at, visitNote: r.note }));
   res.json({ places });
 });
 
@@ -70,7 +73,7 @@ router.get('/public/:shareToken', async (req, res) => {
       createdAt: list.created_at,
       updatedAt: list.updated_at,
     },
-    places: await Promise.all(items.map((r) => mapPlace(r))),
+    places: items.map((r) => mapPlace(r)),
   });
 });
 
@@ -134,7 +137,7 @@ router.get('/:id', authRequired, async (req, res) => {
       isPublic: !!list.is_public,
       shareToken: list.share_token || null,
     },
-    places: await Promise.all(items.map((r) => mapPlace(r))),
+    places: items.map((r) => mapPlace(r)),
   });
 });
 
