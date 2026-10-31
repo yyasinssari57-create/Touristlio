@@ -36,6 +36,7 @@
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",
     "verify:faz2-1": "node server/scripts/verify-faz2-1-code-split.js",
+    "verify:faz2-2": "node server/scripts/verify-faz2-2-image-pipeline.js",
     "verify:faz4": "node server/scripts/verify-gemini-faz4.js",
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
