@@ -15,6 +15,31 @@ async function log({ adminId, adminName, action, targetType, targetId, detail })
   `).run(adminId, cleanName, cleanAction, cleanTargetType, tid, cleanDetail);
 }
 
+/**
+ * Same as log(), but writes every entry in a single multi-row INSERT —
+ * used by bulk admin actions (/tiolas/bulk, /blogs/bulk) so a 20-item batch
+ * writes one audit row per item without one DB round-trip per item
+ * (Claude Master PRD FAZ2-4 — N+1 query cleanup).
+ */
+async function logBatch(entries) {
+  const rows = (entries || [])
+    .filter((e) => e && e.adminId && e.action)
+    .map((e) => [
+      e.adminId,
+      e.adminName ? sanitizeText(e.adminName, 120) : null,
+      sanitizeText(e.action, 80),
+      e.targetType ? sanitizeText(e.targetType, 40) : null,
+      e.targetId != null && Number.isFinite(Number(e.targetId)) ? Number(e.targetId) : null,
+      e.detail != null ? sanitizeText(String(e.detail), 2000) : null,
+    ]);
+  if (!rows.length) return;
+  const placeholders = rows.map(() => '(?, ?, ?, ?, ?, ?)').join(', ');
+  await db.prepare(`
+    INSERT INTO admin_audit_log (admin_id, admin_name, action, target_type, target_id, detail)
+    VALUES ${placeholders}
+  `).run(...rows.flat());
+}
+
 async function list({ page = 1, limit = 50, action, adminId, targetType, dateFrom, dateTo } = {}) {
   const pg = Math.max(Number(page) || 1, 1);
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 100);
@@ -81,4 +106,4 @@ async function list({ page = 1, limit = 50, action, adminId, targetType, dateFro
   };
 }
 
-module.exports = { log, list };
+module.exports = { log, logBatch, list };

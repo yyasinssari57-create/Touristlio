@@ -2,7 +2,134 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
-## Profil avatarı kırpma penceresi — PR #71'in kapsam dışı bıraktığı leftover kapatıldı
+## Claude Master PRD — FAZ2-4 (N+1 Sorgu Temizliği)
+
+Claude Master PRD "FAZ 2 — Performans ve Core Web Vitals" → [FAZ2-4] N+1 sorgu
+temizliği. PRD'nin illüstratif metni `place_stats` materialized view + JOIN
+önerir; bu depoda gerçek şema farklı — `places.tiola_count` / `places.tiola_rating`
+zaten denormalize, önbelleğe alınmış kolonlar (ORTA-1'den beri), ayrı bir stats
+tablosu/materialized view yok. Bu yüzden PRD'nin tam SQL'i yerine bu kod tabanının
+gerçek N+1 desenleri bulundu ve düzeltildi.
+
+### Bulunan ve düzeltilen gerçek N+1'ler
+
+**1) `server/routes/admin.js` — `POST /tiolas/bulk` ve `POST /blogs/bulk`.**
+Önceki hâli, istekteki her id için ayrı ayrı: bir SELECT (durumu/sahibini okumak
+için, approve dışında) + bir UPDATE + bir stats-recompute (place_id okuma + COUNT/AVG
++ UPDATE places, 3 ayrı sorgu) + bir bildirim INSERT + bir admin_audit_log INSERT +
+bir moderation_history INSERT çalıştırıyordu — 20 öğelik bir toplu işlem **60-120+
+ayrı veritabanı sorgusu** demekti. Artık:
+  - Tek bir `UPDATE ... WHERE id = ANY($1::int[]) ... RETURNING ...` ile tüm uygun
+    öğeler tek sorguda güncelleniyor (approve); reddet/kaldır için tek bir toplu
+    SELECT (durum/sahip bilgisi için) + tek bir toplu UPDATE.
+  - `server/lib/tiola-stats.js`'e eklenen `recomputePlaceTiolaStatsBatch(placeIds)`:
+    etkilenen TÜM mekânlar için tek bir GROUP BY sorgusuyla sayı/ortalama hesaplar,
+    sonra yalnızca FARKLI (distinct) mekân sayısı kadar UPDATE çalıştırır — 20 öğe
+    aynı mekâna aitse bu **1 mekân** demektir, farklı mekânlara dağılmışsa en fazla
+    N ama genelde çok daha az.
+  - `server/lib/auditLog.js`, `server/lib/moderation-history.js`,
+    `server/lib/notifications.js`'e eklenen `logBatch()` / `createNotificationsBatch()`:
+    her öğe için **ayrı bir satır** yazılmaya devam ediyor (denetim izinin / bildirimin
+    tek satıra birleştirilmesi YOK — her Tiola/blog kendi audit + moderation history
+    satırını koruyor) ama tek bir çok-satırlı `INSERT ... VALUES (...), (...), ...`
+    ile, N ayrı INSERT yerine.
+  - Alıcı başına e-posta gönderimi (`sendTiolaRejectionEmail` / `sendBlogRejectionEmail`)
+    kasıtlı olarak döngüde BIRAKILDI — bu küçük, bellek içi bir döngü ve bir SMTP
+    çağrısı değil bir veritabanı sorgusu; PRD'nin kendisi de "N e-posta gönderimi tek
+    bir SQL sorgusunun yapabileceği bir şey değil" diyerek bunu hariç tutuyor.
+
+**Somut sorgu sayısı (gerçek Postgres test DB'sinde, `verify:faz2-4` ile ölçüldü):**
+
+| Senaryo | Öncesi | Sonrası |
+|---|---|---|
+| `tiolas/bulk` approve, 6 öğe | 37 sorgu | 6 sorgu |
+| `tiolas/bulk` reject, 6 öğe | 49 sorgu | 8 sorgu |
+| `blogs/bulk` approve, 5 öğe | 16 sorgu | 4 sorgu |
+| `tiolas/bulk` approve, 5 öğe (aynı mekân) | 31 sorgu | 6 sorgu |
+| `tiolas/bulk` approve, **20** öğe (aynı mekân) | 121 sorgu | **6 sorgu** (N'den bağımsız) |
+
+20 öğelik bir toplu onayda sorgu sayısı artık öğe sayısından **bağımsız** (tek
+UPDATE + tek stats hesaplama + mekân başına 1 UPDATE + tek audit INSERT + tek
+moderation INSERT + 1 auth sorgusu) — eskiden öğe sayısıyla doğrusal büyüyordu.
+
+**2) `server/routes/travel-lists.js`** — `GET /visited/all`, `GET /:id`,
+`GET /public/:shareToken`: her mekân satırı için `placeStats(row.id)` çağrısı
+`SELECT tiola_count, tiola_rating FROM places WHERE id = ?` ile AYRI bir sorgu
+çalıştırıyordu — hâlbuki bu satırlar zaten `SELECT p.*, ...` ile `places` tablosunu
+JOIN ediyor, yani `tiola_count`/`tiola_rating` ZATEN elde satırda vardı.
+`mapPlaceRow(row)` stats parametresi verilmediğinde zaten `row.tiola_count` /
+`row.tiola_rating`'e düşüyor (places.service.js ve search.js'in ZATEN kullandığı
+aynı desen) — bu yüzden `placeStats()` çağrısı tamamen kaldırıldı, davranış/yanıt
+şekli değişmedi, sadece gereksiz sorgu gitti. Bu, FAZ1-5/diğer FAZ'ların DEĞİL,
+muhtemelen daha eski bir eklemenin (kullanıcı listeleri/ziyaret edilenler
+özelliği) bıraktığı bir N+1'di.
+
+**Daha önce doğrulandı, dokunulmadı:** `listCategories` N+1'i "Gemini Faz 4"
+döngüsünde zaten düzeltilmişti (`catalog-db.js`) — kod incelendi, hâlâ tek sorgulu
+(GROUP BY ile sayım), regresyon yok.
+
+### Kapsam dışı bırakılanlar (bilinçli, ayrı bir iş kalemi)
+
+- **`server/routes/places-legacy.js`'in arama otomatik-tamamlama ve "yakındaki/
+  benzer mekânlar" özellikleri hâlâ `SELECT * FROM places` ile tam tablo taraması
+  yapıyor** (denetimin flaglediği gibi). Bu FAZ2-4'e DAHİL EDİLMEDİ çünkü:
+  - Otomatik tamamlama (`searchHandler`) zaten `wrap()` ile önbelleğe alınıyor
+    (tekrarlanan aynı sorgu önbellekten döner) ve ayrı bir JS eşleştirme mantığı
+    (`matchesQuery`) kullanıyor — bunu `places-search.js`'in `search_tsv` tabanlı
+    sorgusuna geçirmek, otomatik tamamlamanın hangi alanları/şekilde eşleştirdiğini
+    (ad, şehir, ülke, etiket, takma ad) değiştirme riski taşır; bu kullanıcıya
+    görünür bir arama-sonucu davranış değişikliği olurdu — CRITICAL RULES bunu
+    yasaklıyor ("asla API yanıt şeklini veya kullanıcı davranışını değiştirme").
+  - "Benzer mekânlar" (`findSimilarPlaces`) için şu an PROVEN bir SQL eşdeğeri YOK
+    (yalnızca "yakındaki" için `findNearbyPlacesSql`/PostGIS var) — PRD açıkça
+    "mevcut kanıtlanmış yaklaşımı yeniden kullan, yeni bir yöntem icat etme" diyor;
+    "benzer" için SQL mantığı icat etmek bu PR'ın kapsamını N+1 temizliğinden
+    çıkarıp yeni bir özelliğe dönüştürürdü.
+  - Bu tam tablo taraması zaten `AUDIT_FOLLOWUPS.md`'de (önceki kapsamlı denetimde)
+    bilinen bir leftover olarak kayıtlı; ayrı, odaklı bir iş kalemi olarak kalmalı.
+  - **Not:** `/:id` detay sayfası zaten ÖNCE `findNearbyPlacesSql` (PostGIS, indeksli)
+    deniyor, yalnızca o `null` dönerse (PostGIS yoksa) `allRows` tam taramasına
+    düşüyor — yani "yakındaki" için indeksli yol zaten birincil, tam tarama sadece
+    yedek. Asıl tarama maliyeti "benzer mekânlar" için zorunlu.
+- **`server/routes/trip-plans.js`'in `loadTripFull()`'u** her gün (day) için ayrı bir
+  `SELECT ... FROM trip_plan_items WHERE day_id = ?` çalıştırıyor — teknik olarak bir
+  N+1 (N = plan başına gün sayısı, tipik olarak 1-14), ama FAZ2-4'ün hedefi olan admin
+  bulk uçlarından çok daha küçük ölçekli. **Ayrıca bu dosyada, FAZ2-4'ün kapsamı
+  DIŞINDA iki ayrı doğruluk hatası fark edildi** (düzeltilmedi — bunlar N+1 değil,
+  ayrı bir bugfix PR'ı gerektirir): `GET /trip-plans/:id` ve `/share/:token`,
+  `res.json({ trip: loadTripFull(trip.id) })` çağırıyor — `loadTripFull` async
+  olduğu için `await` EKSİK, yanıt muhtemelen boş bir nesne serileştiriyor; benzer
+  şekilde `GET /suggest/nearby`'de origin yokken `all.slice(...).map(mapPlace)`
+  da `await`'siz bir async map. Bunlar FAZ2-4'ün parçası OLARAK düzeltilmedi (N+1
+  temizliği değil, farklı bir doğruluk sorunu) — Yasin'e ayrı bir bugfix item'ı
+  olarak bildirilmeli.
+- Supabase'de elle çalıştırılması gereken yeni bir SQL/migration **YOK** — bu madde
+  saf sorgu-deseni refaktörü (yeni index/materialized view eklenmedi, var olan
+  şema/indeksler yeniden kullanıldı).
+
+### Doğrulama
+
+- Yeni `server/scripts/verify-faz2-4-n-plus-one.js` (`npm run verify:faz2-4`):
+  gerçek `admin.js` router'ını yerel bir Postgres test veritabanına karşı
+  in-process bir sunucuda ayağa kaldırır, `Statement.prototype.get/all/run`'ı
+  (yalnızca test sürecinde, kaynak kod değişmeden) yama ederek her DB sorgusunu
+  sayar, birkaç test Tiola/blog'u toplu onaylar/reddeder ve: (a) durumun doğru
+  güncellendiğini, (b) her öğe için audit-log + moderation-history + bildirim
+  satırının hâlâ AYRI AYRI yazıldığını, (c) 5 öğelik ve 20 öğelik aynı toplu
+  işlemin sorgu sayısının (6 vs 6) DOĞRUSAL ÖLÇEKLENMEDİĞİNİ doğrular — eski koda
+  karşı çalıştırıldığında bu son kontrol gerçekten BAŞARISIZ olur (31 vs 121 sorgu),
+  yani test N+1'i gerçekten yakalıyor.
+- Regresyon: `verify:admin-security`, `verify:faz1-5`, `verify:votes` (`verify-anti-
+  bot.js`), `verify:forms`, `verify:tiolas`, `verify:indexes` — hepsi yeşil (yerel
+  Postgres test DB'sine karşı çalıştırıldı). `verify:faz1-5`'in admin.js'te her
+  mutasyon rotasının `logAdmin()` çağırdığını doğrulayan statik taraması, artık
+  toplu uçlar için eşdeğer `auditLog.logBatch()` desenini de kabul edecek şekilde
+  güncellendi (davranış aynı — her öğe kendi audit satırını alıyor — yalnızca
+  kontrol deseni güncellendi).
+- `verify:tiolas`'taki "detail missing first-Tiola CTA" başarısızlığı bu PR'dan
+  ÖNCE de mevcut (main'de de başarısız) — FAZ2-4 ile ilgisiz, dokunulmadı.
+
+
 
 PR #71 (`public/js/place-crop.js`), admin "Düzenle" modalındaki kırpma penceresinin hiç
 görünmemesine neden olan iki hata bulup düzeltti, ve AUDIT_FOLLOWUPS.md'de `avatar-crop.js`'te
