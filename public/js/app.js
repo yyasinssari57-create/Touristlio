@@ -875,13 +875,56 @@ function renderSimilarCards(list) {
   }).join('') || `<p class="empty-hint">${t('similarEmpty')}</p>`;
 }
 
+function formatInfoDate(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(lang === 'en' ? 'en-GB' : 'tr-TR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
+function staticInfoValueHtml(box) {
+  const parts = [];
+  if (box.levelKey) parts.push(escapeHtml(t(box.levelKey)));
+  if (box.valueKey) parts.push(escapeHtml(t(box.valueKey)));
+  if (box.text) parts.push(escapeHtml(box.text));
+  return parts.join(' · ');
+}
+
+function renderStaticInfoBoxes(staticInfo) {
+  const el = document.getElementById('pdStaticInfo');
+  if (!el) return;
+  const boxes = staticInfo?.boxes || [];
+  if (!boxes.length) {
+    el.innerHTML = '';
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  const dateStr = staticInfo.verifiedAt ? formatInfoDate(staticInfo.verifiedAt) : '';
+  const updated = dateStr
+    ? `<small class="info-updated">${escapeHtml(t('infoUpdated').replace('{date}', dateStr))}</small>`
+    : '';
+  el.innerHTML = boxes.map((box) => `
+    <div class="aside-card">
+      <div class="ac-title">${escapeHtml(t(box.labelKey))}</div>
+      <div class="ic-row"><span class="ic-val">${staticInfoValueHtml(box)}</span></div>
+      ${updated}
+    </div>`).join('');
+}
+
 function renderDetailWidgets(data) {
   const wBox = document.getElementById('pdWeather');
   if (wBox && data.weather) {
     const w = data.weather;
-    wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
-      <div class="weather-row"><span>${w.label || '—'}</span><strong>${w.tempC != null ? w.tempC + '°C' : '—'}</strong></div>
+    if (w.failed && !w.adminOverride) {
+      wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
+        <div class="weather-row"><span>${escapeHtml(t('weatherUnavailable'))}</span></div>`;
+    } else {
+      wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
+      <div class="weather-row"><span>${escapeHtml(w.label || '—')}</span><strong>${w.tempC != null ? w.tempC + '°C' : '—'}</strong></div>
       ${w.fallback ? `<small class="weather-fallback">${t('weatherEstimate')}</small>` : ''}`;
+    }
   }
   const lBox = document.getElementById('pdLocalInfo');
   if (lBox && data.localInfo) {
@@ -2331,6 +2374,7 @@ async function openDetail(id, skipRoute) {
     renderNearbyCards(data.nearby);
     renderSimilarCards(data.similar);
     renderDetailWidgets(data);
+    renderStaticInfoBoxes(data.staticInfo);
     const affBox = document.getElementById('pdAffiliate');
     if (affBox) {
       if (p.affiliateHotelUrl || p.affiliateBookingUrl) {

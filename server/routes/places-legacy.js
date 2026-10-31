@@ -12,6 +12,7 @@ const { findNearbyPlacesSql } = require('../lib/place-geom');
 const { getWeather } = require('../services/weatherService');
 const { currencyForCountry, timezoneForCountry, parseEntryFeeTry } = require('../lib/currency');
 const { getLiveData, getAdminPayload, mergeWeather, mergeLocalInfo, mergeInfoPanel } = require('../services/liveDataService');
+const { buildPlaceInfoBoxes } = require('../lib/place-info-boxes');
 const placesService = require('../modules/places/places.service');
 
 const router = express.Router();
@@ -88,7 +89,7 @@ router.get('/:id', authOptional, async (req, res) => {
   try {
     weather = await getWeather(place.lat, place.lng, lang);
   } catch {
-    weather = { fallback: true, label: lang === 'en' ? 'Unavailable' : 'Mevcut değil' };
+    weather = { failed: true, fallback: true, tempC: null, label: null, source: 'error' };
   }
   const cur = currencyForCountry(place.country);
   const tz = place.timezone || timezoneForCountry(place.country);
@@ -115,6 +116,7 @@ router.get('/:id', authOptional, async (req, res) => {
     weather: mergedWeather,
     localInfo: mergedLocalInfo,
     liveData,
+    staticInfo: buildPlaceInfoBoxes(place, lang),
   });
 });
 

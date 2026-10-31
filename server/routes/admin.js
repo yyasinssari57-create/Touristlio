@@ -21,6 +21,7 @@ const placesImportExport = require('../lib/places-import-export');
 const profileChanges = require('../lib/profile-changes');
 const { getUserTiolaLikeCount } = require('../lib/likes');
 const { upsertLiveData, applyInfoBoxUpdates, buildInfoBoxesResponse } = require('../services/liveDataService');
+const { buildPlaceInfoBoxes, normalizePlaceInfoPatch, mapInfoColumns } = require('../lib/place-info-boxes');
 const catalogDb = require('../lib/catalog-db');
 const blogDb = require('../lib/blog-db');
 const settingsService = require('../modules/settings/settings.service');
@@ -1254,6 +1255,55 @@ router.get('/places/:id/info-boxes', checkPermission('admin.places'), async (req
   let payload = {};
   try { payload = JSON.parse(row?.payload || '{}'); } catch { /* ignore */ }
   return ok(res, { infoBoxes: buildInfoBoxesResponse(payload) });
+});
+
+router.patch('/places/:id/info', checkPermission('admin.places'), async (req, res) => {
+  const id = parsePositiveInt(req.params.id, res);
+  if (!id) return;
+  const place = await db.prepare('SELECT id FROM places WHERE id = ?').get(id);
+  if (!place) return fail(res, 'Yer bulunamadı', 404);
+
+  const parsed = normalizePlaceInfoPatch(req.body || {});
+  if (parsed.error) return fail(res, parsed.error, 400);
+  const v = parsed.values;
+
+  await db.prepare(`
+    UPDATE places SET
+      climate_info = ?,
+      currency = ?,
+      budget_level = ?,
+      budget_amount = ?,
+      visit_duration = ?,
+      best_time = ?,
+      entry_fee = ?,
+      is_free = ?,
+      wheelchair_accessible = ?,
+      family_friendly = ?,
+      pet_friendly = ?,
+      has_parking = ?,
+      info_source_url = ?,
+      info_verified_at = NOW()
+    WHERE id = ?
+  `).run(
+    v.climate_info,
+    v.currency,
+    v.budget_level,
+    v.budget_amount,
+    v.visit_duration,
+    v.best_time,
+    v.entry_fee,
+    v.is_free,
+    v.wheelchair_accessible,
+    v.family_friendly,
+    v.pet_friendly,
+    v.has_parking,
+    v.info_source_url,
+    id,
+  );
+  await logAdmin(req, 'place.info', 'place', id, null);
+  const row = await db.prepare('SELECT * FROM places WHERE id = ?').get(id);
+  const info = mapInfoColumns(row);
+  return ok(res, { saved: true, info, staticInfo: buildPlaceInfoBoxes(info, 'tr') });
 });
 
 router.post('/users/:id/block', checkPermission('admin.moderate', 'admin.users'), async (req, res) => {

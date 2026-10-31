@@ -2,6 +2,7 @@ const { db } = require('../db');
 const { enrichContentFields } = require('./place-content');
 const { sanitizeName, sanitizeText } = require('./sanitize');
 const { uniquePlaceSlug, slugFromPlace } = require('./place-lookup');
+const { boolOrNull } = require('./place-info-boxes');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
@@ -33,6 +34,20 @@ function mapAdminPlace(row) {
     isLocal: !!row.is_local,
     entryFee: row.entry_fee || '',
     bestTime: row.best_time || '',
+    climateInfo: row.climate_info || '',
+    currency: row.currency || '',
+    budgetLevel: row.budget_level || '',
+    budgetAmount: row.budget_amount || '',
+    visitDuration: row.visit_duration || '',
+    isFree: boolOrNull(row.is_free) === true,
+    wheelchairAccessible: boolOrNull(row.wheelchair_accessible),
+    familyFriendly: boolOrNull(row.family_friendly),
+    petFriendly: boolOrNull(row.pet_friendly),
+    hasParking: boolOrNull(row.has_parking),
+    infoSourceUrl: row.info_source_url || '',
+    infoVerifiedAt: row.info_verified_at instanceof Date
+      ? row.info_verified_at.toISOString()
+      : (row.info_verified_at || null),
   };
 }
 

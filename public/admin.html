@@ -3608,6 +3608,60 @@ async function openPlaceEdit(id) {
           <label class="adm-label-sm" for="edBestTime">En iyi dönem</label>
           <input class="ain" id="edBestTime" value="${escapeHtml(ib.infoBestTime || p.bestTime || '')}" placeholder="Sabah erken" aria-label="En iyi dönem"/>
         </div>
+
+        <div class="adm-side-card" id="placeInfoBoxes">
+          <p class="adm-side-card-title">Bilgi Kutucukları</p>
+          <p class="adm-side-card-hint">Bu metinler destinasyon sayfasında ayrı kutular olarak görünür. İklim, canlı hava durumundan bağımsızdır. Boş bırakılan kutu sitede gösterilmez.</p>
+          <label class="adm-label-sm full" for="infoClimate">İklim/Hava</label>
+          <textarea class="ain full" id="infoClimate" rows="3" aria-label="İklim">${escapeHtml(p.climateInfo || '')}</textarea>
+          <label class="adm-label-sm" for="infoCurrency">Para birimi</label>
+          <input class="ain" id="infoCurrency" value="${escapeHtml(p.currency || '')}" placeholder="Euro, TL, USD" aria-label="Para birimi"/>
+          <label class="adm-label-sm" for="infoBudgetLevel">Bütçe seviyesi</label>
+          <select class="ain" id="infoBudgetLevel" aria-label="Bütçe seviyesi">
+            <option value="" ${p.budgetLevel ? '' : 'selected'}>—</option>
+            <option value="low" ${p.budgetLevel === 'low' ? 'selected' : ''}>Düşük</option>
+            <option value="medium" ${p.budgetLevel === 'medium' ? 'selected' : ''}>Orta</option>
+            <option value="high" ${p.budgetLevel === 'high' ? 'selected' : ''}>Yüksek</option>
+          </select>
+          <label class="adm-label-sm" for="infoBudgetAmount">Bütçe miktarı</label>
+          <input class="ain" id="infoBudgetAmount" value="${escapeHtml(p.budgetAmount || '')}" placeholder="40 € / kişi" aria-label="Bütçe miktarı"/>
+          <label class="adm-label-sm" for="infoVisitDuration">Ziyaret süresi</label>
+          <input class="ain" id="infoVisitDuration" value="${escapeHtml(p.visitDuration || '')}" placeholder="1-2 saat" aria-label="Ziyaret süresi"/>
+          <label class="adm-label-sm full" for="infoBestTime">En iyi zaman</label>
+          <input class="ain full" id="infoBestTime" value="${escapeHtml(p.bestTime || '')}" placeholder="Nisan–Haziran" aria-label="En iyi zaman"/>
+          <label class="adm-label-sm" for="infoEntryFee">Giriş ücreti</label>
+          <input class="ain" id="infoEntryFee" value="${escapeHtml(p.entryFee || '')}" placeholder="350 ₺" aria-label="Giriş ücreti"/>
+          <label class="adm-label-sm" for="infoIsFree" style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <input type="checkbox" id="infoIsFree" ${p.isFree ? 'checked' : ''} aria-label="Ücretsiz"/> Ücretsiz
+          </label>
+          <label class="adm-label-sm" for="infoWheelchair">Engelli erişimi</label>
+          <select class="ain" id="infoWheelchair" aria-label="Engelli erişimi">
+            <option value="" ${p.wheelchairAccessible == null ? 'selected' : ''}>—</option>
+            <option value="true" ${p.wheelchairAccessible === true ? 'selected' : ''}>Var</option>
+            <option value="false" ${p.wheelchairAccessible === false ? 'selected' : ''}>Yok</option>
+          </select>
+          <label class="adm-label-sm" for="infoFamily">Aile dostu</label>
+          <select class="ain" id="infoFamily" aria-label="Aile dostu">
+            <option value="" ${p.familyFriendly == null ? 'selected' : ''}>—</option>
+            <option value="true" ${p.familyFriendly === true ? 'selected' : ''}>Evet</option>
+            <option value="false" ${p.familyFriendly === false ? 'selected' : ''}>Hayır</option>
+          </select>
+          <label class="adm-label-sm" for="infoPets">Evcil hayvan</label>
+          <select class="ain" id="infoPets" aria-label="Evcil hayvan">
+            <option value="" ${p.petFriendly == null ? 'selected' : ''}>—</option>
+            <option value="true" ${p.petFriendly === true ? 'selected' : ''}>Evet</option>
+            <option value="false" ${p.petFriendly === false ? 'selected' : ''}>Hayır</option>
+          </select>
+          <label class="adm-label-sm" for="infoParking">Otopark</label>
+          <select class="ain" id="infoParking" aria-label="Otopark">
+            <option value="" ${p.hasParking == null ? 'selected' : ''}>—</option>
+            <option value="true" ${p.hasParking === true ? 'selected' : ''}>Var</option>
+            <option value="false" ${p.hasParking === false ? 'selected' : ''}>Yok</option>
+          </select>
+          <label class="adm-label-sm full" for="infoSourceUrl">Kaynak URL</label>
+          <input class="ain full" id="infoSourceUrl" value="${escapeHtml(p.infoSourceUrl || '')}" placeholder="https://" aria-label="Kaynak URL"/>
+          <button class="btn bp bsm full" type="button" id="btnSavePlaceInfo" data-act="savePlaceInfo" data-arg="${id}">Bilgileri Kaydet</button>
+        </div>
       </div>
       ${p.tiolaCount ? `<p style="font-size:.8rem;color:#b45309">⚠ Bu yerde ${p.tiolaCount} Tiola kaydı var.</p>` : ''}`,
       [
@@ -3621,6 +3675,47 @@ async function openPlaceEdit(id) {
     document.getElementById('edImage')?.addEventListener('input', () => updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview'));
     updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview');
   } catch (e) { showErr(e.message); }
+}
+
+function infoTriFromSelect(id) {
+  const v = document.getElementById(id)?.value;
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return null;
+}
+
+async function savePlaceInfo(id) {
+  const btn = document.getElementById('btnSavePlaceInfo');
+  clearFormErr('edFormErr');
+  setBtnLoading(btn, true, 'Kaydediliyor…');
+  try {
+    const best = document.getElementById('infoBestTime')?.value || '';
+    const fee = document.getElementById('infoEntryFee')?.value || '';
+    await api('/admin/places/' + id + '/info', {
+      method: 'PATCH',
+      body: {
+        climate_info: document.getElementById('infoClimate')?.value || '',
+        currency: document.getElementById('infoCurrency')?.value || '',
+        budget_level: document.getElementById('infoBudgetLevel')?.value || null,
+        budget_amount: document.getElementById('infoBudgetAmount')?.value || '',
+        visit_duration: document.getElementById('infoVisitDuration')?.value || '',
+        best_time: best,
+        entry_fee: fee,
+        is_free: !!document.getElementById('infoIsFree')?.checked,
+        wheelchair_accessible: infoTriFromSelect('infoWheelchair'),
+        family_friendly: infoTriFromSelect('infoFamily'),
+        pet_friendly: infoTriFromSelect('infoPets'),
+        has_parking: infoTriFromSelect('infoParking'),
+        info_source_url: document.getElementById('infoSourceUrl')?.value || '',
+      },
+    });
+    const oldFee = document.getElementById('edEntryFee');
+    const oldBest = document.getElementById('edBestTime');
+    if (oldFee) oldFee.value = fee;
+    if (oldBest) oldBest.value = best;
+    showToast('Bilgi kutucukları kaydedildi');
+  } catch (e) { showFormErr('edFormErr', e.message); }
+  finally { setBtnLoading(btn, false); }
 }
 
 async function savePlaceEdit(id) {

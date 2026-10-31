@@ -1,4 +1,5 @@
 const { resolvePlaceImageUrl } = require('./place-image');
+const { boolOrNull } = require('./place-info-boxes');
 
 function parseJson(val, fallback) {
   try {
@@ -70,6 +71,20 @@ function mapPlaceRow(row, stats) {
     affiliateHotelUrl: row.affiliate_hotel_url,
     affiliateBookingUrl: row.affiliate_booking_url,
     timezone: row.timezone,
+    climateInfo: row.climate_info || null,
+    currency: row.currency || null,
+    budgetLevel: row.budget_level || null,
+    budgetAmount: row.budget_amount || null,
+    visitDuration: row.visit_duration || null,
+    isFree: boolOrNull(row.is_free) === true,
+    wheelchairAccessible: boolOrNull(row.wheelchair_accessible),
+    familyFriendly: boolOrNull(row.family_friendly),
+    petFriendly: boolOrNull(row.pet_friendly),
+    hasParking: boolOrNull(row.has_parking),
+    infoSourceUrl: row.info_source_url || null,
+    infoVerifiedAt: row.info_verified_at instanceof Date
+      ? row.info_verified_at.toISOString()
+      : (row.info_verified_at || null),
   };
 }
 
