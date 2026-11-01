@@ -27,6 +27,31 @@ function isoDate(value) {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * FAZ3-5 quality bar, mapped onto this schema.
+ * PRD `description_tr` → `overview` or `description` (no description_tr column).
+ * PRD `blog_posts.body` / `is_published` → `blogs.body` / `status = 'approved'`.
+ * PRD `deleted_at` and `updated_at` columns do not exist.
+ */
+const PLACE_DESCRIPTION_MIN_CHARS = 50;
+const BLOG_BODY_MIN_CHARS = 200;
+const SITEMAP_PLACE_LIMIT = 10000;
+
+/** Longer of the Turkish blurbs. English columns do not satisfy description_tr. */
+function turkishPlaceBlurbLength(row) {
+  const overview = String(row?.overview ?? '').trim().length;
+  const description = String(row?.description ?? '').trim().length;
+  return Math.max(overview, description);
+}
+
+function isQualityPlaceDescription(row) {
+  return turkishPlaceBlurbLength(row) > PLACE_DESCRIPTION_MIN_CHARS;
+}
+
+function isQualityBlogBody(row) {
+  return String(row?.body ?? '').trim().length > BLOG_BODY_MIN_CHARS;
+}
+
 /** Audit: lat/lng present, finite, in range, and not 0. (0,0 is Null Island.) */
 function isValidSitemapCoord(lat, lng) {
   const la = Number(lat);
@@ -48,12 +73,14 @@ function placeSitemapPath(row) {
   if (!slug) return null;
   if (!isPublishedPlaceStatus(row.status)) return null;
   if (!isValidSitemapCoord(row.lat, row.lng)) return null;
+  if (!isQualityPlaceDescription(row)) return null;
   return `/places/${encodeURIComponent(slug)}`;
 }
 
 function staticUrls(base) {
   return [
     { loc: `${base}/`, priority: '1.0', changefreq: 'daily' },
+    { loc: `${base}/explore`, priority: '0.9', changefreq: 'daily' },
     { loc: `${base}/gezilecek-yerler`, priority: '0.9', changefreq: 'daily' },
     { loc: `${base}/blog`, priority: '0.8', changefreq: 'daily' },
     { loc: `${base}/search`, priority: '0.6', changefreq: 'weekly' },
@@ -93,12 +120,17 @@ function withEnglishAlternates(urls, base) {
 async function loadPlaceUrls(base) {
   try {
     const rows = await db.prepare(`
-      SELECT slug, lat, lng, status FROM places
+      SELECT slug, lat, lng, status, overview, description FROM places
       WHERE COALESCE(NULLIF(TRIM(status), ''), 'published') = 'published'
         AND slug IS NOT NULL AND TRIM(slug) <> ''
         AND lat IS NOT NULL AND lng IS NOT NULL
         AND lat <> 0 AND lng <> 0
-      ORDER BY id
+        AND GREATEST(
+          char_length(btrim(COALESCE(overview, ''))),
+          char_length(btrim(COALESCE(description, '')))
+        ) > ${PLACE_DESCRIPTION_MIN_CHARS}
+      ORDER BY id DESC
+      LIMIT ${SITEMAP_PLACE_LIMIT}
     `).all();
     const urls = [];
     for (const row of rows) {
@@ -119,11 +151,13 @@ async function loadPlaceUrls(base) {
 async function loadBlogUrls(base) {
   try {
     const rows = await db.prepare(`
-      SELECT slug, published_at, created_at FROM blogs
+      SELECT slug, published_at, created_at, body FROM blogs
       WHERE status = 'approved' AND slug IS NOT NULL AND TRIM(slug) <> ''
-      ORDER BY id
+        AND body IS NOT NULL
+        AND char_length(btrim(body)) > ${BLOG_BODY_MIN_CHARS}
+      ORDER BY COALESCE(published_at, created_at) DESC, id DESC
     `).all();
-    return rows.map((b) => ({
+    return rows.filter(isQualityBlogBody).map((b) => ({
       loc: `${base}/blog/${encodeURIComponent(b.slug)}`,
       lastmod: isoDate(b.published_at || b.created_at),
       priority: '0.7',
@@ -184,7 +218,13 @@ module.exports = {
   buildRobotsTxt,
   isValidSitemapCoord,
   isPublishedPlaceStatus,
+  isQualityPlaceDescription,
+  isQualityBlogBody,
+  turkishPlaceBlurbLength,
   placeSitemapPath,
+  PLACE_DESCRIPTION_MIN_CHARS,
+  BLOG_BODY_MIN_CHARS,
+  SITEMAP_PLACE_LIMIT,
   englishAlternateLoc,
   withEnglishAlternates,
   ROBOTS_PRIVATE_PATHS,
