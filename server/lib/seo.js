@@ -1,5 +1,6 @@
 const { siteBaseUrl } = require('./sitemap');
 const { googleSiteVerification } = require('./analytics-config');
+const { trLabel } = require('./tr-labels');
 
 /** FAZ3-2 static templates. Counts match places.json (1090 places, 135 countries). */
 const SEO_TEMPLATES = {
@@ -49,7 +50,8 @@ function generateMeta(type, data = {}, locale = 'tr') {
   if (type === 'place' && data.place) {
     const p = data.place;
     const name = String((lang === 'en' ? (p.nameEn || p.name) : (p.name || p.nameEn)) || '').trim();
-    const city = String((lang === 'en' ? (p.cityEn || p.city) : (p.city || p.cityEn)) || '').trim();
+    const cityRaw = String((lang === 'en' ? (p.cityEn || p.city) : (p.city || p.cityEn)) || '').trim();
+    const city = lang === 'en' ? cityRaw : trLabel(cityRaw);
     const desc = lang === 'en'
       ? (p.overviewEn || p.descriptionEn || p.overview || p.description || '')
       : (p.overview || p.description || p.descriptionEn || '');

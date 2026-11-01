@@ -1,19 +1,23 @@
+const { trLabel, trDative } = require('./tr-labels');
+
 /** Generate min 5 FAQ Q&A pairs per place (TR + EN) */
 function buildFaqForPlace(p) {
   const name = p.name;
   const city = p.city || '';
   const country = p.country || '';
+  const cityTr = trLabel(city);
+  const countryTr = trLabel(country);
   const entry = p.entryFee || 'Ücretli';
   const best = p.bestTime || 'Sabah erken';
   const entryEn = p.entryFeeEn || (entry.includes('Ücretsiz') ? 'Free' : 'Paid entry');
 
   const faqTR = [
-    { q: `${name} ziyareti ne kadar sürer?`, a: `Çoğu ziyaretçi ${name} için 1,5–3 saat ayırır. ${city} programınıza göre yarım gün de planlayabilirsiniz.` },
+    { q: `${name} ziyareti ne kadar sürer?`, a: `Çoğu ziyaretçi ${name} için 1,5–3 saat ayırır. ${cityTr} programınıza göre yarım gün de planlayabilirsiniz.` },
     { q: `${name} giriş ücreti var mı?`, a: `Güncel durum: ${entry}. Resmi site veya gişeden teyit etmenizi öneririz.` },
     { q: `${name} için en iyi ziyaret zamanı ne?`, a: `${best} genelde daha sakin ve fotoğraf için uygundur. Hafta içi sabah saatleri kalabalığı azaltır.` },
-    { q: `${name}'e nasıl ulaşılır?`, a: p.howToGetThere || `${city} merkezinden toplu taşıma veya taksi ile ulaşılabilir.` },
-    { q: `${name} çocuklarla uygun mu?`, a: `${country} / ${city} genelinde aile ziyaretleri yaygındır; uzun kuyruklar ve yürüyüş mesafesini göz önünde bulundurun.` },
-    { q: `${name} yakınında ne yenir?`, a: p.cultureFood || `${city} çevresinde yerel kafe ve restoranlar yürüme mesafesindedir.` },
+    { q: `${trDative(name)} nasıl ulaşılır?`, a: p.howToGetThere || `${cityTr} merkezinden toplu taşıma veya taksi ile ulaşılabilir.` },
+    { q: `${name} çocuklarla uygun mu?`, a: `${countryTr} / ${cityTr} genelinde aile ziyaretleri yaygındır; uzun kuyruklar ve yürüyüş mesafesini göz önünde bulundurun.` },
+    { q: `${name} yakınında ne yenir?`, a: p.cultureFood || `${cityTr} çevresinde yerel kafe ve restoranlar yürüme mesafesindedir.` },
   ];
 
   const faqEN = [
