@@ -22,6 +22,13 @@ const {
   SITEMAP_PLACE_LIMIT,
   SITEMAP_CACHE_CONTROL,
 } = require('../lib/sitemap');
+const { blogsSeed, demoBlogBody } = require('../seed');
+const {
+  planSitemapBlog,
+  isTestBlogPollution,
+  GENERIC_TR,
+  GENERIC_EN,
+} = require('../lib/blog-sitemap-body');
 
 let failed = 0;
 function ok(msg) { console.log('  ✓', msg); }
@@ -107,6 +114,75 @@ const pkg = JSON.parse(read('package.json'));
 if (pkg.scripts['verify:faz3-5'] !== 'node server/scripts/verify-faz3-5-sitemap.js') {
   fail('package.json missing verify:faz3-5');
 } else ok('verify:faz3-5 script');
+if (pkg.scripts['verify:blog-sitemap'] !== 'node server/scripts/verify-faz3-5-sitemap.js') {
+  fail('package.json missing verify:blog-sitemap');
+} else ok('verify:blog-sitemap script');
+
+if (GENERIC_TR.length <= BLOG_BODY_MIN_CHARS) fail(`generic TR note is ${GENERIC_TR.length}`);
+else ok(`generic TR note is ${GENERIC_TR.length} chars`);
+if (GENERIC_EN.length <= BLOG_BODY_MIN_CHARS) fail(`generic EN note is ${GENERIC_EN.length}`);
+else ok(`generic EN note is ${GENERIC_EN.length} chars`);
+
+if (!Array.isArray(blogsSeed) || blogsSeed.length < 1) fail('demo blog seed is empty');
+else ok(`demo blog seed has ${blogsSeed.length} posts`);
+
+for (const post of blogsSeed) {
+  const stored = demoBlogBody(post);
+  const plan = planSitemapBlog({
+    title: post.title,
+    excerpt: post.excerpt,
+    body: post.excerpt,
+    status: 'approved',
+  });
+  const len = String(stored || '').trim().length;
+  if (plan.action !== 'expand') fail(`${post.title}: expected expand, got ${plan.action}`);
+  else if (len <= BLOG_BODY_MIN_CHARS) fail(`${post.title}: body is ${len} chars`);
+  else if (!isQualityBlogBody({ body: stored })) fail(`${post.title}: sitemap helper rejects the new body`);
+  else if (!String(stored).trim().startsWith(String(post.excerpt || '').trim())) {
+    fail(`${post.title}: stored body dropped the excerpt`);
+  } else ok(`seed “${post.title}” body ${len} chars (was ${String(post.excerpt || '').trim().length})`);
+}
+
+const pollution = planSitemapBlog({
+  title: 'FAZ2-4 verify blog #1-1',
+  excerpt: 'Özet',
+  body: 'Gövde',
+  status: 'approved',
+});
+if (!isTestBlogPollution({ title: 'FAZ2-4 verify blog #1-1', excerpt: 'Özet', body: 'Gövde' })) {
+  fail('FAZ2-4 row was not recognized as test pollution');
+} else if (pollution.action !== 'unpublish') fail(`FAZ2-4 row action ${pollution.action}`);
+else ok('FAZ2-4 verify blog is rejected, not rewritten');
+
+const duePollution = planSitemapBlog({
+  title: 'FAZ2-4 verify blog #due',
+  excerpt: 'Özet',
+  body: 'Gövde',
+  status: 'pending',
+  published_at: '2020-01-01 00:00:00',
+});
+if (duePollution.action !== 'unpublish') fail('scheduled test row would be republished');
+else ok('pending test row with published_at is rejected');
+
+const pendingPollution = planSitemapBlog({
+  title: 'ORTA-6 Pending',
+  excerpt: 'hidden excerpt',
+  body: 'hidden body',
+  status: 'pending',
+});
+if (pendingPollution.action !== 'keep') fail('pending test row should stay pending');
+else ok('pending test row is not expanded');
+
+const english = planSitemapBlog({
+  title: 'A quiet morning walk',
+  excerpt: 'This short guide is about an early walk before the crowds.',
+  body: 'This short guide is about an early walk before the crowds.',
+  status: 'approved',
+});
+if (english.action !== 'expand' || !english.body.includes(GENERIC_EN)) {
+  fail('short English post did not get the English note');
+} else if (english.body.trim().length <= BLOG_BODY_MIN_CHARS) fail('English expansion still short');
+else ok(`short English post expands to ${english.body.trim().length} chars`);
 
 async function checkDatabase() {
   const { initDb, db, closePool } = require('../db');
@@ -141,6 +217,69 @@ async function checkDatabase() {
     const missingBlog = qualityBlogs.filter((row) => !paths.has(`/blog/${encodeURIComponent(row.slug)}`));
     if (missingBlog.length) fail(`${missingBlog.length} long blogs missing from sitemap`);
     else ok(`long approved blogs listed (${qualityBlogs.length} in this database)`);
+
+    const seedRows = await db.prepare(`
+      SELECT title, slug, status, excerpt, body,
+             char_length(btrim(COALESCE(body, ''))) AS body_len
+      FROM blogs
+      WHERE title = ANY(?::text[])
+    `).all(blogsSeed.map((post) => post.title));
+    const byTitle = new Map(seedRows.map((row) => [row.title, row]));
+    let seedListed = 0;
+    for (const post of blogsSeed) {
+      const row = byTitle.get(post.title);
+      if (!row) continue;
+      const len = Number(row.body_len) || 0;
+      const pathName = `/blog/${encodeURIComponent(row.slug)}`;
+      if (row.status !== 'approved') {
+        fail(`demo “${post.title}” is ${row.status}, not approved`);
+      } else if (len <= BLOG_BODY_MIN_CHARS) {
+        fail(`demo “${post.title}” body is still ${len} chars`);
+      } else if (!paths.has(pathName)) {
+        fail(`demo “${post.title}” missing from sitemap`);
+      } else {
+        seedListed += 1;
+        ok(`sitemap lists “${post.title}” (${len} chars)`);
+      }
+    }
+    if (!seedRows.length) {
+      console.log('  · no demo blog titles in this database');
+    } else if (seedListed === blogsSeed.length) {
+      ok(`all ${seedListed} demo blogs are in the sitemap`);
+    }
+
+    const leftoverTests = await db.prepare(`
+      SELECT id, title FROM blogs
+      WHERE status = 'approved'
+        AND (
+          title ILIKE 'FAZ2-4 verify blog%'
+          OR title ILIKE 'ORTA-6 Pending%'
+          OR (
+            btrim(COALESCE(excerpt, '')) = 'Özet'
+            AND btrim(COALESCE(body, '')) = 'Gövde'
+          )
+        )
+    `).all();
+    if (leftoverTests.length) {
+      fail(`${leftoverTests.length} approved test blogs still published`);
+    } else ok('approved test blogs are not published');
+
+    const { publishDueBlogs } = require('../lib/blog-scheduler');
+    await publishDueBlogs();
+    const republished = await db.prepare(`
+      SELECT id FROM blogs
+      WHERE status = 'approved'
+        AND (
+          title ILIKE 'FAZ2-4 verify blog%'
+          OR title ILIKE 'ORTA-6 Pending%'
+          OR (
+            btrim(COALESCE(excerpt, '')) = 'Özet'
+            AND btrim(COALESCE(body, '')) = 'Gövde'
+          )
+        )
+    `).all();
+    if (republished.length) fail(`${republished.length} test blogs republished by the scheduler`);
+    else ok('scheduler does not republish test blogs');
 
     const thinPlaces = await db.prepare(`
       SELECT slug FROM places

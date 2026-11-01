@@ -7,6 +7,7 @@ const { enrichContentFields } = require('./lib/place-content');
 const { slugify } = require('./lib/catalog-db');
 const { uniquePlaceSlug, slugFromPlace } = require('./lib/place-lookup');
 const logger = require('./lib/logger');
+const { planSitemapBlog } = require('./lib/blog-sitemap-body');
 
 const placesPath = path.join(__dirname, 'data', 'places.json');
 const blogsSeed = [
@@ -137,6 +138,16 @@ async function syncLegacyAdminPassword(password) {
   logger.info({ msg: 'Legacy admin password synced', email: legacyEmail });
 }
 
+function demoBlogBody(post) {
+  const plan = planSitemapBlog({
+    title: post.title,
+    excerpt: post.excerpt,
+    body: post.excerpt,
+    status: 'approved',
+  });
+  return plan.body;
+}
+
 async function seedDemoBlogs() {
   const admin = await findUserByEmail((process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase());
   const userId = admin?.id || 1;
@@ -155,7 +166,7 @@ async function seedDemoBlogs() {
       b.title,
       slugify(b.title) || `blog-${b.id}`,
       b.excerpt,
-      b.excerpt,
+      demoBlogBody(b),
       b.imageUrl,
       b.placeId,
       JSON.stringify([b.catLabel].filter(Boolean)),
@@ -176,6 +187,8 @@ async function runFullSeed(options = {}) {
 }
 
 module.exports = {
+  blogsSeed,
+  demoBlogBody,
   seedPlaces,
   seedAdmin,
   syncLegacyAdminPassword,
