@@ -34,11 +34,20 @@ else fail('first slide must be .hbg.active');
 if (html.includes('class="hc"')
   && html.indexOf('class="hero-carousel"') < html.indexOf('class="hc"')
   && html.includes('data-i18n-html="heroTitle"')
-  && html.includes('id="heroSearch"')
-  && html.includes('quickSearch(\'İstanbul\')')) {
-  ok('slogan, search, and city pills stay above the slides');
+  && html.includes('id="heroSearch"')) {
+  ok('slogan and search stay above the slides');
 } else {
   fail('hero overlay content missing or moved');
+}
+
+const cityPills = html.match(/<button\b[^>]*class="hpl"[^>]*>/g) || [];
+const istanbulPill = cityPills.find((btn) => btn.includes('data-arg="İstanbul"'));
+if (cityPills.length >= 1
+  && cityPills.every((btn) => btn.includes('data-act="quickSearch"') && /data-arg="[^"]+"/.test(btn))
+  && istanbulPill) {
+  ok('city pills use data-act + data-arg');
+} else {
+  fail('city pills missing data-act quickSearch / data-arg');
 }
 
 if (html.includes('/js/hero-carousel.js')) ok('hero-carousel.js is loaded');

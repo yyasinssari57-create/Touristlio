@@ -2,6 +2,59 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+Numaralı takip kuyruğu (1–5) bitti. Başka açık denetim maddesi yok.
+Kalanlar isteğe bağlı ve düşük öncelik: favicon, GA4 paneli, PostGIS.
+
+## Denetim #5 — doğrulama betikleri ve gezi planı await
+
+Yasin "sıradakine geç" dedi. Bu, denetim takip kuyruğunun son maddesi.
+Üç doğrulama betiği CSP `data-act` geçişinden sonra eski satır içi
+çağrıyı arayıp yanlış alarm veriyordu. Gezi planı API’si `loadTripFull`
+ve `mapPlace` sonucunu beklemeden JSON’a yazıyordu; Promise gövdede `{}`
+oluyordu.
+
+### Durum
+
+Ürün kodundaki `data-act` düğmeleri duruyor. Eski `onclick` geri gelmedi.
+Renk, yerleşim ve buton yeri değişmedi.
+
+- `verify:tiolas` — İlk Tiola düğmesi `id="firstTiolaCta"` ve `data-act="startFirstTiola"`.
+- `verify:pagination` — Daha Fazla Yükle düğmesi `id="loadMoreBtn"` ve `data-act="loadMorePlaces"`.
+- `verify:hero` — şehir düğmeleri `class="hpl"`, `data-act="quickSearch"` ve `data-arg` (İstanbul dahil).
+
+`server/routes/trip-plans.js`:
+
+- `GET /share/:token` ve `GET /:id` artık `await loadTripFull(...)` kullanır.
+  Güncelleme ucu zaten bekliyordu.
+- Köken yokken `GET /suggest/nearby`, `mapPlace` sonuçlarını `Promise.all` ile bekler.
+- Haversine yedeği senkron `mapPlaceRow` kullanır. `findNearbyPlaces` enlem ve
+  boylamı hemen okur; async `mapPlace` oraya verilirse yer ve mesafe boş kalır.
+  PostGIS yolu `mapPlace`’i beklemeye devam eder.
+
+### Kabul listesi
+
+- [x] İlk Tiola düğmesi duruyor ve `data-act="startFirstTiola"`.
+- [x] Daha Fazla Yükle düğmesi duruyor ve `data-act="loadMorePlaces"`.
+- [x] Şehir düğmeleri duruyor; `data-act="quickSearch"` ve `data-arg`.
+- [x] Paylaşım ve plan detayı gerçek plan, gün ve mekân döner. Gizli plan 404 kalır.
+- [x] Yakın öneri boş nesne değildir; ad, enlem ve mesafe doludur.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- Favicon (`favicon.ico` 404) bu turda yok.
+- GA4 paneli yok. Measurement ID üretilmedi; `GA_MEASUREMENT_ID` boş kalır.
+- PostGIS extension açılmadı. Yoksa site haversine ile devam eder.
+- Yeni özellik yok.
+
+Denetim takip kuyruğu burada kapanır. Yukarıdaki üç madde isteğe bağlıdır.
+
+Doğrulama: `npm run verify:hero`, `npm run verify:tiolas`, `npm run verify:pagination`,
+`npm run verify:trip-await`, `npm run verify:csp`, `npm run verify:empty-states`.
+Hepsi bu turda geçti. `verify:tiolas` yerel Postgres’te çalıştı; PostGIS extension
+uyarısı beklenen davranış (site açılmaya devam eder). `verify:pagination` API
+toplamı 1111, sayfa 2 ayrı dilim, `/explore?country=turkey&page=2` 200.
+
 ## Denetim #4 — PR #52 ve HEAD /404
 
 Yasin "sıradakine geç" dedi. Dördüncü madde: Eylül 2026’daki PR #52

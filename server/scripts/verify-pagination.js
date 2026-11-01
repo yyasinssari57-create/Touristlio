@@ -91,9 +91,10 @@ if (qs1.includes('page=')) fail(`page=1 should be omitted, got ${qs1}`);
 else ok('page=1 omitted from URL');
 
 const html = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
-if (!html.includes('id="loadMoreBtn"') || !html.includes('loadMorePlaces()')) {
+const loadMoreBtn = html.match(/<button\b[^>]*id="loadMoreBtn"[^>]*>/);
+if (!loadMoreBtn || !loadMoreBtn[0].includes('data-act="loadMorePlaces"')) {
   fail('Daha Fazla Yükle button missing');
-} else ok('Daha Fazla Yükle button');
+} else ok('Daha Fazla Yükle button (data-act)');
 if (!html.includes('id="explorePagination"') || !html.includes('id="explorePageNums"')) {
   fail('explore page numbers missing');
 } else ok('explore page numbers');

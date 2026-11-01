@@ -50,9 +50,10 @@ if (!html.includes('id="profBadges"')) fail('profile badges container missing');
 else ok('profile badges container');
 if (!html.includes('id="pdTS"') || !html.includes('id="pdTC"')) fail('detail rating box missing');
 else ok('detail Tiola rating box');
-if (!html.includes('id="firstTiolaCta"') || !html.includes('startFirstTiola()')) {
+const firstTiolaBtn = html.match(/<button\b[^>]*id="firstTiolaCta"[^>]*>/);
+if (!firstTiolaBtn || !firstTiolaBtn[0].includes('data-act="startFirstTiola"')) {
   fail('detail missing first-Tiola CTA');
-} else ok('detail first-Tiola CTA (login required)');
+} else ok('detail first-Tiola CTA (data-act, login required)');
 
 const i18n = fs.readFileSync(path.join(ROOT, 'public', 'js', 'i18n.js'), 'utf8');
 if (!i18n.includes("noReviewsYet: 'Henüz değerlendirme yok'")) fail('TR empty-score copy missing');
