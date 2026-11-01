@@ -2,6 +2,47 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-1 (H1 hiyerarşisi)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-1] H1 Hiyerarşisi Düzeltmesi.
+
+PRD metni: 5 adet h1 var, 1'e inmesi gerekiyor. HTML/template değişikliği.
+Mevcut başlıkların görünümü değişmeyecek, yalnızca h1 → h2/h3. Madde
+"ONAYLANIYOR MU?" diye soruyordu. Yasin FAZ 4 için "geç" dedi. Bu madde
+teknik; yasal unvan, marka cümlesi veya üçüncü parti kimlik uydurmuyor.
+
+### Durum
+
+Ana dalda zaten kapalı (v2 KRİTİK-8). İlk HTML'de tek h1 slogan.
+Diğer bölüm başlıkları h2/h3. `syncPageHeading` açık görünümde tek h1
+bırakır; pasif sayfa önce `hidden` olur. Bu tur renk, yerleşim, buton
+ve metin değiştirmedi. Sözleşme `npm run verify:faz4-1` ile kilitlendi.
+FAZ4-2 ve sonrası bu turda açılmadı.
+
+### Kabul listesi
+
+- [x] Ana sayfa ilk HTML'de tek h1: "Sadece Ziyaret Etme. Hisset."
+- [x] Logo metni h1 değil.
+- [x] "Gezilecek Yerler", "Seyahat Hikayeleri", şehir başlığı ve mekân adı ilk HTML'de h1 değil.
+- [x] Filtre penceresi başlığı h1 değil. Sonuç sayacı h3.
+- [x] Her görünümde (keşfet, yerler, blog liste, blog yazı, profil, mekân) tam bir h1.
+- [x] Blog yazı başlığı h1; liste başlığı o sırada h2.
+- [x] Pasif sayfa, başlık düşünce görünür kalmaz.
+- [x] Blog ve gezilecek yerler başlığı h1/h2 iken aynı CSS. Mekân adı `.pd-title` ile aynı görünür.
+- [x] Bağımsız HTML sayfalarının her birinde tam bir h1.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4-2 … FAZ4-8 bu turda ele alınmadı. Honeypot, fokus çerçevesi ve blog
+  özet tekrarı daha önceki onaylı turda duruyor; yeniden açılmadı.
+- Slogan CSS'i `.hero h1` olarak kaldı. Slogan yalnızca keşfet sayfası
+  açıkken h1 ve görünür; sayfa gizlenince h2 olur. Ayrı bir h2 kuralı
+  eklenmedi (görünen hali zaten h1).
+
+Doğrulama: `npm run verify:faz4-1` (içinde `verify:h1` de çalışır).
+
 ## Claude Master PRD — FAZ3-5 (Sitemap kalite filtresi)
 
 Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-5] Sitemap Kalite Filtresi.
