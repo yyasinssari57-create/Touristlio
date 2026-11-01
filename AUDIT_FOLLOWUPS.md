@@ -2,6 +2,63 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ3-3 (Veritabanı index'leri)
+
+Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-3] Veritabanı Index'leri
+(Supabase SQL). PRD, SQL editöründe `places` / `tiola` / `blog_posts` /
+`favorites` üzerinde şu index'leri istiyor: yayın durumu, slug, şehir+kategori,
+puan, onaylı Tiola, kullanıcı, tekil oy, blog slug, yayın tarihi, e-posta,
+favori, Türkçe GIN. Bu depo o tablo ve sütun adlarını kullanmıyor
+(`verification_status`, `deleted_at`, `city_slug`, `avg_score`, `name_tr`,
+`is_published` yok). Karşılıklar gerçek şemaya göre kontrol edildi. Görünen
+sayfa, renk ve yerleşim değişmedi. FAZ3-4 (arama noindex) ve FAZ3-5 (sitemap
+filtresi) yok.
+
+### Zaten vardı (PRD adı → gerçek index)
+
+- `idx_places_status` → `places(status)` (`migrations.js`). `deleted_at` yok;
+  yayında olmayan mekân `draft` / `archived`.
+- `idx_places_slug` → `places(slug)`.
+- `idx_places_city_cat` → birebir sütun yok. Liste `LOWER(city) LIKE '%…%'`
+  (başta joker) kullandığı için yeni bir `(city, category)` btree seçilmez.
+  `idx_places_country_city_score`, `_lc` ve `idx_places_category_published`
+  (008) duruyor.
+- `idx_places_score` sütun hali → `idx_places_tiola_rating`. Canlı sıralama
+  `COALESCE(tiola_rating, 0)` olduğu için bu tek başına yetmiyordu (aşağıda).
+- `idx_tiola_place_approved` geniş hali → `idx_tiolas_place (place_id, status)`.
+  Üst seviye + `created_at` sırası yoktu (aşağıda).
+- `idx_tiola_user` → `idx_tiolas_user_place_month (user_id, place_id, created_at)`
+  sol önek.
+- Tekil oy → `idx_tiolas_unique_user_place_vote` (007), kısmi: yalnızca yıldız
+  oyu. Tam `UNIQUE (user_id, place_id)` eklenmedi — yanıt ve birden fazla metin
+  Tiola'sı bozulur. PRD'deki `ADD CONSTRAINT IF NOT EXISTS` de PostgreSQL'de
+  geçerli değil.
+- `idx_blog_slug` → `idx_blogs_slug`.
+- `idx_blog_published` geniş hali → `idx_blogs_status (status, created_at)`.
+  Liste `featured` + `COALESCE(published_at, created_at)` sıralıyor (aşağıda).
+- `idx_users_email` → `users.email UNIQUE`.
+- `idx_favorites_user` → `saved_places` birincil anahtarı `(user_id, place_id)`.
+- Türkçe GIN `name_tr/description_tr/city_tr` → sütunlar yok.
+  `idx_places_search_tsv` GIN (002) `name`, `location`, `country`, `city`,
+  `district`, `search_aliases` üzerinde. Vektöre açıklama eklemek arama
+  sonucunu değiştirir; bu turda yapılmadı.
+
+### Bu turda eklenenler (`012_faz3_3_indexes`, sunucu açılınca)
+
+- `idx_places_score` — `(COALESCE(tiola_rating, 0) DESC, id DESC)`. Varsayılan
+  mekân listesi sıralaması.
+- `idx_tiolas_place_approved` — `(place_id, created_at DESC)` yalnızca
+  `status = 'approved' AND parent_id IS NULL`. Mekân sayfasındaki Tiola listesi.
+- `idx_blogs_published` — `(featured DESC, COALESCE(published_at, created_at) DESC)`
+  yalnızca `status = 'approved'`. Herkese açık blog listesi.
+
+### Kapsam dışı
+
+- FAZ3-4 arama sayfası noindex/canonical, FAZ3-5 sitemap filtresi, FAZ4 — yok.
+- Arama metni (hangi alanlar eşleşir) değişmedi.
+
+Doğrulama: `npm run verify:faz3-3` ve `npm run verify:indexes`.
+
 ## Claude Master PRD — FAZ3-2 (Dinamik SEO meta şablonu)
 
 Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-2] Dinamik SEO Meta Template
