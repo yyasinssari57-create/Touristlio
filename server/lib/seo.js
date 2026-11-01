@@ -105,6 +105,51 @@ function normalizePath(pathname) {
   return p || '/';
 }
 
+/**
+ * FAZ3-4 listing paths. A query string on these is a filter/search variant:
+ * noindex, and the canonical URL is the same path without the query.
+ * Place detail (/places/:slug) is not in this set.
+ */
+const PARAM_LISTING_PATHS = new Set(['/explore', '/search', '/places']);
+
+/** PRD private shells, plus this app's real account pages. */
+const ALWAYS_NOINDEX_PATHS = new Set([
+  '/account',
+  '/settings',
+  '/admin',
+  '/dashboard',
+  '/login',
+  '/register',
+  '/profile',
+  '/verify-email',
+  '/reset-password',
+]);
+
+function hasQueryParams(query) {
+  if (!query || typeof query !== 'object') return false;
+  return Object.keys(query).length > 0;
+}
+
+function isAlwaysNoindexPath(pathname) {
+  const p = normalizePath(pathname);
+  if (ALWAYS_NOINDEX_PATHS.has(p)) return true;
+  return p.startsWith('/admin/')
+    || p.startsWith('/account/')
+    || p.startsWith('/settings/')
+    || p.startsWith('/dashboard/');
+}
+
+/** True when this URL must be noindex (private shell, or parameterized listing). */
+function shouldNoindexPath(pathname, query) {
+  if (isAlwaysNoindexPath(pathname)) return true;
+  return hasQueryParams(query) && PARAM_LISTING_PATHS.has(normalizePath(pathname));
+}
+
+function shouldNoindexDocument(relativePath, pathname, query) {
+  const fileNoindex = /login|register|profile|verify-email|reset-password|admin|404\.html|500\.html/.test(relativePath || '');
+  return fileNoindex || shouldNoindexPath(pathname, query);
+}
+
 function defaultOgImage() {
   return `${siteBaseUrl()}/images/hero.webp`;
 }
@@ -328,4 +373,9 @@ module.exports = {
   ogTypeFor,
   generateMeta,
   SEO_TEMPLATES,
+  normalizePath,
+  hasQueryParams,
+  shouldNoindexPath,
+  shouldNoindexDocument,
+  PARAM_LISTING_PATHS,
 };

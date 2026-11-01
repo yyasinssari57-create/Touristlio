@@ -111,6 +111,7 @@ function updateUrl() {
   history.replaceState(null, '', path + (qs.toString() ? '?' + qs.toString() : ''));
   const title = p.q ? `${p.q} — Touristlio` : (lang === 'en' ? 'Search — Touristlio' : 'Arama — Touristlio');
   document.title = title;
+  window.TL_I18N.syncParamListingSeo?.();
 }
 
 function renderSearchPager() {

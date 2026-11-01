@@ -1856,6 +1856,7 @@ function writeRouteToUrl(route, replace = true) {
   const url = `${path}${search}${hash}`;
   if (replace) history.replaceState(route, '', url);
   else history.pushState(route, '', url);
+  if (route.main === 'explore') window.TL_I18N?.syncParamListingSeo?.();
 }
 
 function syncRoute(replace = true) {
@@ -1882,9 +1883,18 @@ async function showMainTab(tab, skipRoute) {
   navEl?.setAttribute('aria-selected', 'true');
   if (tab !== 'detail') prevTab = tab;
   if (tab !== 'detail') window.TL_ANALYTICS?.trackTab(tab);
-  if (tab === 'places') setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
-  else if (tab === 'blog') setCanonical(activeBlogSlug ? blogPublicPath({ slug: activeBlogSlug }) : blogListPath());
-  else if (tab !== 'detail') setCanonical(lang === 'en' ? '/en/' : '/');
+  if (tab === 'places') {
+    setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
+    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+  } else if (tab === 'blog') {
+    setCanonical(activeBlogSlug ? blogPublicPath({ slug: activeBlogSlug }) : blogListPath());
+    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+  } else if (tab === 'detail') {
+    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+  } else if (tab !== 'explore') {
+    setCanonical(lang === 'en' ? '/en/' : '/');
+    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+  }
   if (tab !== 'detail') {
     setMetaContent('meta[property="og:type"]', (tab === 'blog' && activeBlogSlug) ? 'article' : 'website', { property: 'og:type' });
   }
@@ -1934,6 +1944,7 @@ async function showMainTab(tab, skipRoute) {
   window.scrollTo(0, 0);
   syncPageHeading(tab);
   if (!skipRoute) syncRoute(true);
+  if (tab === 'explore') window.TL_I18N?.syncParamListingSeo?.();
   if (!skipRoute) {
     try {
       await Promise.all(tasks);
