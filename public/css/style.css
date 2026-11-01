@@ -22,7 +22,7 @@ input,select,textarea,button{font-family:var(--fn);}
 .skip-link{position:absolute;left:8px;top:-80px;z-index:10000;background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;font-weight:600;text-decoration:none;box-shadow:0 4px 16px rgba(7,22,41,.35);}
 .skip-link:focus,.skip-link:focus-visible{top:8px;outline:3px solid #fff;outline-offset:2px;}
 :focus-visible{outline:3px solid var(--b2);outline-offset:2px;}
-button:focus-visible,.btn:focus-visible{outline:3px solid var(--b2);outline-offset:2px;}
+button:focus-visible,.btn:focus-visible,a:focus-visible{outline:3px solid var(--b2);outline-offset:2px;}
 .tl-nav :focus-visible,.hero :focus-visible,.hero button:focus-visible,.hero .btn:focus-visible{outline-color:#fff;}
 button.ntab,button.etab,button.atab,button.hpl,button.lb,button.dtab,button.ptab,button.fchip,button.fpill,button.cpill,button.bcat-chip,button.star-btn,button.pc-save{
   appearance:none;-webkit-appearance:none;font:inherit;font-family:inherit;

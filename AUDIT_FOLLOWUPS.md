@@ -2,6 +2,54 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-4 (Focus outline)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-4] — ONAY GEREKLİ: Focus Outline Erişilebilirlik.
+
+PRD metni: Klavye kullanıcıları için focus göstergesi yok.
+button:focus-visible ve a:focus-visible için CSS eklenecek.
+Mevcut tasarıma minimum etki, marka rengi kullanılacak.
+Yasin FAZ 4 için "geç" dedi. Bu madde teknik; yasal unvan, marka
+cümlesi veya üçüncü parti kimlik uydurmuyor.
+
+### Durum
+
+Buton çerçevesi ana dalda zaten vardı (onaylı a11y turu, PR #61):
+`button:focus-visible` ve `.btn:focus-visible`, 3px, marka `--b2`
+(`#0284c7`). Genel `:focus-visible` de aynı rengi kullanıyordu;
+bağlantı seçicisi `a:focus-visible` ayrıca yazılmamıştı. Bu tur
+yalnızca o seçiciyi aynı çerçeveye ekledi. Dinlenme hali, renk,
+yerleşim ve buton yeri değişmedi. Koyu menü ve hero'da mevcut beyaz
+çerçeve duruyor. `outline: none` olan kutuların klavye çerçevesi
+zaten geri geliyordu; bu tur onları yeniden çizmedi. Sözleşme
+`npm run verify:faz4-4` ile kilitlendi. FAZ4-5 ve sonrası bu turda
+açılmadı.
+
+### Kabul listesi
+
+- [x] `button:focus-visible` ve `.btn:focus-visible`: 3px solid `var(--b2)`, offset 2px.
+- [x] `a:focus-visible`: aynı marka çerçevesi. Dinlenme halinde çerçeve yok.
+- [x] Genel `:focus-visible` marka `--b2` (3px).
+- [x] Menü ve hero klavye çerçevesi beyaz kalır.
+- [x] Skip link klavyede görünür.
+- [x] `outline: none` yazan her kutu için `:focus-visible` geri yükler.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4-5 … FAZ4-8 bu turda ele alınmadı. Blog özet tekrarı, arama
+  "0 yer" flaşı, kategori tekrarı ve Ayasofya dil hataları duruyor.
+- Admin koyu çubuktaki 2px vurgu çerçevesi (`--brand-accent`) duruyor.
+  O yüzey zaten klavyede görünür; yeniden boyanmadı.
+- `.btn` üzerindeki `transition: all .2s` duruyor. Çerçeve yerleşince
+  kısa bir geçişle belirir; hover hareketi bozulmasın diye dokunulmadı.
+- Leaflet satıcı CSS'i değiştirilmedi.
+
+Doğrulama: `npm run verify:faz4-4`. Headless Chrome: düz bağlantı,
+buton, footer bağlantısı ve `.ain` kutusu marka mavisi 3px. Menü
+bağlantısı ve blog arama kutusu beyaz. Dinlenme halinde çerçeve yok.
+
 ## Claude Master PRD — FAZ4-3 (CLS / görsel kayma)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
