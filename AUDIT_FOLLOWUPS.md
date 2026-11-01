@@ -2,6 +2,49 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-2 (Honeypot alanı gizleme)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-2] — ONAY GEREKLİ: Honeypot Alanı Gizleme.
+
+PRD metni: "Website" honeypot alanı kullanıcıya görünüyor. CSS + HTML
+değişikliği ile gizlenecek. Fonksiyon değişmeyecek, sadece görünmez
+hale gelecek. Yasin FAZ 4 için "geç" dedi. Bu madde teknik; yasal
+unvan, marka cümlesi veya üçüncü parti kimlik uydurmuyor.
+
+### Durum
+
+Ana dalda zaten kapalı (onaylı a11y turu, PR #61). İletişim, giriş,
+kayıt, mekân Tiola ve profil Tiola formlarında `website` alanı `.tl-hp`
+içinde. Ekran dışı (`left: -10000px`), 1px, `clip` + `clip-path`,
+`opacity: 0`, `pointer-events: none`, `aria-hidden`, `tabindex="-1"`.
+`display: none` ve `type="hidden"` yok: bazı botlar bunları atlar; alan
+DOM'da `type="text"` kalır, sunucu doluysa eskisi gibi yakalar.
+`a11y.js` bu kutuya görünür etiket eklemez. Bu tur renk, yerleşim,
+buton ve sunucu fonksiyonunu değiştirmedi. Sözleşme `npm run verify:faz4-2`
+ile kilitlendi. FAZ4-3 ve sonrası bu turda açılmadı.
+
+### Kabul listesi
+
+- [x] İletişim, giriş, kayıt, mekân Tiola ve profil Tiola honeypot'u `.tl-hp` içinde.
+- [x] Giriş penceresi aynı gizlemeyi `honeypotHtml()` ile basar.
+- [x] CSS ekran dışı + clip. `display: none` yok.
+- [x] Alan `type="text"`; `aria-hidden` ve `tabindex="-1"`.
+- [x] Sunucu hâlâ `website` / `url` / `homepage` okur. Boş alan dolu sayılmaz.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4-3 … FAZ4-8 bu turda ele alınmadı.
+- Honeypot yeni forma eklenmedi. Blog yazma formunda ayrı bir Website
+  kutusu yoktu; mevcut gizleme ve sunucu kontrolü duruyor.
+- `display: none` eklenmedi. Onaylı a11y kalıbı duruyor.
+
+Doğrulama: `npm run verify:faz4-2`. Headless Chrome (iletişim, giriş,
+kayıt): "Website" yazısı ve kutusu görünmüyor. Hesaplanan stil:
+`position: absolute`, `left: -10000px`, `opacity: 0`, `clip`,
+`clip-path: inset(50%)`, yatay kaydırma yok.
+
 ## Claude Master PRD — FAZ4-1 (H1 hiyerarşisi)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
