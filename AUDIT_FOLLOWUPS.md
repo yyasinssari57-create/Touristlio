@@ -2,6 +2,146 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ3-1 (Dinamik JSON-LD)
+
+Claude Master PRD "FAZ 3 — Gelişmiş Teknik SEO" → [FAZ3-1] Dinamik JSON-LD
+Schema. PRD'nin illüstratif metni `server/lib/schema.js` (`generatePlaceSchema`,
+`generateBlogSchema`, `generateHomeSchema`) + bir EJS head partial öneriyor; bu
+depo EJS/template kullanmıyor — gerçek implementasyon `server/lib/jsonld.js`
+(builder fonksiyonları) + `server/lib/seo.js`'in `injectSeoHead()` fonksiyonu
+(üretilen statik HTML'e doğrudan string enjeksiyonu). Önceki kapsamlı denetimde
+bu zaten "TAMAMLANDI" listesine girmişti ve PRD'nin istediğinden daha kapsamlı
+olduğu doğru çıktı (BreadcrumbList + FAQPage + Review de var, PRD'de bunlar yok).
+Bu PR o değerlendirmeyi PRD'nin tam kontrol listesine karşı doğruladı ve **iki
+gerçek hata** buldu + düzeltti: `(0,0)` koordinatının `geo` olarak yazılması,
+ve SPA'nın İngilizce blog makalesinde sunucunun doğru `Article` bloğunu yanlış
+URL ile ezmesi.
+
+### Kontrol listesi — PRD'nin istediği 3 sayfa tipi, hepsi server-side mi?
+
+| Sayfa | JSON-LD tipleri | Nereden enjekte ediliyor | Server-side mi? |
+|---|---|---|---|
+| Ana sayfa (`/`, `/explore`) | `TravelAgency` + `WebSite`+`SearchAction` (ayrı objeler) | `server/index.js` `app.get('/')` → `sendPublicHtml` → `autoJsonLd()` → `jsonLdForHome()` | ✅ evet, `curl` ile doğrulandı |
+| Mekân detay (`/places/:slug`) | `TouristAttraction` (+ `BreadcrumbList`, `FAQPage`, `Review[]` — PRD'nin istemediği ekstralar) | `server/index.js` `app.get('/places/:slug')` → `jsonLdForPlace()` | ✅ evet, `curl` ile doğrulandı |
+| Blog detay (`/blog/:slug`) | `Article` | `server/index.js` `app.get('/blog/:slug')` → `jsonLdForBlog()` | ✅ evet, `curl` ile doğrulandı (TR + EN) |
+
+Üçü de `server/lib/seo.js`'in `injectSeoHead()`'i üzerinden, yanıt `res.send()`
+edilmeden ÖNCE `</head>`'e `<script type="application/ld+json">` olarak
+yazılıyor — yani arama motoru taraycısı JS çalıştırmasa bile ilk HTML yanıtında
+JSON-LD zaten var. Client-side JS (`public/js/app.js`) hiçbir zaman bunun
+YERİNE geçen "tek kaynak" değil; aşağıda ayrıca ele alındı.
+
+### Koşullu alanlar — PRD'nin 2 net kuralı
+
+**1) `aggregateRating` — SADECE gerçek Tiola varsa.** `touristAttraction()`
+(`server/lib/jsonld.js`) `tiolaCount > 0 && tiolaRating > 0` değilse bu alanı
+hiç eklemiyor (`compact()` ile `undefined` alanlar JSON'dan tamamen çıkıyor —
+`"aggregateRating": null` gibi yarı-dolu bir alan da kalmıyor). Canlı doğrulama:
+`verify:faz3-1` script'i, test veritabanında gerçek 125 onaylı Tiola'sı olan bir
+mekânda `aggregateRating` VAR, hiç Tiola'sı olmayan `ayasofya-istanbul`'da YOK
+olduğunu `GET /places/...` yanıtının gerçek HTML'inden parse ederek doğruluyor.
+Bu zaten doğruydu — değişiklik yapılmadı.
+
+**2) `geo` — SADECE lat/lng gerçek ve sıfır olmayan değerlerse.** Burada
+**gerçek bir hata bulundu ve düzeltildi**:
+
+- Önceki kod sadece `lat != null && lng != null && Number.isFinite(...)`
+  kontrol ediyordu — `(0, 0)` ("Null Island", gerçek bir koordinat değil, boş/
+  eksik veri placeholder'ı) için de `geo` alanını ekliyordu.
+- Bu TEORİK bir kenar durum değil: canlı test veritabanında (`faz2-4` test
+  verisi kalıntısı, id 9990001-9990003) **gerçekten lat=0, lng=0 olan 3 satır**
+  bulundu — ve bu depo zaten başka bir yerde (`server/lib/sitemap.js`,
+  `isValidSitemapCoord()`, yorum: *"(0,0) is Null Island"*) bu kuralı sitemap
+  için doğru uyguluyordu. `jsonld.js` bu paylaşılan korumayı kullanmıyordu.
+- **Düzeltme:** `server/lib/jsonld.js`'teki `touristAttraction()`, artık
+  `sitemap.js`'teki aynı `isValidSitemapCoord(lat, lng)` fonksiyonunu
+  kullanıyor (yeni bir kural icat edilmedi, var olan kanıtlanmış kural yeniden
+  kullanıldı). Client-side eşdeğeri (`public/js/app.js` `injectPlaceJsonLd()`)
+  de aynı `(0,0)` + sınır (±90/±180) kontrolünü alıyor, böylece sunucu ve SPA
+  birbiriyle tutarlı kalıyor.
+- Canlı doğrulama: `verify:faz3-1`, lat=0/lng=0 olan gerçek bir satırda
+  `GET /places/...` yanıtının HTML'inde `geo` alanının artık HİÇ olmadığını
+  teyit ediyor; gerçek koordinatlı bir mekânda (`ayasofya-istanbul`,
+  41.0/28.98) `geo`'nun normal şekilde var olduğunu da ayrıca doğruluyor.
+
+### SPA client-side navigasyon — iki gerçek hata bulundu, ikisi de düzeltildi
+
+Bu bir SPA (`history.pushState`, `public/js/app.js`). Her doğrudan URL isteği
+(Google'ın sayfayı ilk indirdiği HTML) sunucuda doğru JSON-LD alıyor. Sayfa
+JS çalışınca `setJsonLdBlocks()` sunucunun `<script data-tl-jsonld>` etiketini
+silip kendi ürettiği blokla değiştiriyor. Çift/çakışan iki blok kalmıyor.
+Mekân sayfasında bu değiştirme doğru mekâna güncelleniyor (`openDetail` →
+`injectPlaceJsonLd`). Asıl hata blog makalesindeydi:
+
+1. **EN makale URL'si ve dili düşüyordu.** `articleJsonLd()` adresi her zaman
+   `/blog/...` yazıyordu; `/en` önekini ve `inLanguage` alanını koymuyordu.
+   `/en/blog/:slug` açılınca sunucunun doğru `Article` bloğu (url `/en/blog/...`,
+   `inLanguage: "en"`) silinip yerine Türkçe URL'li, dilsiz bir `Article`
+   konuyordu. JS çalıştıran tarayıcı son DOM'da yanlış kanonik görürdü.
+   Düzeltme: istemci de `blogPublicPath()` kullanıyor (mekân sayfasındaki
+   `placePublicPath()` ile aynı kural) ve `inLanguage` ekliyor.
+2. **Makale açılırken ara adımda şema `CollectionPage` oluyordu.**
+   `showMainTab('blog')`, makale verisi gelmeden sunucu `Article` bloğunu
+   liste şemasıyla değiştiriyordu. Geri yükleme yolunda (`/blog/:slug` ilk
+   açılış) bu silme artık yapılmıyor; `openBlogDetail` doğru `Article`'ı
+   yazıyor. İstek başarısız olursa liste şeması o zaman konuyor.
+
+İki paralel üretici (`jsonld.js` + `app.js`) hâlâ duruyor — bu bir kod
+tekrarı, FAZ3-1'de birleştirilmedi. Aynı kuralları uyguluyorlar (geo
+`(0,0)` koruması dahil) ve aynı sayfada iki ayrı blok bırakmıyorlar.
+
+### Ekstra inceleme — FAQPage / Review (PRD'de yok, ama aynı yüzey)
+
+- **FAQPage:** Görünür SSS akordeonu (`renderFaqAccordion`) VE JSON-LD'nin
+  `faqPage()`'i TAM OLARAK aynı veri kaynağından (`place.faqTR`/`faqEN`,
+  `q`/`a` alanları) besleniyor — ayrı, bağımsız bir metin üretimi yok. Yani
+  Google'ın "FAQPage markup görünür metinle eşleşmeli" kuralı, tasarım
+  itibariyle (single-source) zaten sağlanıyor. Değişiklik gerekmedi.
+- **Review:** JSON-LD'deki `reviewBody`/`reviewRating`/`author.name`,
+  gösterilen Tiola kartlarıyla (`renderTiolaCard`/`renderRevList`) birebir
+  aynı alanlardan (`tiola.text`, `tiola.stars`, `tiola.userName`) geliyor, ve
+  sadece onaylı + üst seviye (yanıt değil) Tiola'lar dahil ediliyor — uydurma
+  içerik yok. Değişiklik gerekmedi.
+
+### Localizasyon (TR/EN)
+
+`touristAttraction()` ve `articleSchema()` `lang` parametresi alıyor;
+mekân açıklaması `descriptionEn`/`overviewEn` (varsa) kullanıyor, `Article`'ın
+`inLanguage` alanı `tr`/`en` arasında değişiyor — `verify:faz3-1` bunu hem TR
+hem EN için canlı `GET /blog/:slug` ve `/en/blog/:slug` üzerinden doğruluyor.
+(`TravelAgency`/`WebSite` marka adı ve sloganı kasıtlı olarak her iki dilde de
+Türkçe kalıyor — bu bir çeviri eksikliği değil, mevcut marka kararı; bu PR'da
+dokunulmadı.)
+
+### Değişen dosyalar
+
+- `server/lib/jsonld.js` — `touristAttraction()`'daki `geo` koşulu artık
+  `server/lib/sitemap.js`'teki `isValidSitemapCoord()`'u kullanıyor (yeni satır
+  sayısı: 1 import + koşul değişikliği; görünür hiçbir UI/metin değişmedi).
+- `public/js/app.js` — (a) `injectPlaceJsonLd()` geo koşulu sunucuyla aynı
+  `(0,0)` + sınır kontrolü; (b) `articleJsonLd()` artık `blogPublicPath()` ve
+  `inLanguage` kullanıyor; (c) blog makalesi geri yüklenirken sunucu `Article`
+  bloğu veri gelene kadar silinmiyor. Görünür metin, renk, yerleşim değişmedi.
+- `server/scripts/verify-faz3-1-jsonld.js` (yeni) + `package.json`
+  (`verify:faz3-1` script'i) — canlı HTML'den JSON-LD parse eder; geo,
+  aggregateRating, TR/EN Article URL ve JSON geçerliliğini doğrular.
+- `AUDIT_FOLLOWUPS.md` — bu bölüm.
+
+Dal, bilgi kutuları PR'ı (#75) dahil güncel `main` üzerine alındı. JSON-LD
+dosyalarında çakışma yoktu; yalnızca `package.json` içindeki
+`verify:place-info` satırı `verify:faz3-1` ile birlikte kaldı. `npm run
+verify:faz3-1` bu güncellemeden sonra tekrar çalıştı ve geçti. `verify:jsonld`
+ve `verify:sitemap` de regresyon için tekrar koşuldu.
+
+### Kapsam dışı (bilinçli)
+
+- İki paralel JSON-LD üretici (`server/lib/jsonld.js` + `public/js/app.js`)
+  birleştirilmedi — bu ayrı bir refactor/tech-debt işi, FAZ3-1'in kapsamı değil
+  ve "zaten çalışıyor" bir şeyi riske atmadan yapılacak bir iş.
+- `TravelAgency`/`WebSite` marka açıklamasının EN çevirisi eklenmedi (bilinçli
+  marka kararı gibi görünüyor, bu PR'ın görev tanımı dışında).
+- FAZ3-2/3/4/5 ve FAZ4'e hiç dokunulmadı.
+
 ## Claude Master PRD — FAZ2-4 (N+1 Sorgu Temizliği)
 
 Claude Master PRD "FAZ 2 — Performans ve Core Web Vitals" → [FAZ2-4] N+1 sorgu

@@ -705,7 +705,8 @@ function reviewJsonLd(ti, place) {
 
 function articleJsonLd(b) {
   const origin = schemaOrigin();
-  const url = `${origin}/blog/${encodeURIComponent(b.slug || b.id)}`;
+  // Same locale path as blogPublicPath / server articleSchema (canonicalFor).
+  const url = `${origin}${blogPublicPath(b)}`;
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -713,7 +714,7 @@ function articleJsonLd(b) {
     description: (b.excerpt || '').slice(0, 300) || undefined,
     image: absSchemaUrl(b.imageUrl),
     datePublished: b.publishedAt || b.createdAt,
-    dateModified: b.publishedAt || b.createdAt,
+    dateModified: b.updatedAt || b.publishedAt || b.createdAt,
     author: { '@type': 'Person', name: b.authorName || 'Touristlio' },
     publisher: {
       '@type': 'Organization',
@@ -722,6 +723,7 @@ function articleJsonLd(b) {
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     url,
+    inLanguage: lang === 'en' ? 'en' : 'tr',
   };
 }
 
@@ -761,8 +763,12 @@ function injectPlaceJsonLd(p, tiolas) {
     image: img,
     address: { '@type': 'PostalAddress', addressLocality: geoLabel(p.city) || p.city, addressRegion: geoLabel(p.district) || p.district, addressCountry: geoLabel(p.country) || p.country },
   };
-  if (p.lat != null && p.lng != null) {
-    attraction.geo = { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng };
+  const latNum = Number(p.lat);
+  const lngNum = Number(p.lng);
+  // Keep in sync with server/lib/sitemap.js isValidSitemapCoord — (0,0) is Null Island, not a real place.
+  if (p.lat != null && p.lng != null && Number.isFinite(latNum) && Number.isFinite(lngNum)
+    && latNum !== 0 && lngNum !== 0 && Math.abs(latNum) <= 90 && Math.abs(lngNum) <= 180) {
+    attraction.geo = { '@type': 'GeoCoordinates', latitude: latNum, longitude: lngNum };
   }
   const count = Number(p.tiolaCount) || 0;
   const rating = Number(p.tiolaRating);
@@ -1864,8 +1870,10 @@ async function showMainTab(tab, skipRoute) {
     setMetaContent('meta[property="og:type"]', (tab === 'blog' && activeBlogSlug) ? 'article' : 'website', { property: 'og:type' });
   }
   if (tab === 'explore') injectHomeJsonLd();
-  else if (tab === 'blog') setJsonLdBlocks([collectionPageJsonLd()]);
-  else if (tab !== 'detail') setJsonLdBlocks(homeJsonLdBase());
+  else if (tab === 'blog') {
+    // Restoring /blog/:slug keeps the server Article until openBlogDetail replaces it.
+    if (!(skipRoute && activeBlogSlug)) setJsonLdBlocks([collectionPageJsonLd()]);
+  } else if (tab !== 'detail') setJsonLdBlocks(homeJsonLdBase());
   const tasks = [];
   if (tab === 'blog') {
     if (!skipRoute) {
@@ -2732,6 +2740,7 @@ async function openBlogDetail(slug, skipRoute) {
   } catch (e) {
     activeBlogSlug = null;
     showBlogListing();
+    setJsonLdBlocks([collectionPageJsonLd()]);
     if (e.status === 404) {
       window.TL_TOAST?.error?.(e.message) || alert(e.message);
       if (!skipRoute) writeRouteToUrl({ main: 'blog' }, true);
