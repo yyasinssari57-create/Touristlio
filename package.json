@@ -44,6 +44,7 @@
     "verify:faz3-3": "node server/scripts/verify-faz3-3-indexes.js",
     "verify:faz3-4": "node server/scripts/verify-faz3-4-search-noindex.js",
     "verify:faz3-5": "node server/scripts/verify-faz3-5-sitemap.js",
+    "verify:faz4-1": "node server/scripts/verify-faz4-1-h1.js",
     "verify:faz4": "node server/scripts/verify-gemini-faz4.js",
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
