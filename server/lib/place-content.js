@@ -1,5 +1,6 @@
 const { resolveCoords } = require('./city-coords');
 const { buildFaqForPlace } = require('./faq-templates');
+const { repairPlaceCopy } = require('./place-copy');
 const { trLabel, trDative } = require('./tr-labels');
 
 /** Discover /api/places?category= buckets (same as former in-memory filterPlaces). */
@@ -120,10 +121,12 @@ function enrichContentFields(p, id) {
     : resolveCoords(p.city, p.country, id);
   const categories = p.categories?.length ? p.categories : deriveCategories(p.category);
   const faqBuilt = buildFaqForPlace({ ...p, howToGetThere, howToGetThereEn, cultureFood, cultureFoodEn });
+  // A stored 6-question template used to win even when it still said "'e nasıl".
+  // repairPlaceCopy rebuilds that template and leaves a genuinely custom FAQ.
   const faqTR = p.faqTR?.length >= 5 ? p.faqTR : faqBuilt.faqTR;
   const faqEN = p.faqEN?.length >= 5 ? p.faqEN : faqBuilt.faqEN;
 
-  return {
+  return repairPlaceCopy({
     ...p,
     overview,
     overviewEn,
@@ -147,7 +150,7 @@ function enrichContentFields(p, id) {
     categories,
     faqTR,
     faqEN,
-  };
+  });
 }
 
 module.exports = {

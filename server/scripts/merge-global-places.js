@@ -4,6 +4,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { toEnglishBestTime } = require('../lib/tr-labels');
 
 const CAT_IMG = {
   landmark: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&q=80',
@@ -247,6 +248,7 @@ function buildRow(id, row) {
     isLocal: !!isLocal,
     entryFee: entryFee || (isLocal ? 'Ücretsiz' : 'Ücretli'),
     bestTime: 'Sabah erken veya gün batımı',
+    bestTimeEn: toEnglishBestTime('Sabah erken veya gün batımı'),
     description: `${name}, ${city} — dünya çapında gezginlerin sık aradığı ${category} destinasyonu. Touristlio'da Tiola ile deneyim paylaşın.`,
     history: `${country} / ${city} bölgesinde kültürel ve doğal öneme sahip bir durak.`,
     tips: 'Kalabalık saatlerden kaçının. Yerel ipuçları için onaylı Tiola yorumlarına bakın.',

@@ -2,6 +2,58 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Denetim #1 — tüm mekânların Türkçe SSS ve ulaşım metni
+
+Yasin denetimden sonra "geç" dedi. İlk madde: Ayasofya dışında kalan
+mekânların bozuk Türkçe SSS / "nasıl gidilir" cümleleri.
+
+Kayıtlı soru `Topkapı Sarayı'e nasıl ulaşılır?` diye bitiyordu. Cevap
+`Istanbul merkezinden … ile Topkapı Sarayı ulaşılabilir.` diye kesiliyordu.
+Şablon `trDative` ile `Sarayı'na`, `Kenti'ne`, `Ayasofya'ya` üretiyordu
+ama `place-content` kayıtlı SSS beş maddeden uzunsa şablonu atlıyordu.
+Eski metin kazanıyordu. `013` yalnız Ayasofya satırını düzeltmişti.
+İngilizce en iyi saat alanının bir kısmında `Sabah`, `Çarşamba` duruyordu.
+
+### Durum
+
+Bütün şablon SSS ve ulaşım cümleleri aynı yardımcıdan yeniden kurulur.
+Yönelme eki son kelimeye göre seçilir: `Ayasofya'ya`, `Topkapı Sarayı'na`,
+`Efes Antik Kenti'ne`, `Louvre Müzesi'ne`, `Kolezyum'a`. Ünsüz ve ince
+ünlüde `Anıtkabir'e` gibi doğru `'e` durur; her ada kör `'e` yapışmaz.
+Türkçe gövdede `Istanbul` / `Turkey` → `İstanbul` / `Türkiye`.
+Mekân adı (`Istanbul Modern`) ve filtre anahtarı `city=Istanbul`,
+`country=Turkey` durur. Arama takma adları durur.
+İngilizce `bestTimeEn` ve İngilizce SSS cevabındaki saat/gün Türkçeden
+çevrildi (`Çarşamba akşamı` → `Wednesday evening`, `Sabah açılışta` →
+`At morning opening`). Türkçe `bestTime` durur (`Sabah 07:00-09:00`).
+Yeni uzun tanıtım paragrafı yazılmadı. Renk, yerleşim ve buton yeri değişmedi.
+Açılışta `014_place_tr_copy` aynı tamiri veritabanındaki satırlara yazar.
+
+`places.json`: 1090 yer. Ayasofya zaten doğruydu, dosyada aynı kaldı.
+1089 ulaşım cümlesi ve 1089 Türkçe SSS yenilendi. 231 İngilizce en iyi
+saat çevirisi yapıldı (25 ayrı kalıp; çoğu `Sabah erken veya gün batımı`).
+
+### Kabul listesi
+
+- [x] Kör `'e nasıl` yok. Soru, yönelme yardımcısıyla aynı.
+- [x] Topkapı `Topkapı Sarayı'na`, Efes `Efes Antik Kenti'ne`.
+- [x] Kolezyum `Kolezyum'a`. Louvre `Louvre Müzesi'ne`.
+- [x] Ayasofya `Ayasofya'ya`, `İstanbul`, `Türkiye`.
+- [x] `city=Istanbul`, `country=Turkey` duruyor.
+- [x] İngilizce `bestTimeEn` ve İngilizce SSS içinde Türkçe saat/gün yok.
+- [x] Türkçe en iyi saat Türkçe duruyor.
+- [x] Beşten uzun bozuk kayıtlı SSS artık şablonu ezmiyor.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- Favicon, blog site haritası, gezi planları ve PR #52 bu turda açılmadı.
+- Roma / İtalya gibi diğer şehir ve ülke adları Türkçeye çevrilmedi.
+  Yalnızca filtre anahtarı olan `Istanbul` ve `Turkey` Türkçe gövdede düzeltildi.
+- Yasal unvan, marka cümlesi, GA kimliği veya uzun yeni tanıtım metni yazılmadı.
+
+Doğrulama: `npm run verify:place-tr-copy`.
+
 ## Claude Master PRD — FAZ4-8 (Ayasofya dil hataları)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
@@ -43,7 +95,8 @@ Ayasofya satırına yazar. Renk, yerleşim ve buton yeri değişmedi.
 ### Bilinçli olarak yapılmayanlar
 
 - Master PRD'de FAZ4'ten sonra yeni bir faz yok. FAZ5 açılmadı.
-- Diğer mekânların kayıtlı `…'e nasıl ulaşılır?` cümleleri duruyor.
+- Diğer mekânların kayıtlı `…'e nasıl ulaşılır?` cümleleri bu turda duruyordu.
+  Takip turu (`014_place_tr_copy`) onları düzeltti. Yukarıdaki denetim #1.
 - Yasal unvan, marka cümlesi, GA kimliği veya uzun yeni tanıtım metni yazılmadı.
 
 Doğrulama: `npm run verify:faz4-8`.
