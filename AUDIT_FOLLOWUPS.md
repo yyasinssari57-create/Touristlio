@@ -2,6 +2,52 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-7 (Kategori navigasyonu tekrarı)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-7] — ONAY GEREKLİ: Kategori Navigasyonu Tekrarı.
+
+PRD metni: Doğa, Tarihi, Müze kategorileri iki kez görünüyor.
+Tekrar eden kategoriler birleştirilecek. Görsel yerleşim değişmeyecek.
+Yasin FAZ 4 için "geç" dedi. Bu madde teknik; yasal unvan, marka
+cümlesi veya üçüncü parti kimlik uydurmuyor.
+
+### Durum
+
+Keşfet ve Harita filtre çubuğu önce grup çipini (Tarihi, Doğa, Müzeler),
+ardından aynı adlı kategori çipini (Tarihi, Doğa, Müze) basıyordu.
+Çubukta aynı ad bir kez kalır: grup çipi durur, tekrarlayan kategori
+çipi çıkmaz. İngilizce Historic / Historical aynı kurala girer.
+Plaj, Simge yapı, Restoran ve diğer ayrı çipler sırasıyla durur.
+Kategori kartları ve Gezilecek Yerler şeridi tek liste olduğu için
+olduğu gibi kaldı. Renk, punto, çip biçimi ve buton yeri değişmedi.
+Sözleşme `npm run verify:faz4-7` ile kilitlendi. FAZ4-8 bu turda
+açılmadı.
+
+### Kabul listesi
+
+- [x] Türkçe çubukta Tarihi, Doğa ve Müze birer kez.
+- [x] Grup çipleri (historical, nature, museums) durur. Aynı adlı kategori çipi yok.
+- [x] Plaj, Simge yapı, Dini, Restoran, Manzara, Macera, Yemek, Eğlence çubukta durur.
+- [x] İngilizce Historic / Historical ve Museum / Museums çubukta bir kez.
+- [x] Adı grupla çakışmayan yeniden adlandırılmış kategori (ör. Sanat Müzesi) durur.
+- [x] Grup listede yoksa o kategori çipi durur.
+- [x] Keşfet ve Harita aynı çubuk HTML'ini kullanır.
+- [x] Kategori kartları tüm kategorileri basar. Gezilecek Yerler şeridi grup tekrarını içermez.
+- [x] `.fpill` ölçü, renk ve yerleşim aynı.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4-8 bu turda ele alınmadı. Ayasofya dil hataları duruyor.
+- Kategori kartları ve Gezilecek Yerler şeridinden Doğa / Tarihi / Müze
+  silinmedi. Oralarda ikinci bir grup çipi yoktu.
+- Grup filtresinin kapsamı (Tarihi = tarihi + simge + dini) değişmedi.
+  Yalnızca çubuktaki ikinci çip kalktı.
+- Admin kategori ipucu metni duruyor.
+
+Doğrulama: `npm run verify:faz4-7`.
+
 ## Claude Master PRD — FAZ4-6 (Arama "0 yer" flaşı)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
