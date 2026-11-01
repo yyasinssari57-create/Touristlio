@@ -74,6 +74,17 @@ function injectErrorDetail(html, errorDetail) {
   return html.replace(token, `<pre class="tl-error-detail" id="tl-server-error-detail">${text}</pre>`);
 }
 
+/**
+ * Status sendPublicHtml would send. HEAD must match GET.
+ * 404.html is a real not-found response unless a handler already set another code.
+ */
+function publicHtmlStatus(relativePath, currentStatus) {
+  const code = Number(currentStatus);
+  const status = Number.isInteger(code) && code >= 100 && code <= 599 ? code : 200;
+  if (relativePath === '404.html' && status === 200) return 404;
+  return status;
+}
+
 function readPublicHtml(publicDir, relativePath) {
   const filePath = path.join(publicDir, relativePath);
   if (!fs.existsSync(filePath)) {
@@ -130,7 +141,7 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   const seoRest = { ...seo };
   delete seoRest.errorDetail;
   if (relativePath === '404.html') {
-    if (res.statusCode === 200) res.status(404);
+    res.status(publicHtmlStatus(relativePath, res.statusCode));
     if (!seoRest.title) {
       seoRest.title = lang === 'en' ? 'Page not found — Touristlio' : 'Sayfa bulunamadı — Touristlio';
     }
@@ -187,14 +198,7 @@ function htmlPageRoutesMiddleware(publicDir) {
     if (!fs.existsSync(filePath)) return next();
 
     if (req.method === 'HEAD') {
-      // Length is approximate for HEAD (SEO/nonce injection happens on GET).
-      const size = Buffer.byteLength(readPublicHtml(root, relativePath), 'utf8');
-      res.set({
-        ...NO_CACHE_HEADERS,
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Length': String(size),
-      });
-      return res.status(200).end();
+      return endPublicHtmlHead(res, root, relativePath);
     }
 
     return sendPublicHtml(res, root, relativePath);
@@ -214,22 +218,28 @@ function publicHtmlMiddleware(publicDir) {
     if (!fs.existsSync(abs)) return next();
 
     if (req.method === 'HEAD') {
-      const size = Buffer.byteLength(readPublicHtml(root, rel), 'utf8');
-      res.set({
-        ...NO_CACHE_HEADERS,
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Length': String(size),
-      });
-      return res.status(200).end();
+      return endPublicHtmlHead(res, root, rel);
     }
     return sendPublicHtml(res, root, rel);
   };
+}
+
+/** HEAD skips SEO/nonce injection; status still matches GET. Length is the raw file. */
+function endPublicHtmlHead(res, publicDir, relativePath) {
+  const size = Buffer.byteLength(readPublicHtml(publicDir, relativePath), 'utf8');
+  res.set({
+    ...NO_CACHE_HEADERS,
+    'Content-Type': 'text/html; charset=utf-8',
+    'Content-Length': String(size),
+  });
+  return res.status(publicHtmlStatus(relativePath, res.statusCode)).end();
 }
 
 module.exports = {
   sendPublicHtml,
   htmlPageRoutesMiddleware,
   publicHtmlMiddleware,
+  publicHtmlStatus,
   NO_CACHE_HEADERS,
   injectAppVersion,
   injectEarlyLangBoot,

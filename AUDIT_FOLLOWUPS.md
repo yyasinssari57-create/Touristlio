@@ -2,6 +2,43 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Denetim #4 — PR #52 ve HEAD /404
+
+Yasin "sıradakine geç" dedi. Dördüncü madde: Eylül 2026’daki PR #52
+main ile çakışıyor. Canlıda GET `/404` zaten 404. HEAD `/404` ise 200
+dönüyordu.
+
+### Durum
+
+PR #52 (`cursor/not-found-10f2`) kapatılacak. Dal main ile çakışıyor
+(Eylül 2026); üzerine yararlı bir birleştirme yok. GET 404 işi zaten
+main’de. Dal birleştirilmedi. Bu oturumda kapatma aracı yoktu; üst ajan
+kapatır.
+
+HEAD kısayolu her HTML sayfasına 200 yazıyordu. GET, `404.html` için
+404 yazıyor. Aynı kural artık HEAD için de geçer: `/404`, `/404.html`
+ve olmayan adres 404. Gerçek sayfalar (`/`, `/login`, yasal HTML) HEAD
+isteğinde 200 kalır. Gövde HEAD’te gönderilmez. Renk, yerleşim ve buton
+yeri değişmedi.
+
+### Kabul listesi
+
+- [x] HEAD `/404` ve HEAD `/404.html` → 404. Gövde boş.
+- [x] GET `/404` → 404. Başlık `Sayfa bulunamadı — Touristlio`.
+- [x] HEAD `/` ve HEAD `/login` → 200.
+- [x] Olmayan yol, GET ve HEAD’te 404.
+- [x] Önceden 500 yazılmış bir cevap 404’e çekilmez.
+- [ ] PR #52 bu oturumda kapatılamadı. Üst ajan kapatır. Birleştirilmez.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- Doğrulama betiklerindeki yanlış alarmlar bu turda yok.
+- Gezi planlarındaki eksik `await` bu turda yok.
+- Kalan madde bu ikisi. Sıradaki tur yalnız onları ele alır.
+
+Doğrulama: `npm run verify:head-404`.
+
 ## Denetim #3 — blog gövdesi sitemap eşiğinin altında
 
 Yasin "sıradakine geç" dedi. Üçüncü madde: blog sayfaları duruyor ama
