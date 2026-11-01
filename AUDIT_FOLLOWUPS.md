@@ -2,6 +2,68 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ3-5 (Sitemap kalite filtresi)
+
+Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-5] Sitemap Kalite Filtresi.
+PRD `server/routes/sitemap.js` ve `description_tr` / `blog_posts` /
+`verification_status` / `deleted_at` / `updated_at` istiyor. Bu depoda sitemap
+`server/lib/sitemap.js` içinde; o sütunlar yok. Kural gerçek şemaya bağlandı.
+Görünen sayfa, renk, yerleşim ve butonlar değişmedi. Yazılar sitede duruyor;
+yalnızca kısa olanlar sitemap listesinden çıktı. FAZ4 yok. FAZ 3’ün beş maddesi
+bu turla kapandı.
+
+### PRD kuralı
+
+- Yayındaki mekân, silinmemiş, enlem dolu ve 0 değil, Türkçe açıklama 50
+  karakterden uzun. En fazla 10.000 kayıt, yeniden eskiye.
+- Yayındaki blog gövdesi 200 karakterden uzun.
+- Statik adresler: `/`, `/explore`, `/blog`, hakkında, iletişim.
+- Öncelik: mekân 0.8 / haftalık, blog 0.7 / aylık. Önbellek 1 saat.
+- XML kaçışı. Hata olursa sitemap çökmesin.
+
+### Şema karşılığı
+
+- `verification_status = 'published'` → `places.status` (boş da yayında).
+- `deleted_at` yok. Taslak ve arşiv zaten status ile eleniyor.
+- `description_tr` yok. Türkçe metin `overview` veya `description`. İngilizce
+  sütun sayılmaz. İkisinden uzun olanı 50 karakteri geçmeli (tam 50 yetmez).
+- `updated_at` yok. Tavan `ORDER BY id DESC LIMIT 10000`. Mekân `lastmod`
+  bugünün tarihi olarak kalır.
+- `blog_posts.is_published` → `blogs.status = 'approved'`. Gövde `blogs.body`.
+- `/legal/about` bu sitede 200 dönmez. Duran adres `/legal/about.html`
+  (iletişim, gizlilik, KVKK, şartlar aynı). `/gezilecek-yerler` ve `/search`
+  de 200 ve indexlenebilir; listeden silinmedi.
+- `/explore` parametresiz indexlenebilir (FAZ3-4) ama sitemap’te yoktu. Eklendi
+  (0.9 / günlük). İngilizce ikizi `/en/explore` mevcut kural ile gelir.
+
+### Zaten vardı
+
+- Yayındaki mekân, zorunlu slug, lat/lng dolu ve 0 değil, aralık kontrolü.
+- Blog 0.7 / aylık, mekân 0.8 / haftalık.
+- `Cache-Control: public, max-age=3600`. XML kaçışı (`&amp;` vb.).
+- Sorgu hata verirse o bölüm boş kalır; tüm sitemap 500 olmaz.
+- İngilizce ikiz adresler.
+
+### Bu turda kapanan boşluk
+
+- Kısa Türkçe açıklama (50 ve altı) sitemap’e yazılmıyor.
+- Kısa blog gövdesi (200 ve altı) sitemap’e yazılmıyor. Yerel test
+  veritabanında 31 onaylı yazının hepsi 200’ün altında (6 demo özet 71–133
+  karakter, gerisi doğrulama artığı). Hepsi listeden çıktı. Uzun gövdeli
+  yazı gelince girer. Sayfanın kendisi yayında kalır.
+- Mekân tavanı 10.000. Bu veritabanında kaliteli mekân 1.087; eklenen
+  açıklama kuralı hiç mekân düşürmedi.
+- `/explore` ve `/en/explore` sitemap’te.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4 — yok. Onay maddelerine başlanmadı.
+- `/blog` liste adresi önceliği 0.8 duruyor; tarama sıklığı günlük kaldı
+  (PRD örneği haftalık). Adres zaten listede.
+- Ekvator / Greenwich (tam 0) elenmeye devam eder.
+
+Doğrulama: `npm run verify:faz3-5` ve `npm run verify:sitemap`.
+
 ## Claude Master PRD — FAZ3-4 (Arama sayfası canonical + noindex)
 
 Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-4] Arama Sayfası Canonical +
