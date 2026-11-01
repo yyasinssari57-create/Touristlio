@@ -630,9 +630,17 @@ function placeListField(p, base) {
   return Array.isArray(val) ? val : [];
 }
 
+function trUiLabel(value) {
+  const src = String(value || '').trim();
+  if (src === 'Istanbul') return 'İstanbul';
+  if (src === 'Turkey') return 'Türkiye';
+  return src;
+}
+
 function placeMetaTitle(p) {
   const name = String(p?.name || '').trim();
-  const city = String((lang === 'en' ? (p?.cityEn || p?.city) : (p?.city || p?.cityEn)) || '').trim();
+  const cityRaw = String((lang === 'en' ? (p?.cityEn || p?.city) : (p?.city || p?.cityEn)) || '').trim();
+  const city = lang === 'en' ? cityRaw : trUiLabel(cityRaw);
   if (name && city) {
     return lang === 'en'
       ? `${name} | Things to Do in ${city} — Touristlio`

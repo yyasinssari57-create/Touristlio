@@ -1,5 +1,6 @@
 const { resolveCoords } = require('./city-coords');
 const { buildFaqForPlace } = require('./faq-templates');
+const { trLabel, trDative } = require('./tr-labels');
 
 /** Discover /api/places?category= buckets (same as former in-memory filterPlaces). */
 const DISCOVER_GROUPS = {
@@ -54,7 +55,7 @@ function matchesFilterGroup(placeCategories, group) {
 
 const THINGS_TR = [
   (n, ci) => `${n} ana alanını yürüyerek keşfedin; bilgi panolarını okuyun.`,
-  (n, ci) => `${ci} çevresindeki yan sokaklarda kısa bir fotoğraf molası verin.`,
+  (n, ci) => `${trLabel(ci)} çevresindeki yan sokaklarda kısa bir fotoğraf molası verin.`,
   (n, ci) => `Yakındaki yerel kafede mola — ${n} ziyaretini günün geri kalanına bağlayın.`,
   (n, ci) => `Rehberli tur veya sesli rehber ile ${n} hakkında derinlemesine bilgi alın.`,
 ];
@@ -67,8 +68,8 @@ const THINGS_EN = [
 ];
 
 const CULTURE_TR = [
-  (n, c) => `${c} mutfağından küçük bir lezzet durağı ekleyin; ${n} çevresinde sokak lezzetleri ve geleneksel tatlar bulunur.`,
-  (n, c) => `Yerel pazar veya esnaf lokantasında ${c} kültürünü tadın — gezi sadece müze değil, sofra da öğretir.`,
+  (n, c) => `${trLabel(c)} mutfağından küçük bir lezzet durağı ekleyin; ${n} çevresinde sokak lezzetleri ve geleneksel tatlar bulunur.`,
+  (n, c) => `Yerel pazar veya esnaf lokantasında ${trLabel(c)} kültürünü tadın — gezi sadece müze değil, sofra da öğretir.`,
 ];
 
 const CULTURE_EN = [
@@ -82,7 +83,7 @@ function extendOverview(desc, name, city, country, lang) {
   if (lang === 'en') {
     return `${desc} Plan half a day if you want to absorb ${name} without rushing — ${city}, ${country} rewards unhurried walks and a second look at details easy to miss on a quick pass.`;
   }
-  return `${desc} Acele etmeden ${name} deneyimini yaşamak için yarım gün ayırın — ${city}, ${country} yavaş tempoda yürüyüşe ve ikinci bir bakışa değer.`;
+  return `${desc} Acele etmeden ${name} deneyimini yaşamak için yarım gün ayırın — ${trLabel(city)}, ${trLabel(country)} yavaş tempoda yürüyüşe ve ikinci bir bakışa değer.`;
 }
 
 const ICONIC_EN = {
@@ -111,7 +112,7 @@ function enrichContentFields(p, id) {
   const cultureFoodEn = p.cultureFoodEn || CULTURE_EN[i % CULTURE_EN.length](p.name, p.country);
   const travelTips = p.travelTips || p.tips || '';
   const travelTipsEn = p.travelTipsEn || p.tipsEn || p.tips || '';
-  const howToGetThere = p.howToGetThere || `${p.city} merkezinden toplu taşıma veya taksi ile ${p.name} ulaşılabilir.`;
+  const howToGetThere = p.howToGetThere || `${trLabel(p.city)} merkezinden toplu taşıma veya taksi ile ${trDative(p.name)} ulaşılabilir.`;
   const howToGetThereEn = p.howToGetThereEn || `Reach ${p.name} from ${p.city} center by public transit or taxi.`;
   const photos = Array.isArray(p.photos) && p.photos.length ? p.photos : (p.imageUrl ? [p.imageUrl] : []);
   const [lat, lng] = p.lat != null && p.lng != null

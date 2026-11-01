@@ -50,7 +50,7 @@ else ok('explore EN count copy');
 const placeTr = generateMeta('place', {
   place: { name: 'Ayasofya', city: 'Istanbul', overview: 'A'.repeat(400), imageUrl: '/images/ayasofya.webp' },
 }, 'tr');
-if (placeTr.title !== 'Ayasofya | Istanbul Gezilecek Yerler — Touristlio') fail(`place TR title: ${placeTr.title}`);
+if (placeTr.title !== 'Ayasofya | İstanbul Gezilecek Yerler — Touristlio') fail(`place TR title: ${placeTr.title}`);
 else ok('place TR title with city');
 if (placeTr.description.length !== 160) fail(`place description not clipped: ${placeTr.description.length}`);
 else ok('place description clipped to 160');

@@ -12,7 +12,7 @@
     "entryFee": "Ücretsiz",
     "entryFeeEn": "Free",
     "bestTime": "Sabah 07:00-09:00",
-    "bestTimeEn": "Sabah 07:00-09:00",
+    "bestTimeEn": "Early morning, 07:00–09:00",
     "description": "Dünyanın en büyük Bizans yapılarından biri. 537 yılında İmparator Justinianos tarafından inşa ettirilen yapı asırlarca kilise, müze ve şimdi cami olarak hizmet veriyor. İçerideki 30 metre çapındaki dev kubbe adeta havada asılı görünüyor.",
     "descriptionEn": "Hagia Sophia crowns Istanbul’s skyline with a dome that seemed to float for Byzantine worshippers and still astonishes visitors today. Layered as cathedral, mosque, and museum, it is the essential stop for understanding the city’s faith, empire, and architecture in one walk.",
     "history": "I. Justinianos tarafından 532-537 arasında inşa ettirildi. 1000 yıl boyunca dünyanın en büyük kubbesi unvanını taşıdı. 1453 fethiyle camiye dönüştürüldü, 1934'te Atatürk'ün kararıyla müzeye çevrildi, 2020'de tekrar cami oldu.",
@@ -37,7 +37,7 @@
     "overviewEn": "Allow at least two hours: security lines move faster early, and the upper galleries reveal mosaics many visitors miss. Dress modestly, carry a scarf, and plan shoe removal at the entrance.",
     "thingsToDo": [
       "Ayasofya ana alanını yürüyerek keşfedin; bilgi panolarını okuyun.",
-      "Istanbul çevresindeki yan sokaklarda kısa bir fotoğraf molası verin.",
+      "İstanbul çevresindeki yan sokaklarda kısa bir fotoğraf molası verin.",
       "Yakındaki yerel kafede mola — Ayasofya ziyaretini günün geri kalanına bağlayın."
     ],
     "thingsToDoEn": [
@@ -45,7 +45,7 @@
       "Allow time for side streets near Istanbul — often the best photo angles.",
       "Pause at a neighborhood café and link Ayasofya to the rest of your day in Istanbul."
     ],
-    "cultureFood": "Yerel pazar veya esnaf lokantasında Turkey kültürünü tadın — gezi sadece müze değil, sofra da öğretir.",
+    "cultureFood": "Yerel pazar veya esnaf lokantasında Türkiye kültürünü tadın — gezi sadece müze değil, sofra da öğretir.",
     "cultureFoodEn": "Browse a local market or café culture nearby; food is part of how Turkey tells its story.",
     "travelTips": "Namaz vakitlerinden sonra, kalabalık gelmeden (07:00-09:00) gidin. Başörtüsü zorunlu. Ayakkabı torbası gerekiyor. Çarşamba günleri en kalabalık.",
     "travelTipsEn": "When visiting Ayasofya in Istanbul, check season, weather, and public holidays in advance. During peak hours, side galleries or terraces may feel less crowded than the main hall. Keep a simple map handy for exits, restrooms, and transit links.",
@@ -55,7 +55,7 @@
       "landmark",
       "historical"
     ],
-    "howToGetThere": "Istanbul merkezinden toplu taşıma veya taksi ile Ayasofya ulaşılabilir.",
+    "howToGetThere": "İstanbul merkezinden toplu taşıma veya taksi ile Ayasofya'ya ulaşılabilir.",
     "howToGetThereEn": "Reach Ayasofya from Istanbul center by public transit or taxi.",
     "photos": [
       "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=600&q=80&auto=format&fit=crop"
@@ -63,7 +63,7 @@
     "faqTR": [
       {
         "q": "Ayasofya ziyareti ne kadar sürer?",
-        "a": "Çoğu ziyaretçi Ayasofya için 1,5–3 saat ayırır. Istanbul programınıza göre yarım gün de planlayabilirsiniz."
+        "a": "Çoğu ziyaretçi Ayasofya için 1,5–3 saat ayırır. İstanbul programınıza göre yarım gün de planlayabilirsiniz."
       },
       {
         "q": "Ayasofya giriş ücreti var mı?",
@@ -74,16 +74,16 @@
         "a": "Sabah 07:00-09:00 genelde daha sakin ve fotoğraf için uygundur. Hafta içi sabah saatleri kalabalığı azaltır."
       },
       {
-        "q": "Ayasofya'e nasıl ulaşılır?",
-        "a": "Istanbul merkezinden toplu taşıma veya taksi ile Ayasofya ulaşılabilir."
+        "q": "Ayasofya'ya nasıl ulaşılır?",
+        "a": "İstanbul merkezinden toplu taşıma veya taksi ile Ayasofya'ya ulaşılabilir."
       },
       {
         "q": "Ayasofya çocuklarla uygun mu?",
-        "a": "Turkey / Istanbul genelinde aile ziyaretleri yaygındır; uzun kuyruklar ve yürüyüş mesafesini göz önünde bulundurun."
+        "a": "Türkiye / İstanbul genelinde aile ziyaretleri yaygındır; uzun kuyruklar ve yürüyüş mesafesini göz önünde bulundurun."
       },
       {
         "q": "Ayasofya yakınında ne yenir?",
-        "a": "Yerel pazar veya esnaf lokantasında Turkey kültürünü tadın — gezi sadece müze değil, sofra da öğretir."
+        "a": "Yerel pazar veya esnaf lokantasında Türkiye kültürünü tadın — gezi sadece müze değil, sofra da öğretir."
       }
     ],
     "faqEN": [
@@ -97,7 +97,7 @@
       },
       {
         "q": "When is the best time to visit Ayasofya?",
-        "a": "Sabah 07:00-09:00 is usually quieter and better for photos. Weekday mornings reduce crowds."
+        "a": "Early morning, 07:00–09:00 is usually quieter and better for photos. Weekday mornings reduce crowds."
       },
       {
         "q": "How do I get to Ayasofya?",

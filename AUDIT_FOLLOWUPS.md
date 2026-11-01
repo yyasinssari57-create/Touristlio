@@ -2,6 +2,52 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-8 (Ayasofya dil hataları)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-8] — ONAY GEREKLİ: Ayasofya Dil Hataları.
+
+PRD metni: Türkçe sayfada "Istanbul", "Turkey", "Ayasofya'e" gibi hatalar.
+Veritabanındaki metin güncelleme + template düzeltmesi.
+Yasin FAZ 4 için "geç" dedi. Bu madde teknik; yasal unvan, marka
+cümlesi veya üçüncü parti kimlik uydurmuyor.
+
+### Durum
+
+Ayasofya Türkçe gövdesinde şehir ve ülke İngilizce anahtarla yazılıydı
+(`Istanbul`, `Turkey`). Ulaşım sorusu `Ayasofya'e` diyordu; cümle
+`Ayasofya ulaşılabilir` diye kesiliyordu. İngilizce en iyi saat alanı
+`Sabah 07:00-09:00` kalmıştı. Bu tur yalnızca Ayasofya kaydını düzeltti:
+Türkçe metin `İstanbul`, `Türkiye`, `Ayasofya'ya`. İngilizce saat
+`Early morning, 07:00–09:00`. Şablon yeni Türkçe cümlede aynı etiket ve
+yönelme ekini kullanır. Sayfa başlığındaki şehir de Türkçede İstanbul
+okunur. Filtre anahtarı `city=Istanbul`, `country=Turkey` durur.
+Arama takma adları durur. Diğer mekânların kayıtlı metni durur.
+Açılışta `013_ayasofya_tr_copy` aynı düzeltmeyi veritabanındaki
+Ayasofya satırına yazar. Renk, yerleşim ve buton yeri değişmedi.
+
+### Kabul listesi
+
+- [x] Ayasofya Türkçe metninde `Istanbul`, `Turkey` ve `Ayasofya'e` yok.
+- [x] Aynı metinde `İstanbul`, `Türkiye` ve `Ayasofya'ya` var.
+- [x] Ulaşım cümlesi `Ayasofya'ya ulaşılabilir`.
+- [x] Türkçe en iyi saat `Sabah 07:00-09:00` duruyor.
+- [x] İngilizce en iyi saat ve İngilizce SSS içinde `Sabah` yok.
+- [x] İngilizce açıklama `Istanbul`, İngilizce kültür metni `Turkey` diyor.
+- [x] `city` ve `country` sütun anahtarları duruyor.
+- [x] Türkçe başlık `Ayasofya | İstanbul Gezilecek Yerler — Touristlio`.
+- [x] İngilizce başlık `Istanbul` ile duruyor. Paris başlığı değişmedi.
+- [x] Topkapı kaydı bu turda duruyor.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- Master PRD'de FAZ4'ten sonra yeni bir faz yok. FAZ5 açılmadı.
+- Diğer mekânların kayıtlı `…'e nasıl ulaşılır?` cümleleri duruyor.
+- Yasal unvan, marka cümlesi, GA kimliği veya uzun yeni tanıtım metni yazılmadı.
+
+Doğrulama: `npm run verify:faz4-8`.
+
 ## Claude Master PRD — FAZ4-7 (Kategori navigasyonu tekrarı)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
