@@ -186,7 +186,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
       </div>
       <div class="results-bar">
-        <h3 id="results-count" aria-live="polite"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
+        <h3 id="results-count" aria-live="polite" aria-busy="true"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
         <div class="results-bar-actions">
           <button type="button" class="btn bo bsm filter-sheet-open" id="filterSheetOpenExplore" hidden aria-haspopup="dialog" aria-expanded="false" aria-controls="filterSheet" data-i18n="filterSheetOpen">Filtrele</button>
           <button type="button" class="btn bo bsm" id="clearFiltersBtn" data-act="resetFilters" data-i18n="filterClear" hidden>Filtreler Temizle</button>
@@ -201,7 +201,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         </div>
       </div>
       <p class="browse-hint" id="browseHint" data-i18n="browseHint">Kategori seçin veya arama yapın — destinasyonlar burada listelenir.</p>
-      <div class="pgrid" id="pgrid" aria-live="polite" aria-busy="false"></div>
+      <div class="pgrid" id="pgrid" aria-live="polite" aria-busy="true"></div>
       <div class="load-more-wrap" id="explorePager" style="display:none">
         <nav class="explore-pagination" id="explorePagination" data-i18n-aria="paginationAria" aria-label="Sayfalama" hidden>
           <button type="button" class="btn bo bsm" id="explorePagePrev" data-i18n="searchPrev">← Önceki</button>
@@ -404,7 +404,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <div>
               <h2 id="discoverCityTitle" data-i18n="discoverGlobalTitle">Tüm gezilecek yerler</h2>
               <p id="discoverPlaceSub" data-i18n="discoverGlobalSub">Türkiye geneli · kategori veya şehir filtreleyin</p>
-              <p class="discover-count-line"><span id="discoverPlaceCount">0</span> <span data-i18n="placesFound">yer</span></p>
+              <p class="discover-count-line" aria-busy="true"><span id="discoverPlaceCount">0</span> <span data-i18n="placesFound">yer</span></p>
             </div>
           </header>
           <div class="discover-cat-strip" id="discoverCatStrip" aria-label="Kategori filtreleri"></div>
@@ -811,6 +811,14 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
 <script src="/js/reports.js?v=__APP_VERSION__"></script>
 <script src="/js/toast.js?v=__APP_VERSION__"></script>
 <script src="/js/skeleton.js?v=__APP_VERSION__"></script>
+<script>
+(function () {
+  var grid = document.getElementById('pgrid');
+  if (grid && window.TL_SKELETON && !grid.querySelector('.pc:not(.sk)')) {
+    window.TL_SKELETON.fillCards(grid, 8);
+  }
+})();
+</script>
 <script>
 (function () {
   setTimeout(function () {

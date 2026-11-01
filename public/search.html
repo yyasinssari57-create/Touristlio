@@ -48,8 +48,8 @@
     <button type="submit" class="btn bp" id="searchSubmit" data-i18n="searchBtn">🔍 Keşfet</button>
     <button type="button" class="btn bo" id="searchClear" data-i18n="filterClear">Filtreler Temizle</button>
   </form>
-  <p class="search-meta" id="results-count" aria-live="polite"></p>
-  <div class="pgrid" id="searchGrid" aria-live="polite" aria-busy="false"></div>
+  <p class="search-meta" id="results-count" aria-live="polite" aria-busy="true"></p>
+  <div class="pgrid" id="searchGrid" aria-live="polite" aria-busy="true"></div>
   <div class="search-pagination" id="searchPager">
     <button type="button" class="btn bo bsm" id="searchPrev" disabled data-i18n="searchPrev">← Önceki</button>
     <div class="search-page-nums" id="searchPageNums"></div>
@@ -68,6 +68,12 @@
 <script src="/js/toast.js?v=__APP_VERSION__"></script>
 <script src="/js/skeleton.js?v=__APP_VERSION__"></script>
 <script>
+(function () {
+  var grid = document.getElementById('searchGrid');
+  if (grid && window.TL_SKELETON && !grid.querySelector('.pc:not(.sk)')) {
+    window.TL_SKELETON.fillCards(grid, 6);
+  }
+})();
 let lang = window.TL_I18N.bootLocale({ syncPath: true });
 let page = 1;
 const LIMIT = (window.TL_EXPLORE_QUERY && window.TL_EXPLORE_QUERY.DEFAULT_PAGE_LIMIT) || 20;
@@ -138,10 +144,28 @@ function renderSearchPager() {
   }
 }
 
+function setSearchCountPending() {
+  const el = document.getElementById('results-count');
+  if (!el) return;
+  const match = String(el.textContent || '').match(/\d+/);
+  const n = match ? Number(match[0]) : NaN;
+  if (!el.textContent.trim() || !Number.isFinite(n) || n <= 0) {
+    el.setAttribute('aria-busy', 'true');
+  }
+}
+
+function revealSearchCount(total, q) {
+  const el = document.getElementById('results-count');
+  if (!el) return;
+  el.textContent = `${total} ${t('placesFound')}${q ? ': ' + q : ''}`;
+  el.setAttribute('aria-busy', 'false');
+}
+
 async function runSearch(resetPage) {
   const grid = document.getElementById('searchGrid');
   const submitBtn = document.getElementById('searchSubmit');
   if (resetPage) page = 1;
+  setSearchCountPending();
   if (window.TL_SKELETON?.fillCards) window.TL_SKELETON.fillCards(grid, 6);
   else grid.innerHTML = window.TL_SKELETON ? window.TL_SKELETON.card(6) : '';
   window.TL_SKELETON?.button(submitBtn, true);
@@ -161,7 +185,7 @@ async function runSearch(resetPage) {
     total = payload.total ?? 0;
     page = payload.page || page;
     totalPages = payload.totalPages || Math.max(1, Math.ceil(total / LIMIT) || 1);
-    document.getElementById('results-count').textContent = `${total} ${t('placesFound')}${p.q ? ': ' + p.q : ''}`;
+    revealSearchCount(total, p.q);
     if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     const html = (payload.places || []).map(pl => {
       const count = Number(pl?.tiolaCount) || 0;

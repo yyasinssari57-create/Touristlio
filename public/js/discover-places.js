@@ -13,6 +13,7 @@ window.TL_DISCOVER = (function () {
   let discoverPage = 1;
   let discoverTotal = 0;
   let discoverHasMore = false;
+  let discoverLoaded = false;
 
   let discoverCats = [];
 
@@ -270,17 +271,38 @@ window.TL_DISCOVER = (function () {
     });
   }
 
+  function setDiscoverCountPending() {
+    const line = document.querySelector('.discover-count-line');
+    const count = document.getElementById('discoverPlaceCount');
+    if (!line || !count) return;
+    const n = Number(count.textContent);
+    if (!discoverLoaded || !Number.isFinite(n) || n <= 0) {
+      line.setAttribute('aria-busy', 'true');
+    }
+  }
+
+  function revealDiscoverCount(total) {
+    const line = document.querySelector('.discover-count-line');
+    const count = document.getElementById('discoverPlaceCount');
+    discoverLoaded = true;
+    if (count) count.textContent = String(total);
+    if (line) line.setAttribute('aria-busy', 'false');
+  }
+
   async function loadPlacesAndMap(append) {
     if (loading) return;
     loading = true;
     const list = document.getElementById('discoverPlaceList');
     const empty = document.getElementById('discoverEmpty');
-    const count = document.getElementById('discoverPlaceCount');
     const moreBtn = document.getElementById('discoverLoadMoreBtn');
     const page = append ? discoverPage + 1 : 1;
-    if (!append && list) {
-      if (window.TL_SKELETON?.fill) window.TL_SKELETON.fill(list, window.TL_SKELETON.list(4));
-      else list.innerHTML = window.TL_SKELETON?.card(4) || '';
+    if (!append) {
+      empty?.style.setProperty('display', 'none');
+      setDiscoverCountPending();
+      if (list) {
+        if (window.TL_SKELETON?.fill) window.TL_SKELETON.fill(list, window.TL_SKELETON.list(4));
+        else list.innerHTML = window.TL_SKELETON?.card(4) || '';
+      }
     }
     if (append) window.TL_SKELETON?.button(moreBtn, true);
     updateDiscoverPager();
@@ -291,7 +313,7 @@ window.TL_DISCOVER = (function () {
       discoverPage = data.page || page;
       discoverTotal = data.total ?? places.length;
       discoverHasMore = data.hasMore === true || places.length < discoverTotal;
-      if (count) count.textContent = String(discoverTotal);
+      revealDiscoverCount(discoverTotal);
       updateHeader();
       if (!places.length) {
         if (list) {

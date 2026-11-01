@@ -1148,21 +1148,47 @@ function renderTiolaRatingLine(p) {
   return `<div class="rat"><span class="rl">${t('touristlio')}</span><span class="st">${s.stars}</span><span class="rn">${s.num}</span><span class="rc">(${s.count} ${t('tiolaCount')})</span></div>`;
 }
 
+function setPlacesCountPending() {
+  const countEl = document.getElementById('results-count');
+  if (!countEl) return;
+  const n = Number(document.getElementById('resCnt')?.textContent);
+  if (!cardsLoaded || !Number.isFinite(n) || n <= 0) {
+    countEl.setAttribute('aria-busy', 'true');
+  }
+}
+
 function showGridSkeleton() {
   const grid = document.getElementById('pgrid');
-  if (!grid) return;
-  if (window.TL_SKELETON?.fillCards) window.TL_SKELETON.fillCards(grid, 8);
-  else {
-    grid.classList.add('skeleton');
-    grid.setAttribute('aria-busy', 'true');
-    grid.innerHTML = Array(8).fill(0).map(() => `
+  if (grid) {
+    if (window.TL_SKELETON?.fillCards) window.TL_SKELETON.fillCards(grid, 8);
+    else {
+      grid.classList.add('skeleton');
+      grid.setAttribute('aria-busy', 'true');
+      grid.innerHTML = Array(8).fill(0).map(() => `
     <div class="pc sk"><div class="pc-img" style="background:var(--l2)"></div>
     <div class="pc-body"><div style="height:12px;background:var(--l2);border-radius:4px;width:70%;margin-bottom:8px"></div></div></div>`).join('');
+    }
   }
+  const noRes = document.getElementById('noRes');
+  if (noRes) noRes.style.display = 'none';
+  const hintEl = document.getElementById('osmHint');
+  if (hintEl) {
+    hintEl.style.display = 'none';
+    hintEl.innerHTML = '';
+  }
+  setPlacesCountPending();
 }
 
 function renderGrid(list, append = false) {
   const grid = document.getElementById('pgrid');
+  const pending = !append && !cardsLoaded && !(list && list.length);
+  if (pending) {
+    showGridSkeleton();
+    const browseHint = document.getElementById('browseHint');
+    if (browseHint) browseHint.style.display = 'block';
+    renderExplorePagination();
+    return;
+  }
   if (grid) {
     if (window.TL_SKELETON?.clear) window.TL_SKELETON.clear(grid);
     else grid.classList.remove('skeleton');
@@ -1290,8 +1316,11 @@ function collectExploreFilterState() {
 
 function updatePlacesFoundCount(total) {
   const n = Number(total);
+  const shown = Number.isFinite(n) ? n : 0;
   const el = document.getElementById('resCnt');
-  if (el) el.textContent = String(Number.isFinite(n) ? n : 0);
+  if (el) el.textContent = String(shown);
+  const countEl = document.getElementById('results-count');
+  if (countEl && cardsLoaded) countEl.setAttribute('aria-busy', 'false');
   updateClearFiltersVisibility();
 }
 

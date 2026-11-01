@@ -2,6 +2,50 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-6 (Arama "0 yer" flaşı)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-6] — ONAY GEREKLİ: Arama "0 Yer" Flash.
+
+PRD metni: Sayfa açılışında veriler gelmeden "0 yer bulundu" flash'ı
+çıkıyor. Loading state ile empty state ayrılacak. Skeleton loader
+gösterilecek (mevcut tasarım korunacak). Yasin FAZ 4 için "geç" dedi.
+Bu madde teknik; yasal unvan, marka cümlesi veya üçüncü parti kimlik
+uydurmuyor.
+
+### Durum
+
+Sayaç HTML'de `0` ile duruyordu; `init` de veri gelmeden `renderGrid([])`
+çağırınca "0 yer bulundu" görünüyordu. Boş sonuç kutusu (`#noRes`)
+yükleme bitmeden de açık kalabiliyordu. Bu tur sayaç, veri gelene kadar
+`aria-busy="true"` ile gizlenir (yer kaplar, yazı görünmez). Izgara
+mevcut iskeleti kullanır. Gerçek `0` ancak liste boş döndükten sonra
+boş durumla birlikte görünür. Renk, punto, yerleşim ve buton yeri
+aynı. Sözleşme `npm run verify:faz4-6` ile kilitlendi. FAZ4-7 ve
+FAZ4-8 bu turda açılmadı.
+
+### Kabul listesi
+
+- [x] Keşfet `#results-count` ilk HTML'de `aria-busy="true"`. `0` görünmez.
+- [x] Veri gelmeden `updatePlacesFoundCount` sayacı açmaz.
+- [x] İskelet sırasında `#noRes` ve OSM ipucu kapalı.
+- [x] `cardsLoaded` ve liste boşsa "0 yer bulundu" + Filtreler Temizle görünür.
+- [x] Arama sayfası sayacı yanıt gelene kadar gizli; iskelet mevcut kart iskeleti.
+- [x] Gezilecek yerler sayacı da veri gelene kadar gizli; boş kutu yüklemede kapalı.
+- [x] Dolu sayaç (0'dan büyük) yenilemede yerinde kalır.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4-7 ve FAZ4-8 bu turda ele alınmadı. Kategori navigasyonu tekrarı
+  ve Ayasofya dil hataları duruyor.
+- Blog sayfasındaki footer geçişi bu maddenin metninde yok. Dokunulmadı.
+- Kategori kartlarındaki katalog `0 yer` sayımı değişmedi.
+- Boş sonuç metni ve Filtreler Temizle butonu duruyor. Yalnızca zamanlaması
+  veri geldikten sonraya alındı.
+
+Doğrulama: `npm run verify:faz4-6`.
+
 ## Claude Master PRD — FAZ4-5 (Blog özet / gövde tekrarı)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
