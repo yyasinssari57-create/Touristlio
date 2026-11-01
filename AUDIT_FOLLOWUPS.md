@@ -2,6 +2,53 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-5 (Blog özet / gövde tekrarı)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-5] — ONAY GEREKLİ: Blog Excerpt/Body Tekrar.
+
+PRD metni: Blog detayında özet (excerpt) gövde (body) içinde tekrar
+ediyor. Template'de tek satır değişiklik. İçerik kaybolmayacak, sadece
+tekrar önlenecek. Yasin FAZ 4 için "geç" dedi. Bu madde teknik; yasal
+unvan, marka cümlesi veya üçüncü parti kimlik uydurmuyor.
+
+### Durum
+
+Ana dalda zaten kapalı (onaylı tur, PR #61). Blog detayı
+`openBlogDetail` içinde özeti `.bd-excerpt` olarak bir kez basar.
+Gövde `bodyWithoutExcerpt` ile kesilir: özet gövdeyle aynıysa gövde
+kutusu boş kalır; gövde özetle başlıyorsa yalnızca devamı `.bd-body`
+içine girer. Özet gövdenin başı değilse gövde olduğu gibi durur
+(cümle silinmez). Karttaki `.bexc` liste özetidir; detay tekrarı
+değildir, duruyor. Seed yazılarında gövde sütunu özetle aynı kısa
+metindir; ekranda bir kez görünür. Bu tur `app.js`, CSS, renk, yerleşim
+ve buton yerini değiştirmedi. Sözleşme `npm run verify:faz4-5` ile
+kilitlendi. FAZ4-6 ve sonrası bu turda açılmadı.
+
+### Kabul listesi
+
+- [x] Detay şablonu `bodyWithoutExcerpt(b.excerpt, b.body)` kullanır.
+- [x] Özet `.bd-excerpt` içinde bir kez. Ham `b.body` aynı kutuya tekrar yazılmaz.
+- [x] Özet = gövde → gövde kutusu yok; metin yalnızca özette kalır.
+- [x] Gövde özetle başlıyorsa devam özetsiz `.bd-body` olur.
+- [x] Özet, gövdenin başı değilse gövde kısaltılmaz.
+- [x] Liste kartı `.bexc` özeti göstermeye devam eder.
+- [x] `.bd-excerpt` ve `.bd-body` ölçüleri aynı (renk, punto, satır aralığı).
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4-6 … FAZ4-8 bu turda ele alınmadı. Arama "0 yer" flaşı, kategori
+  navigasyonu tekrarı ve Ayasofya dil hataları duruyor.
+- Özet metni gövdenin ortasından silinmedi. Yalnızca baştaki tekrar
+  kalkar; ortadaki cümle içeriktir.
+- Kart özeti (`.bexc`) kaldırılmadı. Tekrar, yazı sayfasındaki özet +
+  gövde çiftidir.
+- Paylaşım açıklaması ve JSON-LD hâlâ özete bakabilir. Bunlar sayfada
+  ikinci paragraf değildir.
+
+Doğrulama: `npm run verify:faz4-5`. Ürün kodu bu turda değişmedi.
+
 ## Claude Master PRD — FAZ4-4 (Focus outline)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
