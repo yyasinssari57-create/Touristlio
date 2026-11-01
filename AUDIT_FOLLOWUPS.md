@@ -2,6 +2,43 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Denetim #3 — blog gövdesi sitemap eşiğinin altında
+
+Yasin "sıradakine geç" dedi. Üçüncü madde: blog sayfaları duruyor ama
+sitemap gövde 200 karakteri geçmeyince yazıyı listelemiyor. Demo
+gövdeler özete eşit ve 71–133 karakter. Canlı sitemap’te blog adresi
+bu yüzden 0 kalıyordu.
+
+### Durum
+
+Altı demo yazının gövdesi, kendi başlık ve özetinden kurulan kısa bir
+gezi notuyla 200 karakterin üstüne çıktı. Yeni dükkân adı, sıralama,
+bilet fiyatı veya sağlık tavsiyesi yok. Tokyo notu beşli liste
+uydurmaz. Machu Picchu notu tıbbi tavsiye değildir. `FAZ2-4 verify
+blog…` ve `ORTA-6 Pending` gibi test satırları metinle şişirilmez;
+onaylıysa `rejected` olur, `published_at` silinir. Eski tarih durursa
+açılıştaki zamanlayıcı yazıyı yeniden onaylardı. Yeni yazı eklenmedi.
+Açılışta `015_blog_sitemap_bodies` aynı düzeltmeyi veritabanındaki
+kısa onaylı satırlara yazar. Boş bir kurulumda seed gövdeyi doğrudan
+uzun kaydeder. Renk, yerleşim ve buton yeri değişmedi.
+
+### Kabul listesi
+
+- [x] Altı demo gövde 200 karakterden uzun.
+- [x] Gövde, mevcut özete eklenir. Özet kaybolmaz.
+- [x] Sitemap, uzun onaylı yazıyı `/blog/slug` olarak yazar.
+- [x] Kısa test yazısı sitemap’e girmez; durum `rejected`, yayın tarihi boş.
+- [x] `verify:faz2-4` kendi test blog satırını siler.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- Favicon, PR #52 / 404 ve gezi planlarındaki eksik `await` bu turda yok.
+- Doğrulama betiklerindeki diğer yanlış alarmlar bu turda yok.
+- 31 yeni SEO yazısı yazılmadı.
+
+Doğrulama: `npm run verify:faz3-5` (aynı kontrol `verify:blog-sitemap`).
+
 ## Denetim #1 — tüm mekânların Türkçe SSS ve ulaşım metni
 
 Yasin denetimden sonra "geç" dedi. İlk madde: Ayasofya dışında kalan

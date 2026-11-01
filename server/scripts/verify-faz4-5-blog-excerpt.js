@@ -130,9 +130,12 @@ if (!css.includes('.bexc{font-size:.78rem;color:var(--t2);line-height:1.6;margin
 const seedFnStart = seed.indexOf('async function seedDemoBlogs');
 const seedFnEnd = seed.indexOf('async function runFullSeed');
 const seedFn = seedFnStart >= 0 && seedFnEnd > seedFnStart ? seed.slice(seedFnStart, seedFnEnd) : '';
-if (!/b\.excerpt,\s*b\.excerpt,/.test(seedFn)) {
-  fail('seed gövdesi özetten ayrı yazılmış (bu tur seed’e dokunmaz)');
-} else ok('seed gövdesi özetle aynı; ekranda bir kez görünmeli');
+if (/b\.excerpt,\s*b\.excerpt,/.test(seedFn)) {
+  fail('seed gövdesi hâlâ yalnızca özet; sitemap 200 karakter ister');
+} else ok('seed gövdesi özetten uzun yazılır');
+if (!seedFn.includes('demoBlogBody')) {
+  fail('seed demoBlogBody kullanmıyor');
+} else ok('seed gövdesi demoBlogBody ile kurulur');
 
 function blocks(excerpt, body) {
   const rest = bodyWithoutExcerpt(excerpt, body);

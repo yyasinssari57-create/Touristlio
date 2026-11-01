@@ -174,6 +174,7 @@ async function main() {
     return ids;
   }
 
+  const createdBlogIds = [];
   async function insertBlogs(count) {
     const ids = [];
     for (let i = 0; i < count; i += 1) {
@@ -182,12 +183,15 @@ async function main() {
         VALUES (?, ?, ?, ?, 'pending')
       `).run(author.id, `FAZ2-4 verify blog #${stamp}-${i}`, 'Özet', 'Gövde');
       ids.push(info.lastInsertRowid);
+      createdBlogIds.push(info.lastInsertRowid);
     }
     return ids;
   }
 
   const app = await buildApp();
-  const server = await new Promise((resolve, reject) => {
+  let server;
+  try {
+  server = await new Promise((resolve, reject) => {
     const s = app.listen(0, '127.0.0.1', () => resolve(s));
     s.on('error', reject);
   });
@@ -316,7 +320,17 @@ async function main() {
     }
   }
 
-  await new Promise((resolve) => server.close(resolve));
+  } finally {
+    if (server) await new Promise((resolve) => server.close(resolve));
+    if (createdBlogIds.length) {
+      try {
+        await db.prepare('DELETE FROM blogs WHERE id = ANY(?::int[])').run(createdBlogIds);
+        ok(`test blog satırları silindi (${createdBlogIds.length})`);
+      } catch (err) {
+        fail(`test blog satırları silinemedi: ${err.message}`);
+      }
+    }
+  }
 
   console.log('');
   console.log('  Özet: admin.js /tiolas/bulk ve /blogs/bulk artık per-item DB');
