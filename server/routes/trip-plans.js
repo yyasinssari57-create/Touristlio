@@ -72,9 +72,14 @@ router.get('/suggest/nearby', authOptional, async (req, res) => {
   const all = await db.prepare('SELECT * FROM places').all();
   let origin = placeId ? await db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) : null;
   if (!origin && city) origin = all.find((r) => r.city?.toLowerCase().includes(String(city).toLowerCase()));
-  if (!origin) return res.json({ places: all.slice(0, Number(limit) || 6).map(mapPlace) });
-  const nearby = (await findNearbyPlacesSql(origin, mapPlace, Number(limit) || 6))
-    || findNearbyPlaces(all, origin, mapPlace, Number(limit) || 6);
+  const cap = Number(limit) || 6;
+  if (!origin) {
+    const places = await Promise.all(all.slice(0, cap).map((row) => mapPlace(row)));
+    return res.json({ places });
+  }
+  // findNearbyPlaces reads lat/lng immediately; async mapPlace would JSON as {}.
+  const nearby = (await findNearbyPlacesSql(origin, mapPlace, cap))
+    || findNearbyPlaces(all, origin, (row) => mapPlaceRow(row), cap);
   res.json({ places: nearby });
 });
 
@@ -105,7 +110,7 @@ router.post('/auto-generate', authRequired, async (req, res) => {
 router.get('/share/:token', authOptional, async (req, res) => {
   const trip = await db.prepare('SELECT * FROM trip_plans WHERE share_token = ?').get(req.params.token);
   if (!canViewTrip(trip, req.user)) return res.status(404).json({ error: 'Plan bulunamadı' });
-  res.json({ trip: loadTripFull(trip.id) });
+  res.json({ trip: await loadTripFull(trip.id) });
 });
 
 router.get('/:id', authOptional, async (req, res) => {
@@ -113,7 +118,7 @@ router.get('/:id', authOptional, async (req, res) => {
   if (!tripId) return;
   const trip = await db.prepare('SELECT * FROM trip_plans WHERE id = ?').get(tripId);
   if (!canViewTrip(trip, req.user)) return res.status(404).json({ error: 'Plan bulunamadı' });
-  res.json({ trip: loadTripFull(trip.id) });
+  res.json({ trip: await loadTripFull(trip.id) });
 });
 
 router.put('/:id', authRequired, async (req, res) => {

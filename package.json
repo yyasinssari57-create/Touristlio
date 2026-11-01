@@ -71,6 +71,7 @@
     "verify:skeleton": "node server/scripts/verify-skeleton.js",
     "verify:links": "node server/scripts/verify-broken-links.js",
     "verify:head-404": "node server/scripts/verify-head-404.js",
+    "verify:trip-await": "node server/scripts/verify-trip-await.js",
     "verify:cleanup": "node server/scripts/verify-code-cleanup.js",
     "verify:cache": "node server/scripts/verify-cache-headers.js",
     "verify:analytics": "node server/scripts/verify-analytics.js",
