@@ -2,6 +2,51 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ4-3 (CLS / görsel kayma)
+
+Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
+[FAZ4-3] — ONAY GEREKLİ: CLS (Görsel Kayma) Düzeltmesi.
+
+PRD metni: Görsellere width/height eklenmesi gerekiyor. Kart görselleri
+ve blog görselleri için aspect-ratio CSS. Tasarım bozulmayacak, sadece
+yükleme sırasında kayma önlenecek. Yasin FAZ 4 için "geç" dedi. Bu madde
+teknik; yasal unvan, marka cümlesi veya üçüncü parti kimlik uydurmuyor.
+
+### Durum
+
+Ana dalda zaten kapalı. v2 YÜKSEK-3 kartlara `aspect-ratio: 4/3` ve
+`width`/`height` eklemişti. FAZ2-3 (PR #73) aynı yüzeyi yeniden ölçtü:
+görsel kaynaklı CLS 0. Blog kartı PRD'nin örnek 16/9 oranını kullanmıyor;
+bunun yerine sabit yükseklik var (öne çıkan 380px, diğer 165px). İkisi de
+resim gelmeden kutuyu kilitler. 16/9'a geçmek kartın boyunu değiştirirdi.
+Bu tur renk, yerleşim, buton ve CSS değiştirmedi. Sözleşme
+`npm run verify:faz4-3` ile kilitlendi. FAZ4-4 ve sonrası bu turda açılmadı.
+
+### Kabul listesi
+
+- [x] `TL_IMG.tag` kart görseline `width="400" height="300"` basar. Yedek `responsiveImg` de basar.
+- [x] Mekân kartı `.pc-img` ve içindeki görsel `aspect-ratio: 4/3`. İskelet kart da 4/3.
+- [x] Blog kartı `.bimg` genişlik %100; yükseklik 380px / 165px. Yüksekliği `auto` yapan kural yok.
+- [x] Blog yazı kapağı `.bd-cover` 220px. Kutu `blog-detail-box` sınıfında.
+- [x] Tiola kart görseli kart boyutu + CSS `height: 180px`.
+- [x] Arama, profil ve şehir kartı yedekleri `width="400" height="300"`.
+- [x] Admin dışı statik HTML `<img>` etiketlerinde width ve height var.
+- [x] Hero bir `<img>` değil. `min-height: 100vh` + preload. Arka plan kutuyu şişirmez.
+- [x] Bu turda ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ4-4 … FAZ4-8 bu turda ele alınmadı. Fokus çerçevesi, blog özet tekrarı,
+  arama "0 yer" flaşı, kategori tekrarı ve Ayasofya dil hataları duruyor.
+- Blog kartına `aspect-ratio: 16/9` eklenmedi. Mevcut yükseklik kaymayı
+  zaten keser; 16/9 kart oranını değiştirirdi.
+- FAZ2-3'te not edilen görsel dışı kayma (arama ızgarasının yükleme hali,
+  blog sayfasında footer geçişi) FAZ4-6 kapsamıdır. Bu turda açılmadı.
+- Kırpma penceresindeki fotoğraf ve harita balonu yedeği kart/blog yüzeyi
+  değil. Harita yedeği satır içi yükseklik ile duruyor.
+
+Doğrulama: `npm run verify:faz4-3`.
+
 ## Claude Master PRD — FAZ4-2 (Honeypot alanı gizleme)
 
 Claude Master PRD "FAZ 4 — Kullanıcı onayı gereken değişiklikler" →
