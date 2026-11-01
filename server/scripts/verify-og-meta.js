@@ -28,9 +28,9 @@ if (ogTypeFor('/blog') !== 'website') fail('blog list og:type should be website'
 else ok('blog list og:type website');
 
 const home = buildSeoHead({ pathname: '/', lang: 'tr' });
-if (!home.includes('og:title') || !home.includes('Sadece Ziyaret Etme. Hisset.')) {
-  fail('homepage og:title missing slogan');
-} else ok('homepage og:title slogan');
+if (!home.includes('og:title') || !home.includes('Gerçek Gezginlerle Dünyayı Keşfet')) {
+  fail('homepage og:title missing FAZ3-2 home template');
+} else ok('homepage og:title home template');
 if (!home.includes('twitter:card" content="summary_large_image"')) fail('twitter:card missing');
 else ok('twitter:card summary_large_image');
 if (!home.includes('twitter:image') || !home.includes('/images/hero.webp')) fail('twitter:image not hero.webp');

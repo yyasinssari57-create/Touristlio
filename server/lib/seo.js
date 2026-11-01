@@ -1,14 +1,89 @@
 const { siteBaseUrl } = require('./sitemap');
 const { googleSiteVerification } = require('./analytics-config');
 
-const HOME_TR = {
-  title: 'Touristlio — Sadece Ziyaret Etme. Hisset.',
-  description: 'Touristlio — dünya çapında destinasyonlar, Tiola topluluk puanları ve OpenStreetMap haritalarıyla kişisel seyahat rehberi.',
+/** FAZ3-2 static templates. Counts match places.json (1090 places, 135 countries). */
+const SEO_TEMPLATES = {
+  home: {
+    tr: {
+      title: 'Touristlio — Gerçek Gezginlerle Dünyayı Keşfet',
+      description: 'Gizli köşelerden ikonik yapılara, gerçek gezginlerin '
+        + 'Tiola deneyimleriyle dünyanın en güzel yerlerini keşfet. '
+        + '135 ülke, 1.090+ destinasyon.',
+    },
+    en: {
+      title: 'Touristlio — Discover the World with Real Travelers',
+      description: 'From hidden gems to iconic landmarks, discover beautiful '
+        + 'places through real traveler Tiola reviews. 135 countries, 1,090+ destinations.',
+    },
+  },
+  explore: {
+    tr: {
+      title: 'Gezilecek Yerler — Dünyayı Keşfet | Touristlio',
+      description: '135 ülkede 1.090+ destinasyon. Şehre, kategoriye, puana '
+        + 'göre filtrele. Gerçek gezginlerin Tiola değerlendirmeleri.',
+    },
+    en: {
+      title: 'Places to Visit — Explore the World | Touristlio',
+      description: '1,090+ destinations in 135 countries. Filter by city, '
+        + 'category, and rating. Real traveler Tiola reviews.',
+    },
+  },
 };
-const HOME_EN = {
-  title: "Touristlio — Don't Just Visit. Feel It.",
-  description: 'Touristlio — global destinations, Tiola community ratings, and OpenStreetMap-powered travel discovery.',
-};
+
+function clipMetaDescription(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+}
+
+/**
+ * Single meta template for home, explore, place, and blog.
+ * ogImage is a path or absolute URL; null means the default hero.
+ */
+function generateMeta(type, data = {}, locale = 'tr') {
+  const lang = locale === 'en' ? 'en' : 'tr';
+  const tmpl = SEO_TEMPLATES[type];
+  if (tmpl) {
+    const t = tmpl[lang] || tmpl.tr;
+    return { title: t.title, description: clipMetaDescription(t.description), ogImage: null };
+  }
+
+  if (type === 'place' && data.place) {
+    const p = data.place;
+    const name = String((lang === 'en' ? (p.nameEn || p.name) : (p.name || p.nameEn)) || '').trim();
+    const city = String((lang === 'en' ? (p.cityEn || p.city) : (p.city || p.cityEn)) || '').trim();
+    const desc = lang === 'en'
+      ? (p.overviewEn || p.descriptionEn || p.overview || p.description || '')
+      : (p.overview || p.description || p.descriptionEn || '');
+    const title = (name && city)
+      ? (lang === 'en'
+        ? `${name} | Things to Do in ${city} — Touristlio`
+        : `${name} | ${city} Gezilecek Yerler — Touristlio`)
+      : `${name || 'Touristlio'} — Touristlio`;
+    return {
+      title,
+      description: clipMetaDescription(desc),
+      ogImage: p.imageUrl || p.hero_image || p.heroImage || null,
+    };
+  }
+
+  if (type === 'blog' && (data.post || data.blog)) {
+    const p = data.post || data.blog;
+    const titleText = String((lang === 'en' ? (p.titleEn || p.title) : (p.title || p.titleEn)) || '').trim();
+    const excerpt = lang === 'en'
+      ? (p.excerptEn || p.excerpt || p.body || '')
+      : (p.excerpt || p.body || '');
+    return {
+      title: `${titleText || 'Touristlio'} — Touristlio Blog`,
+      description: clipMetaDescription(String(excerpt).replace(/<[^>]+>/g, '')),
+      ogImage: p.imageUrl || p.cover_image || p.coverImage || null,
+    };
+  }
+
+  return {
+    title: 'Touristlio',
+    description: lang === 'en' ? "Don't Just Visit. Feel It." : 'Sadece Ziyaret Etme. Hisset.',
+    ogImage: null,
+  };
+}
 
 function escapeAttr(s) {
   return String(s || '')
@@ -44,6 +119,15 @@ function absUrl(url) {
 function pageDefaults(pathname, lang) {
   const p = normalizePath(pathname);
   const en = lang === 'en';
+  const locale = en ? 'en' : 'tr';
+  if (p === '/' || p === '') {
+    const home = generateMeta('home', {}, locale);
+    return { title: home.title, description: home.description };
+  }
+  if (p === '/explore') {
+    const explore = generateMeta('explore', {}, locale);
+    return { title: explore.title, description: explore.description };
+  }
   if (p === '/search') {
     return en
       ? { title: 'Search destinations — Touristlio', description: 'Search Touristlio destinations with filters and shareable URLs.' }
@@ -112,7 +196,8 @@ function pageDefaults(pathname, lang) {
       ? { title: 'Reset password — Touristlio', description: 'Choose a new Touristlio password.' }
       : { title: 'Şifre sıfırla — Touristlio', description: 'Touristlio için yeni şifre belirleyin.' };
   }
-  return en ? HOME_EN : HOME_TR;
+  const home = generateMeta('home', {}, en ? 'en' : 'tr');
+  return { title: home.title, description: home.description };
 }
 
 function langFromPath(pathname) {
@@ -241,4 +326,6 @@ module.exports = {
   injectSeoHead,
   buildSeoHead,
   ogTypeFor,
+  generateMeta,
+  SEO_TEMPLATES,
 };

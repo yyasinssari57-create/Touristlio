@@ -2,6 +2,57 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ3-2 (Dinamik SEO meta şablonu)
+
+Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-2] Dinamik SEO Meta Template
+Engine. PRD `server/lib/seo.js` içinde `generateMeta(type, data, locale)` ve
+EJS `head` partial'ı istiyor (title, description ≤160, canonical, Open Graph,
+Twitter card, robots, hreflang). Bu depo EJS kullanmıyor; meta zaten
+`buildSeoHead()` + `injectSeoHead()` ile statik HTML'e yazılıyordu (v2
+YÜKSEK-4). Bu tur şablonları tek fonksiyonda topladı ve gerçek boşlukları
+kapattı. Görünen sayfa metni, renk ve yerleşim değişmedi. JSON-LD'ye
+(FAZ3-1) dokunulmadı.
+
+### Zaten vardı
+
+- Canonical (`https://www.touristlio.com`), hreflang tr/en/x-default, robots,
+  og:title/description/image/url/type/locale, twitter:card
+  `summary_large_image` — `buildSeoHead()`.
+- Mekân ve blog açıklaması 160 karakterde kesiliyordu.
+- Varsayılan görsel `/images/hero.webp`.
+- Giriş/kayıt/profil `noindex` ve bu sayfalarda hreflang yok.
+
+### Kapatılan boşluklar
+
+- **Ana sayfa başlığı** hâlâ sloganı kullanıyordu (`Sadece Ziyaret Etme.
+  Hisset.`). PRD şablonu: `Touristlio — Gerçek Gezginlerle Dünyayı Keşfet` /
+  EN `Discover the World with Real Travelers`. Açıklamadaki **135 ülke** ve
+  **1.090+ destinasyon** `places.json` ile sayıldı (1090 yer, 135 ülke) —
+  uydurma sayı yok. Ekrandaki hero sloganı duruyor.
+- **`/explore`** ana sayfa meta'sını miras alıyordu. Artık ayrı keşif şablonu
+  (TR/EN). `/gezilecek-yerler` ve `/blog` liste başlıkları aynı kaldı.
+- **Mekân başlığı** `Ad — Touristlio` idi. Şehir varsa:
+  `Ad | Şehir Gezilecek Yerler — Touristlio` / EN
+  `Name | Things to Do in City — Touristlio`. Şehir yoksa eski kısa biçim.
+- **Blog yazısı** son eki `— Touristlio Blog`. Özetten HTML etiketleri
+  çıkarılıyor.
+- **SPA `TL_I18N.apply()`** her sayfada (mekân, blog, giriş, yasal sayfalar)
+  başlığı ana sayfa sloganına çeviriyordu. SSS akordeonu mekân sayfasında
+  bunu sunucu başlığının ÜSTÜNE tekrar yazıyordu. Artık yalnızca kabuk
+  rotaları (`/`, `/explore`, `/gezilecek-yerler`, `/blog` listesi) kendi
+  şablonunu yazar; mekân/blog/giriş başlığı ezilmez. Sekme değişince doğru
+  kabuk başlığı geri gelir.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ3-3 veritabanı index'leri, FAZ3-4 arama sayfası noindex/canonical,
+  FAZ3-5 sitemap filtresi, FAZ4 — yok. `/search` hâlâ `index,follow`.
+- JSON-LD üreticileri değişmedi.
+- Canonical'ın istemcide `/explore` → `/` çekilmesi (eski SPA davranışı)
+  FAZ3-4 kapsamı; bu turda canonical kuralları değişmedi.
+
+Doğrulama: `npm run verify:faz3-2` ve `npm run verify:og`.
+
 ## Claude Master PRD — FAZ3-1 (Dinamik JSON-LD)
 
 Claude Master PRD "FAZ 3 — Gelişmiş Teknik SEO" → [FAZ3-1] Dinamik JSON-LD

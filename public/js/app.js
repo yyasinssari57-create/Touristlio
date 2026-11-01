@@ -592,10 +592,29 @@ function placeListField(p, base) {
   return Array.isArray(val) ? val : [];
 }
 
+function placeMetaTitle(p) {
+  const name = String(p?.name || '').trim();
+  const city = String((lang === 'en' ? (p?.cityEn || p?.city) : (p?.city || p?.cityEn)) || '').trim();
+  if (name && city) {
+    return lang === 'en'
+      ? `${name} | Things to Do in ${city} — Touristlio`
+      : `${name} | ${city} Gezilecek Yerler — Touristlio`;
+  }
+  return `${name || 'Touristlio'} — Touristlio`;
+}
+
+function blogMetaTitle(title) {
+  const text = String(title || '').trim();
+  return `${text || 'Touristlio'} — Touristlio Blog`;
+}
+
 function updateSeoForPlace(p) {
   if (!p) return;
-  const title = `${p.name} — Touristlio`;
-  const desc = (placeField(p, 'overview') || placeField(p, 'description') || '').slice(0, 160);
+  const title = placeMetaTitle(p);
+  const rawDesc = lang === 'en'
+    ? (p.overviewEn || p.descriptionEn || p.overview || p.description || '')
+    : (p.overview || p.description || '');
+  const desc = String(rawDesc).replace(/\s+/g, ' ').trim().slice(0, 160);
   document.title = title;
   const meta = document.querySelector('meta[name="description"]');
   if (meta) meta.content = desc;
@@ -1889,6 +1908,19 @@ async function showMainTab(tab, skipRoute) {
     }
     tasks.push(loadBlogPage().then(renderBlog));
   }
+  if (window.TL_I18N?.applyShellMeta) {
+    if (tab === 'detail' || (tab === 'blog' && activeBlogSlug)) {
+      /* place / article title is set by updateSeoForPlace or openBlogDetail */
+    } else if (tab === 'blog') {
+      window.TL_I18N.applyShellMeta('blog', lang);
+    } else if (tab === 'places') {
+      window.TL_I18N.applyShellMeta('places', lang);
+    } else if (tab === 'explore' && window.TL_I18N.shellKindFromPath(location.pathname) === 'explore') {
+      window.TL_I18N.applyShellMeta('explore', lang);
+    } else {
+      window.TL_I18N.applyShellMeta('home', lang);
+    }
+  }
   if (tab === 'profile') tasks.push(Promise.resolve(updateProfilePage()));
   if (tab === 'explore') tasks.push(loadTiolaFeed());
   if (tab === 'places') {
@@ -2715,12 +2747,12 @@ async function openBlogDetail(slug, skipRoute) {
       back.href = blogListPath();
       back.textContent = t('blogBack');
     }
-    document.title = `${b.title} — Touristlio`;
+    document.title = blogMetaTitle(b.title);
     setCanonical(blogPublicPath(b));
     const desc = String(b.excerpt || b.body || '').replace(/<[^>]+>/g, '').slice(0, 160);
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.content = desc;
-    setMetaContent('meta[property="og:title"]', `${b.title} — Touristlio`, { property: 'og:title' });
+    setMetaContent('meta[property="og:title"]', blogMetaTitle(b.title), { property: 'og:title' });
     setMetaContent('meta[property="og:description"]', desc, { property: 'og:description' });
     setMetaContent('meta[property="og:type"]', 'article', { property: 'og:type' });
     const cover = safeUrl(b.imageUrl);
@@ -2729,7 +2761,7 @@ async function openBlogDetail(slug, skipRoute) {
       setMetaContent('meta[property="og:image"]', abs, { property: 'og:image' });
       setMetaContent('meta[name="twitter:image"]', abs, { name: 'twitter:image' });
     }
-    setMetaContent('meta[name="twitter:title"]', `${b.title} — Touristlio`, { name: 'twitter:title' });
+    setMetaContent('meta[name="twitter:title"]', blogMetaTitle(b.title), { name: 'twitter:title' });
     setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
     setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
     setJsonLdBlocks([articleJsonLd(b)]);
@@ -2760,9 +2792,12 @@ function closeBlogDetail(skipRoute) {
   const hero = document.getElementById('blogHeroTitle');
   if (hero) {
     const page = blogMeta?.page || {};
-    document.title = lang === 'en'
-      ? 'Travel Stories — Touristlio'
-      : 'Seyahat Hikayeleri — Touristlio';
+    if (window.TL_I18N?.applyShellMeta) window.TL_I18N.applyShellMeta('blog', lang);
+    else {
+      document.title = lang === 'en'
+        ? 'Travel Stories — Touristlio'
+        : 'Seyahat Hikayeleri — Touristlio';
+    }
     if (page.heroTitle) {
       /* keep listing hero as-is */
     }

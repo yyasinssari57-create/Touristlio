@@ -305,14 +305,13 @@ app.get('/places/:slug', async (req, res) => {
   }
   const place = mapPlaceRow(row, await placeStats(row.id));
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
-  const desc = lang === 'en'
-    ? (place.overviewEn || place.descriptionEn || place.overview || place.description || '')
-    : (place.overview || place.description || '');
   const tiolas = await loadApprovedTiolasForPlace(place.id);
+  const { generateMeta } = require('./lib/seo');
+  const meta = generateMeta('place', { place }, lang);
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
-    title: `${place.name} — Touristlio`,
-    description: String(desc).slice(0, 160),
-    image: place.imageUrl,
+    title: meta.title,
+    description: meta.description,
+    image: meta.ogImage || place.imageUrl,
     ogType: 'place',
     jsonLd: jsonLdForPlace(place, tiolas, lang),
   });
@@ -341,10 +340,12 @@ app.get('/blog/:slug', async (req, res) => {
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
+  const { generateMeta } = require('./lib/seo');
+  const meta = generateMeta('blog', { post: blog }, lang);
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
-    title: `${blog.title} — Touristlio`,
-    description: String(blog.excerpt || blog.body || '').slice(0, 160),
-    image: blog.imageUrl,
+    title: meta.title,
+    description: meta.description,
+    image: meta.ogImage || blog.imageUrl,
     ogType: 'article',
     jsonLd: jsonLdForBlog(blog, lang),
   });
