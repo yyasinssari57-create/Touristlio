@@ -490,16 +490,54 @@ async function loadCategoryMeta() {
   }
 }
 
+function navLabelKey(label) {
+  const text = String(label || '')
+    .replace(/[^\p{L}\p{N}-]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase('tr-TR');
+  return text.replace(/(ler|lar|s)$/u, '');
+}
+
+function categoryNavFaceDuplicate(slug, groups, catLabel, groupLabel) {
+  const face = {
+    historical: 'historical',
+    nature: 'nature',
+    museums: 'museum',
+  };
+  const id = String(slug || '');
+  const left = navLabelKey(catLabel);
+  if (!left) return false;
+  return (groups || []).some((group) => {
+    if (face[group] !== id) return false;
+    const right = navLabelKey(groupLabel(group));
+    if (!right) return false;
+    if (left === right) return true;
+    const longer = left.length >= right.length ? left : right;
+    const shorter = longer === left ? right : left;
+    return longer.startsWith(shorter) && (longer.length - shorter.length) <= 2;
+  });
+}
+
 function buildExploreFiltersHtml() {
   const allOn = activeFilterGroup === 'all' && activeCat === 'all';
   let html = `<button type="button" class="fpill${allOn ? ' on' : ''}" data-kind="all" data-filter="all" data-act="setExploreFilter" data-el data-arg="all">${t('all')}</button>`;
-  (categoryMeta.groups || []).forEach((g) => {
-    const label = t(GROUP_I18N[g] || g);
+  const seen = new Set();
+  const groups = categoryMeta.groups || [];
+  const groupLabel = (g) => t(GROUP_I18N[g] || g);
+  groups.forEach((g) => {
+    const label = groupLabel(g);
+    const key = navLabelKey(label);
+    if (key && seen.has(key)) return;
+    if (key) seen.add(key);
     const on = activeFilterGroup === g ? ' on' : '';
     html += `<button type="button" class="fpill fpill-group${on}" data-kind="group" data-filter="${escapeHtml(g)}" data-act="setExploreFilter" data-el data-arg="group:${escapeHtml(g)}">${escapeHtml(label)}</button>`;
   });
   (categoryMeta.categories || []).forEach((c) => {
     const label = lang === 'en' ? c.nameEn : c.nameTr;
+    const key = navLabelKey(label);
+    if ((key && seen.has(key)) || categoryNavFaceDuplicate(c.slug, groups, label, groupLabel)) return;
+    if (key) seen.add(key);
     const icon = c.icon ? `${c.icon} ` : '';
     const on = activeFilterGroup === 'all' && activeCat === c.slug ? ' on' : '';
     html += `<button type="button" class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" data-act="setExploreFilter" data-el data-arg="cat:${escapeHtml(c.slug)}">${icon}${escapeHtml(label)}</button>`;

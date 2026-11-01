@@ -50,6 +50,7 @@
     "verify:faz4-4": "node server/scripts/verify-faz4-4-focus.js",
     "verify:faz4-5": "node server/scripts/verify-faz4-5-blog-excerpt.js",
     "verify:faz4-6": "node server/scripts/verify-faz4-6-zero-flash.js",
+    "verify:faz4-7": "node server/scripts/verify-faz4-7-cat-nav.js",
     "verify:faz4": "node server/scripts/verify-gemini-faz4.js",
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
