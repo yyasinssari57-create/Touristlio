@@ -775,11 +775,81 @@ window.TL_I18N = (function () {
     return t(lang, CAT_KEYS[cat] || cat);
   }
 
+  const SHELL_META = {
+    home: {
+      tr: {
+        title: 'Touristlio — Gerçek Gezginlerle Dünyayı Keşfet',
+        description: 'Gizli köşelerden ikonik yapılara, gerçek gezginlerin Tiola deneyimleriyle dünyanın en güzel yerlerini keşfet. 135 ülke, 1.090+ destinasyon.',
+      },
+      en: {
+        title: 'Touristlio — Discover the World with Real Travelers',
+        description: 'From hidden gems to iconic landmarks, discover beautiful places through real traveler Tiola reviews. 135 countries, 1,090+ destinations.',
+      },
+    },
+    explore: {
+      tr: {
+        title: 'Gezilecek Yerler — Dünyayı Keşfet | Touristlio',
+        description: '135 ülkede 1.090+ destinasyon. Şehre, kategoriye, puana göre filtrele. Gerçek gezginlerin Tiola değerlendirmeleri.',
+      },
+      en: {
+        title: 'Places to Visit — Explore the World | Touristlio',
+        description: '1,090+ destinations in 135 countries. Filter by city, category, and rating. Real traveler Tiola reviews.',
+      },
+    },
+    places: {
+      tr: {
+        title: 'Gezilecek Yerler — Touristlio',
+        description: 'Touristlio’da destinasyonları ve topluluk Tiola’larını keşfedin.',
+      },
+      en: {
+        title: 'Places to visit — Touristlio',
+        description: 'Browse destinations and community Tiolas on Touristlio.',
+      },
+    },
+    blog: {
+      tr: {
+        title: 'Seyahat Hikayeleri — Touristlio',
+        description: 'Yerel yazarlardan gezi rehberleri, gizli köşeler ve kültürel keşifler.',
+      },
+      en: {
+        title: 'Travel Stories — Touristlio',
+        description: 'Travel guides, hidden gems and cultural stories from local writers on Touristlio.',
+      },
+    },
+  };
+
+  function shellKindFromPath(pathname) {
+    let p = String(pathname || '/').split('?')[0];
+    if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+    if (p === '/en') p = '/';
+    else if (p.startsWith('/en/')) p = p.slice(3) || '/';
+    if (p === '/') return 'home';
+    if (p === '/explore') return 'explore';
+    if (p === '/gezilecek-yerler') return 'places';
+    if (p === '/blog') return 'blog';
+    return null;
+  }
+
+  function setHeadMeta(selector, content) {
+    const el = document.querySelector(selector);
+    if (el) el.setAttribute('content', content);
+  }
+
+  function applyShellMeta(kind, lang) {
+    const pack = SHELL_META[kind] || SHELL_META.home;
+    const meta = pack[lang === 'en' ? 'en' : 'tr'] || pack.tr;
+    document.title = meta.title;
+    setHeadMeta('meta[name="description"]', meta.description);
+    setHeadMeta('meta[property="og:title"]', meta.title);
+    setHeadMeta('meta[property="og:description"]', meta.description);
+    setHeadMeta('meta[name="twitter:title"]', meta.title);
+    setHeadMeta('meta[name="twitter:description"]', meta.description);
+  }
+
   function apply(lang) {
     applyDocumentLang(lang);
-    document.title = lang === 'en'
-      ? 'Touristlio — Don\'t Just Visit. Feel It.'
-      : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
+    const shell = shellKindFromPath(location.pathname);
+    if (shell) applyShellMeta(shell, lang);
     document.querySelectorAll('[data-i18n]').forEach((el) => {
       const key = el.getAttribute('data-i18n');
       const val = t(lang, key);
@@ -822,26 +892,6 @@ window.TL_I18N = (function () {
       if (k) opt.textContent = t(lang, k);
     });
     applyGeo(lang);
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.content = lang === 'en'
-        ? 'Touristlio — global destinations, Tiola community ratings, and OpenStreetMap-powered travel discovery.'
-        : 'Touristlio — dünya çapında destinasyonlar, Tiola topluluk puanları ve OpenStreetMap haritalarıyla kişisel seyahat rehberi.';
-    }
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    const twTitle = document.querySelector('meta[name="twitter:title"]');
-    const twDesc = document.querySelector('meta[name="twitter:description"]');
-    const homeTitle = lang === 'en'
-      ? "Touristlio — Don't Just Visit. Feel It."
-      : 'Touristlio — Sadece Ziyaret Etme. Hisset.';
-    const homeDesc = lang === 'en'
-      ? 'Touristlio — global destinations, Tiola community ratings, and OpenStreetMap-powered travel discovery.'
-      : 'Touristlio — dünya çapında destinasyonlar, Tiola topluluk puanları ve OpenStreetMap haritalarıyla kişisel seyahat rehberi.';
-    if (ogTitle) ogTitle.content = homeTitle;
-    if (ogDesc) ogDesc.content = homeDesc;
-    if (twTitle) twTitle.content = homeTitle;
-    if (twDesc) twDesc.content = homeDesc;
     if (!window.TL_CATEGORY_META) {
       document.querySelectorAll('.cpill[data-cat]').forEach((el) => {
         el.textContent = catLabel(lang, el.getAttribute('data-cat'));
@@ -854,7 +904,7 @@ window.TL_I18N = (function () {
   }
 
   return {
-    dict, t, catLabel, CAT_KEYS, apply, geoName, geoText, applyGeo,
+    dict, t, catLabel, CAT_KEYS, apply, applyShellMeta, shellKindFromPath, geoName, geoText, applyGeo,
     pathIsEnglish, stripLangPrefix, pathForLang, resolveLang, persistLang,
     applyDocumentLang, syncPathToLang, bootLocale, currentLang,
     get lang() { return currentLang(); },
