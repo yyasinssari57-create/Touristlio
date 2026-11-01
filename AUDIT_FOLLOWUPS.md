@@ -127,6 +127,12 @@ dokunulmadı.)
   aggregateRating, TR/EN Article URL ve JSON geçerliliğini doğrular.
 - `AUDIT_FOLLOWUPS.md` — bu bölüm.
 
+Dal, bilgi kutuları PR'ı (#75) dahil güncel `main` üzerine alındı. JSON-LD
+dosyalarında çakışma yoktu; yalnızca `package.json` içindeki
+`verify:place-info` satırı `verify:faz3-1` ile birlikte kaldı. `npm run
+verify:faz3-1` bu güncellemeden sonra tekrar çalıştı ve geçti. `verify:jsonld`
+ve `verify:sitemap` de regresyon için tekrar koşuldu.
+
 ### Kapsam dışı (bilinçli)
 
 - İki paralel JSON-LD üretici (`server/lib/jsonld.js` + `public/js/app.js`)
