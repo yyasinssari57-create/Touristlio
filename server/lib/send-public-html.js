@@ -124,9 +124,8 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   html = injectErrorDetail(html, seo.errorDetail);
   const req = res.req;
   const pathname = (req && (req.originalUrl || req.url) || '/').split('?')[0];
-  const { injectSeoHead, langFromPath } = require('./seo');
+  const { injectSeoHead, langFromPath, shouldNoindexDocument } = require('./seo');
   const { autoJsonLd } = require('./jsonld');
-  const noindex = /login|register|profile|verify-email|reset-password|admin|404\.html|500\.html/.test(relativePath);
   const lang = seo.lang || req?.tlLang || langFromPath(pathname);
   const seoRest = { ...seo };
   delete seoRest.errorDetail;
@@ -155,11 +154,12 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
     } catch { /* default CSS hero */ }
   }
   const jsonLd = seo.jsonLd != null ? seo.jsonLd : autoJsonLd(pathname, relativePath, lang);
+  const noindex = shouldNoindexDocument(relativePath, pathname, req?.query) || seoRest.noindex === true;
   html = injectSeoHead(html, {
     pathname,
     lang,
-    noindex,
     ...seoRest,
+    noindex,
     jsonLd,
   });
   // Last step: every inline <script> above must carry this request's nonce.

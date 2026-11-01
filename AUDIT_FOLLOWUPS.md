@@ -2,6 +2,57 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Claude Master PRD — FAZ3-4 (Arama sayfası canonical + noindex)
+
+Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-4] Arama Sayfası Canonical +
+Noindex. PRD `server/middleware/seoMiddleware.js` içinde `res.locals.noindex`
+istiyor. Bu depo EJS kullanmıyor; meta `buildSeoHead()` + `injectSeoHead()`
+ile HTML'e yazılıyor. Kural aynı yere, `shouldNoindexDocument()` olarak
+bağlandı. Görünen sayfa, renk, yerleşim ve butonlar değişmedi. FAZ3-5
+(sitemap kalite filtresi) ve FAZ4 yok.
+
+### PRD kuralı
+
+- Sorgu parametresi olan `/explore`, `/search`, `/places` (TR ve `/en`)
+  `noindex, nofollow`. Canonical ve `og:url` aynı yol, sorgusuz.
+- Bu üç yol parametresizken `index,follow`. Canonical kendi yolu
+  (`/explore` ana sayfaya çekilmez).
+- `/account`, `/settings`, `/admin`, `/dashboard` her zaman noindex.
+  Sitedeki karşılıkları (`/login`, `/register`, `/profile`, `/admin`,
+  e-posta doğrulama, şifre sıfırlama, 404/500) zaten noindex idi.
+- `/places/slug` (mekân sayfası) parametre taşısa da indexlenir. Canonical
+  sorgusuz kalır.
+
+### Zaten vardı
+
+- Canonical üreticisi sorguyu zaten yazmıyordu.
+- Giriş, kayıt, profil, admin, 404 `noindex, nofollow` ve bu sayfalarda
+  hreflang yok.
+- `/places` ve `/places/` 302 ile `/gezilecek-yerler` adresine gider; sorgu
+  düşer. Ayrı bir HTML sayfası değil.
+- `robots.txt` özel sayfaları Disallow eder. Liste/arama yollarına Disallow
+  eklenmedi: Google'ın noindex etiketini görmesi için sayfa taranabilir kalır.
+
+### Kapatılan boşluklar
+
+- `/search?q=…` ve `/explore?country=…` (ve `/en` ikizleri) sunucu HTML'inde
+  hâlâ `index,follow` idi. Artık noindex; canonical sorgusuz.
+- SPA, `/explore` açıkken canonical'ı `/` yapıyordu. Filtre URL'si
+  `history.replaceState` ile değişince robots güncellenmiyordu. `syncParamListingSeo()`
+  filtre yazılınca ve sekme değişince çalışır: parametreli listede noindex +
+  sorgusuz canonical, parametresiz `/explore` kendi canonical'ında kalır,
+  filtre kalkınca veya mekân/blog sekmesine geçince `index,follow` geri gelir.
+- Arama sayfası (`search.html`) sorguyu adres çubuğuna yazınca aynı kuralı
+  uygular.
+
+### Bilinçli olarak yapılmayanlar
+
+- FAZ3-5 sitemap kalite filtresi ve FAZ4 — yok.
+- `/gezilecek-yerler` PRD listesinde yok; sorgu davranışı değişmedi.
+- Başlık, açıklama, JSON-LD ve ekrandaki metinler değişmedi.
+
+Doğrulama: `npm run verify:faz3-4`, `npm run verify:faz3-2`, `npm run verify:og`.
+
 ## Claude Master PRD — FAZ3-3 (Veritabanı index'leri)
 
 Claude Master PRD "FAZ 3 — Teknik SEO" → [FAZ3-3] Veritabanı Index'leri

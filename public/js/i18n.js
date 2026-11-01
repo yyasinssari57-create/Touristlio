@@ -903,10 +903,72 @@ window.TL_I18N = (function () {
     }
   }
 
+  /**
+   * FAZ3-4: /explore, /search and /places with a query string are noindex.
+   * Canonical and og:url stay on that path with the query removed.
+   * A clean /explore keeps canonical /explore (not /). Other routes are untouched.
+   */
+  function seoOrigin() {
+    if (typeof location === 'undefined') return 'https://www.touristlio.com';
+    const host = location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') return location.origin;
+    return 'https://www.touristlio.com';
+  }
+
+  function absSeo(urlPath) {
+    const path = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
+    return `${seoOrigin()}${path}`.replace('://touristlio.com', '://www.touristlio.com');
+  }
+
+  function listingHasParams() {
+    const raw = (typeof location !== 'undefined' && location.search) || '';
+    if (!raw || raw === '?') return false;
+    const params = new URLSearchParams(raw.charAt(0) === '?' ? raw.slice(1) : raw);
+    let has = false;
+    params.forEach(() => { has = true; });
+    return has;
+  }
+
+  function upsertMeta(attr, key, content) {
+    const sel = `meta[${attr}="${key}"]`;
+    let el = document.querySelector(sel);
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute(attr, key);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', content);
+  }
+
+  function upsertCanonical(href) {
+    let link = document.querySelector('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      document.head.appendChild(link);
+    }
+    link.setAttribute('href', href);
+    upsertMeta('property', 'og:url', href);
+  }
+
+  function syncParamListingSeo() {
+    if (typeof location === 'undefined' || typeof document === 'undefined') return;
+    let bare = stripLangPrefix(String(location.pathname || '/').split('?')[0]);
+    if (bare.length > 1 && bare.endsWith('/')) bare = bare.slice(0, -1);
+    const listing = bare === '/explore' || bare === '/search' || bare === '/places';
+    const home = bare === '/';
+    if (!listing && !home) return;
+    const en = pathIsEnglish(location.pathname);
+    const noindex = listing && listingHasParams();
+    const canonPath = pathForLang(bare, en ? 'en' : 'tr');
+    upsertCanonical(absSeo(canonPath));
+    upsertMeta('name', 'robots', noindex ? 'noindex, nofollow' : 'index,follow');
+  }
+
   return {
     dict, t, catLabel, CAT_KEYS, apply, applyShellMeta, shellKindFromPath, geoName, geoText, applyGeo,
     pathIsEnglish, stripLangPrefix, pathForLang, resolveLang, persistLang,
-    applyDocumentLang, syncPathToLang, bootLocale, currentLang,
+    applyDocumentLang, syncPathToLang, bootLocale, currentLang, syncParamListingSeo,
     get lang() { return currentLang(); },
   };
 })();
