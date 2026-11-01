@@ -41,6 +41,7 @@
     "verify:place-info": "node server/scripts/verify-place-info-boxes.js",
     "verify:faz3-1": "node server/scripts/verify-faz3-1-jsonld.js",
     "verify:faz3-2": "node server/scripts/verify-faz3-2-seo-meta.js",
+    "verify:faz3-3": "node server/scripts/verify-faz3-3-indexes.js",
     "verify:faz4": "node server/scripts/verify-gemini-faz4.js",
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
