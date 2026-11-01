@@ -1,4 +1,4 @@
-const { trLabel, trDative } = require('./tr-labels');
+const { trLabel, trDative, toEnglishBestTime } = require('./tr-labels');
 
 /** Generate min 5 FAQ Q&A pairs per place (TR + EN) */
 function buildFaqForPlace(p) {
@@ -10,6 +10,7 @@ function buildFaqForPlace(p) {
   const entry = p.entryFee || 'Ücretli';
   const best = p.bestTime || 'Sabah erken';
   const entryEn = p.entryFeeEn || (entry.includes('Ücretsiz') ? 'Free' : 'Paid entry');
+  const bestEn = toEnglishBestTime(p.bestTimeEn || best);
 
   const faqTR = [
     { q: `${name} ziyareti ne kadar sürer?`, a: `Çoğu ziyaretçi ${name} için 1,5–3 saat ayırır. ${cityTr} programınıza göre yarım gün de planlayabilirsiniz.` },
@@ -23,7 +24,7 @@ function buildFaqForPlace(p) {
   const faqEN = [
     { q: `How long should I spend at ${name}?`, a: `Most visitors allow 1.5–3 hours at ${name}. A half-day works well if you are exploring ${city} at a relaxed pace.` },
     { q: `Is there an entry fee for ${name}?`, a: `Current info: ${entryEn}. Confirm at the ticket desk or official site before you go.` },
-    { q: `When is the best time to visit ${name}?`, a: `${p.bestTimeEn || best} is usually quieter and better for photos. Weekday mornings reduce crowds.` },
+    { q: `When is the best time to visit ${name}?`, a: `${bestEn} is usually quieter and better for photos. Weekday mornings reduce crowds.` },
     { q: `How do I get to ${name}?`, a: p.howToGetThereEn || `Reach ${name} from ${city} center by public transit or taxi.` },
     { q: `Is ${name} suitable for children?`, a: `Family visits are common in ${city}, ${country}; plan for queues and walking distance.` },
     { q: `Where to eat near ${name}?`, a: p.cultureFoodEn || `Local cafés and restaurants sit within walking distance of ${city} center.` },

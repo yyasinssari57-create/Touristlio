@@ -96,8 +96,9 @@ else {
 
 const topkapi = places.find((p) => p.name === 'Topkapı Sarayı');
 const topQ = (topkapi?.faqTR || []).map((item) => item.q).join(' ');
-if (!topQ.includes("Topkapı Sarayı'e nasıl ulaşılır?")) fail('Topkapı SSS bu turda değişmiş');
-else ok('Topkapı kaydı bu turda duruyor');
+if (topQ.includes("Topkapı Sarayı'e nasıl ulaşılır?")) fail('Topkapı SSS hâlâ \'e eki');
+else if (!topQ.includes("Topkapı Sarayı'na nasıl ulaşılır?")) fail(`Topkapı SSS: ${topQ}`);
+else ok("Topkapı SSS Topkapı Sarayı'na");
 
 const generated = buildFaqForPlace({
   name: 'Ayasofya',

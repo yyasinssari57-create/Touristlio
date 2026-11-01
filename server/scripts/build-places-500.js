@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { assignUniqueImages, fallbackImageUrl } = require('../lib/photo-pools');
 const { enrichContentFields } = require('../lib/place-content');
+const { toEnglishBestTime } = require('../lib/tr-labels');
 const BATCH3 = require('./places-batch3');
 const BATCH4 = require('./places-batch4');
 const BATCH5 = require('./places-batch5-categories');
@@ -56,12 +57,6 @@ const TIPS_EN = [
 ];
 
 const ENTRY_EN = { 'Ücretsiz': 'Free', 'Ücretli': 'Paid' };
-const BEST_EN = {
-  'Sabah erken': 'Early morning',
-  'Gün batımı': 'Sunset',
-  'Hafta içi sabah': 'Weekday morning',
-  'İlkbahar–sonbahar': 'Spring–autumn',
-};
 
 const TARGET_MIN = 800;
 const TARGET_MAX = 0;
@@ -101,7 +96,7 @@ function buildRow(id, row) {
     entryFee: fee,
     entryFeeEn: ENTRY_EN[fee] || fee,
     bestTime: best,
-    bestTimeEn: BEST_EN[best] || best,
+    bestTimeEn: toEnglishBestTime(best),
     description: DESC[i](name, country, city, category),
     descriptionEn: DESC_EN[i](name, country, city, category),
     history: HIST[id % HIST.length](name, country, city),
@@ -143,7 +138,7 @@ function enrichExisting(p, id) {
     entryFee: fee,
     entryFeeEn: p.entryFeeEn || ENTRY_EN[fee] || fee,
     bestTime: best,
-    bestTimeEn: p.bestTimeEn || BEST_EN[best] || best,
+    bestTimeEn: toEnglishBestTime(p.bestTimeEn || best),
     description: desc,
     descriptionEn: (!isShortText(p.descriptionEn, MIN_DESC_LEN))
       ? p.descriptionEn
