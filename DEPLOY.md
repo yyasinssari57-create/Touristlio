@@ -72,7 +72,18 @@ Deploy başlamadan veya ilk deploy sonrası **Environment** sekmesinde aşağıd
 | `ADMIN_NAME` | `Admin` |
 | `LOG_LEVEL` | `info` |
 
-Tam liste ve isteğe bağlı değişkenler: `.env.production.example`
+**İsteğe bağlı — Google Analytics 4**
+
+Kod hazır. Kimlik yokken `gtag` yüklenmez; birinci taraf ziyaret sayacı çerez
+onayından sonra çalışmaya devam eder. Sahte `G-` değeri yazmayın.
+
+| Değişken | Nereye |
+|----------|--------|
+| `GA_MEASUREMENT_ID` | [analytics.google.com](https://analytics.google.com) → Yönetici → Veri akışları → Web → Ölçüm Kimliği (`G-` ile başlar). Bu servisin **Environment** sekmesine, anahtar adı aynen `GA_MEASUREMENT_ID` olacak şekilde yapıştırın. Kayıt servisi yeniden başlatır. |
+
+Çerez bandında **Kabul** denmeden Google script’i inmez. **Reddet** seçilirse GA4 kapalı kalır.
+
+Tam liste ve diğer isteğe bağlı değişkenler: `.env.production.example`
 
 ### 3. İlk deploy’u bekle
 

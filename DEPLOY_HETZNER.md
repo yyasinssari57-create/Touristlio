@@ -357,6 +357,7 @@ nano .env
 | `SMTP_USER` | Brevo giriş e-postanız | Brevo hesap e-postası. |
 | `SMTP_PASS` | Brevo **SMTP anahtarı** | API anahtarı değil! Brevo → SMTP & API → SMTP key. |
 | `SMTP_FROM` | doğrulanmış gönderen | Brevo’da “Gönderenler”den onaylı olmalı. |
+| `GA_MEASUREMENT_ID` | boş bırakın, veya `G-…` | İsteğe bağlı. [analytics.google.com](https://analytics.google.com) → Yönetici → Veri akışları → Web → Ölçüm Kimliği. Değeri bu `.env` satırına yazın. Uydurmayın. Boşken GA4 kapalıdır. Çerez **Kabul** edilmeden `gtag` yüklenmez. Değiştirdikten sonra §8.4: `pm2 restart touristlio`. |
 
 JWT secret üretmek için (henüz yapmadıysanız):
 
