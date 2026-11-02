@@ -116,6 +116,23 @@ function cssUrlValue(url) {
     .replace(/</g, '');
 }
 
+/** Existing round mark (logo-round). Injected so every public HTML page shares one tab icon. */
+const FAVICON_LINKS = [
+  '<link rel="icon" href="/favicon.ico" sizes="32x32"/>',
+  '<link rel="icon" href="/favicon.svg" type="image/svg+xml"/>',
+  '<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>',
+].join('\n');
+
+function injectFaviconLinks(html) {
+  if (/<link\b[^>]*\brel=["'](?:shortcut icon|icon|apple-touch-icon)["']/i.test(html)) {
+    return html;
+  }
+  if (/<\/head>/i.test(html)) {
+    return html.replace(/<\/head>/i, `${FAVICON_LINKS}\n</head>`);
+  }
+  return `${FAVICON_LINKS}\n${html}`;
+}
+
 function injectHeroBackground(html, url) {
   const src = String(url || '').trim();
   if (!src) return html;
@@ -173,6 +190,7 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
     noindex,
     jsonLd,
   });
+  html = injectFaviconLinks(html);
   // Last step: every inline <script> above must carry this request's nonce.
   html = injectNonce(html, nonceFromRes(res));
   res.set({
@@ -247,6 +265,8 @@ module.exports = {
   injectClientErrorBoundary,
   injectAnalyticsScripts,
   injectErrorDetail,
+  injectFaviconLinks,
+  FAVICON_LINKS,
   injectNonce,
   HTML_PAGE_ROUTES,
   readPublicHtml,
