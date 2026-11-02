@@ -2,8 +2,41 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
-Numaralı takip kuyruğu (1–5) bitti. Başka açık denetim maddesi yok.
-Kalanlar isteğe bağlı ve düşük öncelik: favicon, GA4 paneli, PostGIS.
+Numaralı takip kuyruğu (1–5) bitti. Favicon da eklendi.
+Kalanlar isteğe bağlı ve düşük öncelik: GA4 paneli (Yasin’in gerçek
+`GA_MEASUREMENT_ID` değeri gerekir), PostGIS.
+
+## İsteğe bağlı — favicon
+
+Yasin "sıradakine geç" dedi. Canlıda `/favicon.ico` 404 idi
+(FAZ2-1 artığı). Bu tur yalnız sekme ikonunu ekler.
+
+### Durum
+
+İşaret mevcut yuvarlak logodan geldi (`public/images/logo-round.png`,
+beyaz T + iğne, siyah zemin). Yeni bir marka çizilmedi. Ekrandaki renk,
+yerleşim ve buton yeri değişmedi.
+
+- `public/favicon.ico` — 16, 32 ve 48. `GET` ve `HEAD` `/favicon.ico` 200.
+- `public/favicon.svg` — aynı işaret.
+- `public/apple-touch-icon.png` — 180×180.
+- `sendPublicHtml` herkese açık HTML’in `</head>` kısmına üç `link` ekler.
+  Ana sayfa, giriş, yasal sayfalar, admin ve 404 aynı ikonu kullanır.
+  Tarayıcı link olmasa da `/favicon.ico` ister; dosya artık duruyor.
+
+### Kabul listesi
+
+- [x] `/favicon.ico` 200. Gövde ICO.
+- [x] `/favicon.svg` ve `/apple-touch-icon.png` 200.
+- [x] Sunulan HTML’de `rel="icon"` ve `apple-touch-icon` var.
+- [x] Ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- GA4 paneli yok. Measurement ID üretilmedi; `GA_MEASUREMENT_ID` boş kalır.
+- PostGIS extension açılmadı. Yoksa site haversine ile devam eder.
+
+Doğrulama: `npm run verify:favicon`.
 
 ## Denetim #5 — doğrulama betikleri ve gezi planı await
 
