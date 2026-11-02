@@ -25,6 +25,15 @@ async function getLiveData(placeId, placeRow, mapPlace) {
   if (row) {
     let extra = {};
     try { extra = JSON.parse(row.payload || '{}'); } catch { /* ignore */ }
+    const extraSafe = { ...extra };
+    // Eski yönetici hava/saat metni canlı verinin yerine geçmez.
+    delete extraSafe.weather;
+    if (extraSafe.localInfo) {
+      const li = { ...extraSafe.localInfo };
+      delete li.localTime;
+      if (Object.keys(li).length) extraSafe.localInfo = li;
+      else delete extraSafe.localInfo;
+    }
     return {
       placeId,
       budget: extra.budget
@@ -37,7 +46,7 @@ async function getLiveData(placeId, placeRow, mapPlace) {
       updatedAt: row.updated_at,
       source: row.source || 'cache',
       fallback: false,
-      ...extra,
+      ...extraSafe,
     };
   }
 

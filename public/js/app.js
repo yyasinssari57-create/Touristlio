@@ -994,6 +994,7 @@ function stopPlaceClock() {
 }
 
 function formatLiveLocalTime(timeZone) {
+  if (!timeZone) return '—';
   const locale = lang === 'en' ? 'en-GB' : 'tr-TR';
   const base = {
     day: '2-digit',
@@ -1005,14 +1006,9 @@ function formatLiveLocalTime(timeZone) {
     hourCycle: 'h23',
   };
   try {
-    const opts = timeZone ? { ...base, timeZone } : base;
-    return new Intl.DateTimeFormat(locale, opts).format(new Date());
+    return new Intl.DateTimeFormat(locale, { ...base, timeZone }).format(new Date());
   } catch {
-    try {
-      return new Intl.DateTimeFormat(locale, base).format(new Date());
-    } catch {
-      return '';
-    }
+    return '—';
   }
 }
 
@@ -1046,7 +1042,7 @@ function renderDetailWidgets(data) {
   const lBox = document.getElementById('pdLocalInfo');
   if (lBox && data.localInfo) {
     const li = data.localInfo;
-    const tz = li.timezone || data.weather?.timezone || '';
+    const tz = data.weather?.timezone || li.timezone || '';
     lBox.innerHTML = `<div class="ac-title">🕐 ${t('localInfoTitle')}</div>
       <div class="ic-row"><span class="ic-lbl">${t('localTime')}</span><span class="ic-val" id="pdLocalClock">${escapeHtml(formatLiveLocalTime(tz))}</span></div>
       <div class="ic-row"><span class="ic-lbl">${t('localCurrency')}</span><span class="ic-val">${li.currency?.code || '—'} ${li.currency?.symbol || ''}</span></div>

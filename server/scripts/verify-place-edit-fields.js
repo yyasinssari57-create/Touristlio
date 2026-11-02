@@ -137,9 +137,11 @@ else ok('yerel saat saniye saniye akar');
 
 if (!weatherJs.includes('api.open-meteo.com') || !weatherJs.includes('timezone')) {
   fail('canlı hava saat dilimi döndürmüyor');
-} else if (!legacyJs.includes('weather.timezone') || !legacyJs.includes('timezoneForCountry')) {
+} else if (!legacyJs.includes('applyResolvedTimezone')) {
   fail('yer saati dilim seçimi yok');
-} else ok('hava Open-Meteo; saat dilimi koordinat veya ülke');
+} else if (legacyJs.includes('timezoneForCountry')) {
+  fail('yer saati hâlâ ülke tablosundan seçiliyor');
+} else ok('hava Open-Meteo; saat dilimi koordinat');
 
 const inline = adminHtml.split('<script>').pop().split('</script>')[0];
 try {
