@@ -10,7 +10,8 @@ const { getStatsMap } = require('../lib/stats-cache');
 const { findNearbyPlaces, findSimilarPlaces } = require('../lib/geo');
 const { findNearbyPlacesSql } = require('../lib/place-geom');
 const { getWeather } = require('../services/weatherService');
-const { currencyForCountry, timezoneForCountry, parseEntryFeeTry } = require('../lib/currency');
+const { currencyForCountry, parseEntryFeeTry } = require('../lib/currency');
+const { applyResolvedTimezone, formatPlaceLocalTime } = require('../lib/timezone');
 const { getLiveData, getAdminPayload, mergeWeather, mergeLocalInfo, mergeInfoPanel } = require('../services/liveDataService');
 const { buildPlaceInfoBoxes } = require('../lib/place-info-boxes');
 const placesService = require('../modules/places/places.service');
@@ -92,9 +93,11 @@ router.get('/:id', authOptional, async (req, res) => {
     weather = { failed: true, fallback: true, tempC: null, label: null, source: 'error' };
   }
   const cur = currencyForCountry(place.country);
-  const tz = String(place.timezone || '').trim()
-    || (weather && weather.timezone)
-    || timezoneForCountry(place.country);
+  const { timezone: tz } = applyResolvedTimezone(weather, {
+    storedTimezone: place.timezone,
+    lat: place.lat,
+    lng: place.lng,
+  });
   const entryTry = parseEntryFeeTry(place.entryFee);
   const affiliateEnabled = process.env.AFFILIATE_ENABLED === 'true';
   const adminPayload = await getAdminPayload(place.id);
@@ -105,7 +108,7 @@ router.get('/:id', authOptional, async (req, res) => {
     timezone: tz,
     currency: cur,
     entryTryEstimate: entryTry,
-    localTime: new Date().toLocaleString(lang === 'en' ? 'en-GB' : 'tr-TR', { timeZone: tz }),
+    localTime: formatPlaceLocalTime(tz, lang),
   }, adminPayload);
   res.json({
     place: {
@@ -127,6 +130,11 @@ router.get('/:id/weather', authOptional, async (req, res) => {
   if (!row) return;
   const lang = req.query.lang === 'en' ? 'en' : 'tr';
   const weather = await getWeather(row.lat, row.lng, lang);
+  applyResolvedTimezone(weather, {
+    storedTimezone: row.timezone,
+    lat: row.lat,
+    lng: row.lng,
+  });
   res.json(weather);
 });
 
