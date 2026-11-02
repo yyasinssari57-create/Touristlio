@@ -92,7 +92,9 @@ router.get('/:id', authOptional, async (req, res) => {
     weather = { failed: true, fallback: true, tempC: null, label: null, source: 'error' };
   }
   const cur = currencyForCountry(place.country);
-  const tz = place.timezone || timezoneForCountry(place.country);
+  const tz = String(place.timezone || '').trim()
+    || (weather && weather.timezone)
+    || timezoneForCountry(place.country);
   const entryTry = parseEntryFeeTry(place.entryFee);
   const affiliateEnabled = process.env.AFFILIATE_ENABLED === 'true';
   const adminPayload = await getAdminPayload(place.id);

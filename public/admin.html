@@ -3524,18 +3524,58 @@ async function openPlaceEdit(id) {
     const catOpts = categoryOptions.map((c) =>
       `<option value="${escapeHtml(c.slug)}" ${c.slug === p.category ? 'selected' : ''}>${escapeHtml(c.nameTr)} — kod: ${escapeHtml(c.slug)}</option>`
     ).join('');
+    const aliasText = Array.isArray(p.searchAliases) ? p.searchAliases.join(', ') : '';
     openModal('Yer düzenle: ' + p.name, `
       <div class="admin-form">
         <div id="edFormErr" class="admin-form-err" role="alert" tabindex="-1"></div>
-        <input class="ain full" id="edName" value="${escapeHtml(p.name)}" aria-label="Ad"/>
-        <label class="adm-label-sm" for="edStatus">Yayın durumu</label>
-        <select class="ain" id="edStatus" aria-label="Yayın durumu">
-          <option value="published" ${(p.status || 'published') === 'published' ? 'selected' : ''}>Yayında</option>
-          <option value="draft" ${p.status === 'draft' ? 'selected' : ''}>Taslak</option>
-          <option value="archived" ${p.status === 'archived' ? 'selected' : ''}>Arşiv</option>
-        </select>
-        <input class="ain" id="edLat" value="${p.lat ?? ''}" aria-label="Enlem" type="number" step="any"/>
-        <input class="ain" id="edLng" value="${p.lng ?? ''}" aria-label="Boylam" type="number" step="any"/>
+        <p class="adm-photo-title full">Yer bilgileri</p>
+        <p class="adm-field-hint full">Yeni yer eklerken girdiğiniz alanlar. Alttaki Kaydet hepsini yazar. Saat ve hava durumu otomatiktir.</p>
+        <div class="full">
+          <label class="adm-label-sm" for="edName">Yer adı *</label>
+          <input class="ain" id="edName" value="${escapeHtml(p.name || '')}" aria-label="Yer adı"/>
+        </div>
+        <div>
+          <label class="adm-label-sm" for="edCountry">Ülke *</label>
+          <input class="ain" id="edCountry" value="${escapeHtml(p.country || '')}" aria-label="Ülke"/>
+        </div>
+        <div>
+          <label class="adm-label-sm" for="edCity">Şehir *</label>
+          <input class="ain" id="edCity" value="${escapeHtml(p.city || '')}" aria-label="Şehir"/>
+        </div>
+        <div>
+          <label class="adm-label-sm" for="edDistrict">İlçe / bölge</label>
+          <input class="ain" id="edDistrict" value="${escapeHtml(p.district || '')}" placeholder="Boşsa şehir yazılır" aria-label="İlçe"/>
+        </div>
+        <div>
+          <label class="adm-label-sm" for="edStatus">Yayın durumu</label>
+          <select class="ain" id="edStatus" aria-label="Yayın durumu">
+            <option value="published" ${(p.status || 'published') === 'published' ? 'selected' : ''}>Yayında</option>
+            <option value="draft" ${p.status === 'draft' ? 'selected' : ''}>Taslak</option>
+            <option value="archived" ${p.status === 'archived' ? 'selected' : ''}>Arşiv</option>
+          </select>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edLocation">Adres / konum metni</label>
+          <input class="ain" id="edLocation" value="${escapeHtml(p.location || '')}" placeholder="Boşsa şehir, ülke yazılır" aria-label="Konum"/>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edCat">Kategori (kod / slug) *</label>
+          <select class="ain" id="edCat" aria-label="Kategori kodu">${catOpts}</select>
+          <p class="adm-field-hint">Türkçe ad değil; yerin kategori kodu seçilir (ör. <code>museum</code>).</p>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edAliases">Arama alias (virgülle)</label>
+          <input class="ain" id="edAliases" value="${escapeHtml(aliasText)}" placeholder="Ayasofya, Hagia Sophia" aria-label="Arama aliasları"/>
+        </div>
+        <div>
+          <label class="adm-label-sm" for="edLat">Enlem</label>
+          <input class="ain" id="edLat" value="${p.lat ?? ''}" aria-label="Enlem" type="number" step="any" inputmode="decimal"/>
+        </div>
+        <div>
+          <label class="adm-label-sm" for="edLng">Boylam</label>
+          <input class="ain" id="edLng" value="${p.lng ?? ''}" aria-label="Boylam" type="number" step="any" inputmode="decimal"/>
+        </div>
+        <p class="adm-field-hint full">Enlem -90…90, boylam -180…180. İkisi boşsa mevcut koordinat durur. Bağlantı adı (slug) yer adından otomatik güncellenir${p.slug ? `: <code>${escapeHtml(p.slug)}</code>` : ''}.</p>
         <label class="adm-label-sm full" for="edImage">Kapak görseli URL</label>
         <input class="ain full" id="edImage" value="${escapeHtml(p.imageUrl || '')}" aria-label="Kapak görseli URL"/>
         <p class="adm-field-hint" id="edImageHint">${imageSourceBadge(p.imageUrl)} Görseli değiştirmek için URL düzenleyin veya yeni görsel yükleyin.</p>
@@ -3555,25 +3595,35 @@ async function openPlaceEdit(id) {
           <div id="edPhotoNewPreview" class="photo-preview-row"></div>
           <p class="photo-upload-hint">En fazla 10 görsel · JPEG, PNG, WebP · dosya başına max 12 MB</p>
         </div>
-        <textarea class="ain full" id="edDesc" aria-label="Açıklama" style="height:60px">${escapeHtml(p.description || '')}</textarea>
+        <div class="full">
+          <label class="adm-label-sm" for="edOverview">Sayfa özeti (TR)</label>
+          <textarea class="ain" id="edOverview" aria-label="Sayfa özeti Türkçe" style="height:70px">${escapeHtml(p.overview || '')}</textarea>
+          <p class="adm-field-hint">Sitede görünen metin budur. Özeti ellemezseniz ve açıklamayı değiştirirseniz özet açıklamadan yenilenir.</p>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edDesc">Açıklama (TR)</label>
+          <textarea class="ain" id="edDesc" aria-label="Açıklama Türkçe" style="height:60px">${escapeHtml(p.description || '')}</textarea>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edOverviewEn">Page summary (EN)</label>
+          <textarea class="ain" id="edOverviewEn" aria-label="Sayfa özeti İngilizce" style="height:60px">${escapeHtml(p.overviewEn || '')}</textarea>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edDescEn">Description (EN)</label>
+          <textarea class="ain" id="edDescEn" aria-label="Açıklama İngilizce" style="height:60px">${escapeHtml(p.descriptionEn || '')}</textarea>
+        </div>
 
         <p class="adm-photo-title full" style="margin-top:8px">Yan panel kartları (destinasyon sayfası)</p>
-        <p class="adm-field-hint full">Boş bırakılan alanlar otomatik veya API verisini kullanır. Doldurulan alanlar yönetici değerini gösterir.</p>
+        <p class="adm-field-hint full">Saat ve hava durumu otomatik akar; elle yazılmaz. Para, bütçe ve bilgi kutucukları kaydedilir.</p>
 
         <div class="adm-side-card">
           <p class="adm-side-card-title">🌤️ Hava Durumu</p>
-          <p class="adm-side-card-hint">Durum metni ve sıcaklık (°C)</p>
-          <label class="adm-label-sm" for="edWeatherLabel">Durum</label>
-          <input class="ain" id="edWeatherLabel" value="${escapeHtml(ib.weatherLabel || '')}" placeholder="Kapalı" aria-label="Hava durumu"/>
-          <label class="adm-label-sm" for="edWeatherTemp">Sıcaklık (°C)</label>
-          <input class="ain" id="edWeatherTemp" type="number" step="0.1" value="${ib.weatherTempC ?? ''}" placeholder="22.3" aria-label="Sıcaklık"/>
+          <p class="adm-side-card-hint">Canlı hava, yerin enlem ve boylamından otomatik gelir. İklim metni aşağıdaki Bilgi Kutucukları’ndadır.</p>
         </div>
 
         <div class="adm-side-card">
           <p class="adm-side-card-title">🕐 Yerel Bilgi</p>
-          <p class="adm-side-card-hint">Yerel saat ve para birimi gösterimi</p>
-          <label class="adm-label-sm full" for="edLocalTime">Yerel saat</label>
-          <input class="ain full" id="edLocalTime" value="${escapeHtml(ib.localTime || '')}" placeholder="07.06.2026 14:30:00" aria-label="Yerel saat"/>
+          <p class="adm-side-card-hint">Yerel saat konumuna göre kendiliğinden akar. Para birimi gösterimini buradan değiştirebilirsiniz.</p>
           <label class="adm-label-sm" for="edCurrencyCode">Para birimi kodu</label>
           <input class="ain" id="edCurrencyCode" value="${escapeHtml(ib.currencyCode || '')}" placeholder="TRY" aria-label="Para birimi kodu"/>
           <label class="adm-label-sm" for="edCurrencySymbol">Sembol</label>
@@ -3593,14 +3643,7 @@ async function openPlaceEdit(id) {
 
         <div class="adm-side-card">
           <p class="adm-side-card-title">📋 Bilgiler</p>
-          <p class="adm-side-card-hint">Ülke, şehir, kategori, giriş ücreti ve en iyi dönem</p>
-          <label class="adm-label-sm" for="edCountry">Ülke</label>
-          <input class="ain" id="edCountry" value="${escapeHtml(ib.infoCountry || p.country || '')}" aria-label="Ülke"/>
-          <label class="adm-label-sm" for="edCity">Şehir</label>
-          <input class="ain" id="edCity" value="${escapeHtml(ib.infoCity || p.city || '')}" aria-label="Şehir"/>
-          <label class="adm-label-sm full" for="edCat">Kategori (kod / slug)</label>
-          <select class="ain full" id="edCat" aria-label="Kategori kodu">${catOpts}</select>
-          <p class="adm-field-hint">Türkçe ad değil; yerin kategori kodu seçilir (ör. <code>museum</code>).</p>
+          <p class="adm-side-card-hint">Ülke, şehir ve kategori yukarıdaki yer bilgilerindedir. Burada yalnızca sağ paneldeki ek metinler durur.</p>
           <label class="adm-label-sm full" for="edCategoryLabel">Kategori gösterim metni (isteğe bağlı)</label>
           <input class="ain full" id="edCategoryLabel" value="${escapeHtml(ib.infoCategoryLabel || '')}" placeholder="Boş bırakılırsa kategori adı kullanılır" aria-label="Kategori gösterim metni"/>
           <label class="adm-label-sm" for="edEntryFee">Giriş ücreti</label>
@@ -3611,7 +3654,7 @@ async function openPlaceEdit(id) {
 
         <div class="adm-side-card" id="placeInfoBoxes">
           <p class="adm-side-card-title">Bilgi Kutucukları</p>
-          <p class="adm-side-card-hint">Bu metinler destinasyon sayfasında ayrı kutular olarak görünür. İklim, canlı hava durumundan bağımsızdır. Boş bırakılan kutu sitede gösterilmez.</p>
+          <p class="adm-side-card-hint">Bu metinler destinasyon sayfasında ayrı kutular olarak görünür. İklim, canlı hava durumundan bağımsızdır. Canlı saat ve hava burada yok. Boş bırakılan kutu sitede gösterilmez.</p>
           <label class="adm-label-sm full" for="infoClimate">İklim/Hava</label>
           <textarea class="ain full" id="infoClimate" rows="3" aria-label="İklim">${escapeHtml(p.climateInfo || '')}</textarea>
           <label class="adm-label-sm" for="infoCurrency">Para birimi</label>
@@ -3677,6 +3720,40 @@ async function openPlaceEdit(id) {
   } catch (e) { showErr(e.message); }
 }
 
+function readPlaceCoord(id, min, max, label) {
+  const raw = document.getElementById(id)?.value;
+  if (raw == null || String(raw).trim() === '') return null;
+  const n = Number(String(raw).trim().replace(',', '.'));
+  if (!Number.isFinite(n) || n < min || n > max) {
+    throw new Error(label + ' ' + min + ' ile ' + max + ' arasında olmalı');
+  }
+  return n;
+}
+
+function placeInfoPatchBody() {
+  const best = document.getElementById('infoBestTime')?.value || '';
+  const fee = document.getElementById('infoEntryFee')?.value || '';
+  return {
+    best,
+    fee,
+    body: {
+      climate_info: document.getElementById('infoClimate')?.value || '',
+      currency: document.getElementById('infoCurrency')?.value || '',
+      budget_level: document.getElementById('infoBudgetLevel')?.value || null,
+      budget_amount: document.getElementById('infoBudgetAmount')?.value || '',
+      visit_duration: document.getElementById('infoVisitDuration')?.value || '',
+      best_time: best,
+      entry_fee: fee,
+      is_free: !!document.getElementById('infoIsFree')?.checked,
+      wheelchair_accessible: infoTriFromSelect('infoWheelchair'),
+      family_friendly: infoTriFromSelect('infoFamily'),
+      pet_friendly: infoTriFromSelect('infoPets'),
+      has_parking: infoTriFromSelect('infoParking'),
+      info_source_url: document.getElementById('infoSourceUrl')?.value || '',
+    },
+  };
+}
+
 function infoTriFromSelect(id) {
   const v = document.getElementById(id)?.value;
   if (v === 'true') return true;
@@ -3689,25 +3766,12 @@ async function savePlaceInfo(id) {
   clearFormErr('edFormErr');
   setBtnLoading(btn, true, 'Kaydediliyor…');
   try {
-    const best = document.getElementById('infoBestTime')?.value || '';
-    const fee = document.getElementById('infoEntryFee')?.value || '';
+    const info = placeInfoPatchBody();
+    const best = info.best;
+    const fee = info.fee;
     await api('/admin/places/' + id + '/info', {
       method: 'PATCH',
-      body: {
-        climate_info: document.getElementById('infoClimate')?.value || '',
-        currency: document.getElementById('infoCurrency')?.value || '',
-        budget_level: document.getElementById('infoBudgetLevel')?.value || null,
-        budget_amount: document.getElementById('infoBudgetAmount')?.value || '',
-        visit_duration: document.getElementById('infoVisitDuration')?.value || '',
-        best_time: best,
-        entry_fee: fee,
-        is_free: !!document.getElementById('infoIsFree')?.checked,
-        wheelchair_accessible: infoTriFromSelect('infoWheelchair'),
-        family_friendly: infoTriFromSelect('infoFamily'),
-        pet_friendly: infoTriFromSelect('infoPets'),
-        has_parking: infoTriFromSelect('infoParking'),
-        info_source_url: document.getElementById('infoSourceUrl')?.value || '',
-      },
+      body: info.body,
     });
     const oldFee = document.getElementById('edEntryFee');
     const oldBest = document.getElementById('edBestTime');
@@ -3731,30 +3795,46 @@ async function savePlaceEdit(id) {
       photos = photos.filter((u) => !isExternalPhotoUrl(u));
       if (isExternalPhotoUrl(imageUrl)) imageUrl = '';
     }
+    const lat = readPlaceCoord('edLat', -90, 90, 'Enlem');
+    const lng = readPlaceCoord('edLng', -180, 180, 'Boylam');
+    if ((lat == null) !== (lng == null)) {
+      throw new Error('Enlem ve boylam birlikte girilmeli');
+    }
+    const info = placeInfoPatchBody();
+    const aliases = (document.getElementById('edAliases')?.value || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     await api('/admin/places/' + id, {
       method: 'PUT',
       body: {
         name: document.getElementById('edName').value,
         country: document.getElementById('edCountry').value,
         city: document.getElementById('edCity').value,
+        district: document.getElementById('edDistrict').value,
+        location: document.getElementById('edLocation').value,
         category: document.getElementById('edCat').value,
         status: document.getElementById('edStatus').value,
-        lat: parseFloat(document.getElementById('edLat').value) || undefined,
-        lng: parseFloat(document.getElementById('edLng').value) || undefined,
+        lat,
+        lng,
         imageUrl: imageUrl || (photos?.[0] || undefined),
         photos,
         description: document.getElementById('edDesc').value,
-        entryFee: document.getElementById('edEntryFee').value,
-        bestTime: document.getElementById('edBestTime').value,
+        descriptionEn: document.getElementById('edDescEn').value,
+        overview: document.getElementById('edOverview').value,
+        overviewEn: document.getElementById('edOverviewEn').value,
+        searchAliases: aliases,
+        entryFee: info.fee,
+        bestTime: info.best,
       },
     });
     await uploadPlacePhotos(id, 'edPhotos');
     await api('/admin/places/' + id + '/info-boxes', {
       method: 'PUT',
       body: {
-        weatherLabel: document.getElementById('edWeatherLabel')?.value,
-        weatherTempC: document.getElementById('edWeatherTemp')?.value,
-        localTime: document.getElementById('edLocalTime')?.value,
+        weatherLabel: '',
+        weatherTempC: '',
+        localTime: '',
         currencyCode: document.getElementById('edCurrencyCode')?.value,
         currencySymbol: document.getElementById('edCurrencySymbol')?.value,
         budgetLow: document.getElementById('edBudgetLow')?.value,
@@ -3763,9 +3843,13 @@ async function savePlaceEdit(id) {
         infoCountry: document.getElementById('edCountry')?.value,
         infoCity: document.getElementById('edCity')?.value,
         infoCategoryLabel: document.getElementById('edCategoryLabel')?.value,
-        infoEntryFee: document.getElementById('edEntryFee')?.value,
-        infoBestTime: document.getElementById('edBestTime')?.value,
+        infoEntryFee: document.getElementById('edEntryFee')?.value ?? info.fee,
+        infoBestTime: document.getElementById('edBestTime')?.value ?? info.best,
       },
+    });
+    await api('/admin/places/' + id + '/info', {
+      method: 'PATCH',
+      body: info.body,
     });
     closeModal();
     editExistingPhotos = [];

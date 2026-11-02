@@ -6,6 +6,26 @@ const { boolOrNull } = require('./place-info-boxes');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
+/** Empty stays empty (caller keeps the stored value). Out of range throws. */
+function parseOptionalCoord(value, min, max) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'string' && value.trim() === '') return undefined;
+  const n = typeof value === 'number' ? value : Number(String(value).trim().replace(',', '.'));
+  if (!Number.isFinite(n) || n < min || n > max) {
+    throw new Error('Enlem -90 ile 90, boylam -180 ile 180 arasında olmalı');
+  }
+  return n;
+}
+
+function parseJsonList(raw) {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 async function persistPlaceSlug(id, placeLike) {
   const slug = await uniquePlaceSlug(db, slugFromPlace(placeLike), id);
   await db.prepare('UPDATE places SET slug = ? WHERE id = ?').run(slug, id);
@@ -27,6 +47,9 @@ function mapAdminPlace(row) {
     imageUrl: row.image_url,
     description: row.description,
     descriptionEn: row.description_en,
+    overview: row.overview || '',
+    overviewEn: row.overview_en || '',
+    searchAliases: parseJsonList(row.search_aliases),
     lat: row.lat,
     lng: row.lng,
     status: row.status || 'published',
@@ -157,7 +180,14 @@ async function buildPlacePayload(body, existingId) {
 }
 
 async function insertPlace(body) {
-  const { enriched, status, photosJson } = await buildPlacePayload(body);
+  const src = { ...(body || {}) };
+  if (src.lat !== undefined && src.lat !== null && src.lat !== '') {
+    src.lat = parseOptionalCoord(src.lat, -90, 90);
+  }
+  if (src.lng !== undefined && src.lng !== null && src.lng !== '') {
+    src.lng = parseOptionalCoord(src.lng, -180, 180);
+  }
+  const { enriched, status, photosJson } = await buildPlacePayload(src);
   const id = enriched.id;
   await db.prepare(`
     INSERT INTO places
@@ -219,35 +249,53 @@ async function insertPlace(body) {
 async function updatePlace(id, body) {
   const row = await db.prepare('SELECT * FROM places WHERE id = ?').get(id);
   if (!row) return null;
+  const src = body || {};
+  const lat = parseOptionalCoord(src.lat, -90, 90);
+  const lng = parseOptionalCoord(src.lng, -180, 180);
+  const descriptionChanged = src.description !== undefined
+    && String(src.description ?? '') !== String(row.description || '');
+  const descriptionEnChanged = src.descriptionEn !== undefined
+    && String(src.descriptionEn ?? '') !== String(row.description_en || '');
+  const overviewTouched = src.overview !== undefined
+    && String(src.overview) !== String(row.overview || '');
+  const overviewEnTouched = src.overviewEn !== undefined
+    && String(src.overviewEn) !== String(row.overview_en || '');
   const merged = {
-    name: body.name ?? row.name,
-    location: body.location ?? row.location,
-    country: body.country ?? row.country,
-    city: body.city ?? row.city,
-    district: body.district ?? row.district,
-    category: body.category ?? row.category,
-    imageUrl: body.imageUrl ?? body.image_url ?? row.image_url,
-    description: body.description ?? row.description,
-    descriptionEn: body.descriptionEn ?? row.description_en,
-    lat: body.lat ?? row.lat,
-    lng: body.lng ?? row.lng,
-    status: body.status ?? row.status ?? 'published',
-    isLocal: body.isLocal ?? !!row.is_local,
-    entryFee: body.entryFee ?? row.entry_fee,
-    bestTime: body.bestTime ?? row.best_time,
-    history: body.history ?? row.history,
-    tips: body.tips ?? row.tips,
-    travelTips: body.travelTips ?? row.travel_tips,
-    searchAliases: body.searchAliases ?? JSON.parse(row.search_aliases || '[]'),
-    photos: body.photos ?? JSON.parse(row.photos || '[]'),
+    name: src.name ?? row.name,
+    location: src.location !== undefined ? src.location : row.location,
+    country: src.country ?? row.country,
+    city: src.city ?? row.city,
+    district: src.district !== undefined ? src.district : row.district,
+    category: src.category ?? row.category,
+    imageUrl: src.imageUrl ?? src.image_url ?? row.image_url,
+    description: src.description !== undefined ? src.description : row.description,
+    descriptionEn: src.descriptionEn !== undefined ? src.descriptionEn : row.description_en,
+    overview: overviewTouched ? src.overview : (descriptionChanged ? '' : row.overview),
+    overviewEn: overviewEnTouched ? src.overviewEn : (descriptionEnChanged ? '' : row.overview_en),
+    lat: lat !== undefined ? lat : row.lat,
+    lng: lng !== undefined ? lng : row.lng,
+    status: src.status ?? row.status ?? 'published',
+    isLocal: src.isLocal ?? !!row.is_local,
+    entryFee: src.entryFee ?? row.entry_fee,
+    bestTime: src.bestTime ?? row.best_time,
+    history: src.history ?? row.history,
+    tips: src.tips ?? row.tips,
+    travelTips: src.travelTips ?? row.travel_tips,
+    searchAliases: src.searchAliases !== undefined ? src.searchAliases : parseJsonList(row.search_aliases),
+    photos: src.photos ?? JSON.parse(row.photos || '[]'),
   };
   const { enriched, status, photosJson } = await buildPlacePayload(merged, id);
+  const nextOverview = (overviewTouched || descriptionChanged) ? enriched.overview : row.overview;
+  const nextOverviewEn = (overviewEnTouched || descriptionEnChanged)
+    ? (enriched.overviewEn || null)
+    : row.overview_en;
 
   await db.prepare(`
     UPDATE places SET
       name = ?, location = ?, country = ?, city = ?, district = ?, category = ?,
       image_url = ?, is_local = ?, entry_fee = ?, best_time = ?,
-      description = ?, description_en = ?, history = ?, tips = ?, travel_tips = ?,
+      description = ?, description_en = ?, overview = ?, overview_en = ?,
+      history = ?, tips = ?, travel_tips = ?,
       photos = ?, search_aliases = ?, categories = ?, lat = ?, lng = ?, status = ?
     WHERE id = ?
   `).run(
@@ -263,6 +311,8 @@ async function updatePlace(id, body) {
     enriched.bestTime,
     enriched.description,
     enriched.descriptionEn || null,
+    nextOverview,
+    nextOverviewEn,
     enriched.history,
     enriched.tips,
     enriched.travelTips,
@@ -328,6 +378,7 @@ module.exports = {
   deletePlace,
   countPlaceTiolas,
   mapAdminPlace,
+  parseOptionalCoord,
   VALID_STATUS,
   ISSUE_FILTERS,
 };

@@ -984,6 +984,52 @@ function renderStaticInfoBoxes(staticInfo) {
     </div>`).join('');
 }
 
+let placeClockTimer = null;
+
+function stopPlaceClock() {
+  if (placeClockTimer) {
+    clearInterval(placeClockTimer);
+    placeClockTimer = null;
+  }
+}
+
+function formatLiveLocalTime(timeZone) {
+  const locale = lang === 'en' ? 'en-GB' : 'tr-TR';
+  const base = {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  };
+  try {
+    const opts = timeZone ? { ...base, timeZone } : base;
+    return new Intl.DateTimeFormat(locale, opts).format(new Date());
+  } catch {
+    try {
+      return new Intl.DateTimeFormat(locale, base).format(new Date());
+    } catch {
+      return '';
+    }
+  }
+}
+
+function startPlaceClock(timeZone) {
+  stopPlaceClock();
+  const tick = () => {
+    const el = document.getElementById('pdLocalClock');
+    if (!el) {
+      stopPlaceClock();
+      return;
+    }
+    el.textContent = formatLiveLocalTime(timeZone);
+  };
+  tick();
+  placeClockTimer = setInterval(tick, 1000);
+}
+
 function renderDetailWidgets(data) {
   const wBox = document.getElementById('pdWeather');
   if (wBox && data.weather) {
@@ -1000,10 +1046,14 @@ function renderDetailWidgets(data) {
   const lBox = document.getElementById('pdLocalInfo');
   if (lBox && data.localInfo) {
     const li = data.localInfo;
+    const tz = li.timezone || data.weather?.timezone || '';
     lBox.innerHTML = `<div class="ac-title">🕐 ${t('localInfoTitle')}</div>
-      <div class="ic-row"><span class="ic-lbl">${t('localTime')}</span><span class="ic-val">${escapeHtml(li.localTime || '—')}</span></div>
+      <div class="ic-row"><span class="ic-lbl">${t('localTime')}</span><span class="ic-val" id="pdLocalClock">${escapeHtml(formatLiveLocalTime(tz))}</span></div>
       <div class="ic-row"><span class="ic-lbl">${t('localCurrency')}</span><span class="ic-val">${li.currency?.code || '—'} ${li.currency?.symbol || ''}</span></div>
       ${li.entryTryEstimate ? `<div class="ic-row"><span class="ic-lbl">${t('entryTry')}</span><span class="ic-val">~${li.entryTryEstimate} ₺</span></div>` : ''}`;
+    startPlaceClock(tz);
+  } else {
+    stopPlaceClock();
   }
   const liveBox = document.getElementById('pdLiveData');
   if (liveBox && data.liveData) {
@@ -1939,6 +1989,7 @@ function syncRoute(replace = true) {
 }
 
 async function showMainTab(tab, skipRoute) {
+  if (tab !== 'detail') stopPlaceClock();
   closeNavMenu();
   closeFilterSheet();
   if (!skipRoute) window.TL_LOADER?.show();
