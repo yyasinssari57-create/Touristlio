@@ -1008,7 +1008,20 @@ function formatLiveLocalTime(timeZone) {
   try {
     return new Intl.DateTimeFormat(locale, { ...base, timeZone }).format(new Date());
   } catch {
-    return '—';
+    try {
+      return new Intl.DateTimeFormat(locale, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone,
+      }).format(new Date());
+    } catch {
+      return '—';
+    }
   }
 }
 
@@ -1026,25 +1039,64 @@ function startPlaceClock(timeZone) {
   placeClockTimer = setInterval(tick, 1000);
 }
 
+function weatherHasReading(w) {
+  return !!w && w.tempC != null && w.tempC !== '' && Number.isFinite(Number(w.tempC));
+}
+
+function paintWeatherBox(w) {
+  const wBox = document.getElementById('pdWeather');
+  if (!wBox || !w) return;
+  if (weatherHasReading(w) || w.adminOverride || !w.failed) {
+    wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
+      <div class="weather-row"><span>${escapeHtml(w.label || '—')}</span><strong>${w.tempC != null ? w.tempC + '°C' : '—'}</strong></div>
+      ${w.fallback ? `<small class="weather-fallback">${t('weatherEstimate')}</small>` : ''}`;
+    return;
+  }
+  wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
+        <div class="weather-row"><span>${escapeHtml(t('weatherUnavailable'))}</span></div>`;
+}
+
+async function refreshFailedWeather(placeKey, failedReading, fallbackTz) {
+  const wBox = document.getElementById('pdWeather');
+  let reading = null;
+  try {
+    reading = await api('/places/' + encodeURIComponent(placeKey) + '/weather?lang=' + encodeURIComponent(lang), { silent: true });
+  } catch { /* ikinci deneme de düştü */ }
+  const box = document.getElementById('pdWeather');
+  if (!box || box !== wBox || box.dataset.weatherFor !== String(placeKey)) return;
+  if (weatherHasReading(reading)) {
+    paintWeatherBox({ ...reading, failed: false });
+    const tz = reading.timezone || fallbackTz || '';
+    const clock = document.getElementById('pdLocalClock');
+    if (clock && tz) {
+      clock.dataset.timezone = tz;
+      clock.textContent = formatLiveLocalTime(tz);
+      startPlaceClock(tz);
+    }
+    return;
+  }
+  paintWeatherBox(failedReading);
+}
+
 function renderDetailWidgets(data) {
   const wBox = document.getElementById('pdWeather');
   if (wBox && data.weather) {
-    const w = data.weather;
-    if (w.failed && !w.adminOverride) {
-      wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
-        <div class="weather-row"><span>${escapeHtml(t('weatherUnavailable'))}</span></div>`;
+    const placeKey = data.place?.slug || data.place?.id || '';
+    wBox.dataset.weatherFor = String(placeKey);
+    if (weatherHasReading(data.weather) || data.weather.adminOverride || !data.weather.failed || !placeKey) {
+      paintWeatherBox(data.weather);
     } else {
-      wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
-      <div class="weather-row"><span>${escapeHtml(w.label || '—')}</span><strong>${w.tempC != null ? w.tempC + '°C' : '—'}</strong></div>
-      ${w.fallback ? `<small class="weather-fallback">${t('weatherEstimate')}</small>` : ''}`;
+      wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>`;
+      refreshFailedWeather(placeKey, data.weather, data.localInfo?.timezone || '');
     }
   }
   const lBox = document.getElementById('pdLocalInfo');
   if (lBox && data.localInfo) {
     const li = data.localInfo;
     const tz = data.weather?.timezone || li.timezone || '';
+    const tzAttr = escapeHtml(String(tz).replace(/"/g, ''));
     lBox.innerHTML = `<div class="ac-title">🕐 ${t('localInfoTitle')}</div>
-      <div class="ic-row"><span class="ic-lbl">${t('localTime')}</span><span class="ic-val" id="pdLocalClock">${escapeHtml(formatLiveLocalTime(tz))}</span></div>
+      <div class="ic-row"><span class="ic-lbl">${t('localTime')}</span><span class="ic-val" id="pdLocalClock" data-timezone="${tzAttr}">${escapeHtml(formatLiveLocalTime(tz))}</span></div>
       <div class="ic-row"><span class="ic-lbl">${t('localCurrency')}</span><span class="ic-val">${li.currency?.code || '—'} ${li.currency?.symbol || ''}</span></div>
       ${li.entryTryEstimate ? `<div class="ic-row"><span class="ic-lbl">${t('entryTry')}</span><span class="ic-val">~${li.entryTryEstimate} ₺</span></div>` : ''}`;
     startPlaceClock(tz);

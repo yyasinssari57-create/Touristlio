@@ -4,8 +4,8 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { getWeather, clearWeatherCache, metSymbolToWmo } = require('../services/weatherService');
-const { resolvePlaceTimezone, applyResolvedTimezone } = require('../lib/timezone');
+const { getWeather, clearWeatherCache, expireWeatherFreshness, metSymbolToWmo } = require('../services/weatherService');
+const { resolvePlaceTimezone, applyResolvedTimezone, formatPlaceLocalTime } = require('../lib/timezone');
 
 const ROOT = path.join(__dirname, '..', '..');
 let failed = 0;
@@ -96,6 +96,12 @@ else ok('bozuk kayıtlı dilim yok sayılır');
 if (resolvePlaceTimezone({ lat: 20, lng: 0 })) fail('[20,0] sentinel dilim üretmemeli');
 else ok('[20,0] sentinel dilim yok');
 
+const istClock = formatPlaceLocalTime('Europe/Istanbul', 'tr');
+const utcClock = formatPlaceLocalTime('UTC', 'tr');
+if (!istClock || !utcClock || istClock === utcClock) fail(`İstanbul saati UTC’den ayrılmıyor: ${istClock} / ${utcClock}`);
+else if (offsetHours('Europe/Istanbul') !== 3) fail('İstanbul UTC+3 değil');
+else ok(`Ayasofya saati Europe/Istanbul (${istClock}), UTC değil`);
+
 if (metSymbolToWmo('clearsky_day') !== 0 || metSymbolToWmo('heavyrain') !== 63) {
   fail('MET sembol kodu WMO’ya dönmüyor');
 } else ok('MET sembol kodu etikete döner');
@@ -165,6 +171,104 @@ const stringLat = await getWeather('40.7128', '-74.0060', 'en', {
 if (stringLat.failed || stringLat.tempC !== 11) fail(`string koordinat patladı: ${JSON.stringify(stringLat)}`);
 else ok('string enlem/boylam toFixed ile kırılmaz');
 
+function metBody(temp, symbol) {
+  return jsonResponse(200, {
+    properties: {
+      timeseries: [{
+        data: {
+          instant: { details: { air_temperature: temp, wind_speed: 2 } },
+          next_1_hours: { summary: { symbol_code: symbol || 'cloudy' } },
+        },
+      }],
+    },
+  });
+}
+
+clearWeatherCache();
+let cooledOpen = 0;
+const cooled = await getWeather(10.55, 10.55, 'tr', {
+  cache: true,
+  fetchImpl: async (url) => {
+    if (String(url).includes('open-meteo')) return jsonResponse(429, 'Daily API request limit exceeded');
+    if (String(url).includes('met.no')) return metBody(12.5, 'cloudy');
+    throw new Error(`429 sonrası başka sağlayıcı gerekmedi: ${url}`);
+  },
+});
+if (cooled.failed || cooled.tempC !== 12.5 || cooled.source !== 'met-no') {
+  fail(`429 soğuma öncesi bozuk: ${JSON.stringify(cooled)}`);
+} else ok('Open-Meteo 429 belleğe yazılıyor');
+
+const cooledNext = await getWeather(11.66, 11.66, 'tr', {
+  cache: true,
+  fetchImpl: async (url) => {
+    if (String(url).includes('open-meteo')) {
+      cooledOpen += 1;
+      return jsonResponse(429, 'limit');
+    }
+    if (String(url).includes('met.no')) return metBody(13.1, 'clearsky_day');
+    throw new Error(`soğuma sırasında fazla çağrı: ${url}`);
+  },
+});
+if (cooledOpen !== 0) fail('Open-Meteo 429 sonrası yine çağrıldı');
+else if (cooledNext.tempC !== 13.1 || cooledNext.source !== 'met-no') fail(`soğuma yedeği bozuk: ${JSON.stringify(cooledNext)}`);
+else ok('Open-Meteo 429 olunca bir sonraki yer doğrudan MET Norveç');
+
+clearWeatherCache();
+const seeded = await getWeather(12.34, 12.34, 'tr', {
+  cache: true,
+  fetchImpl: async () => jsonResponse(200, {
+    timezone: 'Europe/Istanbul',
+    utc_offset_seconds: 10800,
+    current: { temperature_2m: 19.4, weather_code: 1, wind_speed_10m: 4 },
+  }),
+});
+if (seeded.tempC !== 19.4 || seeded.failed) fail(`önbellek tohumu bozuk: ${JSON.stringify(seeded)}`);
+expireWeatherFreshness();
+let staleCalls = 0;
+const stale = await getWeather(12.34, 12.34, 'tr', {
+  cache: true,
+  fetchImpl: async () => {
+    staleCalls += 1;
+    return jsonResponse(503, 'down');
+  },
+});
+if (!stale || stale.failed || stale.tempC !== 19.4 || !stale.stale || !stale.fallback) {
+  fail(`eski hava dönmedi: ${JSON.stringify(stale)}`);
+} else if (staleCalls < 1) fail('sağlayıcılar yeniden denenmedi');
+else ok('sağlayıcılar düşünce son başarılı sıcaklık duruyor');
+
+const again = await getWeather(12.34, 12.34, 'tr', {
+  cache: true,
+  fetchImpl: async () => {
+    fail('bayat hava iki dakika içinde yeniden istenmemeli');
+    return jsonResponse(503, 'down');
+  },
+});
+if (again.tempC !== 19.4 || again.failed) fail(`bayat tekrar bozuk: ${JSON.stringify(again)}`);
+else ok('bayat hava kısa süre yeniden istenmez');
+
+clearWeatherCache();
+let thirdCalls = 0;
+const third = await getWeather(13.21, 13.21, 'tr', {
+  fetchImpl: async (url) => {
+    const u = String(url);
+    if (u.includes('open-meteo')) return jsonResponse(429, 'limit');
+    if (u.includes('met.no')) return jsonResponse(503, 'met down');
+    if (u.includes('7timer')) {
+      thirdCalls += 1;
+      return jsonResponse(200, {
+        init: '2026110212',
+        dataseries: [{ timepoint: 9, temp2m: 14, weather: 'lightrainnight' }],
+      });
+    }
+    throw new Error(`7timer yetmeli: ${u}`);
+  },
+});
+if (third.failed || third.tempC !== 14 || third.source !== '7timer' || third.label !== 'Hafif yağmur') {
+  fail(`7timer yedeği bozuk: ${JSON.stringify(third)}`);
+} else if (thirdCalls !== 1) fail('7timer bir kez çağrılmalı');
+else ok('Open-Meteo ve MET düşünce 7Timer sıcaklık verir');
+
 clearWeatherCache();
 console.log('  … canlı Open-Meteo / MET');
 const istanbulLive = await getWeather(41.0082, 28.9784, 'tr');
@@ -192,9 +296,19 @@ if (!appJs.includes('data.weather?.timezone || li.timezone')) fail('saat Open-Me
 else ok('sayfa saati önce hava dilimini kullanır');
 if (/timeZone \? \{ \.\.\.base, timeZone \} : base/.test(appJs)) fail('saat dilimi boşsa tarayıcı saati gösteriliyor');
 else ok('boş dilimde ziyaretçinin saati yazılmaz');
-if (!weatherJs.includes('api.met.no') || !weatherJs.includes('api.open-meteo.com')) {
-  fail('hava yedeği yok');
-} else ok('hava Open-Meteo, olmazsa MET Norveç');
+if (!appJs.includes('hour12: false') || !appJs.includes('timeZone,')) {
+  fail('saat dilimi hourCycle hata verince düşmüyor');
+} else ok('hourCycle olmazsa saat yine yerin diliminde');
+if (!appJs.includes('function weatherHasReading') || !appJs.includes('weatherHasReading(w)')) {
+  fail('sıcaklık varken veri alınamadı gizlenmiyor');
+} else ok('sıcaklık varsa veri alınamadı yazılmaz');
+if (/if \(w\.failed && !w\.adminOverride\)/.test(appJs)) fail('failed bayrağı sıcaklığı eziyor');
+else ok('failed bayrağı tek başına kutuyu kapatmıyor');
+if (!appJs.includes("/weather?lang=")) fail('hava ayrı uçtan yeniden denenmiyor');
+else ok('yer gövdesi boşa düşerse /weather bir kez daha istenir');
+if (!weatherJs.includes('api.met.no') || !weatherJs.includes('api.open-meteo.com') || !weatherJs.includes('7timer.info') || !weatherJs.includes('wttr.in')) {
+  fail('hava yedeği eksik');
+} else ok('hava Open-Meteo, MET Norveç, 7Timer, wttr.in');
 
 if (failed) {
   console.error(`\n${failed} kontrol başarısız`);
