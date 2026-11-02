@@ -17,14 +17,18 @@ Yeni kovalar (birbirinin sayacını doldurmaz):
 - Gezinme GET/HEAD: **600 / 15 dk** (`BROWSE_RATE_LIMIT_MAX`, yoksa `RATE_LIMIT_MAX`, yoksa 600). Eski ortak 300 bu kovaya indirgendi.
 - Yazma (giriş/iletişim/admin dışı): **120 / 15 dk**.
 - Ziyaretçi nabzı `POST /api/analytics/track`: **180 / 15 dk**.
-- Admin (IP, oturum açılmadan da) ve oturum açmış admin (kullanıcı): **400 / 15 dk**.
-- Admin araçları (yedek, site haritası, önbellek, doğrulama): **30 / 15 dk**.
+- Oturum açmamış personel API (IP): **1200 / 15 dk** (`ADMIN_IP_RATE_LIMIT_MAX`). Önceki 400 tavanı giriş yapmış yöneticiyi de kesiyordu.
+- Oturum açmış admin yazmaları: **4000 / 15 dk** (`ADMIN_USER_RATE_LIMIT_MAX`), kullanıcı kimliğiyle.
+- Oturum açmış admin okumaları (GET/HEAD: liste, istatistik, ayar, görsel): **5000 / 15 dk** (`ADMIN_READ_RATE_LIMIT_MAX`). Yazma sayacına yazılmaz.
+- Admin araçları (yedek, site haritası, önbellek, doğrulama): **30 / 15 dk** (değişmedi).
 
-429 gövdesi artık “Yaklaşık N dakika sonra tekrar deneyin.” der ve `Retry-After` başlığı gider. Beş yanlış şifre hâlâ hesabı 15 dk kilitler; metin “15 dakika sonra tekrar deneyin.”
+Panel hâlâ “Admin istek limiti aşıldı. Lütfen kısa süre sonra tekrar deneyin.” diyebiliyordu. O cümle `/api/admin` oturum sayacındandı (eski varsayılan 150, sonra 400). Bir sayfa düzinelerce istek atıyor; yeniden denemek sayacı dolduruyordu. Render’da `ADMIN_RATE_LIMIT_MAX=150` veya `400` kod varsayılanını eziyordu. **2000’in altındaki `ADMIN_RATE_LIMIT_MAX` artık yok sayılır.** Asıl düğmeler `ADMIN_IP_RATE_LIMIT_MAX`, `ADMIN_USER_RATE_LIMIT_MAX`, `ADMIN_READ_RATE_LIMIT_MAX`. Düşük eski satırı Render Environment’dan silin. Giriş yapmış panel çerezi IP kovasına yazılmaz; normal üye çerezi yazılır.
 
-`REDIS_URL` bu kovalara bağlı değil. Boşsa sayaçlar süreç belleğindedir: her Render deploy / yeniden başlatma sıfırlar, birden fazla kopya paylaşmaz. Redis yalnızca Tiola oy sayacını (5/dk) tutar. Render Environment’da eski `RATE_LIMIT_MAX=300` veya `ADMIN_TOOL_RATE_LIMIT_MAX=10` duruyorsa kod varsayılanını ezer — silin veya yukarıdaki değerlere çekin.
+429 gövdesi “Yaklaşık N dakika sonra tekrar deneyin.” der ve `Retry-After` başlığı gider. Beş yanlış şifre hâlâ hesabı 15 dk kilitler; metin “15 dakika sonra tekrar deneyin.”
 
-`npm run verify:faz1-4` yeni tavanları ve kova ayrımını (gezinme 429 iken giriş 401; admin 429 iken gezinme 200) doğrular. `verify:forms` ve `verify:votes` iletişim / Tiola 3/5 dk sınırını doğrular.
+`REDIS_URL` bu kovalara bağlı değil. Boşsa sayaçlar süreç belleğindedir: her Render deploy / yeniden başlatma sıfırlar, birden fazla kopya paylaşmaz. Redis yalnızca Tiola oy sayacını (5/dk) tutar. Render Environment’da eski `RATE_LIMIT_MAX=300` gezinme kovasını ezer — silin veya 600 yapın. `ADMIN_TOOL_RATE_LIMIT_MAX=10` duruyorsa silin veya 30 yapın. `ADMIN_RATE_LIMIT_MAX=150` veya `400` admin panelini artık kesmez ama satırı silin.
+
+`npm run verify:faz1-4` yeni tavanları, eski 150’nin yok sayıldığını ve kova ayrımını doğrular (gezinme 429 iken giriş 401; üye çerezi 429 iken panel GET hâlâ açık; GET okuması yazma sayacını doldurmaz). `verify:forms` ve `verify:votes` iletişim / Tiola 3/5 dk sınırını doğrular.
 
 ## İsteğe bağlı — PostGIS yakın yerler
 
