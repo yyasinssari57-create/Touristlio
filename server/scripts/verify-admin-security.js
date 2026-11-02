@@ -45,6 +45,21 @@ if (!indexJs.includes("app.use('/api/admin'") || !indexJs.includes('csrfProtecti
 if (!adminJs.includes('adminLimiter') || !/router\.use\(\s*adminLimiter\s*\)/.test(adminJs)) {
   fail('/api/admin must apply adminLimiter after auth');
 } else ok('/api/admin applies adminLimiter after auth (per user)');
+const rl = read('server/middleware/rateLimit.js');
+if (!rl.includes('const ADMIN_IP_DEFAULT = 1200')
+  || !rl.includes('const ADMIN_USER_DEFAULT = 4000')
+  || !rl.includes('const ADMIN_READ_DEFAULT = 5000')) {
+  fail('admin caps must stay 1200 IP / 4000 writes / 5000 reads');
+} else ok('admin caps are 1200 unauthenticated / 4000 writes / 5000 reads');
+if (!rl.includes('const ADMIN_USER_FLOOR = 2000') || !rl.includes('if (n < floor) continue;')) {
+  fail('ADMIN_RATE_LIMIT_MAX below 2000 must be ignored');
+} else ok('ADMIN_RATE_LIMIT_MAX below 2000 is ignored');
+if (!rl.includes('function isAdminRead') || !rl.includes('adminReadLimiter')) {
+  fail('cheap admin GET/HEAD must use the read bucket');
+} else ok('admin GET/HEAD uses the read bucket, not the write bucket');
+if (!/envMax\(\['AUTH_RATE_LIMIT_MAX'\], 20\)/.test(rl) || !/envMax\(\['FORM_RATE_LIMIT_MAX'\], 3\)/.test(rl)) {
+  fail('public login/contact limits must stay 20/15min and 3/5min');
+} else ok('public login 20/15min and contact 3/5min unchanged');
 
 const authSvc = read('server/modules/auth/auth.service.js');
 if (!/const MAX_FAILED\s*=\s*5/.test(authSvc) || !/const LOCK_MINUTES\s*=\s*15/.test(authSvc)) {

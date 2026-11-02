@@ -1,6 +1,23 @@
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 
 const isDev = process.env.NODE_ENV !== 'production';
+
+/** Same set as server/middleware/rbac.js PANEL_ROLES. A normal member token stays on the strict IP bucket. */
+const PANEL_ROLES = new Set(['admin', 'moderator', 'editor', 'staff']);
+
+/**
+ * Authenticated panel use (lists, stats, settings, images, retries) used to
+ * share one 150-then-400 counter with anonymous /api/admin hits. Render env
+ * ADMIN_RATE_LIMIT_MAX=150 or 400 overrode the code default and kept that
+ * block. Values below the floor are ignored. Set the dedicated vars to
+ * choose a cap, including a lower one.
+ */
+const ADMIN_IP_DEFAULT = 1200;
+const ADMIN_USER_DEFAULT = 4000;
+const ADMIN_READ_DEFAULT = 5000;
+const ADMIN_IP_FLOOR = 1200;
+const ADMIN_USER_FLOOR = 2000;
 
 /**
  * These limiters use express-rate-limit's in-memory store.
@@ -8,15 +25,73 @@ const isDev = process.env.NODE_ENV !== 'production';
  * Without Redis, every bucket resets on process restart / Render deploy and is
  * not shared across instances. Buckets are still separate from each other.
  */
+function readEnvInt(env, name) {
+  const raw = env[name];
+  if (raw == null || String(raw).trim() === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.floor(n);
+}
+
 function envMax(names, fallback) {
   for (const name of names) {
-    const raw = process.env[name];
-    if (raw == null || String(raw).trim() === '') continue;
-    const n = Number(raw);
-    if (Number.isFinite(n) && n >= 1) return Math.floor(n);
+    const n = readEnvInt(process.env, name);
+    if (n != null) return n;
   }
   return fallback;
 }
+
+function bucketMax(env, { names, legacy, floor, fallback }) {
+  for (const name of names) {
+    const n = readEnvInt(env, name);
+    if (n != null) return n;
+  }
+  for (const name of legacy || []) {
+    const n = readEnvInt(env, name);
+    if (n == null) continue;
+    if (n < floor) continue;
+    return n;
+  }
+  return fallback;
+}
+
+function resolveAdminRateLimits(env = process.env) {
+  return {
+    ip: bucketMax(env, {
+      names: ['ADMIN_IP_RATE_LIMIT_MAX'],
+      legacy: ['ADMIN_RATE_LIMIT_MAX'],
+      floor: ADMIN_IP_FLOOR,
+      fallback: ADMIN_IP_DEFAULT,
+    }),
+    user: bucketMax(env, {
+      names: ['ADMIN_USER_RATE_LIMIT_MAX'],
+      legacy: ['ADMIN_RATE_LIMIT_MAX'],
+      floor: ADMIN_USER_FLOOR,
+      fallback: ADMIN_USER_DEFAULT,
+    }),
+    read: bucketMax(env, {
+      names: ['ADMIN_READ_RATE_LIMIT_MAX'],
+      legacy: ['ADMIN_RATE_LIMIT_MAX'],
+      floor: ADMIN_USER_FLOOR,
+      fallback: ADMIN_READ_DEFAULT,
+    }),
+  };
+}
+
+function warnStaleAdminRateLimit(env) {
+  const legacy = readEnvInt(env, 'ADMIN_RATE_LIMIT_MAX');
+  if (legacy == null || legacy >= ADMIN_USER_FLOOR) return;
+  console.warn(
+    `[rate-limit] ADMIN_RATE_LIMIT_MAX=${legacy} is below ${ADMIN_USER_FLOOR} and is ignored for the admin panel. `
+    + 'Delete it in Render Environment (old 150 and 400 values blocked normal admin use). '
+    + `Defaults unless overridden: unauthenticated IP ${ADMIN_IP_DEFAULT}, `
+    + `authenticated writes ${ADMIN_USER_DEFAULT}, authenticated reads ${ADMIN_READ_DEFAULT} per 15 min. `
+    + 'Dedicated vars: ADMIN_IP_RATE_LIMIT_MAX, ADMIN_USER_RATE_LIMIT_MAX, ADMIN_READ_RATE_LIMIT_MAX.',
+  );
+}
+
+const adminCaps = resolveAdminRateLimits(process.env);
+warnStaleAdminRateLimit(process.env);
 
 function requestPath(req) {
   return req.originalUrl?.split('?')[0] || req.path || '';
@@ -51,6 +126,47 @@ function isStaffApi(req) {
   if (startsWithPath(path, '/api/moderation')) return true;
   if (startsWithPath(path, '/api/settings') && path !== '/api/settings/public') return true;
   return false;
+}
+
+function requestToken(req) {
+  const header = req.headers && req.headers.authorization;
+  if (typeof header === 'string' && header.startsWith('Bearer ')) {
+    const token = header.slice(7).trim();
+    if (token) return token;
+  }
+  const cookie = req.cookies && req.cookies.tl_token;
+  if (typeof cookie === 'string' && cookie.trim()) return cookie.trim();
+  return '';
+}
+
+/** Verified panel JWT, or null. Does not hit the database. Invalid tokens stay on the IP bucket. */
+function panelClaims(req) {
+  if (Object.prototype.hasOwnProperty.call(req, '_tlPanelClaims')) return req._tlPanelClaims;
+  const token = requestToken(req);
+  let claims = null;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-change-me');
+      if (payload && payload.id != null && PANEL_ROLES.has(payload.role)) {
+        claims = { id: payload.id, role: payload.role };
+      }
+    } catch {
+      claims = null;
+    }
+  }
+  req._tlPanelClaims = claims;
+  return claims;
+}
+
+function isAdminRead(req) {
+  return req.method === 'GET' || req.method === 'HEAD';
+}
+
+async function adminActorKey(req, prefix) {
+  if (req.user?.id != null) return `${prefix}:user:${req.user.id}`;
+  const claims = panelClaims(req);
+  if (claims?.id != null) return `${prefix}:user:${claims.id}`;
+  return `${prefix}:ip:${req.ip}`;
 }
 
 function limitMessage(base) {
@@ -113,12 +229,12 @@ const trackLimiter = createLimiter({
 });
 
 /**
- * Staff routes, counted by IP before auth runs.
- * Stops an unauthenticated flood without charging the public browse bucket.
+ * Unauthenticated staff routes, counted by IP.
+ * A logged-in panel session does not use this bucket.
  */
 const adminIpLimiter = createLimiter({
   windowMs: WINDOW_15,
-  max: envMax(['ADMIN_RATE_LIMIT_MAX'], 400),
+  max: adminCaps.ip,
   message: 'Admin istek limiti aşıldı.',
 });
 
@@ -154,13 +270,42 @@ const adminToolLimiter = createLimiter({
   message: 'Admin araç limiti aşıldı.',
 });
 
-/** Authenticated /api/admin only (mounted after auth). Keyed by user id. */
-const adminLimiter = createLimiter({
+/** Authenticated panel writes. Keyed by user id. Cheap GET/HEAD does not land here. */
+const adminWriteLimiter = createLimiter({
   windowMs: WINDOW_15,
-  max: envMax(['ADMIN_RATE_LIMIT_MAX'], 400),
-  keyGenerator: async (req) => (req.user?.id ? `admin:user:${req.user.id}` : `admin:ip:${req.ip}`),
+  max: adminCaps.user,
+  keyGenerator: async (req) => adminActorKey(req, 'admin'),
   message: 'Admin istek limiti aşıldı.',
 });
+
+/** Authenticated panel reads (lists, stats, settings, images). Own bucket so refreshes do not eat the write cap. */
+const adminReadLimiter = createLimiter({
+  windowMs: WINDOW_15,
+  max: adminCaps.read,
+  keyGenerator: async (req) => adminActorKey(req, 'adminread'),
+  message: 'Admin istek limiti aşıldı.',
+});
+
+/**
+ * Staff gate. Anonymous hits use the stricter IP bucket. A verified panel
+ * JWT uses the read or write bucket. Mounted on /api/ (before auth) and
+ * again after auth on /api/admin; the flag avoids counting one request twice
+ * (express-rate-limit throws ERR_ERL_DOUBLE_COUNT).
+ */
+function adminSessionLimiter(req, res, next) {
+  if (req.adminRateLimited) return next();
+  const claims = panelClaims(req);
+  const limiter = claims
+    ? (isAdminRead(req) ? adminReadLimiter : adminWriteLimiter)
+    : adminIpLimiter;
+  return limiter(req, res, (err) => {
+    if (err) return next(err);
+    req.adminRateLimited = true;
+    return next();
+  });
+}
+
+const adminLimiter = adminSessionLimiter;
 
 const liveDataLimiter = createLimiter({
   windowMs: 60 * 1000,
@@ -196,7 +341,7 @@ function apiLimiter(req, res, next) {
   if (startsWithPath(path, '/api/auth')) return next();
   if (startsWithPath(path, '/api/contact')) return next();
   if (isAnalyticsTrack(req)) return trackLimiter(req, res, next);
-  if (isStaffApi(req)) return adminIpLimiter(req, res, next);
+  if (isStaffApi(req)) return adminSessionLimiter(req, res, next);
   if (req.method === 'GET' || req.method === 'HEAD') return browseLimiter(req, res, next);
   if (req.method === 'OPTIONS') return next();
   return writeLimiter(req, res, next);
@@ -208,10 +353,13 @@ module.exports = {
   writeLimiter,
   trackLimiter,
   adminIpLimiter,
+  adminReadLimiter,
+  adminSessionLimiter,
   authLimiter,
   searchLimiter,
   adminToolLimiter,
   adminLimiter,
+  resolveAdminRateLimits,
   liveDataLimiter,
   reportLimiter,
   adminAnalyticsLimiter,
