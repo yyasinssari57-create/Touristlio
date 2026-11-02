@@ -80,16 +80,9 @@ function hasText(v) {
   return v != null && String(v).trim() !== '';
 }
 
-function mergeWeather(apiWeather, adminPayload) {
-  const w = adminPayload?.weather;
-  if (!w || (!hasText(w.label) && (w.tempC == null || w.tempC === ''))) return apiWeather;
-  return {
-    ...apiWeather,
-    label: hasText(w.label) ? w.label : apiWeather?.label,
-    tempC: w.tempC != null && Number.isFinite(Number(w.tempC)) ? Number(w.tempC) : apiWeather?.tempC,
-    fallback: false,
-    adminOverride: true,
-  };
+/** Live Open-Meteo only. Static climate text is climate_info, not this box. */
+function mergeWeather(apiWeather) {
+  return apiWeather;
 }
 
 function mergeLocalInfo(apiLocalInfo, adminPayload) {
@@ -98,11 +91,10 @@ function mergeLocalInfo(apiLocalInfo, adminPayload) {
   const currency = { ...(apiLocalInfo?.currency || {}) };
   if (hasText(li.currencyCode)) currency.code = li.currencyCode.trim();
   if (hasText(li.currencySymbol)) currency.symbol = li.currencySymbol.trim();
-  const hasOverride = hasText(li.localTime) || hasText(li.currencyCode) || hasText(li.currencySymbol);
+  const hasOverride = hasText(li.currencyCode) || hasText(li.currencySymbol);
   if (!hasOverride) return apiLocalInfo;
   return {
     ...apiLocalInfo,
-    localTime: hasText(li.localTime) ? li.localTime.trim() : apiLocalInfo?.localTime,
     currency,
     adminOverride: true,
   };
@@ -172,19 +164,18 @@ function applyInfoBoxUpdates(existingPayload, body) {
   };
 
   const {
-    weatherLabel, weatherTempC,
-    localTime, currencyCode, currencySymbol,
+    currencyCode, currencySymbol,
     budgetLow, budgetMid, hotelAvg, crowd,
     infoCountry, infoCity, infoCategoryLabel, infoEntryFee, infoBestTime,
   } = body || {};
 
-  setNested('weather', 'label', weatherLabel, 80);
-  if (weatherTempC !== undefined) {
-    const n = Number(weatherTempC);
-    setNested('weather', 'tempC', weatherTempC === '' || weatherTempC === null ? '' : (Number.isFinite(n) ? n : null), 0);
+  // Saat ve canlı hava yönetici metni olarak tutulmaz. Eski kayıt da silinir.
+  delete payload.weather;
+  if (payload.localInfo) {
+    delete payload.localInfo.localTime;
+    if (!Object.keys(payload.localInfo).length) delete payload.localInfo;
   }
 
-  setNested('localInfo', 'localTime', localTime, 80);
   setNested('localInfo', 'currencyCode', currencyCode, 12);
   setNested('localInfo', 'currencySymbol', currencySymbol, 8);
 

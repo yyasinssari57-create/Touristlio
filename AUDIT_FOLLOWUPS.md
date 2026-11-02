@@ -2,6 +2,18 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Yer düzenleme — temel alanlar, canlı saat, canlı hava
+
+Yasin yer kaydettikten sonra Düzenle’de yalnızca bilgi kutucuklarını (para, tarih, aile dostu) değiştirebiliyordu. Adres, enlem, boylam ve ilk formdaki alanlar ya formda yoktu ya da alttaki Kaydet’e bağlı değildi. Bilgi Kutucukları duruyor. Kaydet artık yer bilgisiyle birlikte kutucukları da yazar.
+
+Düzenle’de yeniden yazılan alanlar: yer adı, ülke, şehir, ilçe, adres/konum, kategori, yayın durumu, arama alias, enlem, boylam, açıklama (TR/EN), sayfa özeti (TR/EN), kapak ve fotoğraf. Slug yer adından otomatik güncellenir; ayrı kutu yok. Boş enlem/boylam mevcut koordinatı silmez. Aralık dışı değer kaydı reddeder.
+
+Sağ paneldeki saat artık elle yazılmaz. Sayfa açıkken yerin saat diliminde saniye saniye akar. Dilim önce kayıtlı `timezone`, yoksa canlı hava cevabındaki dilim (enlem/boylam), yoksa ülkeye göre mevcut eşlemedir.
+
+Hava durumu da elle yazılmaz; Open-Meteo canlı kalır. İklim metni (`climate_info`) Bilgi Kutucukları’nda durur, canlı havadan ayrıdır.
+
+`npm run verify:place-edit`
+
 Numaralı takip kuyruğu (1–5) bitti. Favicon da eklendi.
 GA4 kodu hazır. Canlıda Measurement ID yok; Yasin `GA_MEASUREMENT_ID`
 yazınca açılır. Bu bir kod işi değil. İsteğe bağlı kod kuyruğu boş.

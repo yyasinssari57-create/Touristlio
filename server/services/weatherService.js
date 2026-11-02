@@ -11,6 +11,8 @@ async function fetchOpenMeteo(lat, lng) {
     tempC: c?.temperature_2m ?? null,
     windKmh: c?.wind_speed_10m ?? null,
     code: c?.weather_code ?? null,
+    timezone: data.timezone || null,
+    utcOffsetSeconds: data.utc_offset_seconds ?? null,
     source: 'open-meteo',
     fetchedAt: new Date().toISOString(),
   };
