@@ -90,6 +90,35 @@ if (!envExample.includes('GA_MEASUREMENT_ID=G-XXXXXXXXXX')) {
   fail('.env.example missing G-XXXXXXXXXX comment');
 } else ok('.env.example documents G-XXXXXXXXXX format');
 
+function assertGaPasteDocs(rel, label) {
+  const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+  if (!text.includes('GA_MEASUREMENT_ID')) {
+    fail(`${label} does not say where to paste GA_MEASUREMENT_ID`);
+    return;
+  }
+  const leaked = (text.match(/\bG-[A-Z0-9]{4,20}\b/g) || []).filter((id) => !/^G-X+$/i.test(id));
+  if (leaked.length) fail(`${label} hardcodes a measurement id: ${leaked.join(', ')}`);
+  else ok(`${label} names GA_MEASUREMENT_ID and has no real G- id`);
+}
+assertGaPasteDocs('DEPLOY.md', 'DEPLOY.md');
+assertGaPasteDocs('DEPLOY_HETZNER.md', 'DEPLOY_HETZNER.md');
+assertGaPasteDocs('AUDIT_FOLLOWUPS.md', 'AUDIT_FOLLOWUPS.md');
+
+const renderYaml = fs.readFileSync(path.join(ROOT, 'render.yaml'), 'utf8');
+if (!/key:\s*GA_MEASUREMENT_ID[\s\S]{0,80}sync:\s*false/.test(renderYaml)) {
+  fail('render.yaml must declare GA_MEASUREMENT_ID with sync: false');
+} else ok('render.yaml leaves GA_MEASUREMENT_ID for the dashboard');
+
+const prodEnv = fs.readFileSync(path.join(ROOT, 'server/lib/production-env.js'), 'utf8');
+if (!prodEnv.includes('GA_MEASUREMENT_ID not set')) {
+  fail('production startup does not warn when GA_MEASUREMENT_ID is unset');
+} else ok('production warns when GA_MEASUREMENT_ID is unset');
+
+const adminGuide = fs.readFileSync(path.join(ROOT, 'public/admin.html'), 'utf8');
+if (!adminGuide.includes('GA_MEASUREMENT_ID') || !/panele yazılmaz|Admin paneline değil|admin paneline/i.test(adminGuide)) {
+  fail('admin guide does not say the measurement id is not pasted in the panel');
+} else ok('admin guide points GA4 id to env, not the panel');
+
 const publicHtmlDir = path.join(ROOT, 'public');
 function walkHtml(dir, acc) {
   for (const name of fs.readdirSync(dir)) {

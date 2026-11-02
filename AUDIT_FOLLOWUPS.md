@@ -3,8 +3,57 @@
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 Numaralı takip kuyruğu (1–5) bitti. Favicon da eklendi.
-Kalanlar isteğe bağlı ve düşük öncelik: GA4 paneli (Yasin’in gerçek
-`GA_MEASUREMENT_ID` değeri gerekir), PostGIS.
+GA4 kodu hazır. Canlıda Measurement ID yok; Yasin `GA_MEASUREMENT_ID`
+yazınca açılır. Kalan kod işi: PostGIS.
+
+## İsteğe bağlı — GA4 hazır, Measurement ID yok
+
+Yasin "sıradakine geç" dedi. Rıza sonrası GA4 zaten duruyor (v2 ORTA-3,
+PR #46). Bu tur sahte `G-` kimliği yazmaz. Yeni ekran yok.
+
+### Durum
+
+- Çerez kabulü olmadan `gtag.js` yüklenmez. Kabul: `tl_cookie_ok=1` ve
+  `cookie_consent=accepted`. Red: `tl_cookie_ok=0` ve `cookie_consent=rejected`.
+- `GA_MEASUREMENT_ID` boşsa veya `G-` biçiminde değilse GA4 kapalıdır.
+  CSP’deki Google host’ları da ancak geçerli kimlik varken açılır.
+- Kimlik `/api/config/public` üzerinden gelir. HTML’e ve `analytics.js` içine
+  gömülmez. Admin panelinde yapıştırma alanı yoktur. CSP süreç açılışında
+  ortam değişkeninden kurulur; panelden kaydetmek script’i keserdi.
+- Birinci taraf analitik (admin **Analitik** sekmesi) kimlik olmadan da,
+  çerez onayından sonra çalışır.
+
+### Yasin’in yapacağı
+
+1. [analytics.google.com](https://analytics.google.com) → Yönetici →
+   Veri akışları → Web akışı → **Ölçüm Kimliği**. `G-` ile başlar.
+   Repoya veya sohbete uydurma değer yazmayın.
+2. **Render (canlı):** Dashboard → `touristlio` servisi → **Environment** →
+   anahtar tam olarak `GA_MEASUREMENT_ID`, değer o kimlik. Kaydedince Render
+   yeniden deploy eder. Kayıt yeri bu anahtardır; admin **Ayarlar** sekmesi
+   Measurement ID saklamaz.
+3. **Hetzner:** sunucudaki `.env` içinde aynı satır, sonra
+   `pm2 restart touristlio` (`DEPLOY_HETZNER.md` §8.4).
+4. Kontrol: sitede çerezleri kabul edin. Ağda `googletagmanager.com/gtag/js`
+   ancak o zaman görünür. GA4 **Gerçek zamanlı** raporu aynı ziyareti gösterir.
+   Reddedince istek gitmez.
+
+### Kabul listesi
+
+- [x] Kimlik yokken gtag yok ve CSP’te Google host yok.
+- [x] Geçerli `G-` kimliği varken yükleme yalnızca çerez kabulünden sonra.
+- [x] Repoda gerçek Measurement ID yok. Örnek satırlar boş.
+- [ ] Canlı kimlik — Yasin yukarıdaki yere yapıştıracak.
+
+### Bilinçli olarak yapılmayanlar
+
+- PostGIS extension açılmadı.
+- Google Ads / Signals host’ları (`doubleclick`, `*.google.com`) CSP’ye
+  eklenmedi. Temel GA4 sayfa görüntüleme resmi GA4 listesindeki host’larla
+  gider. Ads bağlanırsa CSP ayrıca açılır.
+- Admin ayar alanı eklenmedi.
+
+Doğrulama: `npm run verify:analytics`.
 
 ## İsteğe bağlı — favicon
 
