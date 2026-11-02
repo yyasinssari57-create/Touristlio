@@ -44,8 +44,11 @@ function tiolaVoteLimiter(req, res, next) {
             windowMs: WINDOW_MS,
           },
         });
+        const retryAfter = Math.max(1, Math.ceil((result.ttlMs || WINDOW_MS) / 1000));
+        res.setHeader('Retry-After', String(retryAfter));
         return res.status(429).json({
           error: 'Çok fazla Tiola isteği. Dakikada en fazla 5 deneme yapabilirsiniz.',
+          retryAfterSeconds: retryAfter,
         });
       }
       next();

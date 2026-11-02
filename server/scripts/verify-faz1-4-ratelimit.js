@@ -1,9 +1,9 @@
 /**
  * Claude Master PRD — FAZ1-4 (rate limiting / tüm kritik endpoint'ler).
  * Gap analysis sonucu: auth, passwordReset, tiola, search, contact ve genel
- * `/api/*` limiterları ZATEN mevcuttu (v1 YÜKSEK-7, v2 YÜKSEK-2, ORTA-4, v2
- * ORTA-5). Bu script mevcut limiterların ayarlarının DEĞİŞMEDİĞİNİ ve doğru
- * route'lara bağlı olduğunu doğrular — yeni bir limiter eklenmedi.
+ * `/api/*` limiterları mevcuttu. 2026 ayarı: paylaşılan 300/15 dk IP kovası
+ * gezinme / yazma / izleme / admin olarak ayrıldı. Giriş (20/15 dk), iletişim
+ * ve Tiola formu (3/5 dk), arama (60/dk) ve Tiola oyu (5/dk) sıkı duruyor.
  *
  * Usage: node server/scripts/verify-faz1-4-ratelimit.js
  * Optional: VERIFY_RL_URL=http://127.0.0.1:3061 node server/scripts/verify-faz1-4-ratelimit.js
@@ -27,11 +27,7 @@ function read(rel) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8');
 }
 
-// --- 1. Mevcut limiter ayarları değişmemiş mi? (statik config kontrolü) ---
-// express-rate-limit v7 middleware'leri çalışma zamanında options'ı dışa
-// açmıyor; bu yüzden tanım bloklarını kaynak metinden ayıklayıp kontrol
-// ediyoruz (verify-form-security.js'deki `rlJs.includes(...)` deseniyle aynı
-// mantık, burada daha sağlam bir blok ayıklayıcıyla).
+// --- 1. Limiter tavanları (kaynak metin). express-rate-limit v7 options'ı dışa açmaz. ---
 const {
   authLimiter,
   searchLimiter,
@@ -39,69 +35,56 @@ const {
   formLimiter,
   tiolaFormLimiter,
   apiLimiter,
+  browseLimiter,
+  writeLimiter,
+  trackLimiter,
+  adminIpLimiter,
+  adminLimiter,
 } = require('../middleware/rateLimit');
 const { TIOLA_VOTE_MAX, TIOLA_VOTE_WINDOW_MS } = require('../middleware/tiolaVoteLimit');
 
 const rlSrcForConfig = read('server/middleware/rateLimit.js');
 
-function extractLimiterBlock(src, varName) {
-  const startMatch = src.match(new RegExp(`const ${varName}\\s*=\\s*rateLimit\\(\\{`));
-  if (!startMatch) return null;
-  const braceStart = startMatch.index + startMatch[0].length - 1;
-  let depth = 0;
-  for (let i = braceStart; i < src.length; i += 1) {
-    if (src[i] === '{') depth += 1;
-    else if (src[i] === '}') {
-      depth -= 1;
-      if (depth === 0) return src.slice(braceStart, i + 1);
-    }
-  }
-  return null;
-}
-
-function assertBlock(varName, { windowExpr, maxExpr, label }) {
-  const block = extractLimiterBlock(rlSrcForConfig, varName);
-  if (!block) {
-    fail(`${varName} tanımı rateLimit.js içinde bulunamadı`);
-    return;
-  }
-  if (!block.includes(windowExpr)) fail(`${varName} windowMs değişmiş (beklenen: ${windowExpr})`);
-  else if (!block.includes(maxExpr)) fail(`${varName} max değişmiş (beklenen: ${maxExpr})`);
+function assertIncludes(snippet, label) {
+  if (!rlSrcForConfig.includes(snippet)) fail(`${label} bulunamadı`);
   else ok(label);
 }
 
-assertBlock('authLimiter', {
-  windowExpr: '15 * 60 * 1000',
-  maxExpr: "process.env.AUTH_RATE_LIMIT_MAX) || 20",
-  label: 'authLimiter 20 / 15 dk (değişmedi, hesap kilidi 5 hata → 15 dk ayrı duruyor)',
-});
-assertBlock('searchLimiter', {
-  windowExpr: '60 * 1000',
-  maxExpr: "process.env.SEARCH_RATE_LIMIT_MAX) || 60",
-  label: 'searchLimiter 60 / dk (değişmedi, PRD değeriyle zaten aynı)',
-});
-assertBlock('formLimiter', {
-  windowExpr: '5 * 60 * 1000',
-  maxExpr: "process.env.FORM_RATE_LIMIT_MAX) || 3",
-  label: 'formLimiter (contactLimiter) 3 / 5 dk (değişmedi)',
-});
-assertBlock('tiolaFormLimiter', {
-  windowExpr: '5 * 60 * 1000',
-  maxExpr: "process.env.FORM_RATE_LIMIT_MAX) || 3",
-  label: 'tiolaFormLimiter 3 / 5 dk (değişmedi, kayıt/iletişim kovasından ayrı)',
-});
-assertBlock('apiLimiter', {
-  windowExpr: '15 * 60 * 1000',
-  maxExpr: "process.env.RATE_LIMIT_MAX) || 300",
-  label: "apiLimiter 300 / 15 dk, genel /api/* catch-all zaten mevcut — PRD madde 6 zaten karşılanıyor",
-});
+assertIncludes("envMax(['AUTH_RATE_LIMIT_MAX'], 20)", 'authLimiter 20 / 15 dk (giriş koruması duruyor)');
+assertIncludes('windowMs: WINDOW_15', '15 dk pencereli kovalar duruyor');
+assertIncludes("envMax(['SEARCH_RATE_LIMIT_MAX'], 60)", 'searchLimiter 60 / dk (değişmedi)');
+assertIncludes("envMax(['FORM_RATE_LIMIT_MAX'], 3)", 'formLimiter / tiolaFormLimiter 3 / 5 dk (değişmedi)');
+assertIncludes('5 * 60 * 1000', 'form penceresi 5 dk');
+assertIncludes("envMax(['BROWSE_RATE_LIMIT_MAX', 'RATE_LIMIT_MAX'], 600)", 'browseLimiter 600 / 15 dk (RATE_LIMIT_MAX hâlâ bu kovayı ezer)');
+assertIncludes("envMax(['WRITE_RATE_LIMIT_MAX'], 120)", 'writeLimiter 120 / 15 dk');
+assertIncludes("envMax(['TRACK_RATE_LIMIT_MAX'], 180)", 'trackLimiter 180 / 15 dk');
+assertIncludes("envMax(['ADMIN_RATE_LIMIT_MAX'], 400)", 'admin IP + oturum limiti 400 / 15 dk');
+assertIncludes("envMax(['ADMIN_TOOL_RATE_LIMIT_MAX'], 30)", 'adminToolLimiter 30 / 15 dk');
+assertIncludes("startsWithPath(path, '/api/auth')", 'giriş istekleri genel kovaya yazılmıyor');
+assertIncludes("startsWithPath(path, '/api/contact')", 'iletişim istekleri genel kovaya yazılmıyor');
+assertIncludes('return adminIpLimiter(req, res, next)', 'personel API ayrı IP kovasında');
+assertIncludes('return browseLimiter(req, res, next)', 'GET/HEAD gezinme kovasında');
+assertIncludes('return writeLimiter(req, res, next)', 'diğer yazmalar kendi kovasında');
+assertIncludes('retryAfterSeconds', 'limit yanıtı kaç saniye bekleneceğini söyler');
+assertIncludes('standardHeaders: true', 'standardHeaders açık — 429 Retry-After başlığı gider');
 
 if (contactLimiter !== formLimiter) fail('contactLimiter formLimiter ile aynı kova olmaktan çıkmış');
 else ok('contactLimiter === formLimiter (iletişim/kayıt/şifre-unuttum ortak IP kovası, değişmedi)');
 
-if (typeof authLimiter !== 'function' || typeof searchLimiter !== 'function' || typeof apiLimiter !== 'function') {
-  fail('limiter middleware export edilmemiş fonksiyon');
-} else ok('authLimiter / searchLimiter / apiLimiter çalışan Express middleware olarak export ediliyor');
+const exported = {
+  authLimiter,
+  searchLimiter,
+  apiLimiter,
+  browseLimiter,
+  writeLimiter,
+  trackLimiter,
+  adminIpLimiter,
+  adminLimiter,
+};
+for (const [name, fn] of Object.entries(exported)) {
+  if (typeof fn !== 'function') fail(`${name} middleware olarak export edilmemiş`);
+}
+if (!failed) ok('auth / search / browse / write / track / admin kovaları export ediliyor');
 
 if (TIOLA_VOTE_MAX !== 5) fail(`tiolaVoteLimiter max değişmiş (beklenen 5, gelen ${TIOLA_VOTE_MAX})`);
 else ok('tiolaVoteLimiter 5 / dk (ORTA-4, değişmedi)');
@@ -138,13 +121,18 @@ else ok('POST /api/tiolas/:id/like → tiolaVoteLimiter bağlı (5/dk)');
 const indexJs = read('server/index.js');
 if (!/app\.use\(\s*'\/api\/'\s*,\s*apiLimiter\s*\)/.test(indexJs)) {
   fail("app.use('/api/', apiLimiter) bulunamadı — genel catch-all kayboldu");
-} else ok("app.use('/api/', apiLimiter) duruyor — tüm /api/* zaten genel limit altında");
+} else ok("app.use('/api/', apiLimiter) duruyor — /api/* kova yönlendiricisi altında");
+
+const adminRoutesSrc = read('server/routes/admin.js');
+if (!/router\.use\(\s*adminLimiter\s*\)/.test(adminRoutesSrc)) {
+  fail('adminLimiter oturumdan sonra bağlı değil');
+} else ok('adminLimiter auth sonrası (kullanıcı kovası)');
 
 // --- 3. Bilinçli karar: bot User-Agent skip EKLENMEDİ (PRD'nin aksine) ---
 // Gerekçe: UA her istemci tarafından serbestçe ayarlanabilir; "Googlebot" taklidi
 // yapan bir kötüye kullanım, tam da apiLimiter'ın durdurmaya çalıştığı trafiği
 // limitsiz hale getirir. Bu, arama motoru botlarını korumaktan çok bypass riski
-// yaratır. Mevcut 300/15dk (≈20/dk) payı zaten Googlebot/Bingbot için yeterli;
+// yaratır. Gezinme kovası (varsayılan 600/15 dk) gerçek botlar için yeterli;
 // ayrıca search/contact/tiola gibi kritik uçlar kendi route-özel limiterlarına
 // sahip olduğundan UA bazlı istisnaya hiç ihtiyaç yok.
 const rlSrc = read('server/middleware/rateLimit.js');
@@ -176,7 +164,7 @@ function postJson(url, body, extraHeaders) {
       res.on('end', () => {
         let json = {};
         try { json = JSON.parse(data); } catch { /* ignore */ }
-        resolve({ status: res.statusCode, json, body: data });
+        resolve({ status: res.statusCode, json, body: data, headers: res.headers });
       });
     });
     req.on('error', reject);
@@ -194,7 +182,7 @@ function getJson(url) {
       res.on('end', () => {
         let json = {};
         try { json = JSON.parse(body); } catch { /* ignore */ }
-        resolve({ status: res.statusCode, json, body });
+        resolve({ status: res.statusCode, json, body, headers: res.headers });
       });
     });
     req.on('error', reject);
@@ -277,6 +265,10 @@ async function checkAuthLimiter(base) {
   });
   if (third.status !== 429) fail(`3rd login HTTP ${third.status}, expected 429 (AUTH_RATE_LIMIT_MAX=2 test)`);
   else ok('3. giriş denemesi 429 (authLimiter çalışıyor)');
+  if (!third.headers['retry-after']) fail('auth 429 Retry-After yok');
+  else ok('auth 429 Retry-After başlığı var');
+  if (!/dakika/.test(String(third.json.error || ''))) fail(`auth 429 mesajı: ${third.json.error}`);
+  else ok('auth 429 mesajı kaç dakika bekleneceğini söylüyor');
 }
 
 async function checkSearchLimiter(base) {
@@ -291,6 +283,50 @@ async function checkSearchLimiter(base) {
   else ok('3. arama isteği 429 (searchLimiter çalışıyor)');
 }
 
+/** Gezinme kotası dolunca giriş hâlâ kendi kovasında kalır. */
+async function checkBrowseSeparateFromLogin(base) {
+  const root = base.replace(/\/$/, '');
+  for (let i = 1; i <= 2; i += 1) {
+    const r = await getJson(`${root}/api/config/public`);
+    if (r.status !== 200) fail(`browse ${i} HTTP ${r.status}, expected 200`);
+    else ok(`gezinme isteği ${i}/2 kota içinde, 200`);
+  }
+  const third = await getJson(`${root}/api/config/public`);
+  if (third.status !== 429) fail(`3rd browse HTTP ${third.status}, expected 429 (BROWSE_RATE_LIMIT_MAX=2)`);
+  else ok('3. gezinme isteği 429 (browseLimiter)');
+  if (!third.headers['retry-after']) fail('browse 429 Retry-After yok');
+  else ok(`browse 429 Retry-After=${third.headers['retry-after']}`);
+  if (!/dakika/.test(String(third.json.error || ''))) fail(`browse 429 mesajı: ${third.json.error}`);
+  else ok('browse 429 mesajı dakika söylüyor');
+
+  const login = await postJson(`${root}/api/auth/login`, {
+    email: 'bucket-split@touristlio.local',
+    password: 'WrongPassNotUsed123',
+  });
+  if (login.status === 429) fail('giriş, gezinme kovasına yazılmış (429)');
+  else if (login.status !== 401) fail(`login after browse cap HTTP ${login.status}, expected 401`);
+  else ok('gezinme kotası doluyken giriş 401 (ayrı kova)');
+}
+
+/** Admin IP kovası gezinme kovasını doldurmaz. */
+async function checkAdminSeparateFromBrowse(base) {
+  const root = base.replace(/\/$/, '');
+  for (let i = 1; i <= 2; i += 1) {
+    const r = await getJson(`${root}/api/admin/stats`);
+    if (r.status === 429) fail(`admin ${i} beklenmedik 429`);
+    else if (r.status !== 401 && r.status !== 403) fail(`admin ${i} HTTP ${r.status}, expected 401`);
+    else ok(`admin isteği ${i}/2 kota içinde, ${r.status}`);
+  }
+  const third = await getJson(`${root}/api/admin/stats`);
+  if (third.status !== 429) fail(`3rd admin HTTP ${third.status}, expected 429 (ADMIN_RATE_LIMIT_MAX=2)`);
+  else ok('3. admin isteği 429 (adminIpLimiter)');
+  if (!/dakika/.test(String(third.json.error || ''))) fail(`admin 429 mesajı: ${third.json.error}`);
+  else ok('admin 429 mesajı dakika söylüyor');
+  const browse = await getJson(`${root}/api/config/public`);
+  if (browse.status !== 200) fail(`browse after admin cap HTTP ${browse.status}, expected 200`);
+  else ok('admin kotası gezinme kovasını doldurmadı');
+}
+
 async function main() {
   const given = process.env.VERIFY_RL_URL;
   if (given) {
@@ -302,6 +338,12 @@ async function main() {
     await withServer(process.env.VERIFY_RL_SEARCH_PORT || '3062', {
       SEARCH_RATE_LIMIT_MAX: '2',
     }, checkSearchLimiter);
+    await withServer(process.env.VERIFY_RL_BROWSE_PORT || '3063', {
+      BROWSE_RATE_LIMIT_MAX: '2',
+    }, checkBrowseSeparateFromLogin);
+    await withServer(process.env.VERIFY_RL_ADMIN_PORT || '3064', {
+      ADMIN_RATE_LIMIT_MAX: '2',
+    }, checkAdminSeparateFromBrowse);
   }
   if (failed) {
     console.error(`verify-faz1-4-ratelimit: ${failed} failed`);

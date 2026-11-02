@@ -22,7 +22,7 @@ function validateProductionEnv() {
 
   if (!String(process.env.REDIS_URL || process.env.RATE_LIMIT_REDIS_URL || '').trim()) {
     logger.warn({
-      msg: 'Production: REDIS_URL not set — Tiola vote limiter uses in-process memory (resets on restart, not shared across instances). Set REDIS_URL for Redis-backed 5/min limits.',
+      msg: 'Production: REDIS_URL not set — rate limits stay in this process memory. They reset on each deploy/restart and are not shared if more than one instance runs. REDIS_URL today only backs the Tiola vote counter (5/min). Login, contact, browse, and admin buckets use express-rate-limit memory and do not read REDIS_URL.',
     });
   }
 

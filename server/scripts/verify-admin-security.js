@@ -39,9 +39,12 @@ if (!adminJs.includes("requireRole('admin')")) {
 } else ok('admin-only routes use requireRole(\'admin\')');
 
 const indexJs = read('server/index.js');
-if (!indexJs.includes("app.use('/api/admin'") || !indexJs.includes('csrfProtection') || !indexJs.includes('adminLimiter')) {
-  fail('/api/admin must mount csrfProtection + adminLimiter');
-} else ok('/api/admin has CSRF + adminLimiter');
+if (!indexJs.includes("app.use('/api/admin'") || !indexJs.includes('csrfProtection')) {
+  fail('/api/admin must mount csrfProtection');
+} else ok('/api/admin has CSRF');
+if (!adminJs.includes('adminLimiter') || !/router\.use\(\s*adminLimiter\s*\)/.test(adminJs)) {
+  fail('/api/admin must apply adminLimiter after auth');
+} else ok('/api/admin applies adminLimiter after auth (per user)');
 
 const authSvc = read('server/modules/auth/auth.service.js');
 if (!/const MAX_FAILED\s*=\s*5/.test(authSvc) || !/const LOCK_MINUTES\s*=\s*15/.test(authSvc)) {

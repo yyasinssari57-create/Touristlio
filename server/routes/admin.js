@@ -11,7 +11,7 @@ const auditLog = require('../lib/auditLog');
 const contentFilter = require('../lib/contentFilter');
 const { parsePagination, buildTiolaListFilters, buildBlogListFilters } = require('../lib/moderation-query');
 const { spawnSync } = require('child_process');
-const { adminToolLimiter } = require('../middleware/rateLimit');
+const { adminToolLimiter, adminLimiter } = require('../middleware/rateLimit');
 const { parsePositiveInt, sanitizeText, sanitizeName } = require('../lib/sanitize');
 const notifications = require('../lib/notifications');
 const { sendTiolaRejectionEmail, sendBlogRejectionEmail, sendAdminMessageEmail } = require('../lib/mailer');
@@ -43,6 +43,7 @@ const { refreshPlaceStatsForTiola, recomputePlaceTiolaStatsBatch } = require('..
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
 router.use(authRequired, requireRole(...PANEL_ROLES));
+router.use(adminLimiter);
 
 async function logAdmin(req, action, targetType, targetId, detail) {
   await auditLog.log({

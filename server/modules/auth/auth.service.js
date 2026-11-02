@@ -138,7 +138,7 @@ async function login(req) {
   }
   if (isLocked(row)) {
     logFailedLogin(req, { userId: row.id, locked: true, reason: 'locked' });
-    return { error: 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin.', status: 423 };
+    return { error: 'Çok fazla başarısız deneme. 15 dakika sonra tekrar deneyin.', status: 423 };
   }
   if (!(await comparePassword(password, row.password_hash))) {
     await authModel.recordFailedLogin(row, MAX_FAILED, LOCK_MINUTES);
