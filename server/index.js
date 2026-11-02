@@ -95,7 +95,9 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'https:', 'blob:', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
+      // Raster tiles are <img> requests (img-src). 'https:' already allows them;
+      // OSM France is listed explicitly so the map still loads if that wildcard is tightened.
+      imgSrc: ["'self'", 'data:', 'https:', 'blob:', 'https://*.tile.openstreetmap.fr'],
       connectSrc: [...getConnectSrcOrigins(), ...recaptchaSrc, ...gaSrc],
       frameSrc: recaptchaOn ? recaptchaSrc : ["'self'"],
       frameAncestors: ["'self'"],

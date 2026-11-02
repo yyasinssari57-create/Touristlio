@@ -64,9 +64,11 @@ window.TL_MAP_DISCOVER = (function () {
         if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return;
         map = L.map(el, { scrollWheelZoom: true, zoomControl: false }).setView([39.0, 35.0], 6);
         L.control.zoom({ position: 'topleft' }).addTo(map);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap',
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://www.openstreetmap.fr/">OSM France</a>',
+          subdomains: 'abc',
           maxZoom: 18,
+          referrerPolicy: 'strict-origin-when-cross-origin',
         }).addTo(map);
         cluster = makeCluster();
         map.addLayer(cluster);

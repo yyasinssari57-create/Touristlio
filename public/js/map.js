@@ -117,10 +117,17 @@ window.TL_MAP = (function () {
     });
   }
 
+  // OSM France raster tiles (OpenStreetMap data). The official OSM tile servers block many production sites.
+  // CARTO's public raster CDN now requires an API key, so it is not used here.
+  const BASEMAP_URL = 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
+  const BASEMAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://www.openstreetmap.fr/">OSM France</a>';
+
   function addOsmTiles(map) {
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    L.tileLayer(BASEMAP_URL, {
+      attribution: BASEMAP_ATTRIBUTION,
+      subdomains: 'abc',
       maxZoom: 18,
+      referrerPolicy: 'strict-origin-when-cross-origin',
     }).addTo(map);
   }
 
@@ -342,10 +349,7 @@ window.TL_MAP = (function () {
         configureLeafletIcons();
         detailMap = L.map(el, { scrollWheelZoom: false, zoomControl: false }).setView([lat, lng], 14);
         L.control.zoom({ position: 'topleft' }).addTo(detailMap);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OSM',
-          maxZoom: 18,
-        }).addTo(detailMap);
+        addOsmTiles(detailMap);
         const icon = L.divIcon({
           className: 'tl-map-pin',
           html: markerHtml(colorFor(place.category)),
