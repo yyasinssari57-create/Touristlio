@@ -6,6 +6,26 @@ Numaralı takip kuyruğu (1–5) bitti. Favicon da eklendi.
 GA4 kodu hazır. Canlıda Measurement ID yok; Yasin `GA_MEASUREMENT_ID`
 yazınca açılır. Bu bir kod işi değil. İsteğe bağlı kod kuyruğu boş.
 
+## İstek limiti — “çok fazla istek / bir süre sonra”
+
+Yasin aynı işi birkaç kez deneyince “Çok fazla istek. Lütfen bir süre sonra tekrar deneyin.” görüyordu. Bu cümle tek bir sayaçtan geliyordu: tüm `/api/*` (gezinme, arama, giriş, admin kaydı, fotoğraf, ziyaretçi nabzı) **aynı IP kovasında 300 istek / 15 dakika**. Admin paneli ayrıca 150 / 15 dk sayıyordu. Yedek, site haritası, önbellek ve doğrulama araçları **10 / 15 dk** idi. Mesaj kaç dakika bekleneceğini söylemiyordu.
+
+Giriş (20 / 15 dk), iletişim ve kayıt (3 / 5 dk), Tiola gönderimi (3 / 5 dk), Tiola oyu (5 / dk) ve arama (60 / dk) **aynı sıkılıkta duruyor.** Bot koruması kapatılmadı. Kullanıcı-ajanına (Googlebot taklidi) istisna yok.
+
+Yeni kovalar (birbirinin sayacını doldurmaz):
+
+- Gezinme GET/HEAD: **600 / 15 dk** (`BROWSE_RATE_LIMIT_MAX`, yoksa `RATE_LIMIT_MAX`, yoksa 600). Eski ortak 300 bu kovaya indirgendi.
+- Yazma (giriş/iletişim/admin dışı): **120 / 15 dk**.
+- Ziyaretçi nabzı `POST /api/analytics/track`: **180 / 15 dk**.
+- Admin (IP, oturum açılmadan da) ve oturum açmış admin (kullanıcı): **400 / 15 dk**.
+- Admin araçları (yedek, site haritası, önbellek, doğrulama): **30 / 15 dk**.
+
+429 gövdesi artık “Yaklaşık N dakika sonra tekrar deneyin.” der ve `Retry-After` başlığı gider. Beş yanlış şifre hâlâ hesabı 15 dk kilitler; metin “15 dakika sonra tekrar deneyin.”
+
+`REDIS_URL` bu kovalara bağlı değil. Boşsa sayaçlar süreç belleğindedir: her Render deploy / yeniden başlatma sıfırlar, birden fazla kopya paylaşmaz. Redis yalnızca Tiola oy sayacını (5/dk) tutar. Render Environment’da eski `RATE_LIMIT_MAX=300` veya `ADMIN_TOOL_RATE_LIMIT_MAX=10` duruyorsa kod varsayılanını ezer — silin veya yukarıdaki değerlere çekin.
+
+`npm run verify:faz1-4` yeni tavanları ve kova ayrımını (gezinme 429 iken giriş 401; admin 429 iken gezinme 200) doğrular. `verify:forms` ve `verify:votes` iletişim / Tiola 3/5 dk sınırını doğrular.
+
 ## İsteğe bağlı — PostGIS yakın yerler
 
 Yasin PostGIS’in neden isteğe bağlı kaldığını sordu, sonra "geç" dedi.
@@ -1805,6 +1825,8 @@ Projede eski bir "modüler refactor" denemesinden kalan, **admin paneli JS'i tar
 `npm run verify:faz1-5` — statik olarak (a) `/api/admin`'in blanket korumasını ve tüm mutasyon rotalarının `logAdmin` çağırdığını, (b) `/api/users` rol ucunun düzeltmelerini, (c) `rbac.js`/`db.js` seed hizasını, (d) `moderation.controller.js`'in audit log eklerini, (e) yeni CSRF mount'larını doğrular; ardından gerçek bir yerel sunucuda (prod Supabase'e dokunmadan) unauth/member/moderator/admin ile canlı 401/403/200 ve `admin_audit_log`'a gerçekten satır yazıldığını doğrular. Regresyon: `npm run verify:forms`, `verify:votes`, `verify:faz1-4`, `verify:sprint1`, `verify:admin-security`, `verify:admin-role` — hepsi geçti.
 
 ## Claude Master PRD — FAZ1-4 (rate limit / tüm kritik endpoint'ler)
+
+Güncelleme: paylaşılan 300/15 dk kovası ayrıldı. Güncel tavanlar dosyanın başındaki «İstek limiti» notunda. Aşağısı o tarihteki tespit olarak duruyor.
 
 Gap analizi: PRD'nin 6 limiter kategorisinin **hepsi zaten vardı** (v1 YÜKSEK-7, v2 YÜKSEK-2, ORTA-4, v2 ORTA-5). Yeni limiter eklenmedi; mevcut korumalar doğrulandı ve tek bir bilinçli "ekleme" kararı belgelendi.
 
