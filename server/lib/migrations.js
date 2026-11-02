@@ -342,6 +342,7 @@ async function runFileMigrations(db) {
   if (!fs.existsSync(migrationsDir)) return;
 
   const helpers = { columnExists, addColumnIfMissing, tableExists };
+  await reopenPostgisMigrationIfGeomMissing(db);
   const files = fs.readdirSync(migrationsDir)
     .filter((f) => f.endsWith('.js'))
     .sort();
@@ -357,7 +358,8 @@ async function runFileMigrations(db) {
       logger.info({ msg: 'Migration applied', id });
     } catch (err) {
       const optional = mod.optional === true || id === '002_places_fts';
-      logger.error({
+      const log = optional ? logger.warn.bind(logger) : logger.error.bind(logger);
+      log({
         msg: optional ? 'File migration failed (non-fatal)' : 'File migration failed',
         id,
         file,
@@ -367,6 +369,33 @@ async function runFileMigrations(db) {
       });
       if (!optional) throw err;
     }
+  }
+}
+
+/**
+ * 010 used to swallow a missing extension and still record itself as applied,
+ * so geom was never created on a later boot. Drop that row when the column
+ * is absent; the optional file then retries and runOptional('postgisGeom')
+ * remains the belt-and-suspenders path.
+ */
+async function reopenPostgisMigrationIfGeomMissing(db) {
+  try {
+    const applied = await db.prepare('SELECT 1 AS ok FROM schema_migrations WHERE id = ?').get('010_postgis_geom');
+    if (!applied) return;
+    const col = await db.prepare(`
+      SELECT 1 AS ok
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'places' AND column_name = 'geom'
+    `).get();
+    if (col) return;
+    await db.prepare('DELETE FROM schema_migrations WHERE id = ?').run('010_postgis_geom');
+    logger.info({ msg: '010_postgis_geom was recorded without geom; will retry' });
+  } catch (err) {
+    logger.warn({
+      msg: 'PostGIS migration retry mark skipped',
+      code: err.code,
+      err: err.message,
+    });
   }
 }
 

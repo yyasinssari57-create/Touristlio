@@ -131,7 +131,7 @@ async function ensurePostgisGeom(database) {
       UPDATE places
       SET geom = ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
       WHERE lat IS NOT NULL AND lng IS NOT NULL
-        AND lat <> 0 AND lng <> 0
+        AND NOT (lat = 0 AND lng = 0)
         AND geom IS NULL
     `);
   } catch (err) {
@@ -212,7 +212,7 @@ async function findNearbyPlacesSql(originRow, mapPlace, limit = 6) {
       WHERE p.id != ?
         AND p.geom IS NOT NULL
         AND COALESCE(p.status, 'published') != 'archived'
-        AND ST_DWithin(p.geom, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, 20000000)
+        AND ST_DWithin(p.geom, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, 21000000)
       ORDER BY
         (CASE WHEN p.country = ? THEN 0 ELSE 10000 END)
         + (ST_Distance(p.geom, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography) / 1000.0)

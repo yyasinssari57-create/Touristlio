@@ -1,7 +1,9 @@
 /**
  * Gemini Faz 4 — optional PostGIS geography point + SP-GiST/GIST index.
  * Does not drop lat/lng. Does not rename places.location (TEXT address).
- * CREATE EXTENSION is try/caught; missing PostGIS must not crash boot.
+ * CREATE EXTENSION is try/caught. The error is rethrown so this optional
+ * file is not marked applied; the next boot retries after the extension exists.
+ * Boot itself continues (runFileMigrations treats optional: true as non-fatal).
  */
 
 async function up(db, helpers) {
@@ -15,6 +17,7 @@ async function up(db, helpers) {
       code: err.code,
       err: err.message,
     });
+    throw err;
   }
 }
 

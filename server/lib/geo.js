@@ -10,10 +10,14 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function isListedPlace(row) {
+  return (row.status || 'published') !== 'archived';
+}
+
 function findNearbyPlaces(allRows, originRow, mapPlace, limit = 6) {
   const origin = mapPlace(originRow);
   const scored = allRows
-    .filter((r) => r.id !== originRow.id)
+    .filter((r) => r.id !== originRow.id && isListedPlace(r))
     .map((r) => {
       const p = mapPlace(r);
       const dist = haversineKm(origin.lat, origin.lng, p.lat, p.lng);
