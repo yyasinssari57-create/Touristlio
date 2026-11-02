@@ -55,6 +55,7 @@
     "verify:faz4-8": "node server/scripts/verify-faz4-8-ayasofya.js",
     "verify:place-tr-copy": "node server/scripts/verify-place-tr-copy.js",
     "verify:faz4": "node server/scripts/verify-gemini-faz4.js",
+    "verify:postgis": "node server/scripts/verify-postgis-nearby.js",
     "verify:www": "node server/scripts/verify-www-redirect.js",
     "verify:legal": "node server/scripts/verify-legal-placeholders.js",
     "verify:csp": "node server/scripts/verify-csp.js",

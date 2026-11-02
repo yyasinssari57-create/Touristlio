@@ -4,7 +4,52 @@ Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
 Numaralı takip kuyruğu (1–5) bitti. Favicon da eklendi.
 GA4 kodu hazır. Canlıda Measurement ID yok; Yasin `GA_MEASUREMENT_ID`
-yazınca açılır. Kalan kod işi: PostGIS.
+yazınca açılır. Bu bir kod işi değil. İsteğe bağlı kod kuyruğu boş.
+
+## İsteğe bağlı — PostGIS yakın yerler
+
+Yasin PostGIS’in neden isteğe bağlı kaldığını sordu, sonra "geç" dedi.
+Yakın yerler uzantı varsa veritabanından gelir. Uzantı yoksa eski haversine
+yolu durur. Yeni ekran yok. Sahte GA kimliği yok.
+
+### Durum
+
+- Açılış `CREATE EXTENSION IF NOT EXISTS postgis` dener. Uzantı yoksa hata
+  yutulur, sunucu açılır. `010_postgis_geom` bu durumda uygulanmış sayılmaz;
+  sonraki açılış yeniden dener. Eski kurulumda satır yazılıp `geom` oluşmadıysa
+  o satır silinir ve dosya yeniden koşar. `runOptional('postgisGeom')` aynı
+  denemeyi bir kez daha yapar.
+- Uzantı varsa `places.geom` (`geography(Point, 4326)`), SP-GiST (olmazsa
+  GIST), tetik ve mevcut enlem/boylam doldurması durur. `lat` / `lng` ve
+  `places.location` (adres metni) durur.
+- Yakın liste: `ST_DWithin` + `ST_Distance`. Aynı ülke tercihi haversine ile
+  aynı. Arşivlenen yer iki yolda da yok. PostGIS yoksa `findNearbyPlacesSql`
+  `null` döner; mekân detayı ve gezi önerisi `findNearbyPlaces` kullanır.
+- Gezi önerisinde köken `placeId` ise ve SQL dönerse tüm `places` tablosu
+  okunmaz. SQL `null` ise eski tam okuma durur.
+- Benzer yerler kategori ve popülerlik sırasıdır; mesafe sorgusu değildir.
+  O liste JS’te kaldı. Detay sayfası bu liste için tabloyu okumaya devam eder.
+
+### Kabul listesi
+
+- [x] Uzantı yokken site açılır, yakın liste haversine ile dolar.
+- [x] Uzantı varken `geom` sütunu, coğrafi indeks ve SQL yakın listesi durur.
+- [x] Render / Supabase uzantıyı vermezse deploy kırılmaz.
+- [x] Ekrandaki renk, yerleşim ve buton yeri değişmedi.
+
+### Bilinçli olarak yapılmayanlar
+
+- GA4 Measurement ID üretilmedi. Canlıda hâlâ Yasin yazacak.
+- Benzer yerler için yeni bir mesafe sıralaması icat edilmedi.
+- PostGIS paketi deploy imajına zorunlu eklenmedi. Supabase çoğu projede
+  uzantıyı açar; açmazsa panelden **postgis** ve yeniden başlatma yeter.
+
+Doğrulama: `npm run verify:postgis`.
+
+Yerel Postgres 16’da paket yokken betik haversine yolunu geçti
+(`extension "postgis" is not available`, kod `0A000`). `postgresql-16-postgis-3`
+kurulunca aynı betik `geom`, `idx_places_geom_spgist` ve SQL listesini doğruladı.
+1 km `ST_DWithin` planı bu indeksi kullandı. SQL sırası haversine ile aynıydı.
 
 ## İsteğe bağlı — GA4 hazır, Measurement ID yok
 
@@ -1825,7 +1870,7 @@ Gemini “Faz 4”. Express + vanilla JS. Tasarım / UI yok. Next.js yok.
 `npm run verify:faz4` (veya `node scripts/verify-gemini-faz4.mjs`).
 
 ### Leftover
-- PostGIS Supabase Dashboard → Database → Extensions’ta kapalıysa `geom` oluşmaz; site yine çalışır. Yasin panelden **postgis** açıp Render’da restart etmeli.
+- PostGIS açılışta `CREATE EXTENSION` dener. Rol uzantıyı açamazsa `geom` oluşmaz; site haversine ile çalışır. Supabase’de Dashboard → Database → Extensions → **postgis** ve yeniden başlatma bu durumda yeter. `npm run verify:postgis`.
 - `categories` TEXT → JSONB + GIN yok (Faz 1 leftover; LIKE duruyor).
 - Detay yakını hâlâ gerekirse tüm `places` çeker (similar + haversine yedek). Supercluster yok.
 - SPA istemci JSON-LD (app.js) sunucu builder’ın kopyası; birleştirilmedi.

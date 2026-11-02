@@ -69,17 +69,22 @@ router.post('/', authRequired, async (req, res) => {
 
 router.get('/suggest/nearby', authOptional, async (req, res) => {
   const { placeId, city, limit } = req.query;
-  const all = await db.prepare('SELECT * FROM places').all();
-  let origin = placeId ? await db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) : null;
-  if (!origin && city) origin = all.find((r) => r.city?.toLowerCase().includes(String(city).toLowerCase()));
   const cap = Number(limit) || 6;
+  let origin = placeId ? await db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) : null;
+  let all = null;
+  if (!origin) {
+    all = await db.prepare('SELECT * FROM places').all();
+    if (city) origin = all.find((r) => r.city?.toLowerCase().includes(String(city).toLowerCase()));
+  }
   if (!origin) {
     const places = await Promise.all(all.slice(0, cap).map((row) => mapPlace(row)));
     return res.json({ places });
   }
+  const fromSql = await findNearbyPlacesSql(origin, mapPlace, cap);
+  if (fromSql) return res.json({ places: fromSql });
   // findNearbyPlaces reads lat/lng immediately; async mapPlace would JSON as {}.
-  const nearby = (await findNearbyPlacesSql(origin, mapPlace, cap))
-    || findNearbyPlaces(all, origin, (row) => mapPlaceRow(row), cap);
+  if (!all) all = await db.prepare('SELECT * FROM places').all();
+  const nearby = findNearbyPlaces(all, origin, (row) => mapPlaceRow(row), cap);
   res.json({ places: nearby });
 });
 
