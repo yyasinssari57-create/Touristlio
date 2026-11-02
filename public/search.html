@@ -58,6 +58,7 @@
   <p class="page-info" id="searchPageInfo"></p>
 </main>
 
+<script src="/js/locale-resolve.js?v=__APP_VERSION__"></script>
 <script src="/js/i18n.js?v=__APP_VERSION__"></script>
 <script src="/js/bind-actions.js?v=__APP_VERSION__"></script>
 <script src="/js/a11y.js?v=__APP_VERSION__"></script>
@@ -74,7 +75,7 @@
     window.TL_SKELETON.fillCards(grid, 6);
   }
 })();
-let lang = window.TL_I18N.bootLocale({ syncPath: true });
+let lang = window.TL_I18N.bootLocale();
 let page = 1;
 const LIMIT = (window.TL_EXPLORE_QUERY && window.TL_EXPLORE_QUERY.DEFAULT_PAGE_LIMIT) || 20;
 let total = 0;

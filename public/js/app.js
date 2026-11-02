@@ -92,8 +92,10 @@ let activeBlogSlug = null;
 let savedIds = new Set();
 let authMode = 'login';
 let lang = window.TL_I18N
-  ? window.TL_I18N.bootLocale({ syncPath: true })
-  : ((location.pathname === '/en' || location.pathname.startsWith('/en/')) ? 'en' : 'tr');
+  ? window.TL_I18N.bootLocale()
+  : (window.TL_LOCALE
+    ? window.TL_LOCALE.resolveLocale(location.pathname, localStorage.getItem('tl_lang') || '')
+    : 'tr');
 let lastOsmHint = false;
 let searchTimer;
 let filterRequestId = 0;
@@ -1970,13 +1972,17 @@ function writeRouteToUrl(route, replace = true) {
     }
   }
 
-  if (lang === 'en') {
+  const onEnglishPath = window.TL_I18N
+    ? window.TL_I18N.pathIsEnglish(location.pathname)
+    : (lang === 'en');
+  if (onEnglishPath) {
     path = path === '/' ? '/en/' : `/en${path}`;
   }
 
   const url = `${path}${search}${hash}`;
   if (replace) history.replaceState(route, '', url);
   else history.pushState(route, '', url);
+  adoptLangFromPath();
   if (route.main === 'explore') window.TL_I18N?.syncParamListingSeo?.();
 }
 
@@ -2005,6 +2011,8 @@ async function showMainTab(tab, skipRoute) {
   navEl?.setAttribute('aria-selected', 'true');
   if (tab !== 'detail') prevTab = tab;
   if (tab !== 'detail') window.TL_ANALYTICS?.trackTab(tab);
+  if (tab === 'blog' && !skipRoute) activeBlogSlug = null;
+  if (!skipRoute) syncRoute(true);
   if (tab === 'places') {
     setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
     setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
@@ -2065,7 +2073,6 @@ async function showMainTab(tab, skipRoute) {
   }
   window.scrollTo(0, 0);
   syncPageHeading(tab);
-  if (!skipRoute) syncRoute(true);
   if (tab === 'explore') window.TL_I18N?.syncParamListingSeo?.();
   if (!skipRoute) {
     try {
@@ -3862,13 +3869,28 @@ function refreshAfterLang() {
   if (window.TL_DISCOVER) window.TL_DISCOVER.setLang(lang);
 }
 
-function setLang(l, btn) {
-  lang = window.TL_I18N ? window.TL_I18N.persistLang(l) : (l === 'en' ? 'en' : 'tr');
+function markLangButtons() {
   document.querySelectorAll('.lb').forEach((b) => {
     const on = b.getAttribute('data-arg') === lang || b.textContent.trim().toLowerCase() === lang;
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+}
+
+function adoptLangFromPath() {
+  if (!window.TL_I18N || typeof window.TL_I18N.resolveLang !== 'function') return lang;
+  const next = window.TL_I18N.resolveLang(location.pathname);
+  if (next === lang) return lang;
+  lang = window.TL_I18N.applyDocumentLang(next);
+  markLangButtons();
+  window.TL_I18N.apply(lang);
+  return lang;
+}
+
+function setLang(l, btn) {
+  lang = window.TL_I18N ? window.TL_I18N.persistLang(l) : (l === 'en' ? 'en' : 'tr');
+  if (window.TL_I18N) window.TL_I18N.syncPathToLang(lang);
+  markLangButtons();
   if (btn) {
     btn.classList.add('on');
     btn.setAttribute('aria-pressed', 'true');
@@ -3884,9 +3906,14 @@ document.addEventListener('click', (e) => {
 
 async function applyRouteFromUrl(opts = {}) {
   const route = readRouteFromUrl();
+  if (route.main === 'explore') restoreExploreFiltersFromUrl();
+  if (route.blogSlug) activeBlogSlug = route.blogSlug;
+  else if (route.main === 'blog') activeBlogSlug = null;
+  if (route.main === 'blog' && route.blogCat) blogCat = route.blogCat;
+  // URL first, then language. A saved / route must not fetch /blog in the homepage language.
+  writeRouteToUrl(route, true);
   restoringRoute = true;
   try {
-    if (route.main === 'explore') restoreExploreFiltersFromUrl();
     if (route.main === 'detail' && (route.placeSlug || route.placeId)) {
       const opened = await openDetail(route.placeSlug || route.placeId, true);
       if (opened === false) return;
@@ -3903,11 +3930,7 @@ async function applyRouteFromUrl(opts = {}) {
       await openBlogDetail(route.blogSlug, true);
       return;
     }
-    if (route.main === 'blog') {
-      activeBlogSlug = null;
-      showBlogListing();
-    }
-    if (route.main === 'blog' && route.blogCat) blogCat = route.blogCat;
+    if (route.main === 'blog') showBlogListing();
     if (route.main === 'profile') {
       if (route.profileUserId) {
         viewingProfileUserId = (user && user.id === route.profileUserId) ? null : route.profileUserId;

@@ -1,6 +1,7 @@
 const { siteBaseUrl } = require('./sitemap');
 const { googleSiteVerification } = require('./analytics-config');
 const { trLabel } = require('./tr-labels');
+const { resolveLocale } = require('../../public/js/locale-resolve');
 
 /** FAZ3-2 static templates. Counts match places.json (1090 places, 135 countries). */
 const SEO_TEMPLATES = {
@@ -248,8 +249,8 @@ function pageDefaults(pathname, lang) {
 }
 
 function langFromPath(pathname) {
-  const p = (pathname || '/').split('?')[0];
-  return (p === '/en' || p.startsWith('/en/')) ? 'en' : 'tr';
+  // Server has no tl_lang. Homepage without /en stays tr for crawlers.
+  return resolveLocale(pathname, '');
 }
 
 function canonicalFor(pathname, lang) {
