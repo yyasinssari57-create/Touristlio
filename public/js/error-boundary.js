@@ -34,10 +34,13 @@
     } catch { /* ignore */ }
     var htmlLang = (document.documentElement && (document.documentElement.getAttribute('data-tl-lang') || document.documentElement.lang)) || '';
     if (htmlLang.toLowerCase().indexOf('en') === 0) return 'en';
-    try {
-      var stored = localStorage.getItem('tl_lang');
-      if (stored === 'en' || stored === 'tr') return stored;
-    } catch { /* private mode */ }
+    if (htmlLang.toLowerCase().indexOf('tr') === 0) return 'tr';
+    if (window.TL_LOCALE && typeof window.TL_LOCALE.resolveLocale === 'function') {
+      try {
+        var stored = localStorage.getItem('tl_lang') || '';
+        return window.TL_LOCALE.resolveLocale(location.pathname, stored);
+      } catch { /* private mode */ }
+    }
     return 'tr';
   }
 

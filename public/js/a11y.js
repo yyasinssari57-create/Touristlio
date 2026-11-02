@@ -12,11 +12,16 @@
     if (global.TL_I18N && typeof global.TL_I18N.resolveLang === 'function') {
       return global.TL_I18N.resolveLang();
     }
+    if (global.TL_LOCALE && typeof global.TL_LOCALE.resolveLocale === 'function') {
+      try {
+        return global.TL_LOCALE.resolveLocale(location.pathname, localStorage.getItem('tl_lang') || '');
+      } catch { return 'tr'; }
+    }
     try {
       var p = location.pathname || '/';
       if (p === '/en' || p.indexOf('/en/') === 0) return 'en';
-      return localStorage.getItem('tl_lang') === 'en' ? 'en' : 'tr';
-    } catch { return 'tr'; }
+    } catch { /* ignore */ }
+    return 'tr';
   }
 
   function t(key, fallback) {

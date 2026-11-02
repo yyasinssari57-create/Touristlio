@@ -33,6 +33,7 @@
     "verify:passwords": "node server/scripts/verify-password-hash.js",
     "verify:faz1": "node server/scripts/verify-gemini-faz1.js",
     "verify:sprint0": "node server/scripts/verify-gemini-sprint0.js",
+    "verify:v4-adim1": "node server/scripts/verify-v4-adim1-locale.js",
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",
     "verify:faz2-1": "node server/scripts/verify-faz2-1-code-split.js",

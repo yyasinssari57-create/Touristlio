@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { getAppVersion } = require('./app-version');
 const { nonceFromRes, injectNonce } = require('../middleware/csp-nonce');
+const { buildEarlyBootScript } = require('../../public/js/locale-resolve');
 
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -34,15 +35,25 @@ function injectAppVersion(html) {
   return html.replace(/__APP_VERSION__/g, getAppVersion());
 }
 
-/** Same resolver as public/js/i18n.js — URL /en wins, else tl_lang, else tr. */
-const EARLY_LANG_BOOT = `<script data-tl-lang-boot>(function(){try{var p=location.pathname||'/';var en=p==='/en'||p.indexOf('/en/')===0;var s='';try{s=localStorage.getItem('tl_lang')||'';}catch(e){}var lang=en?'en':(s==='en'?'en':'tr');document.documentElement.lang=lang;document.documentElement.setAttribute('data-tl-lang',lang);}catch(e){}})();</script>`;
+/** Generated from locale-resolve.js so the data-tl-lang-boot script cannot drift. */
+const EARLY_LANG_BOOT = buildEarlyBootScript();
 
 function injectEarlyLangBoot(html) {
-  if (!html || html.includes('data-tl-lang-boot')) return html;
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head[^>]*>/i, (open) => `${open}\n${EARLY_LANG_BOOT}`);
+  if (!html) return html;
+  const stripped = html.replace(/<script\b[^>]*\bdata-tl-lang-boot\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  if (/<head[^>]*>/i.test(stripped)) {
+    return stripped.replace(/<head[^>]*>/i, (open) => `${open}\n${EARLY_LANG_BOOT}`);
   }
-  return EARLY_LANG_BOOT + html;
+  return EARLY_LANG_BOOT + stripped;
+}
+
+function injectLocaleModule(html) {
+  if (!html || html.includes('/js/locale-resolve.js')) return html;
+  const tag = `<script src="/js/locale-resolve.js?v=${getAppVersion()}"></script>\n`;
+  if (/<script\s+src="\/js\/i18n\.js/i.test(html)) {
+    return html.replace(/<script\s+src="\/js\/i18n\.js/i, `${tag}<script src="/js/i18n.js`);
+  }
+  return html;
 }
 
 function injectClientErrorBoundary(html) {
@@ -147,6 +158,7 @@ function injectHeroBackground(html, url) {
 async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   let html = readPublicHtml(publicDir, relativePath);
   html = injectEarlyLangBoot(html);
+  html = injectLocaleModule(html);
   html = injectClientErrorBoundary(html);
   html = injectAnalyticsScripts(html, relativePath);
   html = injectErrorDetail(html, seo.errorDetail);
@@ -261,6 +273,7 @@ module.exports = {
   NO_CACHE_HEADERS,
   injectAppVersion,
   injectEarlyLangBoot,
+  injectLocaleModule,
   EARLY_LANG_BOOT,
   injectClientErrorBoundary,
   injectAnalyticsScripts,

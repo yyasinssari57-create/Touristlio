@@ -2,6 +2,14 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 1 (dil tek kaynaktan)
+
+`/blog`, `/blog/...`, `/places/...`, `/explore` ve `/gezilecek-yerler` artık tarayıcıdaki `tl_lang=en` kaydına bakmıyor. Adres Türkçe kalıyor, sayfa metni Türkçe kalıyor. `/en/...` her zaman İngilizce. Kayıtlı dil yalnızca ana sayfada (`/`) kullanılıyor. Sayfa açılışında adres değişmiyor. EN/TR düğmesi aynı sayfanın karşılığına gidiyor (`/blog/yazi` ↔ `/en/blog/yazi`).
+
+Karar tek modülde: `public/js/locale-resolve.js`. Erken boot script bu modülden üretiliyor. `TL_I18N.resolveLang` ve sunucudaki `langFromPath` aynı fonksiyonu çağırıyor.
+
+`npm run verify:v4-adim1`
+
 ## Yer düzenleme — temel alanlar, canlı saat, canlı hava
 
 Yasin yer kaydettikten sonra Düzenle’de yalnızca bilgi kutucuklarını (para, tarih, aile dostu) değiştirebiliyordu. Adres, enlem, boylam ve ilk formdaki alanlar ya formda yoktu ya da alttaki Kaydet’e bağlı değildi. Bilgi Kutucukları duruyor. Kaydet artık yer bilgisiyle birlikte kutucukları da yazar.

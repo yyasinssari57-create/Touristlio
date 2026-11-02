@@ -68,17 +68,21 @@ if (!appJs.includes('bootLocale') || !appJs.includes('persistLang') || !appJs.in
 } else ok('app.js uses one locale resolver and syncs route after setLang');
 
 const i18nJs = read('public/js/i18n.js');
+const localeJs = read('public/js/locale-resolve.js');
 if (!i18nJs.includes('function resolveLang') || !i18nJs.includes('function pathForLang') || !i18nJs.includes('function bootLocale')) {
   fail('i18n.js missing single locale resolver');
 } else ok('i18n.js resolveLang + pathForLang + bootLocale');
-if (!i18nJs.includes('if (pathIsEnglish(p)) return \'en\'')) {
+if (!localeJs.includes('if (pathIsEnglish(p)) return \'en\'') || !i18nJs.includes('resolveLocale')) {
   fail('resolveLang does not let /en win');
 } else ok('URL /en wins over tl_lang');
 
 const indexHtml = read('public/index.html');
-if (!indexHtml.includes('data-tl-lang-boot')) {
-  fail('index.html missing early lang boot script');
-} else ok('index.html early lang + data-tl-lang');
+if (!indexHtml.includes('/js/locale-resolve.js')) {
+  fail('index.html missing shared locale module');
+} else ok('index.html loads shared locale module');
+if (indexHtml.includes('data-tl-lang-boot')) {
+  fail('index.html must not keep a second early lang resolver');
+} else ok('index.html early lang comes from the server boot script');
 if (!indexHtml.includes('data-i18n-html="blogHeroTitle"') || !indexHtml.includes('data-i18n="blogSub"')) {
   fail('blog hero title/sub missing data-i18n (EN/TR stay mixed)');
 } else ok('blog hero title/sub follow apply() language');

@@ -1,24 +1,27 @@
 window.TL_I18N = (function () {
   let activeLang = null;
 
+  function localeApi() {
+    const api = typeof window !== 'undefined' ? window.TL_LOCALE : null;
+    if (!api || typeof api.resolveLocale !== 'function') {
+      throw new Error('TL_LOCALE missing: load /js/locale-resolve.js before i18n.js');
+    }
+    return api;
+  }
+
   function pathIsEnglish(pathname) {
     const p = pathname == null
       ? (typeof location !== 'undefined' ? location.pathname : '/')
       : pathname;
-    return p === '/en' || (typeof p === 'string' && p.indexOf('/en/') === 0);
+    return localeApi().pathIsEnglish(p);
   }
 
   function stripLangPrefix(pathname) {
-    const p = pathname || '/';
-    if (p === '/en' || p === '/en/') return '/';
-    if (p.indexOf('/en/') === 0) return p.slice(3) || '/';
-    return p || '/';
+    return localeApi().stripLangPrefix(pathname || '/');
   }
 
   function pathForLang(pathname, lang) {
-    const rest = stripLangPrefix(pathname);
-    if (lang === 'en') return rest === '/' ? '/en/' : `/en${rest}`;
-    return rest || '/';
+    return localeApi().pathForLang(pathname || '/', lang);
   }
 
   function storedLang() {
@@ -30,14 +33,13 @@ window.TL_I18N = (function () {
     }
   }
 
-  /** URL /en wins; else tl_lang; else tr. */
+  /** Shared rules: /en wins; TR content routes stay tr; only "/" may use tl_lang. */
   function resolveLang(pathname, stored) {
     const p = pathname != null
       ? pathname
       : (typeof location !== 'undefined' ? location.pathname : '/');
-    if (pathIsEnglish(p)) return 'en';
     const s = stored != null ? stored : storedLang();
-    return s === 'en' ? 'en' : 'tr';
+    return localeApi().resolveLocale(p, s);
   }
 
   function persistLang(lang) {
@@ -69,9 +71,10 @@ window.TL_I18N = (function () {
 
   function bootLocale(opts) {
     const lang = resolveLang();
-    persistLang(lang);
     applyDocumentLang(lang);
-    if (!opts || opts.syncPath !== false) syncPathToLang(lang);
+    // Opening a link must not rewrite the URL or overwrite tl_lang.
+    // syncPathToLang runs only when the EN/TR button asks for it.
+    if (opts && opts.syncPath === true) syncPathToLang(lang);
     return lang;
   }
 
