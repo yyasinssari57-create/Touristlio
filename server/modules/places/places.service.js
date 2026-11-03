@@ -12,6 +12,7 @@ const { DISCOVER_GROUPS, FILTER_GROUPS, GROUP_VISIBILITY, matchesFilterGroup } =
 const { cacheKey, wrap, clear, PLACES_TTL_MS } = require('../../lib/cache');
 const { getStatsMap, invalidateStatsCache } = require('../../lib/stats-cache');
 const { searchPlacesPage } = require('../../lib/places-search');
+const { isPublishedPlaceStatus, publishedPlaceSql } = require('../../lib/place-status');
 const { parseListPagination, paginationMeta } = require('../../lib/pagination');
 
 const CACHE_VERSION = 'v4';
@@ -103,7 +104,7 @@ function filterPlaces(rows, queryParams, statsMap, options = {}) {
 
   const qNorm = q ? normalizeSearch(q) : '';
 
-  let filtered = rows;
+  let filtered = rows.filter((row) => isPublishedPlaceStatus(row.status));
 
 
 
@@ -352,7 +353,8 @@ async function citiesWithCounts(country) {
 
     rows = await db.prepare(`
       SELECT city, country, COUNT(*) AS c FROM places
-      WHERE lower(country) LIKE ? OR lower(country) LIKE ?
+      WHERE (lower(country) LIKE ? OR lower(country) LIKE ?)
+        AND ${publishedPlaceSql('status')}
       GROUP BY city, country
     `).all(`%${countryNorm}%`, countryNorm === 'turkey' ? '%türkiye%' : `%${countryNorm}%`);
 
@@ -361,6 +363,7 @@ async function citiesWithCounts(country) {
     rows = await db.prepare(`
       SELECT city, country, COUNT(*) AS c FROM places
       WHERE city IS NOT NULL AND trim(city) != ''
+        AND ${publishedPlaceSql('status')}
       GROUP BY city, country
       ORDER BY c DESC, city ASC
       LIMIT 120

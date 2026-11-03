@@ -41,7 +41,7 @@ async function seedPlaces(options = {}) {
      culture_food, culture_food_en, travel_tips, travel_tips_en,
      how_to_get_there, how_to_get_there_en, photos,
      tips, tips_en, tags, search_aliases, categories, lat, lng, popularity,
-     faq_tr, faq_en)
+     faq_tr, faq_en, status)
     VALUES (@id, @name, @slug, @location, @country, @city, @district, @category,
             @imageUrl, @isLocal, @entryFee, @entryFeeEn, @bestTime, @bestTimeEn,
             @description, @descriptionEn, @overview, @overviewEn,
@@ -49,7 +49,7 @@ async function seedPlaces(options = {}) {
             @cultureFood, @cultureFoodEn, @travelTips, @travelTipsEn,
             @howToGetThere, @howToGetThereEn, @photos,
             @tips, @tipsEn, @tags, @searchAliases, @categories, @lat, @lng, @popularity,
-            @faqTR, @faqEN)
+            @faqTR, @faqEN, @status)
   `);
 
   const usedSlugs = new Set();
@@ -90,6 +90,7 @@ async function seedPlaces(options = {}) {
         popularity,
         faqTR: JSON.stringify(p.faqTR || []),
         faqEN: JSON.stringify(p.faqEN || []),
+        status: ['published', 'draft', 'archived'].includes(p.status) ? p.status : 'published',
       });
     }
   });

@@ -128,8 +128,14 @@
         <div class="admin-card">
           <div class="admin-form" style="margin-bottom:12px">
             <label class="sr-only" for="placeSearch">Yer ara</label>
-            <label class="sr-only" for="placeSearch">Yer ara</label>
             <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" data-act="debounceLoadPlaces"/>
+            <label class="sr-only" for="placeStatusFilter">Yayın durumu</label>
+            <select class="ain" id="placeStatusFilter" aria-label="Yayın durumu" data-act="loadPlacesList">
+              <option value="">Tümü (arşiv hariç)</option>
+              <option value="published">Yayında</option>
+              <option value="draft">Taslak</option>
+              <option value="archived">Arşiv</option>
+            </select>
             <button class="btn bo bsm" type="button" data-act="exportPlaces" data-arg="json">Dışa aktar (JSON)</button>
             <button class="btn bo bsm" type="button" data-act="exportPlaces" data-arg="csv">Dışa aktar (CSV)</button>
             <label class="btn bp bsm adm-photo-btn" style="margin:0">
@@ -3494,7 +3500,9 @@ async function loadPlacesList() {
   wrap.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
   try {
     const q = document.getElementById('placeSearch')?.value || '';
-    const qs = new URLSearchParams({ q, limit: '80' });
+    const status = document.getElementById('placeStatusFilter')?.value || '';
+    const qs = new URLSearchParams({ q, limit: status ? '200' : '80' });
+    if (status) qs.set('status', status);
     if (placeQualityFilter) qs.set('issue', placeQualityFilter);
     const data = await api('/admin/places?' + qs);
     const rows = data.places || [];

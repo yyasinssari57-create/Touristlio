@@ -8,6 +8,8 @@ const { normalizeSearch, matchesQuery } = require('../lib/search-normalize');
 const { cacheKey, wrap, PLACES_TTL_MS } = require('../lib/cache');
 const { getStatsMap } = require('../lib/stats-cache');
 const { findNearbyPlaces, findSimilarPlaces } = require('../lib/geo');
+const { isPublishedPlaceStatus } = require('../lib/place-status');
+const { publishedRedirectSlug } = require('../lib/place-redirects');
 const { findNearbyPlacesSql } = require('../lib/place-geom');
 const { getWeather } = require('../services/weatherService');
 const { currencyForCountry, parseEntryFeeTry } = require('../lib/currency');
@@ -42,6 +44,7 @@ async function searchHandler(req, res) {
     const mapper = (row) => mapWithStats(row, statsMap);
     const qNorm = normalizeSearch(q);
     const matches = rows
+      .filter((row) => isPublishedPlaceStatus(row.status))
       .filter((row) => matchesQuery(mapper(row), qNorm))
       .slice(0, limit)
       .map(mapper);
@@ -68,11 +71,16 @@ async function resolvePlaceRow(req, res) {
     return null;
   }
   const row = await findPlaceRow(key);
-  if (!row) {
-    res.status(404).json({ error: 'Yer bulunamadı' });
+  if (row && isPublishedPlaceStatus(row.status)) return row;
+  const fromSlug = (row && row.slug) || (/^\d+$/.test(String(key)) ? '' : String(key).toLowerCase());
+  const target = fromSlug ? await publishedRedirectSlug(fromSlug) : '';
+  if (target) {
+    const q = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+    res.redirect(301, `/api/places/${encodeURIComponent(target)}${q}`);
     return null;
   }
-  return row;
+  res.status(404).json({ error: 'Yer bulunamadı' });
+  return null;
 }
 
 router.get('/:id', authOptional, async (req, res) => {

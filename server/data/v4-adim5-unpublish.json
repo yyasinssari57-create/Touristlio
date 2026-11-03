@@ -1,0 +1,1468 @@
+{
+  "note": "V4 Adım 5. Silinmedi. status=draft. 16 gözden geçir ve yalnızca yakın koordinat çiftleri duruyor.",
+  "counts": {
+    "templatesGenerated": 119,
+    "templatesReview": 16,
+    "templateDrafts": 119,
+    "duplicateDrafts": 24,
+    "drafts": 143,
+    "redirects": 24,
+    "protected": 16,
+    "nearbyOnlyPairs": 42,
+    "similarPairs": 24
+  },
+  "drafts": [
+    {
+      "id": 1042,
+      "slug": "accra-cultural-district-accra",
+      "name": "Accra Cultural District",
+      "city": "Accra",
+      "country": "Ghana",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1041,
+      "slug": "accra-main-square-accra",
+      "name": "Accra Main Square",
+      "city": "Accra",
+      "country": "Ghana",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1039,
+      "slug": "addis-ababa-historic-quarter-addis-ababa",
+      "name": "Addis Ababa Historic Quarter",
+      "city": "Addis Ababa",
+      "country": "Ethiopia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1040,
+      "slug": "addis-ababa-waterfront-addis-ababa",
+      "name": "Addis Ababa Waterfront",
+      "city": "Addis Ababa",
+      "country": "Ethiopia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1050,
+      "slug": "algiers-central-park-algiers",
+      "name": "Algiers Central Park",
+      "city": "Algiers",
+      "country": "Algeria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1049,
+      "slug": "algiers-old-town-algiers",
+      "name": "Algiers Old Town",
+      "city": "Algiers",
+      "country": "Algeria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1015,
+      "slug": "almaty-historic-quarter-almaty",
+      "name": "Almaty Historic Quarter",
+      "city": "Almaty",
+      "country": "Kazakhstan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1016,
+      "slug": "almaty-waterfront-almaty",
+      "name": "Almaty Waterfront",
+      "city": "Almaty",
+      "country": "Kazakhstan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 601,
+      "slug": "antalya-termessos-ruins-antalya",
+      "name": "Antalya Termessos Ruins",
+      "city": "Antalya",
+      "country": "Turkey",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1068,
+      "slug": "antananarivo-central-park-antananarivo",
+      "name": "Antananarivo Central Park",
+      "city": "Antananarivo",
+      "country": "Madagascar",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1067,
+      "slug": "antananarivo-old-town-antananarivo",
+      "name": "Antananarivo Old Town",
+      "city": "Antananarivo",
+      "country": "Madagascar",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1087,
+      "slug": "asuncion-historic-quarter-asuncion",
+      "name": "Asuncion Historic Quarter",
+      "city": "Asuncion",
+      "country": "Paraguay",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1088,
+      "slug": "asuncion-waterfront-asuncion",
+      "name": "Asuncion Waterfront",
+      "city": "Asuncion",
+      "country": "Paraguay",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 543,
+      "slug": "atacama-valle-de-la-luna-san-pedro-de-atacama",
+      "name": "Atacama Valle de la Luna",
+      "city": "San Pedro de Atacama",
+      "country": "Chile",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1002,
+      "slug": "athens-central-park-athens",
+      "name": "Athens Central Park",
+      "city": "Athens",
+      "country": "Greece",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1001,
+      "slug": "athens-old-town-athens",
+      "name": "Athens Old Town",
+      "city": "Athens",
+      "country": "Greece",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1021,
+      "slug": "baghdad-historic-quarter-baghdad",
+      "name": "Baghdad Historic Quarter",
+      "city": "Baghdad",
+      "country": "Iraq",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1022,
+      "slug": "baghdad-waterfront-baghdad",
+      "name": "Baghdad Waterfront",
+      "city": "Baghdad",
+      "country": "Iraq",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1014,
+      "slug": "baku-central-park-baku",
+      "name": "Baku Central Park",
+      "city": "Baku",
+      "country": "Azerbaijan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1013,
+      "slug": "baku-old-town-baku",
+      "name": "Baku Old Town",
+      "city": "Baku",
+      "country": "Azerbaijan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 994,
+      "slug": "barcelona-cultural-district-barcelona",
+      "name": "Barcelona Cultural District",
+      "city": "Barcelona",
+      "country": "Spain",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 993,
+      "slug": "barcelona-main-square-barcelona",
+      "name": "Barcelona Main Square",
+      "city": "Barcelona",
+      "country": "Spain",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1024,
+      "slug": "beirut-cultural-district-beirut",
+      "name": "Beirut Cultural District",
+      "city": "Beirut",
+      "country": "Lebanon",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1023,
+      "slug": "beirut-main-square-beirut",
+      "name": "Beirut Main Square",
+      "city": "Beirut",
+      "country": "Lebanon",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1009,
+      "slug": "belgrade-historic-quarter-belgrade",
+      "name": "Belgrade Historic Quarter",
+      "city": "Belgrade",
+      "country": "Serbia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1010,
+      "slug": "belgrade-waterfront-belgrade",
+      "name": "Belgrade Waterfront",
+      "city": "Belgrade",
+      "country": "Serbia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 804,
+      "slug": "black-forest-triberg",
+      "name": "Black Forest",
+      "city": "Triberg",
+      "country": "Germany",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1078,
+      "slug": "bogota-cultural-district-bogota",
+      "name": "Bogota Cultural District",
+      "city": "Bogota",
+      "country": "Colombia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1077,
+      "slug": "bogota-main-square-bogota",
+      "name": "Bogota Main Square",
+      "city": "Bogota",
+      "country": "Colombia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 489,
+      "slug": "brussels-atomium-brussels",
+      "name": "Brussels Atomium",
+      "city": "Brussels",
+      "country": "Belgium",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1006,
+      "slug": "bucharest-cultural-district-bucharest",
+      "name": "Bucharest Cultural District",
+      "city": "Bucharest",
+      "country": "Romania",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1005,
+      "slug": "bucharest-main-square-bucharest",
+      "name": "Bucharest Main Square",
+      "city": "Bucharest",
+      "country": "Romania",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 977,
+      "slug": "budapest-cultural-district-budapest",
+      "name": "Budapest Cultural District",
+      "city": "Budapest",
+      "country": "Hungary",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 976,
+      "slug": "budapest-main-square-budapest",
+      "name": "Budapest Main Square",
+      "city": "Budapest",
+      "country": "Hungary",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 587,
+      "slug": "bursa-cumalikizik-village-bursa",
+      "name": "Bursa Cumalikizik Village",
+      "city": "Bursa",
+      "country": "Turkey",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1045,
+      "slug": "casablanca-historic-quarter-casablanca",
+      "name": "Casablanca Historic Quarter",
+      "city": "Casablanca",
+      "country": "Morocco",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1046,
+      "slug": "casablanca-waterfront-casablanca",
+      "name": "Casablanca Waterfront",
+      "city": "Casablanca",
+      "country": "Morocco",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 984,
+      "slug": "copenhagen-central-park-copenhagen",
+      "name": "Copenhagen Central Park",
+      "city": "Copenhagen",
+      "country": "Denmark",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 983,
+      "slug": "copenhagen-old-town-copenhagen",
+      "name": "Copenhagen Old Town",
+      "city": "Copenhagen",
+      "country": "Denmark",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 449,
+      "slug": "dakar-goree-island-dakar",
+      "name": "Dakar Goree Island",
+      "city": "Dakar",
+      "country": "Senegal",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1026,
+      "slug": "damascus-central-park-damascus",
+      "name": "Damascus Central Park",
+      "city": "Damascus",
+      "country": "Syria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1025,
+      "slug": "damascus-old-town-damascus",
+      "name": "Damascus Old Town",
+      "city": "Damascus",
+      "country": "Syria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 130,
+      "slug": "dead-sea-ein-bokek-ein-bokek",
+      "name": "Dead Sea Ein Bokek",
+      "city": "Ein Bokek",
+      "country": "Israel",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1030,
+      "slug": "doha-cultural-district-doha",
+      "name": "Doha Cultural District",
+      "city": "Doha",
+      "country": "Qatar",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1029,
+      "slug": "doha-main-square-doha",
+      "name": "Doha Main Square",
+      "city": "Doha",
+      "country": "Qatar",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 988,
+      "slug": "dublin-cultural-district-dublin",
+      "name": "Dublin Cultural District",
+      "city": "Dublin",
+      "country": "Ireland",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 987,
+      "slug": "dublin-main-square-dublin",
+      "name": "Dublin Main Square",
+      "city": "Dublin",
+      "country": "Ireland",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1003,
+      "slug": "dubrovnik-historic-quarter-dubrovnik",
+      "name": "Dubrovnik Historic Quarter",
+      "city": "Dubrovnik",
+      "country": "Croatia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1004,
+      "slug": "dubrovnik-waterfront-dubrovnik",
+      "name": "Dubrovnik Waterfront",
+      "city": "Dubrovnik",
+      "country": "Croatia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 997,
+      "slug": "florence-historic-quarter-florence",
+      "name": "Florence Historic Quarter",
+      "city": "Florence",
+      "country": "Italy",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 998,
+      "slug": "florence-waterfront-florence",
+      "name": "Florence Waterfront",
+      "city": "Florence",
+      "country": "Italy",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1066,
+      "slug": "gaborone-cultural-district-gaborone",
+      "name": "Gaborone Cultural District",
+      "city": "Gaborone",
+      "country": "Botswana",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1065,
+      "slug": "gaborone-main-square-gaborone",
+      "name": "Gaborone Main Square",
+      "city": "Gaborone",
+      "country": "Botswana",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1074,
+      "slug": "guadalajara-central-park-guadalajara",
+      "name": "Guadalajara Central Park",
+      "city": "Guadalajara",
+      "country": "Mexico",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1073,
+      "slug": "guadalajara-old-town-guadalajara",
+      "name": "Guadalajara Old Town",
+      "city": "Guadalajara",
+      "country": "Mexico",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1062,
+      "slug": "harare-central-park-harare",
+      "name": "Harare Central Park",
+      "city": "Harare",
+      "country": "Zimbabwe",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1061,
+      "slug": "harare-old-town-harare",
+      "name": "Harare Old Town",
+      "city": "Harare",
+      "country": "Zimbabwe",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 193,
+      "slug": "havana-malecon-havana",
+      "name": "Havana Malecón",
+      "city": "Havana",
+      "country": "Cuba",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 985,
+      "slug": "helsinki-historic-quarter-helsinki",
+      "name": "Helsinki Historic Quarter",
+      "city": "Helsinki",
+      "country": "Finland",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 986,
+      "slug": "helsinki-waterfront-helsinki",
+      "name": "Helsinki Waterfront",
+      "city": "Helsinki",
+      "country": "Finland",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1056,
+      "slug": "kampala-central-park-kampala",
+      "name": "Kampala Central Park",
+      "city": "Kampala",
+      "country": "Uganda",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1055,
+      "slug": "kampala-old-town-kampala",
+      "name": "Kampala Old Town",
+      "city": "Kampala",
+      "country": "Uganda",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 596,
+      "slug": "kars-ani-ruins-kars",
+      "name": "Kars Ani Ruins",
+      "city": "Kars",
+      "country": "Turkey",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 427,
+      "slug": "kerala-backwaters-alleppey-alleppey",
+      "name": "Kerala Backwaters Alleppey",
+      "city": "Alleppey",
+      "country": "India",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1054,
+      "slug": "khartoum-cultural-district-khartoum",
+      "name": "Khartoum Cultural District",
+      "city": "Khartoum",
+      "country": "Sudan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1053,
+      "slug": "khartoum-main-square-khartoum",
+      "name": "Khartoum Main Square",
+      "city": "Khartoum",
+      "country": "Sudan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1057,
+      "slug": "kigali-historic-quarter-kigali",
+      "name": "Kigali Historic Quarter",
+      "city": "Kigali",
+      "country": "Rwanda",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1058,
+      "slug": "kigali-waterfront-kigali",
+      "name": "Kigali Waterfront",
+      "city": "Kigali",
+      "country": "Rwanda",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 397,
+      "slug": "kuala-lumpur-batu-caves-kuala-lumpur",
+      "name": "Kuala Lumpur Batu Caves",
+      "city": "Kuala Lumpur",
+      "country": "Malaysia",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1032,
+      "slug": "kuwait-city-central-park-kuwait-city",
+      "name": "Kuwait City Central Park",
+      "city": "Kuwait City",
+      "country": "Kuwait",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1031,
+      "slug": "kuwait-city-old-town-kuwait-city",
+      "name": "Kuwait City Old Town",
+      "city": "Kuwait City",
+      "country": "Kuwait",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1086,
+      "slug": "la-paz-central-park-la-paz",
+      "name": "La Paz Central Park",
+      "city": "La Paz",
+      "country": "Bolivia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1085,
+      "slug": "la-paz-old-town-la-paz",
+      "name": "La Paz Old Town",
+      "city": "La Paz",
+      "country": "Bolivia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1044,
+      "slug": "lagos-central-park-lagos",
+      "name": "Lagos Central Park",
+      "city": "Lagos",
+      "country": "Nigeria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1043,
+      "slug": "lagos-old-town-lagos",
+      "name": "Lagos Old Town",
+      "city": "Lagos",
+      "country": "Nigeria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 174,
+      "slug": "lake-baikal-irkutsk",
+      "name": "Lake Baikal",
+      "city": "Irkutsk",
+      "country": "Russia",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 249,
+      "slug": "lake-van-akdamar-van",
+      "name": "Lake Van Akdamar",
+      "city": "Van",
+      "country": "Turkey",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1081,
+      "slug": "lima-historic-quarter-lima",
+      "name": "Lima Historic Quarter",
+      "city": "Lima",
+      "country": "Peru",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1082,
+      "slug": "lima-waterfront-lima",
+      "name": "Lima Waterfront",
+      "city": "Lima",
+      "country": "Peru",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 990,
+      "slug": "lisbon-central-park-lisbon",
+      "name": "Lisbon Central Park",
+      "city": "Lisbon",
+      "country": "Portugal",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 989,
+      "slug": "lisbon-old-town-lisbon",
+      "name": "Lisbon Old Town",
+      "city": "Lisbon",
+      "country": "Portugal",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 991,
+      "slug": "madrid-historic-quarter-madrid",
+      "name": "Madrid Historic Quarter",
+      "city": "Madrid",
+      "country": "Spain",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 992,
+      "slug": "madrid-waterfront-madrid",
+      "name": "Madrid Waterfront",
+      "city": "Madrid",
+      "country": "Spain",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1033,
+      "slug": "manama-historic-quarter-manama",
+      "name": "Manama Historic Quarter",
+      "city": "Manama",
+      "country": "Bahrain",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1034,
+      "slug": "manama-waterfront-manama",
+      "name": "Manama Waterfront",
+      "city": "Manama",
+      "country": "Bahrain",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1060,
+      "slug": "maputo-cultural-district-maputo",
+      "name": "Maputo Cultural District",
+      "city": "Maputo",
+      "country": "Mozambique",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1059,
+      "slug": "maputo-main-square-maputo",
+      "name": "Maputo Main Square",
+      "city": "Maputo",
+      "country": "Mozambique",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1080,
+      "slug": "medellin-central-park-medellin",
+      "name": "Medellin Central Park",
+      "city": "Medellin",
+      "country": "Colombia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1079,
+      "slug": "medellin-old-town-medellin",
+      "name": "Medellin Old Town",
+      "city": "Medellin",
+      "country": "Colombia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1072,
+      "slug": "mexico-city-cultural-district-mexico-city",
+      "name": "Mexico City Cultural District",
+      "city": "Mexico City",
+      "country": "Mexico",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1071,
+      "slug": "mexico-city-main-square-mexico-city",
+      "name": "Mexico City Main Square",
+      "city": "Mexico City",
+      "country": "Mexico",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 996,
+      "slug": "milan-central-park-milan",
+      "name": "Milan Central Park",
+      "city": "Milan",
+      "country": "Italy",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 995,
+      "slug": "milan-old-town-milan",
+      "name": "Milan Old Town",
+      "city": "Milan",
+      "country": "Italy",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1075,
+      "slug": "monterrey-historic-quarter-monterrey",
+      "name": "Monterrey Historic Quarter",
+      "city": "Monterrey",
+      "country": "Mexico",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1076,
+      "slug": "monterrey-waterfront-monterrey",
+      "name": "Monterrey Waterfront",
+      "city": "Monterrey",
+      "country": "Mexico",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1090,
+      "slug": "montevideo-cultural-district-montevideo",
+      "name": "Montevideo Cultural District",
+      "city": "Montevideo",
+      "country": "Uruguay",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1089,
+      "slug": "montevideo-main-square-montevideo",
+      "name": "Montevideo Main Square",
+      "city": "Montevideo",
+      "country": "Uruguay",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1036,
+      "slug": "muscat-cultural-district-muscat",
+      "name": "Muscat Cultural District",
+      "city": "Muscat",
+      "country": "Oman",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1035,
+      "slug": "muscat-main-square-muscat",
+      "name": "Muscat Main Square",
+      "city": "Muscat",
+      "country": "Oman",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1038,
+      "slug": "nairobi-central-park-nairobi",
+      "name": "Nairobi Central Park",
+      "city": "Nairobi",
+      "country": "Kenya",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1037,
+      "slug": "nairobi-old-town-nairobi",
+      "name": "Nairobi Old Town",
+      "city": "Nairobi",
+      "country": "Kenya",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 128,
+      "slug": "old-city-jerusalem-jerusalem",
+      "name": "Old City Jerusalem",
+      "city": "Jerusalem",
+      "country": "Israel",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 982,
+      "slug": "oslo-cultural-district-oslo",
+      "name": "Oslo Cultural District",
+      "city": "Oslo",
+      "country": "Norway",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 981,
+      "slug": "oslo-main-square-oslo",
+      "name": "Oslo Main Square",
+      "city": "Oslo",
+      "country": "Norway",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 788,
+      "slug": "park-guell-barcelona-2",
+      "name": "Park Guell",
+      "city": "Barcelona",
+      "country": "Spain",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 119,
+      "slug": "petronas-towers-kuala-lumpur",
+      "name": "Petronas Towers",
+      "city": "Kuala Lumpur",
+      "country": "Malaysia",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1069,
+      "slug": "port-louis-historic-quarter-port-louis",
+      "name": "Port Louis Historic Quarter",
+      "city": "Port Louis",
+      "country": "Mauritius",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1070,
+      "slug": "port-louis-waterfront-port-louis",
+      "name": "Port Louis Waterfront",
+      "city": "Port Louis",
+      "country": "Mauritius",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 974,
+      "slug": "prague-historic-quarter-prague",
+      "name": "Prague Historic Quarter",
+      "city": "Prague",
+      "country": "Czech Republic",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 975,
+      "slug": "prague-waterfront-prague",
+      "name": "Prague Waterfront",
+      "city": "Prague",
+      "country": "Czech Republic",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 246,
+      "slug": "prince-islands-istanbul",
+      "name": "Prince Islands",
+      "city": "Istanbul",
+      "country": "Turkey",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 531,
+      "slug": "quebec-old-quebec-quebec-city",
+      "name": "Quebec Old Quebec",
+      "city": "Quebec City",
+      "country": "Canada",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1084,
+      "slug": "quito-cultural-district-quito",
+      "name": "Quito Cultural District",
+      "city": "Quito",
+      "country": "Ecuador",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1083,
+      "slug": "quito-main-square-quito",
+      "name": "Quito Main Square",
+      "city": "Quito",
+      "country": "Ecuador",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 698,
+      "slug": "rio-copacabana-beach-rio-de-janeiro",
+      "name": "Rio Copacabana Beach",
+      "city": "Rio de Janeiro",
+      "country": "Brazil",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1027,
+      "slug": "riyadh-historic-quarter-riyadh",
+      "name": "Riyadh Historic Quarter",
+      "city": "Riyadh",
+      "country": "Saudi Arabia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1028,
+      "slug": "riyadh-waterfront-riyadh",
+      "name": "Riyadh Waterfront",
+      "city": "Riyadh",
+      "country": "Saudi Arabia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 582,
+      "slug": "rize-firtina-valley-rize",
+      "name": "Rize Firtina Valley",
+      "city": "Rize",
+      "country": "Turkey",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1008,
+      "slug": "sofia-central-park-sofia",
+      "name": "Sofia Central Park",
+      "city": "Sofia",
+      "country": "Bulgaria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1007,
+      "slug": "sofia-old-town-sofia",
+      "name": "Sofia Old Town",
+      "city": "Sofia",
+      "country": "Bulgaria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 979,
+      "slug": "stockholm-historic-quarter-stockholm",
+      "name": "Stockholm Historic Quarter",
+      "city": "Stockholm",
+      "country": "Sweden",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 980,
+      "slug": "stockholm-waterfront-stockholm",
+      "name": "Stockholm Waterfront",
+      "city": "Stockholm",
+      "country": "Sweden",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 458,
+      "slug": "stone-town-zanzibar-zanzibar",
+      "name": "Stone Town Zanzibar",
+      "city": "Zanzibar",
+      "country": "Tanzania",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 28,
+      "slug": "tac-mahal-agra",
+      "name": "Tac Mahal",
+      "city": "Agra",
+      "country": "India",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1018,
+      "slug": "tashkent-cultural-district-tashkent",
+      "name": "Tashkent Cultural District",
+      "city": "Tashkent",
+      "country": "Uzbekistan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1017,
+      "slug": "tashkent-main-square-tashkent",
+      "name": "Tashkent Main Square",
+      "city": "Tashkent",
+      "country": "Uzbekistan",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1012,
+      "slug": "tbilisi-cultural-district-tbilisi",
+      "name": "Tbilisi Cultural District",
+      "city": "Tbilisi",
+      "country": "Georgia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1011,
+      "slug": "tbilisi-main-square-tbilisi",
+      "name": "Tbilisi Main Square",
+      "city": "Tbilisi",
+      "country": "Georgia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1020,
+      "slug": "tehran-central-park-tehran",
+      "name": "Tehran Central Park",
+      "city": "Tehran",
+      "country": "Iran",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1019,
+      "slug": "tehran-old-town-tehran",
+      "name": "Tehran Old Town",
+      "city": "Tehran",
+      "country": "Iran",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1051,
+      "slug": "tripoli-historic-quarter-tripoli",
+      "name": "Tripoli Historic Quarter",
+      "city": "Tripoli",
+      "country": "Libya",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1052,
+      "slug": "tripoli-waterfront-tripoli",
+      "name": "Tripoli Waterfront",
+      "city": "Tripoli",
+      "country": "Libya",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 745,
+      "slug": "tsukiji-outer-market-sushi-tokyo",
+      "name": "Tsukiji Outer Market Sushi",
+      "city": "Tokyo",
+      "country": "Japan",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 1048,
+      "slug": "tunis-cultural-district-tunis",
+      "name": "Tunis Cultural District",
+      "city": "Tunis",
+      "country": "Tunisia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1047,
+      "slug": "tunis-main-square-tunis",
+      "name": "Tunis Main Square",
+      "city": "Tunis",
+      "country": "Tunisia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1000,
+      "slug": "venice-cultural-district-venice",
+      "name": "Venice Cultural District",
+      "city": "Venice",
+      "country": "Italy",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 999,
+      "slug": "venice-main-square-venice",
+      "name": "Venice Main Square",
+      "city": "Venice",
+      "country": "Italy",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 109,
+      "slug": "victoria-peak-hong-kong-hong-kong",
+      "name": "Victoria Peak Hong Kong",
+      "city": "Hong Kong",
+      "country": "China",
+      "reason": "yinelenen_adres"
+    },
+    {
+      "id": 973,
+      "slug": "vienna-central-park-vienna",
+      "name": "Vienna Central Park",
+      "city": "Vienna",
+      "country": "Austria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 972,
+      "slug": "vienna-old-town-vienna",
+      "name": "Vienna Old Town",
+      "city": "Vienna",
+      "country": "Austria",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 978,
+      "slug": "warsaw-central-park-warsaw",
+      "name": "Warsaw Central Park",
+      "city": "Warsaw",
+      "country": "Poland",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1063,
+      "slug": "windhoek-historic-quarter-windhoek",
+      "name": "Windhoek Historic Quarter",
+      "city": "Windhoek",
+      "country": "Namibia",
+      "reason": "sablon_uretim"
+    },
+    {
+      "id": 1064,
+      "slug": "windhoek-waterfront-windhoek",
+      "name": "Windhoek Waterfront",
+      "city": "Windhoek",
+      "country": "Namibia",
+      "reason": "sablon_uretim"
+    }
+  ],
+  "redirects": [
+    {
+      "fromId": 601,
+      "fromSlug": "antalya-termessos-ruins-antalya",
+      "fromName": "Antalya Termessos Ruins",
+      "toId": 893,
+      "toSlug": "termessos-ruins-antalya",
+      "toName": "Termessos Ruins"
+    },
+    {
+      "fromId": 543,
+      "fromSlug": "atacama-valle-de-la-luna-san-pedro-de-atacama",
+      "fromName": "Atacama Valle de la Luna",
+      "toId": 187,
+      "toSlug": "atacama-desert-valle-de-la-luna-san-pedro-de-atacama",
+      "toName": "Atacama Desert Valle de la Luna"
+    },
+    {
+      "fromId": 804,
+      "fromSlug": "black-forest-triberg",
+      "fromName": "Black Forest",
+      "toId": 225,
+      "toSlug": "black-forest-triberg-triberg",
+      "toName": "Black Forest Triberg"
+    },
+    {
+      "fromId": 489,
+      "fromSlug": "brussels-atomium-brussels",
+      "fromName": "Brussels Atomium",
+      "toId": 803,
+      "toSlug": "atomium-brussels-brussels",
+      "toName": "Atomium Brussels"
+    },
+    {
+      "fromId": 587,
+      "fromSlug": "bursa-cumalikizik-village-bursa",
+      "fromName": "Bursa Cumalikizik Village",
+      "toId": 908,
+      "toSlug": "cumalikizik-village-bursa",
+      "toName": "Cumalikizik Village"
+    },
+    {
+      "fromId": 449,
+      "fromSlug": "dakar-goree-island-dakar",
+      "fromName": "Dakar Goree Island",
+      "toId": 822,
+      "toSlug": "goree-island-dakar",
+      "toName": "Goree Island"
+    },
+    {
+      "fromId": 130,
+      "fromSlug": "dead-sea-ein-bokek-ein-bokek",
+      "fromName": "Dead Sea Ein Bokek",
+      "toId": 811,
+      "toSlug": "dead-sea-float-ein-bokek",
+      "toName": "Dead Sea Float"
+    },
+    {
+      "fromId": 193,
+      "fromSlug": "havana-malecon-havana",
+      "fromName": "Havana Malecón",
+      "toId": 837,
+      "toSlug": "havana-malecon-havana-2",
+      "toName": "Havana Malecon"
+    },
+    {
+      "fromId": 596,
+      "fromSlug": "kars-ani-ruins-kars",
+      "fromName": "Kars Ani Ruins",
+      "toId": 882,
+      "toSlug": "ani-ruins-kars",
+      "toName": "Ani Ruins"
+    },
+    {
+      "fromId": 427,
+      "fromSlug": "kerala-backwaters-alleppey-alleppey",
+      "fromName": "Kerala Backwaters Alleppey",
+      "toId": 851,
+      "toSlug": "kerala-backwaters-alleppey",
+      "toName": "Kerala Backwaters"
+    },
+    {
+      "fromId": 397,
+      "fromSlug": "kuala-lumpur-batu-caves-kuala-lumpur",
+      "fromName": "Kuala Lumpur Batu Caves",
+      "toId": 204,
+      "toSlug": "batu-caves-kuala-lumpur",
+      "toName": "Batu Caves"
+    },
+    {
+      "fromId": 174,
+      "fromSlug": "lake-baikal-irkutsk",
+      "fromName": "Lake Baikal",
+      "toId": 809,
+      "toSlug": "trans-siberian-lake-baikal-irkutsk",
+      "toName": "Trans-Siberian Lake Baikal"
+    },
+    {
+      "fromId": 249,
+      "fromSlug": "lake-van-akdamar-van",
+      "fromName": "Lake Van Akdamar",
+      "toId": 884,
+      "toSlug": "van-lake-akdamar-van",
+      "toName": "Van Lake Akdamar"
+    },
+    {
+      "fromId": 128,
+      "fromSlug": "old-city-jerusalem-jerusalem",
+      "fromName": "Old City Jerusalem",
+      "toId": 812,
+      "toSlug": "jerusalem-old-city-jerusalem",
+      "toName": "Jerusalem Old City"
+    },
+    {
+      "fromId": 788,
+      "fromSlug": "park-guell-barcelona-2",
+      "fromName": "Park Guell",
+      "toId": 84,
+      "toSlug": "park-guell-barcelona",
+      "toName": "Park Güell"
+    },
+    {
+      "fromId": 119,
+      "fromSlug": "petronas-towers-kuala-lumpur",
+      "fromName": "Petronas Towers",
+      "toId": 848,
+      "toSlug": "petronas-towers-skybridge-kuala-lumpur",
+      "toName": "Petronas Towers Skybridge"
+    },
+    {
+      "fromId": 246,
+      "fromSlug": "prince-islands-istanbul",
+      "fromName": "Prince Islands",
+      "toId": 774,
+      "toSlug": "princes-islands-istanbul",
+      "toName": "Princes Islands"
+    },
+    {
+      "fromId": 531,
+      "fromSlug": "quebec-old-quebec-quebec-city",
+      "fromName": "Quebec Old Quebec",
+      "toId": 828,
+      "toSlug": "old-quebec-quebec-city",
+      "toName": "Old Quebec"
+    },
+    {
+      "fromId": 698,
+      "fromSlug": "rio-copacabana-beach-rio-de-janeiro",
+      "fromName": "Rio Copacabana Beach",
+      "toId": 831,
+      "toSlug": "copacabana-beach-rio-de-janeiro",
+      "toName": "Copacabana Beach"
+    },
+    {
+      "fromId": 582,
+      "fromSlug": "rize-firtina-valley-rize",
+      "fromName": "Rize Firtina Valley",
+      "toId": 961,
+      "toSlug": "firtina-valley-rize",
+      "toName": "Firtina Valley"
+    },
+    {
+      "fromId": 458,
+      "fromSlug": "stone-town-zanzibar-zanzibar",
+      "fromName": "Stone Town Zanzibar",
+      "toId": 149,
+      "toSlug": "zanzibar-stone-town-zanzibar",
+      "toName": "Zanzibar Stone Town"
+    },
+    {
+      "fromId": 28,
+      "fromSlug": "tac-mahal-agra",
+      "fromName": "Tac Mahal",
+      "toId": 133,
+      "toSlug": "taj-mahal-agra",
+      "toName": "Taj Mahal"
+    },
+    {
+      "fromId": 745,
+      "fromSlug": "tsukiji-outer-market-sushi-tokyo",
+      "fromName": "Tsukiji Outer Market Sushi",
+      "toId": 726,
+      "toSlug": "tokyo-tsukiji-outer-market-tokyo",
+      "toName": "Tokyo Tsukiji Outer Market"
+    },
+    {
+      "fromId": 109,
+      "fromSlug": "victoria-peak-hong-kong-hong-kong",
+      "fromName": "Victoria Peak Hong Kong",
+      "toId": 839,
+      "toSlug": "hong-kong-victoria-peak-hong-kong",
+      "toName": "Hong Kong Victoria Peak"
+    }
+  ],
+  "protected": [
+    {
+      "id": 625,
+      "slug": "albuquerque-old-town-albuquerque",
+      "name": "Albuquerque Old Town",
+      "city": "Albuquerque",
+      "country": "USA"
+    },
+    {
+      "id": 323,
+      "slug": "bucharest-old-town-bucharest",
+      "name": "Bucharest Old Town",
+      "city": "Bucharest",
+      "country": "Romania"
+    },
+    {
+      "id": 777,
+      "slug": "dubrovnik-old-town-dubrovnik",
+      "name": "Dubrovnik Old Town",
+      "city": "Dubrovnik",
+      "country": "Croatia"
+    },
+    {
+      "id": 398,
+      "slug": "jakarta-old-town-jakarta",
+      "name": "Jakarta Old Town",
+      "city": "Jakarta",
+      "country": "Indonesia"
+    },
+    {
+      "id": 259,
+      "slug": "lubeck-old-town-lubeck",
+      "name": "Lubeck Old Town",
+      "city": "Lubeck",
+      "country": "Germany"
+    },
+    {
+      "id": 239,
+      "slug": "lviv-old-town-lviv",
+      "name": "Lviv Old Town",
+      "city": "Lviv",
+      "country": "Ukraine"
+    },
+    {
+      "id": 707,
+      "slug": "nessebar-old-town-nessebar",
+      "name": "Nessebar Old Town",
+      "city": "Nessebar",
+      "country": "Bulgaria"
+    },
+    {
+      "id": 706,
+      "slug": "plovdiv-old-town-plovdiv",
+      "name": "Plovdiv Old Town",
+      "city": "Plovdiv",
+      "country": "Bulgaria"
+    },
+    {
+      "id": 277,
+      "slug": "rhodes-old-town-rhodes",
+      "name": "Rhodes Old Town",
+      "city": "Rhodes",
+      "country": "Greece"
+    },
+    {
+      "id": 170,
+      "slug": "riga-old-town-riga",
+      "name": "Riga Old Town",
+      "city": "Riga",
+      "country": "Latvia"
+    },
+    {
+      "id": 223,
+      "slug": "salzburg-old-town-salzburg",
+      "name": "Salzburg Old Town",
+      "city": "Salzburg",
+      "country": "Austria"
+    },
+    {
+      "id": 382,
+      "slug": "takayama-old-town-takayama",
+      "name": "Takayama Old Town",
+      "city": "Takayama",
+      "country": "Japan"
+    },
+    {
+      "id": 169,
+      "slug": "tallinn-old-town-tallinn",
+      "name": "Tallinn Old Town",
+      "city": "Tallinn",
+      "country": "Estonia"
+    },
+    {
+      "id": 240,
+      "slug": "tbilisi-old-town-tbilisi",
+      "name": "Tbilisi Old Town",
+      "city": "Tbilisi",
+      "country": "Georgia"
+    },
+    {
+      "id": 331,
+      "slug": "vilnius-old-town-vilnius",
+      "name": "Vilnius Old Town",
+      "city": "Vilnius",
+      "country": "Lithuania"
+    },
+    {
+      "id": 171,
+      "slug": "warsaw-old-town-warsaw",
+      "name": "Warsaw Old Town",
+      "city": "Warsaw",
+      "country": "Poland"
+    }
+  ]
+}

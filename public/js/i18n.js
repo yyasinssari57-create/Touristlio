@@ -782,21 +782,21 @@ window.TL_I18N = (function () {
     home: {
       tr: {
         title: 'Touristlio — Gerçek Gezginlerle Dünyayı Keşfet',
-        description: 'Gizli köşelerden ikonik yapılara, gerçek gezginlerin Tiola deneyimleriyle dünyanın en güzel yerlerini keşfet. 135 ülke, 1.090+ destinasyon.',
+        description: 'Gizli köşelerden ikonik yapılara, gerçek gezginlerin Tiola deneyimleriyle dünyanın en güzel yerlerini keşfet.',
       },
       en: {
         title: 'Touristlio — Discover the World with Real Travelers',
-        description: 'From hidden gems to iconic landmarks, discover beautiful places through real traveler Tiola reviews. 135 countries, 1,090+ destinations.',
+        description: 'From hidden gems to iconic landmarks, discover beautiful places through real traveler Tiola reviews.',
       },
     },
     explore: {
       tr: {
         title: 'Gezilecek Yerler — Dünyayı Keşfet | Touristlio',
-        description: '135 ülkede 1.090+ destinasyon. Şehre, kategoriye, puana göre filtrele. Gerçek gezginlerin Tiola değerlendirmeleri.',
+        description: 'Şehre, kategoriye, puana göre filtrele. Gerçek gezginlerin Tiola değerlendirmeleri.',
       },
       en: {
         title: 'Places to Visit — Explore the World | Touristlio',
-        description: '1,090+ destinations in 135 countries. Filter by city, category, and rating. Real traveler Tiola reviews.',
+        description: 'Filter by city, category, and rating. Real traveler Tiola reviews.',
       },
     },
     places: {
@@ -838,15 +838,22 @@ window.TL_I18N = (function () {
     if (el) el.setAttribute('content', content);
   }
 
-  function applyShellMeta(kind, lang) {
+  function applyShellMeta(kind, lang, counts) {
     const pack = SHELL_META[kind] || SHELL_META.home;
     const meta = pack[lang === 'en' ? 'en' : 'tr'] || pack.tr;
     document.title = meta.title;
-    setHeadMeta('meta[name="description"]', meta.description);
+    const stats = counts || (typeof window !== 'undefined' ? window.__TL_HOME_STATS : null);
+    const helper = typeof window !== 'undefined' ? window.TL_PLACE_COUNTS : null;
+    const live = (kind === 'home' || kind === 'explore') && helper && helper.hasCounts(stats)
+      ? helper.shellDescription(kind, lang === 'en' ? 'en' : 'tr', stats)
+      : '';
+    const existing = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    const description = live || ((kind === 'home' || kind === 'explore') ? (existing || meta.description) : meta.description);
+    setHeadMeta('meta[name="description"]', description);
     setHeadMeta('meta[property="og:title"]', meta.title);
-    setHeadMeta('meta[property="og:description"]', meta.description);
+    setHeadMeta('meta[property="og:description"]', description);
     setHeadMeta('meta[name="twitter:title"]', meta.title);
-    setHeadMeta('meta[name="twitter:description"]', meta.description);
+    setHeadMeta('meta[name="twitter:description"]', description);
   }
 
   function apply(lang) {

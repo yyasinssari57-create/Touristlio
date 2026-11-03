@@ -2395,7 +2395,12 @@ function applyHomepageStats(stats) {
   if (sc) animateStat(sc, countries);
   if (sp) animateStat(sp, listed);
   if (st) animateStat(st, tiolas);
+  window.__TL_HOME_STATS = { countries, places: listed, tiolas };
   document.getElementById('homeStatsStrip')?.setAttribute('aria-busy', 'false');
+  if (window.TL_I18N && typeof window.TL_I18N.applyShellMeta === 'function' && typeof window.TL_I18N.shellKindFromPath === 'function') {
+    const kind = window.TL_I18N.shellKindFromPath(location.pathname);
+    if (kind === 'home' || kind === 'explore') window.TL_I18N.applyShellMeta(kind, lang, window.__TL_HOME_STATS);
+  }
 }
 
 function loadHomepageStats() {

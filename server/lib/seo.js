@@ -2,36 +2,32 @@ const { siteBaseUrl } = require('./sitemap');
 const { googleSiteVerification } = require('./analytics-config');
 const { trLabel } = require('./tr-labels');
 const { resolveLocale } = require('../../public/js/locale-resolve');
+const { shellDescription } = require('../../public/js/place-count-copy');
 const {
   EN_UNTRANSLATED_TITLE,
   EN_UNTRANSLATED_DESCRIPTION,
 } = require('./blog-i18n');
 
-/** FAZ3-2 static templates. Counts match places.json (1090 places, 135 countries). */
+/** FAZ3-2 titles. Home and explore descriptions come from published counts. */
 const SEO_TEMPLATES = {
   home: {
     tr: {
       title: 'Touristlio — Gerçek Gezginlerle Dünyayı Keşfet',
-      description: 'Gizli köşelerden ikonik yapılara, gerçek gezginlerin '
-        + 'Tiola deneyimleriyle dünyanın en güzel yerlerini keşfet. '
-        + '135 ülke, 1.090+ destinasyon.',
+      description: shellDescription('home', 'tr'),
     },
     en: {
       title: 'Touristlio — Discover the World with Real Travelers',
-      description: 'From hidden gems to iconic landmarks, discover beautiful '
-        + 'places through real traveler Tiola reviews. 135 countries, 1,090+ destinations.',
+      description: shellDescription('home', 'en'),
     },
   },
   explore: {
     tr: {
       title: 'Gezilecek Yerler — Dünyayı Keşfet | Touristlio',
-      description: '135 ülkede 1.090+ destinasyon. Şehre, kategoriye, puana '
-        + 'göre filtrele. Gerçek gezginlerin Tiola değerlendirmeleri.',
+      description: shellDescription('explore', 'tr'),
     },
     en: {
       title: 'Places to Visit — Explore the World | Touristlio',
-      description: '1,090+ destinations in 135 countries. Filter by city, '
-        + 'category, and rating. Real traveler Tiola reviews.',
+      description: shellDescription('explore', 'en'),
     },
   },
 };
@@ -49,7 +45,10 @@ function generateMeta(type, data = {}, locale = 'tr') {
   const tmpl = SEO_TEMPLATES[type];
   if (tmpl) {
     const t = tmpl[lang] || tmpl.tr;
-    return { title: t.title, description: clipMetaDescription(t.description), ogImage: null };
+    const description = (type === 'home' || type === 'explore')
+      ? shellDescription(type, lang, data.counts)
+      : t.description;
+    return { title: t.title, description: clipMetaDescription(description), ogImage: null };
   }
 
   if (type === 'place' && data.place) {

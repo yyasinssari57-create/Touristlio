@@ -48,12 +48,19 @@ function injectEarlyLangBoot(html) {
 }
 
 function injectLocaleModule(html) {
-  if (!html || html.includes('/js/locale-resolve.js')) return html;
-  const tag = `<script src="/js/locale-resolve.js?v=${getAppVersion()}"></script>\n`;
-  if (/<script\s+src="\/js\/i18n\.js/i.test(html)) {
-    return html.replace(/<script\s+src="\/js\/i18n\.js/i, `${tag}<script src="/js/i18n.js`);
+  if (!html) return html;
+  let next = html;
+  if (!next.includes('/js/locale-resolve.js')) {
+    const tag = `<script src="/js/locale-resolve.js?v=${getAppVersion()}"></script>\n`;
+    if (/<script\s+src="\/js\/i18n\.js/i.test(next)) {
+      next = next.replace(/<script\s+src="\/js\/i18n\.js/i, `${tag}<script src="/js/i18n.js`);
+    }
   }
-  return html;
+  if (!next.includes('/js/place-count-copy.js') && /\/js\/i18n\.js/i.test(next)) {
+    const tag = `<script src="/js/place-count-copy.js?v=${getAppVersion()}"></script>\n`;
+    next = next.replace(/<script\s+src="\/js\/i18n\.js/i, `${tag}<script src="/js/i18n.js`);
+  }
+  return next;
 }
 
 function injectClientErrorBoundary(html) {
@@ -195,6 +202,18 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
         if (!seoRest.image) seoRest.image = pub.heroImageUrl;
       }
     } catch { /* default CSS hero */ }
+    try {
+      const { normalizePath, generateMeta } = require('./seo');
+      const kindPath = normalizePath(pathname);
+      const kind = kindPath === '/explore' ? 'explore' : (kindPath === '/' ? 'home' : '');
+      if (kind && !seoRest.description) {
+        const { getHomepageStats } = require('./stats-cache');
+        const counts = await getHomepageStats();
+        const meta = generateMeta(kind, { counts }, lang);
+        if (!seoRest.title) seoRest.title = meta.title;
+        if (counts && Number(counts.places) > 0) seoRest.description = meta.description;
+      }
+    } catch { /* static fallback description */ }
   }
   const jsonLd = seo.jsonLd != null ? seo.jsonLd : autoJsonLd(pathname, relativePath, lang);
   const noindex = shouldNoindexDocument(relativePath, pathname, req?.query) || seoRest.noindex === true;

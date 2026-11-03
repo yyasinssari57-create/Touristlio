@@ -1,3 +1,5 @@
+const { isPublishedPlaceStatus } = require('./place-status');
+
 /** Haversine distance in km */
 function haversineKm(lat1, lng1, lat2, lng2) {
   if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return Infinity;
@@ -11,7 +13,7 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 function isListedPlace(row) {
-  return (row.status || 'published') !== 'archived';
+  return isPublishedPlaceStatus(row && row.status);
 }
 
 function findNearbyPlaces(allRows, originRow, mapPlace, limit = 6) {
@@ -32,7 +34,7 @@ function findSimilarPlaces(allRows, originRow, mapPlace, limit = 6) {
   const origin = mapPlace(originRow);
   const cats = new Set([originRow.category, ...(origin.categories || [])]);
   return allRows
-    .filter((r) => r.id !== originRow.id && (cats.has(r.category) || JSON.parse(r.categories || '[]').some((c) => cats.has(c))))
+    .filter((r) => r.id !== originRow.id && isListedPlace(r) && (cats.has(r.category) || JSON.parse(r.categories || '[]').some((c) => cats.has(c))))
     .map((r) => mapPlace(r))
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
     .slice(0, limit);
