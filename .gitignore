@@ -18,6 +18,9 @@ data/*.db-shm
 Thumbs.db
 public/sitemap.xml
 
+# V4 Adım 4 yer kalite raporu (üretilir, depoya girmez)
+reports/
+
 # Dev logo / restore artifacts (local agent tooling)
 public/images/logo-transparent.png
 scripts/_write-logo*
