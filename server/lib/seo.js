@@ -137,6 +137,8 @@ const ALWAYS_NOINDEX_PATHS = new Set([
   '/profile',
   '/verify-email',
   '/reset-password',
+  // V4 Adım 3: search results are not a landing page.
+  '/search',
 ]);
 
 function hasQueryParams(query) {
@@ -153,7 +155,7 @@ function isAlwaysNoindexPath(pathname) {
     || p.startsWith('/dashboard/');
 }
 
-/** True when this URL must be noindex (private shell, or parameterized listing). */
+/** True when this URL must be noindex (private shell, /search, or parameterized listing). */
 function shouldNoindexPath(pathname, query) {
   if (isAlwaysNoindexPath(pathname)) return true;
   return hasQueryParams(query) && PARAM_LISTING_PATHS.has(normalizePath(pathname));

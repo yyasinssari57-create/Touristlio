@@ -197,8 +197,9 @@ async function insertPlace(body) {
      history, history_en, things_to_do, things_to_do_en,
      culture_food, culture_food_en, travel_tips, travel_tips_en,
      how_to_get_there, how_to_get_there_en, photos,
-     tips, tips_en, tags, search_aliases, categories, lat, lng, popularity, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     tips, tips_en, tags, search_aliases, categories, lat, lng, popularity, status,
+     created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
   `).run(
     id,
     enriched.name,
@@ -296,7 +297,9 @@ async function updatePlace(id, body) {
       image_url = ?, is_local = ?, entry_fee = ?, best_time = ?,
       description = ?, description_en = ?, overview = ?, overview_en = ?,
       history = ?, tips = ?, travel_tips = ?,
-      photos = ?, search_aliases = ?, categories = ?, lat = ?, lng = ?, status = ?
+      photos = ?, search_aliases = ?, categories = ?, lat = ?, lng = ?, status = ?,
+      updated_at = datetime('now'),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), datetime('now'))
     WHERE id = ?
   `).run(
     enriched.name,
@@ -335,7 +338,11 @@ async function updatePlace(id, body) {
 async function archivePlace(id) {
   const row = await db.prepare('SELECT id FROM places WHERE id = ?').get(id);
   if (!row) return null;
-  await db.prepare("UPDATE places SET status = 'archived' WHERE id = ?").run(id);
+  await db.prepare(`
+    UPDATE places SET status = 'archived', updated_at = datetime('now'),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), datetime('now'))
+    WHERE id = ?
+  `).run(id);
   return { id, status: 'archived' };
 }
 

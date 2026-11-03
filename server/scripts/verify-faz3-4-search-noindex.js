@@ -2,8 +2,9 @@
  * Claude Master PRD — FAZ3-4 (arama sayfası canonical + noindex).
  * Usage: node server/scripts/verify-faz3-4-search-noindex.js
  *
- * Parametreli /explore, /search ve /places noindex olur; canonical sorguyu
- * taşımaz. Parametresiz liste ve mekân detayı indexlenir. Veritabanı gerekmez.
+ * Parametreli /explore ve /places noindex olur; canonical sorguyu taşımaz.
+ * V4 Adım 3: /search (sorgu olsun olmasın) noindex. Parametresiz keşfet
+ * ve mekân detayı indexlenir. Veritabanı gerekmez.
  */
 const fs = require('fs');
 const path = require('path');
@@ -48,8 +49,10 @@ console.log('verify-faz3-4-search-noindex');
 
 const base = siteBaseUrl();
 
-if (shouldNoindexPath('/search', {})) fail('bare /search must stay indexable');
-else ok('bare /search is indexable');
+if (!shouldNoindexPath('/search', {})) fail('bare /search must be noindex');
+else ok('bare /search is noindex');
+if (!shouldNoindexPath('/en/search', {})) fail('/en/search must be noindex');
+else ok('/en/search is noindex');
 if (!shouldNoindexPath('/search', { q: 'istanbul' })) fail('/search?q= must be noindex');
 else ok('/search?q= noindex');
 if (!shouldNoindexPath('/en/explore', { country: 'turkey' })) fail('EN /explore?country= noindex');
@@ -74,14 +77,20 @@ if (!shouldNoindexDocument('login.html', '/login', {})) fail('login.html file no
 else ok('login.html file noindex');
 if (!shouldNoindexDocument('404.html', '/missing', {})) fail('404.html file noindex');
 else ok('404.html file noindex');
-if (shouldNoindexDocument('search.html', '/search', {})) fail('search.html without query noindex');
-else ok('search.html without query is indexable');
+if (!shouldNoindexDocument('search.html', '/search', {})) fail('search.html without query must be noindex');
+else ok('search.html without query is noindex');
 if (!shouldNoindexDocument('search.html', '/search', { q: 'paris', page: '2' })) fail('search.html with query');
 else ok('search.html with query is noindex');
 
-const bareSearch = buildSeoHead({ pathname: '/search', lang: 'tr' });
-if (bareSearch.includes('noindex')) fail('buildSeoHead /search without flag is noindex');
-else ok('buildSeoHead does not noindex bare /search by itself');
+const bareSearch = buildSeoHead({
+  pathname: '/search',
+  lang: 'tr',
+  noindex: shouldNoindexDocument('search.html', '/search', {}),
+});
+if (!bareSearch.includes('noindex, nofollow')) fail('bare /search head is not noindex');
+else ok('bare /search head is noindex');
+if (bareSearch.includes('hreflang=')) fail('bare /search still has hreflang');
+else ok('bare /search omits hreflang');
 if (!bareSearch.includes(`rel="canonical" href="${base}/search"`)) fail('bare search canonical');
 else ok('bare /search canonical has no query');
 
@@ -129,12 +138,12 @@ async function render(relativePath, originalUrl, query) {
 
 (async () => {
   const searchBare = await render('search.html', '/search', {});
-  if (robotsOf(searchBare) !== 'index,follow') fail(`GET /search robots ${robotsOf(searchBare)}`);
-  else ok('GET /search robots index,follow');
+  if (robotsOf(searchBare) !== 'noindex, nofollow') fail(`GET /search robots ${robotsOf(searchBare)}`);
+  else ok('GET /search robots noindex, nofollow');
   if (canonicalOf(searchBare) !== `${base}/search`) fail(`GET /search canonical ${canonicalOf(searchBare)}`);
   else ok('GET /search canonical');
-  if (!headOf(searchBare).includes('hreflang="tr"')) fail('GET /search missing hreflang');
-  else ok('GET /search has hreflang');
+  if (headOf(searchBare).includes('hreflang=')) fail('GET /search still has hreflang');
+  else ok('GET /search omits hreflang');
 
   const searchQ = await render('search.html', '/search?q=istanbul&page=2', { q: 'istanbul', page: '2' });
   if (robotsOf(searchQ) !== 'noindex, nofollow') fail(`GET /search?q robots ${robotsOf(searchQ)}`);
@@ -208,7 +217,7 @@ async function render(relativePath, originalUrl, query) {
     canonical: 'https://www.touristlio.com/en/search',
   }, 'client /en/search?q=');
   assertClient(client, '/search', '', 'https://www.touristlio.com', {
-    robots: 'index,follow',
+    robots: 'noindex, nofollow',
     canonical: 'https://www.touristlio.com/search',
   }, 'client bare /search');
   assertClient(client, '/', '', 'https://www.touristlio.com', {
@@ -279,6 +288,7 @@ function createDocument(origin) {
 }
 
 function runClient() {
+  const locale = read('public/js/locale-resolve.js');
   const code = read('public/js/i18n.js');
   return function visit(pathname, search, origin) {
     const document = createDocument(origin);
@@ -298,7 +308,9 @@ function runClient() {
       },
     };
     sandbox.window = sandbox;
+    sandbox.globalThis = sandbox;
     vm.createContext(sandbox);
+    vm.runInContext(locale, sandbox);
     vm.runInContext(code, sandbox);
     sandbox.TL_I18N.syncParamListingSeo();
     const canon = document.querySelector('link[rel="canonical"]');

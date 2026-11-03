@@ -1284,7 +1284,9 @@ router.patch('/places/:id/info', checkPermission('admin.places'), async (req, re
       pet_friendly = ?,
       has_parking = ?,
       info_source_url = ?,
-      info_verified_at = NOW()
+      info_verified_at = NOW(),
+      updated_at = datetime('now'),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), datetime('now'))
     WHERE id = ?
   `).run(
     v.climate_info,

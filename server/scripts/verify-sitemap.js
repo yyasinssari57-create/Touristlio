@@ -164,17 +164,23 @@ async function checkDatabase() {
     const locSet = new Set(locs.map((loc) => pathnameOf(loc)));
     if (!locSet.has('/explore') || !locSet.has('/en/explore')) fail('sitemap missing /explore');
     else ok('/explore and /en/explore in sitemap');
-    if (!locSet.has('/en/') || !locSet.has('/en/blog') || !locSet.has('/en/gezilecek-yerler') || !locSet.has('/en/search')) {
-      fail('sitemap missing EN listing pages');
-    } else ok('EN listing pages in sitemap');
+    if (!locSet.has('/gezilecek-yerler') || !locSet.has('/en/gezilecek-yerler')) {
+      fail('sitemap missing /gezilecek-yerler');
+    } else ok('/gezilecek-yerler and /en/gezilecek-yerler in sitemap');
+    if (locSet.has('/search') || locSet.has('/en/search')) fail('sitemap still lists /search');
+    else ok('/search is not in the sitemap');
+    if (!locSet.has('/en/') || !locSet.has('/en/blog')) {
+      fail('sitemap missing EN home or blog index');
+    } else ok('EN home and blog index in sitemap');
     if (!locSet.has('/en/legal/about.html') || !locSet.has('/en/legal/contact.html')) {
       fail('sitemap missing EN legal pages');
     } else ok('EN legal pages in sitemap');
     if (locs.some((loc) => pathnameOf(loc).startsWith('/en/en/'))) fail('sitemap has /en/en/ paths');
     else ok('no /en/en/ duplicate prefix');
 
+    const { placeHasEnglishCopy } = require('../lib/place-i18n');
     const places = await db.prepare(
-      'SELECT id, slug, lat, lng, status, overview, description FROM places',
+      'SELECT id, slug, lat, lng, status, overview, description, description_en, overview_en FROM places',
     ).all();
     const qualityPlaces = places
       .map((row) => ({ row, pathName: placeSitemapPath(row) }))
@@ -185,9 +191,15 @@ async function checkDatabase() {
     let expectedPlaces = qualityPlaces.length;
     let leaked = 0;
     let missing = 0;
-    for (const pathName of expectedPlacePaths) {
+    for (const item of qualityPlaces) {
+      const pathName = item.pathName;
       if (!locSet.has(pathName)) missing += 1;
-      if (!locSet.has(`/en${pathName}`)) missing += 1;
+      const enPath = `/en${pathName}`;
+      if (placeHasEnglishCopy(item.row)) {
+        if (!locSet.has(enPath)) missing += 1;
+      } else if (locSet.has(enPath)) {
+        leaked += 1;
+      }
     }
     for (const row of places) {
       const slug = String(row.slug || '').trim();
@@ -260,9 +272,11 @@ async function main() {
     const xml = await buildSitemapXml();
     if (!xml.includes('<urlset')) fail('static xml missing urlset');
     else ok('static xml has urlset (no DB)');
-    if (!xml.includes('/en/gezilecek-yerler') || !xml.includes('/en/search') || !xml.includes('/en/legal/about.html')) {
+    if (!xml.includes('/en/gezilecek-yerler') || !xml.includes('/en/legal/about.html')) {
       fail('static sitemap missing EN twins');
     } else ok('static sitemap has EN listing + legal twins');
+    if (xml.includes('/search')) fail('static sitemap still lists /search');
+    else ok('static sitemap has no /search');
     if (!xml.includes('/explore') || !xml.includes('/en/explore')) fail('static sitemap missing /explore');
     else ok('static sitemap has /explore');
   }

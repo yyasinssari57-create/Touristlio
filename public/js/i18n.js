@@ -907,7 +907,8 @@ window.TL_I18N = (function () {
   }
 
   /**
-   * FAZ3-4: /explore, /search and /places with a query string are noindex.
+   * FAZ3-4: /explore and /places with a query string are noindex.
+   * V4 Adım 3: /search is always noindex, with or without a query.
    * Canonical and og:url stay on that path with the query removed.
    * A clean /explore keeps canonical /explore (not /). Other routes are untouched.
    */
@@ -962,7 +963,7 @@ window.TL_I18N = (function () {
     const home = bare === '/';
     if (!listing && !home) return;
     const en = pathIsEnglish(location.pathname);
-    const noindex = listing && listingHasParams();
+    const noindex = bare === '/search' || (listing && listingHasParams());
     const canonPath = pathForLang(bare, en ? 'en' : 'tr');
     upsertCanonical(absSeo(canonPath));
     upsertMeta('name', 'robots', noindex ? 'noindex, nofollow' : 'index,follow');

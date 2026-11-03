@@ -35,6 +35,7 @@
     "verify:sprint0": "node server/scripts/verify-gemini-sprint0.js",
     "verify:v4-adim1": "node server/scripts/verify-v4-adim1-locale.js",
     "verify:v4-adim2": "node server/scripts/verify-v4-adim2-blog-i18n.js",
+    "verify:v4-adim3": "node server/scripts/verify-v4-adim3-sitemap.js",
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",
     "verify:faz2-1": "node server/scripts/verify-faz2-1-code-split.js",

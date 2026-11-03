@@ -26,12 +26,18 @@ if (englishAlternateLoc('https://www.touristlio.com/blog/foo', 'https://www.tour
 } else ok('EN blog loc');
 
 const paired = withEnglishAlternates(
+  [{ loc: 'https://www.touristlio.com/explore', priority: '0.9', lastmod: '2026-11-01' }],
+  'https://www.touristlio.com',
+);
+if (paired.length !== 2 || paired[1].loc !== 'https://www.touristlio.com/en/explore') {
+  fail('withEnglishAlternates explore');
+} else ok('withEnglishAlternates adds /en/explore');
+const searchPair = withEnglishAlternates(
   [{ loc: 'https://www.touristlio.com/search', priority: '0.6' }],
   'https://www.touristlio.com',
 );
-if (paired.length !== 2 || paired[1].loc !== 'https://www.touristlio.com/en/search') {
-  fail('withEnglishAlternates search');
-} else ok('withEnglishAlternates adds /en/search');
+if (searchPair.length !== 0) fail('withEnglishAlternates still emits /search');
+else ok('withEnglishAlternates drops /search');
 
 const robots = buildRobotsTxt();
 if (!robots.includes('Disallow: /login') || !robots.includes('Disallow: /en/admin')) {
@@ -126,9 +132,11 @@ async function checkLive(base) {
 
   const sm = await fetchText(`${base}/sitemap.xml`);
   if (sm.status !== 200) fail(`sitemap HTTP ${sm.status}`);
-  else if (!sm.body.includes('/en/gezilecek-yerler') || !sm.body.includes('/en/search')) {
+  else if (!sm.body.includes('/en/gezilecek-yerler') || !sm.body.includes('/en/explore')) {
     fail('sitemap missing EN listing twins');
-  } else ok('sitemap has EN listing twins');
+  } else if (sm.body.includes('/search')) {
+    fail('sitemap still lists /search');
+  } else ok('sitemap has EN listing twins and no /search');
   if (!/max-age=/.test(sm.cache)) fail(`sitemap Cache-Control ${sm.cache}`);
   else ok('sitemap Cache-Control max-age');
 }
