@@ -1791,6 +1791,45 @@ function setMetaContent(selector, content, create) {
   if (el) el.setAttribute('content', content);
 }
 
+function setHreflangAlternates(trPath, enPath) {
+  const origin = publicOrigin();
+  const abs = (p) => {
+    if (!p) return '';
+    if (/^https?:\/\//i.test(p)) return p;
+    return origin + (p.startsWith('/') ? p : `/${p}`);
+  };
+  const wanted = [
+    ['tr', abs(trPath || '/blog')],
+    ['x-default', abs(trPath || '/blog')],
+  ];
+  if (enPath) wanted.push(['en', abs(enPath)]);
+  const keep = new Set(wanted.map(([code]) => code));
+  document.querySelectorAll('link[rel="alternate"][hreflang]').forEach((el) => {
+    if (!keep.has(el.getAttribute('hreflang'))) el.remove();
+  });
+  wanted.forEach(([code, href]) => {
+    let el = document.querySelector(`link[rel="alternate"][hreflang="${code}"]`);
+    if (!el) {
+      el = document.createElement('link');
+      el.rel = 'alternate';
+      el.setAttribute('hreflang', code);
+      document.head.appendChild(el);
+    }
+    el.href = href;
+  });
+}
+
+function clearHreflang() {
+  document.querySelectorAll('link[rel="alternate"][hreflang]').forEach((el) => el.remove());
+}
+
+function setBlogListingSeo() {
+  setCanonical(blogListPath());
+  setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+  setMetaContent('meta[property="og:type"]', 'website', { property: 'og:type' });
+  setHreflangAlternates('/blog', '/en/blog');
+}
+
 function setCanonical(href) {
   let link = document.querySelector('link[rel="canonical"]');
   if (!link) {
@@ -2017,8 +2056,10 @@ async function showMainTab(tab, skipRoute) {
     setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
     setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
   } else if (tab === 'blog') {
-    setCanonical(activeBlogSlug ? blogPublicPath({ slug: activeBlogSlug }) : blogListPath());
-    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+    if (!(skipRoute && activeBlogSlug)) {
+      setCanonical(blogListPath());
+      setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+    }
   } else if (tab === 'detail') {
     setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
   } else if (tab !== 'explore') {
@@ -2034,12 +2075,14 @@ async function showMainTab(tab, skipRoute) {
     if (!(skipRoute && activeBlogSlug)) setJsonLdBlocks([collectionPageJsonLd()]);
   } else if (tab !== 'detail') setJsonLdBlocks(homeJsonLdBase());
   const tasks = [];
-  if (tab === 'blog') {
+    if (tab === 'blog') {
     if (!skipRoute) {
       activeBlogSlug = null;
       showBlogListing();
+      setBlogListingSeo();
     } else if (!activeBlogSlug) {
       showBlogListing();
+      setBlogListingSeo();
     }
     const back = document.getElementById('blogBackLink');
     if (back) {
@@ -2198,8 +2241,12 @@ function escapeHtml(s) {
 
 function formatDate(iso) {
   if (!iso) return '';
-  const d = new Date(iso.includes('T') ? iso : iso + 'Z');
-  return d.toLocaleDateString(lang === 'en' ? 'en' : 'tr');
+  const raw = String(iso).trim();
+  let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  if (!/[zZ]|[+-]\d\d:?\d\d$/.test(normalized)) normalized += 'Z';
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'tr-TR');
 }
 
 function syncExploreFilterState() {
@@ -2772,12 +2819,12 @@ async function loadBlogPage() {
       const allLabel = page.catAll || t('blogCatAll');
       const cats = blogMeta.categories || [];
       chips.innerHTML = `<button type="button" class="bcat-chip ${blogCat === 'all' ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="all">${escapeHtml(allLabel)}</button>`
-        + cats.map((c) => `<button type="button" class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="${escapeHtml(c.slug)}">${escapeHtml(c.label || (lang === 'en' ? (c.nameEn || c.nameTr) : (c.nameTr || c.nameEn)) || '')}</button>`).join('');
+        + cats.map((c) => `<button type="button" class="bcat-chip ${blogCat === c.slug ? 'on' : ''}" data-act="setBlogCat" data-el data-arg="${escapeHtml(c.slug)}">${escapeHtml(c.label || (lang === 'en' ? (c.nameEn || c.slug) : (c.nameTr || c.nameEn)) || '')}</button>`).join('');
     }
     const writeCat = document.getElementById('blogCat');
     if (writeCat && blogMeta.categories?.length) {
       writeCat.innerHTML = blogMeta.categories.map((c) =>
-        `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.label || (lang === 'en' ? (c.nameEn || c.nameTr) : (c.nameTr || c.nameEn)) || '')}</option>`
+        `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.label || (lang === 'en' ? (c.nameEn || c.slug) : (c.nameTr || c.nameEn)) || '')}</option>`
       ).join('');
     }
   } catch (e) {
@@ -2795,7 +2842,12 @@ async function renderBlog() {
     if (blogCat !== 'all') qs.set('category', blogCat);
     if (blogSearchQ) qs.set('q', blogSearchQ);
     const data = await api('/blogs?' + qs);
-    const blogs = data.blogs || [];
+    const blogs = (data.blogs || []).filter((b) => {
+      if (typeof b.title !== 'string' || b.title.includes('[object ')) return false;
+      if (typeof b.categoryLabel === 'string' && b.categoryLabel.includes('[object ')) return false;
+      if (lang === 'en' && b.translated !== true) return false;
+      return true;
+    });
     if (!blogs.length) {
       grid.innerHTML = `<div class="no-res">${escapeHtml(labels.empty)}</div>`;
       return;
@@ -2853,6 +2905,41 @@ async function openBlogDetail(slug, skipRoute) {
     if (!b) {
       throw Object.assign(new Error(t('blogEmpty') || 'Blog bulunamadı'), { status: 404 });
     }
+    const trSlug = b.slugTr || (lang !== 'en' ? (b.slug || slug) : '');
+    const enSlug = b.translated ? (b.slugEn || (lang === 'en' ? b.slug : '')) : '';
+    const trHref = trSlug ? `/blog/${encodeURIComponent(trSlug)}` : '/blog';
+    const enHref = enSlug ? `/en/blog/${encodeURIComponent(enSlug)}` : '';
+    const bodyEl = document.getElementById('blogDetailBody');
+    if (!bodyEl) return;
+    if (lang === 'en' && b.translated === false) {
+      bodyEl.innerHTML = `
+      <h1 class="bd-title">This story is not in English yet</h1>
+      <p class="bd-excerpt">Bu yazı henüz İngilizceye çevrilmedi.</p>
+      <p class="bd-excerpt">This story has not been translated into English yet.</p>
+      <p class="bd-excerpt"><a href="${escapeHtml(trHref)}">Türkçe sürüm</a></p>`;
+      activeBlogSlug = trSlug || slug;
+      showBlogArticle();
+      const back = document.getElementById('blogBackLink');
+      if (back) {
+        back.href = blogListPath();
+        back.textContent = t('blogBack');
+      }
+      document.title = 'This story is not in English yet — Touristlio';
+      setCanonical(trHref);
+      const noticeDesc = 'This story has not been translated into English yet.';
+      setMetaContent('meta[name="description"]', noticeDesc, { name: 'description' });
+      setMetaContent('meta[name="robots"]', 'noindex, nofollow', { name: 'robots' });
+      setMetaContent('meta[property="og:title"]', document.title, { property: 'og:title' });
+      setMetaContent('meta[property="og:description"]', noticeDesc, { property: 'og:description' });
+      setMetaContent('meta[property="og:type"]', 'website', { property: 'og:type' });
+      setMetaContent('meta[name="twitter:title"]', document.title, { name: 'twitter:title' });
+      setMetaContent('meta[name="twitter:description"]', noticeDesc, { name: 'twitter:description' });
+      clearHreflang();
+      setJsonLdBlocks([]);
+      window.scrollTo(0, 0);
+      if (!skipRoute) writeRouteToUrl({ main: 'blog', blogSlug: activeBlogSlug }, false);
+      return;
+    }
     const img = safeUrl(b.imageUrl) || placeImg({ category: displayLabel(b.category) || 'guide', id: b.id });
     const tags = (b.tags || []).map((tag) => `<span class="bd-tag">${escapeHtml(displayLabel(tag))}</span>`).join('');
     const menuBtn = window.TL_REPORTS?.menuButton('blog', b.id, b.title, b.userId) || '';
@@ -2862,8 +2949,6 @@ async function openBlogDetail(slug, skipRoute) {
       avatarUrl: b.avatarUrl,
       avatarPreset: b.avatarPreset,
     }, 'tiola-mini');
-    const bodyEl = document.getElementById('blogDetailBody');
-    if (!bodyEl) return;
     const restBody = bodyWithoutExcerpt(b.excerpt, b.body);
     bodyEl.innerHTML = `
       <div data-content-type="blog" data-content-id="${b.id}">
@@ -2905,9 +2990,14 @@ async function openBlogDetail(slug, skipRoute) {
     setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
     setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
     setJsonLdBlocks([articleJsonLd(b)]);
+    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+    if (enHref) setHreflangAlternates(trHref, enHref);
+    else setHreflangAlternates(trHref, null);
     window.scrollTo(0, 0);
     if (!skipRoute) {
       writeRouteToUrl({ main: 'blog', blogSlug: activeBlogSlug }, false);
+    } else if (activeBlogSlug && activeBlogSlug !== slug) {
+      writeRouteToUrl({ main: 'blog', blogSlug: activeBlogSlug }, true);
     }
   } catch (e) {
     activeBlogSlug = null;
@@ -2927,7 +3017,7 @@ function closeBlogDetail(skipRoute) {
   showBlogListing();
   document.body.style.overflow = '';
   setJsonLdBlocks([collectionPageJsonLd()]);
-  setCanonical(blogListPath());
+  setBlogListingSeo();
   setMetaContent('meta[property="og:type"]', 'website', { property: 'og:type' });
   const hero = document.getElementById('blogHeroTitle');
   if (hero) {

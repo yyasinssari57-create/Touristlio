@@ -9,6 +9,12 @@ const settingsService = require('../modules/settings/settings.service');
 const { enrichBlogLikes, toggleBlogLike } = require('../lib/likes');
 const { canModifyOwnContent } = require('../lib/content-ownership');
 const { containsBannedWord } = require('../lib/contentFilter');
+const {
+  localizeBlog,
+  blogAuthorName,
+  blogEnReadySql,
+  findBlogRow,
+} = require('../lib/blog-i18n');
 
 const router = express.Router();
 
@@ -26,20 +32,23 @@ async function categoryLabel(slug, lang) {
 async function mapBlog(row, lang = 'tr', userId = null) {
   const category = blogDb.categorySlugFromUnknown(row.category);
   const tags = blogDb.parseTagsStored(row.tags);
-  const displayAuthor = row.author_name || row.author_name_user || 'Anonim';
+  const loc = localizeBlog(row, lang);
   const likes = await enrichBlogLikes(row, userId);
   return {
     id: row.id,
     userId: row.user_id,
-    slug: row.slug,
+    slug: loc.slug,
+    slugTr: loc.slugTr,
+    slugEn: loc.slugEn,
     category,
     categoryLabel: await categoryLabel(category, lang),
-    title: row.title,
-    excerpt: row.excerpt,
-    body: row.body,
+    title: loc.title,
+    excerpt: loc.excerpt,
+    body: loc.body,
+    translated: loc.translated,
     imageUrl: row.image_url,
     placeId: row.place_id,
-    authorName: displayAuthor,
+    authorName: blogAuthorName(row, lang),
     avatarColor: row.avatar_color || null,
     avatarUrl: row.avatar_url || null,
     avatarPreset: row.avatar_preset || null,
@@ -66,10 +75,22 @@ function publicBlogSelect() {
 router.get('/meta', async (_req, res) => {
   const lang = String(_req.query.lang || 'tr').startsWith('en') ? 'en' : 'tr';
   const page = await settingsService.getBlogPageSettings();
-  const categories = (await blogDb.listBlogCategories()).map((c) => ({
+  let categories = await blogDb.listBlogCategories();
+  if (lang === 'en') {
+    const counts = await db.prepare(`
+      SELECT b.category AS category, COUNT(*) AS c
+      FROM blogs b
+      WHERE b.status = ?
+      ${blogEnReadySql('b')}
+      GROUP BY b.category
+    `).all(PUBLIC_BLOG_STATUS);
+    const bySlug = new Map(counts.map((row) => [row.category, Number(row.c) || 0]));
+    categories = categories.map((c) => ({ ...c, postCount: bySlug.get(c.slug) || 0 }));
+  }
+  categories = categories.map((c) => ({
     slug: c.slug,
     label: lang === 'en'
-      ? (c.icon ? `${c.icon} ${c.nameEn}` : c.nameEn)
+      ? (c.icon ? `${c.icon} ${c.nameEn || c.slug}` : (c.nameEn || c.slug))
       : (c.icon ? `${c.icon} ${c.nameTr}` : c.nameTr),
     nameTr: c.nameTr,
     nameEn: c.nameEn,
@@ -112,9 +133,16 @@ router.get('/', authOptional, async (req, res) => {
   if (featured === '1') {
     where += ' AND b.featured = 1';
   }
+  if (lang === 'en' && mine !== '1') {
+    where += ` ${blogEnReadySql('b')}`;
+  }
   if (q && String(q).trim()) {
-    where += ' AND (b.title LIKE ? OR b.excerpt LIKE ? OR b.body LIKE ?)';
     const like = `%${sanitizeText(q, 80)}%`;
+    if (lang === 'en' && mine !== '1') {
+      where += ' AND (b.title_en LIKE ? OR b.excerpt_en LIKE ? OR b.body_en LIKE ?)';
+    } else {
+      where += ' AND (b.title LIKE ? OR b.excerpt LIKE ? OR b.body LIKE ?)';
+    }
     params.push(like, like, like);
   }
 
@@ -132,10 +160,7 @@ router.get('/:slug', authOptional, async (req, res) => {
   const slug = sanitizeText(req.params.slug, 120);
   if (!slug) return res.status(400).json({ error: 'Geçersiz slug' });
 
-  let row = await db.prepare(`
-    ${publicBlogSelect()}
-    WHERE b.slug = ?
-  `).get(slug);
+  let row = await findBlogRow(db, slug, lang);
 
   if (!row && /^\d+$/.test(slug)) {
     row = await db.prepare(`

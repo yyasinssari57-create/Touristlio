@@ -2,6 +2,10 @@ const { siteBaseUrl } = require('./sitemap');
 const { googleSiteVerification } = require('./analytics-config');
 const { trLabel } = require('./tr-labels');
 const { resolveLocale } = require('../../public/js/locale-resolve');
+const {
+  EN_UNTRANSLATED_TITLE,
+  EN_UNTRANSLATED_DESCRIPTION,
+} = require('./blog-i18n');
 
 /** FAZ3-2 static templates. Counts match places.json (1090 places, 135 countries). */
 const SEO_TEMPLATES = {
@@ -70,9 +74,16 @@ function generateMeta(type, data = {}, locale = 'tr') {
 
   if (type === 'blog' && (data.post || data.blog)) {
     const p = data.post || data.blog;
+    if (lang === 'en' && p.translated === false) {
+      return {
+        title: EN_UNTRANSLATED_TITLE,
+        description: EN_UNTRANSLATED_DESCRIPTION,
+        ogImage: null,
+      };
+    }
     const titleText = String((lang === 'en' ? (p.titleEn || p.title) : (p.title || p.titleEn)) || '').trim();
     const excerpt = lang === 'en'
-      ? (p.excerptEn || p.excerpt || p.body || '')
+      ? (p.excerptEn || p.excerpt || '')
       : (p.excerpt || p.body || '');
     return {
       title: `${titleText || 'Touristlio'} — Touristlio Blog`,
@@ -262,16 +273,29 @@ function canonicalFor(pathname, lang) {
   return rest === '/' ? `${base}/` : `${base}${rest}`;
 }
 
-function hreflangLinks(pathname) {
+function absoluteFromSite(pathname) {
+  const base = siteBaseUrl();
+  if (!pathname) return `${base}/`;
+  if (/^https?:\/\//i.test(pathname)) return pathname;
+  return pathname.startsWith('/') ? `${base}${pathname}` : `${base}/${pathname}`;
+}
+
+function hreflangLinks(pathname, alternates) {
   const base = siteBaseUrl();
   const rest = normalizePath(pathname);
-  const tr = rest === '/' ? `${base}/` : `${base}${rest}`;
-  const en = rest === '/' ? `${base}/en/` : `${base}/en${rest}`;
-  return [
+  const trDefault = rest === '/' ? `${base}/` : `${base}${rest}`;
+  const enDefault = rest === '/' ? `${base}/en/` : `${base}/en${rest}`;
+  const tr = alternates && alternates.tr ? absoluteFromSite(alternates.tr) : trDefault;
+  let en = enDefault;
+  if (alternates && Object.prototype.hasOwnProperty.call(alternates, 'en')) {
+    en = alternates.en ? absoluteFromSite(alternates.en) : null;
+  }
+  const lines = [
     `<link rel="alternate" hreflang="tr" href="${escapeAttr(tr)}" />`,
-    `<link rel="alternate" hreflang="en" href="${escapeAttr(en)}" />`,
-    `<link rel="alternate" hreflang="x-default" href="${escapeAttr(tr)}" />`,
-  ].join('\n');
+  ];
+  if (en) lines.push(`<link rel="alternate" hreflang="en" href="${escapeAttr(en)}" />`);
+  lines.push(`<link rel="alternate" hreflang="x-default" href="${escapeAttr(tr)}" />`);
+  return lines.join('\n');
 }
 
 function ogTypeFor(pathname, explicit) {
@@ -282,13 +306,15 @@ function ogTypeFor(pathname, explicit) {
   return 'website';
 }
 
-function buildSeoHead({ pathname, lang, title, description, image, noindex, ogType }) {
+function buildSeoHead({ pathname, lang, title, description, image, noindex, ogType, alternates, canonicalPath }) {
   const resolvedLang = lang || langFromPath(pathname);
   const defaults = pageDefaults(pathname, resolvedLang);
   const pageTitle = title || defaults.title;
   const pageDesc = (description || defaults.description || '').slice(0, 160);
   const img = absUrl(image || defaultOgImage());
-  const canonical = canonicalFor(pathname, resolvedLang);
+  const canonical = canonicalPath
+    ? absoluteFromSite(canonicalPath)
+    : canonicalFor(pathname, resolvedLang);
   const robots = noindex ? 'noindex, nofollow' : 'index,follow';
   const locale = resolvedLang === 'en' ? 'en_US' : 'tr_TR';
   const type = ogTypeFor(pathname, ogType);
@@ -299,7 +325,7 @@ function buildSeoHead({ pathname, lang, title, description, image, noindex, ogTy
     `<meta name="robots" content="${robots}"/>`,
     gsc ? `<meta name="google-site-verification" content="${escapeAttr(gsc)}"/>` : '',
     `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
-    noindex ? '' : hreflangLinks(pathname),
+    noindex ? '' : hreflangLinks(pathname, alternates),
     `<meta property="og:type" content="${escapeAttr(type)}"/>`,
     `<meta property="og:site_name" content="Touristlio"/>`,
     `<meta property="og:locale" content="${locale}"/>`,

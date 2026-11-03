@@ -335,21 +335,31 @@ app.get('/blog/:slug', async (req, res) => {
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
+  const lang = req.tlLang === 'en' ? 'en' : 'tr';
   const { loadApprovedBlog, jsonLdForBlog } = require('./lib/jsonld');
-  const blog = await loadApprovedBlog(slug);
+  const { injectUntranslatedNote } = require('./lib/blog-i18n');
+  const blog = await loadApprovedBlog(slug, lang);
   if (!blog) {
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
-  const lang = req.tlLang === 'en' ? 'en' : 'tr';
   const { generateMeta } = require('./lib/seo');
   const meta = generateMeta('blog', { post: blog }, lang);
+  const trPath = blog.slugTr ? `/blog/${encodeURIComponent(blog.slugTr)}` : '/blog';
+  const enPath = blog.translated && blog.slugEn
+    ? `/en/blog/${encodeURIComponent(blog.slugEn)}`
+    : null;
+  const untranslatedEn = lang === 'en' && blog.translated === false;
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: meta.title,
     description: meta.description,
-    image: meta.ogImage || blog.imageUrl,
-    ogType: 'article',
-    jsonLd: jsonLdForBlog(blog, lang),
+    image: untranslatedEn ? null : (meta.ogImage || blog.imageUrl),
+    ogType: untranslatedEn ? 'website' : 'article',
+    noindex: untranslatedEn,
+    canonicalPath: untranslatedEn ? trPath : (lang === 'en' ? enPath : trPath),
+    alternates: { tr: trPath, en: enPath },
+    jsonLd: untranslatedEn ? [] : jsonLdForBlog(blog, lang),
+    beforeInject: untranslatedEn ? (html) => injectUntranslatedNote(html, trPath) : undefined,
   });
 });
 

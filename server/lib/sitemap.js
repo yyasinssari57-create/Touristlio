@@ -1,4 +1,5 @@
 const { db } = require('../db');
+const { blogEnSitemapPath } = require('./blog-i18n');
 
 function escapeXml(s) {
   return String(s)
@@ -92,7 +93,11 @@ function staticUrls(base) {
   ];
 }
 
-/** /places/slug → /en/places/slug. Already-English locs are skipped. */
+function isBlogDetailPath(pathname) {
+  return /^\/blog\/[^/]+$/.test(pathname || '');
+}
+
+/** /places/slug → /en/places/slug. Already-English locs are skipped. Blog posts are not mirrored. */
 function englishAlternateLoc(loc, base) {
   const root = String(base || '').replace(/\/$/, '');
   const full = String(loc || '');
@@ -104,10 +109,14 @@ function englishAlternateLoc(loc, base) {
 
 function withEnglishAlternates(urls, base) {
   const extra = [];
+  const root = String(base || '').replace(/\/$/, '');
   for (const u of urls) {
+    const path = String(u.loc || '').startsWith(root)
+      ? (String(u.loc).slice(root.length) || '/')
+      : '';
+    if (isBlogDetailPath(path)) continue;
     const enLoc = englishAlternateLoc(u.loc, base);
     if (!enLoc) continue;
-    const path = String(u.loc || '').slice(String(base || '').replace(/\/$/, '').length) || '/';
     extra.push({
       ...u,
       loc: enLoc,
@@ -151,18 +160,33 @@ async function loadPlaceUrls(base) {
 async function loadBlogUrls(base) {
   try {
     const rows = await db.prepare(`
-      SELECT slug, published_at, created_at, body FROM blogs
+      SELECT slug, slug_en, title_en, excerpt_en, body_en, published_at, created_at, body
+      FROM blogs
       WHERE status = 'approved' AND slug IS NOT NULL AND TRIM(slug) <> ''
         AND body IS NOT NULL
         AND char_length(btrim(body)) > ${BLOG_BODY_MIN_CHARS}
       ORDER BY COALESCE(published_at, created_at) DESC, id DESC
     `).all();
-    return rows.filter(isQualityBlogBody).map((b) => ({
-      loc: `${base}/blog/${encodeURIComponent(b.slug)}`,
-      lastmod: isoDate(b.published_at || b.created_at),
-      priority: '0.7',
-      changefreq: 'monthly',
-    }));
+    const urls = [];
+    for (const b of rows) {
+      if (!isQualityBlogBody(b)) continue;
+      const lastmod = isoDate(b.published_at || b.created_at);
+      urls.push({
+        loc: `${base}/blog/${encodeURIComponent(b.slug)}`,
+        lastmod,
+        priority: '0.7',
+        changefreq: 'monthly',
+      });
+      const enPath = blogEnSitemapPath(b);
+      if (!enPath) continue;
+      urls.push({
+        loc: `${base}${enPath}`,
+        lastmod,
+        priority: '0.7',
+        changefreq: 'monthly',
+      });
+    }
+    return urls;
   } catch {
     return [];
   }
@@ -227,6 +251,7 @@ module.exports = {
   SITEMAP_PLACE_LIMIT,
   englishAlternateLoc,
   withEnglishAlternates,
+  isBlogDetailPath,
   ROBOTS_PRIVATE_PATHS,
   SITEMAP_CACHE_CONTROL,
 };

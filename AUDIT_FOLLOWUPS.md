@@ -2,6 +2,14 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 2 (blog iki dilli)
+
+`/en/blog` artık Türkçe yazı başlığı ve özeti göstermez. İngilizce metin yoksa yazı listede yoktur. Adres açılırsa sayfa “Bu yazı henüz İngilizceye çevrilmedi” der, Türkçe sürüme link verir ve Google’a kapalıdır (`noindex`). O yazı İngilizce site haritasına ve `hreflang`’a girmez.
+
+Veritabanına `title_en`, `excerpt_en`, `body_en`, `slug_en` eklendi. Eski yazılar duruyor; İngilizce metin kendiliğinden yazılmadı. Admin → Blog yazıları → Düzenle formunda İngilizce başlık, özet ve içerik var. Kategori adı, yazar (“Anonymous”) ve tarih, sayfanın diline göre gelir.
+
+`npm run verify:v4-adim2`
+
 ## Cursor V4 — Adım 1 (dil tek kaynaktan)
 
 `/blog`, `/blog/...`, `/places/...`, `/explore` ve `/gezilecek-yerler` artık tarayıcıdaki `tl_lang=en` kaydına bakmıyor. Adres Türkçe kalıyor, sayfa metni Türkçe kalıyor. `/en/...` her zaman İngilizce. Kayıtlı dil yalnızca ana sayfada (`/`) kullanılıyor. Sayfa açılışında adres değişmiyor. EN/TR düğmesi aynı sayfanın karşılığına gidiyor (`/blog/yazi` ↔ `/en/blog/yazi`).

@@ -6,6 +6,7 @@ const { siteBaseUrl, absUrl, canonicalFor, stripEnPrefix } = require('./seo');
 const { sanitizeText } = require('./sanitize');
 const { slugify } = require('./slugify');
 const { isValidSitemapCoord } = require('./sitemap');
+const { localizeBlog, blogAuthorName, findBlogRow } = require('./blog-i18n');
 
 const LOGO_PATH = '/images/logo.webp';
 const AGENCY_DESCRIPTION = 'Sadece Ziyaret Etme. Hisset. Topluluk tabanlı seyahat rehberliği.';
@@ -232,16 +233,27 @@ function reviewSchema(tiola, place) {
 
 function articleSchema(blog, lang = 'tr') {
   if (!blog) return null;
+  if (lang === 'en' && blog.translated === false) return null;
   const base = siteBaseUrl();
-  const slug = blog.slug || blog.id;
+  const en = lang === 'en';
+  const title = en
+    ? String((blog.titleEn != null && String(blog.titleEn).trim()) ? blog.titleEn : (blog.title || ''))
+    : String(blog.title || '');
+  const excerpt = en
+    ? String((blog.excerptEn != null && String(blog.excerptEn).trim()) ? blog.excerptEn : (blog.excerpt || ''))
+    : String(blog.excerpt || '');
+  const slug = en
+    ? String((blog.slugEn != null && String(blog.slugEn).trim()) ? blog.slugEn : (blog.slug || blog.id || ''))
+    : String(blog.slug || blog.id || '');
+  if (!title.trim() || !slug.trim()) return null;
   const path = `/blog/${encodeURIComponent(slug)}`;
   const url = canonicalFor(path, lang);
   const published = toIso(blog.publishedAt || blog.published_at || blog.createdAt || blog.created_at);
   return compact({
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: String(blog.title || '').slice(0, 110),
-    description: String(blog.excerpt || '').slice(0, 300) || undefined,
+    headline: title.slice(0, 110),
+    description: excerpt.slice(0, 300) || undefined,
     image: blog.imageUrl || blog.image_url ? absUrl(blog.imageUrl || blog.image_url) : undefined,
     datePublished: published,
     dateModified: toIso(blog.updatedAt || blog.updated_at) || published,
@@ -367,17 +379,14 @@ async function loadApprovedTiolasForPlace(placeId) {
   }
 }
 
-async function loadApprovedBlog(slug) {
+async function loadApprovedBlog(slug, lang = 'tr') {
   const raw = String(slug || '').trim();
   if (!raw) return null;
   try {
     const { db } = require('../db');
-    let row = await db.prepare(`
-      SELECT b.*, u.name AS author_name_user
-      FROM blogs b
-      JOIN users u ON u.id = b.user_id
-      WHERE b.slug = ? AND b.status = 'approved'
-    `).get(raw);
+    const want = lang === 'en' ? 'en' : 'tr';
+    let row = await findBlogRow(db, raw, want);
+    if (row && row.status !== 'approved') row = null;
     if (!row && /^\d+$/.test(raw)) {
       row = await db.prepare(`
         SELECT b.*, u.name AS author_name_user
@@ -386,15 +395,13 @@ async function loadApprovedBlog(slug) {
         WHERE b.id = ? AND b.status = 'approved'
       `).get(Number(raw));
     }
-    if (!row) return null;
+    if (!row || row.status !== 'approved') return null;
+    const loc = localizeBlog(row, want);
     return {
       id: row.id,
-      slug: row.slug,
-      title: row.title,
-      excerpt: row.excerpt,
-      body: row.body,
+      ...loc,
       imageUrl: row.image_url,
-      authorName: row.author_name || row.author_name_user || 'Anonim',
+      authorName: blogAuthorName(row, want),
       publishedAt: row.published_at || row.created_at,
       createdAt: row.created_at,
     };
