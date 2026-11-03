@@ -2,6 +2,41 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 6 (yayın kalite kapısı + boş bölüm başlıkları)
+
+Yasin “geç” dedi. Küçük onay (boş bölüm başlığını gizleme) bu adımda uygulandı. Kayıt silinmedi. Yayındaki eksikler taslağa çekilmedi.
+
+Yeni yayın (yeni kayıt doğrudan yayında, ya da taslak/arşiv → yayında) şu alanlar dolu değilse durur ve hangilerinin eksik olduğunu yazar: ad, açıklama (TR), koordinat, kategori, doğrulanmış görsel, kaynak URL veya doğrulama tarihi. İngilizce alan zorunlu değil. İngilizce sayfayı Google’a kapatmak Adım 8.
+
+Koordinat, site haritasıyla aynı kural: boş, aralık dışı veya 0 geçmez. Salt Cathedral Zipaquirá ve Tallinn Telliskivi Creative City bu yüzden listede (boylam 0).
+
+Doğrulanmış görsel: Adım 7 `image_verified` işaretini ekleyince yalnızca true geçer. İşaret yokken kayıtlı görsel adresi yeter. Boş adres yetmez; sayfa açılırken basılan kategori yedeği sayılmaz. `image_verified` false ise kayıtlı adres de geçmez.
+
+Zaten yayında olan kayıt bu kapıya takılmaz. Düzenlenebilir. Kendiliğinden taslak olmaz.
+
+Boş bölüm: Tarihçe, Yapılacaklar, Kültür, İpuçları, Genel Bakış, En İyi Zaman, Nasıl Gidilir ve Etiketler. Metin yoksa veya yalnızca “—” ise başlık ve sekme görünmez. Yapılacaklar listesi boşsa ipucu metni oraya kopyalanmaz. İngilizce metin yoksa Türkçe metin durur; bölüm bu yüzden gizlenmez.
+
+Yer listesinde (`server/data/places.json`) yayındaki 947 kaydın tarihçe / yapılacaklar / kültür / ipuçları metni dolu (bir kısmı şablon cümle). Bu yüzden başlıklar duruyor. Ayasofya’nın tarihçesi ve ipucu metni gerçek; yapılacaklar ve kültür cümlesi şablon. Canlı veritabanında bir alan boşsa aynı kural başlığı gizler.
+
+**Eksik yayınlar (yer listesi, 1090 kayıt, 947 yayında). Taslağa çekilen: 0.**
+
+| Eksik | Yayında |
+| --- | --- |
+| Ad | 0 |
+| Açıklama (TR) | 0 |
+| Koordinat | 2 |
+| Kategori | 0 |
+| Doğrulanmış görsel | 0 |
+| Kaynak URL veya doğrulama tarihi | 947 |
+
+947’sinin hepsinde kaynak URL ve doğrulama tarihi yok. İkisi bir de koordinatsız: Salt Cathedral Zipaquirá, Tallinn Telliskivi Creative City. 143 taslak bu listede yok.
+
+Yerel test veritabanı: 1113 mekân, yayında 950 (yer listesindeki 947 + 3 boş “FAZ2-4 Test Yer”), taslak 143, arşiv 20. 950 yayının hepsinde kaynak yok. O 3 test yerinde açıklama, görsel ve dört bölüm de boş; başlıkları gizlenir. Deneme kaydı açıldı, kapı eksikte durdu, dolu kayıt yayınlandı, sonra deneme kaydı silindi. Yayın 950, taslak 143 aynı kaldı. Ayasofya yayında kaldı.
+
+Komut: `npm run audit:publish-quality`. Kontrol: `npm run verify:v4-adim6`. Rapor `reports/` içine yazılır, depoya girmez.
+
+Sıradaki adım Adım 7: görsel doğrulama (yanlış eşleşme ve yinelenen görsel).
+
 ## Cursor V4 — Adım 5 (şablon ve kopya taslak)
 
 Yasin “geç” dedi. Bu adım onaylı güvenli kümeyi yayından çıkardı. Kayıt silinmedi. Durum `draft`. Admin → Gezilecek Yerler → Yayın durumu → Taslak ile geri açılır.
@@ -34,7 +69,7 @@ Ana sayfa sayacı ve açıklama metni artık yayındaki sayıdan gelir (sabit �
 
 `npm run verify:v4-adim5` ve `AUDIT_PLACES_SOURCE=json npm run audit:places-quality`.
 
-Sıradaki adım Adım 6: yayın kalite kapısı ve boş bölüm başlıkları. Eksik yayın kayıtları yalnızca listelenir, kendiliğinden taslağa çekilmez.
+Bu raporun ardından Adım 6 çalıştı. Ayrıntı yukarıda.
 
 ## Cursor V4 — Adım 4 (yinelenen ve şablon mekânlar, yalnızca rapor)
 

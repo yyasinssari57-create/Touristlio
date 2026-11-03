@@ -2575,21 +2575,62 @@ function renderDetailGallery(p) {
 }
 
 function showDetailTab(name, el, skipRoute) {
-  document.querySelectorAll('.dtab').forEach((t) => {
-    t.classList.remove('on');
-    t.setAttribute('aria-selected', 'false');
-  });
-  if (el) {
-    el.classList.add('on');
-    el.setAttribute('aria-selected', 'true');
+  let btn = el || document.querySelector(`.dtab[data-arg="${name}"]`);
+  if (!btn || btn.classList.contains('is-empty')) {
+    btn = document.querySelector('#page-detail .dtab:not(.is-empty)');
+    if (!btn) return;
+    name = btn.getAttribute('data-arg');
   }
-  document.querySelectorAll('.dtab-panel').forEach((p) => {
+  document.querySelectorAll('#page-detail .dtab').forEach((t) => {
+    const on = t === btn;
+    t.classList.toggle('on', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('#page-detail .dtab-panel').forEach((p) => {
     const active = p.id === 'dtab-' + name;
     p.classList.toggle('active', active);
     p.hidden = !active;
     p.setAttribute('aria-hidden', active ? 'false' : 'true');
   });
   if (!skipRoute) syncRoute(true);
+}
+
+function applyPlaceSectionVisibility(vis) {
+  if (!vis) return;
+  const tabs = ['overview', 'history', 'things', 'culture', 'tips'];
+  tabs.forEach((key) => {
+    const show = !!vis[key];
+    document.querySelectorAll(`#page-detail .dtab[data-arg="${key}"]`).forEach((el) => {
+      el.classList.toggle('is-empty', !show);
+      el.setAttribute('aria-hidden', show ? 'false' : 'true');
+      if (!show) {
+        el.classList.remove('on');
+        el.setAttribute('aria-selected', 'false');
+      }
+    });
+    const panel = document.getElementById('dtab-' + key);
+    if (panel) panel.classList.toggle('is-empty', !show);
+  });
+  const blocks = [
+    ['pdOverviewBlock', vis.overview],
+    ['pdHistBlock', vis.history],
+    ['pdThingsBlock', vis.things],
+    ['pdCultureBlock', vis.culture],
+    ['pdTipsBlock', vis.tipsText],
+    ['pdBestTimeBlock', vis.bestTime],
+    ['pdHowToBlock', vis.howToGet],
+    ['pdTagsBlock', vis.tags],
+  ];
+  blocks.forEach(([id, show]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('is-empty', !show);
+  });
+  const tablist = document.querySelector('#page-detail .detail-tabs');
+  if (tablist) tablist.classList.toggle('is-empty', !tabs.some((key) => vis[key]));
+  if (!document.querySelector('#page-detail .dtab.on:not(.is-empty)')) {
+    const first = document.querySelector('#page-detail .dtab:not(.is-empty)');
+    if (first) showDetailTab(first.getAttribute('data-arg'), first, true);
+  }
 }
 
 async function openDetail(id, skipRoute) {
@@ -2616,19 +2657,31 @@ async function openDetail(id, skipRoute) {
     document.getElementById('pdTitle').textContent = p.name;
     document.getElementById('pdLoc').textContent = '📍 ' + geoText(p.location) + ' · ' + geoLabel(p.country)
       + (p.lat != null && p.lng != null ? ` · ${Number(p.lat).toFixed(4)}, ${Number(p.lng).toFixed(4)}` : '');
-    setCollapsibleText(document.getElementById('pdOverview'), document.getElementById('pdOverviewMore'), placeField(p, 'overview') || placeField(p, 'description'));
-    setCollapsibleText(document.getElementById('pdHist'), document.getElementById('pdHistMore'), placeField(p, 'history'));
-    const things = placeListField(p, 'thingsToDo');
-    document.getElementById('pdThings').innerHTML = things.length
-      ? things.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
-      : `<li>${escapeHtml(placeField(p, 'tips') || '—')}</li>`;
-    setCollapsibleText(document.getElementById('pdCulture'), document.getElementById('pdCultureMore'), placeField(p, 'cultureFood'));
-    setCollapsibleText(document.getElementById('pdTips'), document.getElementById('pdTipsMore'), placeField(p, 'travelTips') || placeField(p, 'tips'));
+    const sections = window.TL_PLACE_SECTIONS
+      ? window.TL_PLACE_SECTIONS.placeSectionVisibility(p, lang)
+      : null;
+    const overviewText = sections
+      ? sections.texts.overview
+      : (placeField(p, 'overview') || placeField(p, 'description'));
+    const historyText = sections ? sections.texts.history : placeField(p, 'history');
+    const things = sections ? sections.texts.things : placeListField(p, 'thingsToDo');
+    const cultureText = sections ? sections.texts.culture : placeField(p, 'cultureFood');
+    const tipsText = sections
+      ? sections.texts.tips
+      : (placeField(p, 'travelTips') || placeField(p, 'tips'));
+    setCollapsibleText(document.getElementById('pdOverview'), document.getElementById('pdOverviewMore'), overviewText);
+    setCollapsibleText(document.getElementById('pdHist'), document.getElementById('pdHistMore'), historyText);
+    document.getElementById('pdThings').innerHTML = things
+      .map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+    setCollapsibleText(document.getElementById('pdCulture'), document.getElementById('pdCultureMore'), cultureText);
+    setCollapsibleText(document.getElementById('pdTips'), document.getElementById('pdTipsMore'), tipsText);
     const howEl = document.getElementById('pdHowToGet');
-    if (howEl) howEl.textContent = placeField(p, 'howToGetThere') || '—';
+    if (howEl) howEl.textContent = sections ? sections.texts.howTo : (placeField(p, 'howToGetThere') || '');
     const bestEl = document.getElementById('pdBestTime');
-    if (bestEl) bestEl.textContent = placeField(p, 'bestTime') || '—';
-    document.getElementById('pdTags').innerHTML = (p.tags || []).map((tag) => `<span class="pd-tag">${escapeHtml(localizeTag(tag))}</span>`).join('');
+    if (bestEl) bestEl.textContent = sections ? sections.texts.bestTime : (placeField(p, 'bestTime') || '');
+    const tagList = sections ? sections.texts.tags : (p.tags || []);
+    document.getElementById('pdTags').innerHTML = tagList.map((tag) => `<span class="pd-tag">${escapeHtml(localizeTag(tag))}</span>`).join('');
+    applyPlaceSectionVisibility(sections);
     renderFaqAccordion(p);
     renderNearbyCards(data.nearby);
     renderSimilarCards(data.similar);
@@ -4039,8 +4092,8 @@ async function applyRouteFromUrl(opts = {}) {
     if (route.main === 'detail' && (route.placeSlug || route.placeId)) {
       const opened = await openDetail(route.placeSlug || route.placeId, true);
       if (opened === false) return;
-      if (route.detailTab && route.detailTab !== 'overview') {
-        const el = document.querySelector(`.dtab[onclick*="'${route.detailTab}'"]`);
+      if (route.detailTab && route.detailTab !== 'overview' && /^(history|things|culture|tips)$/.test(route.detailTab)) {
+        const el = document.querySelector(`#page-detail .dtab[data-arg="${route.detailTab}"]`);
         if (el) showDetailTab(route.detailTab, el, true);
       }
       return;

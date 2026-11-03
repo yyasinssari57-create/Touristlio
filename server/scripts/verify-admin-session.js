@@ -329,7 +329,7 @@ async function checkLive(base) {
 
   const createPlace = await jsonRequest(`${root}/api/admin/places`, {
     method: 'POST', jar, headers: { Origin: root },
-    body: { name: 'Verify Session Place', country: 'TR', city: 'Istanbul', category: 'tarihi', status: 'published' },
+    body: { name: 'Verify Session Place', country: 'TR', city: 'Istanbul', category: 'tarihi', status: 'draft' },
   });
   const placeId = createPlace.json?.data?.id;
   if (createPlace.status !== 201 || !placeId) {
