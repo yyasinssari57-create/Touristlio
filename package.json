@@ -36,6 +36,8 @@
     "verify:v4-adim1": "node server/scripts/verify-v4-adim1-locale.js",
     "verify:v4-adim2": "node server/scripts/verify-v4-adim2-blog-i18n.js",
     "verify:v4-adim3": "node server/scripts/verify-v4-adim3-sitemap.js",
+    "audit:places-quality": "node server/scripts/audit-places-quality.js",
+    "verify:v4-adim4": "node server/scripts/verify-v4-adim4-places.js",
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",
     "verify:faz2-1": "node server/scripts/verify-faz2-1-code-split.js",

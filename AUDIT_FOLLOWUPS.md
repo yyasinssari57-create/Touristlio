@@ -2,6 +2,37 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 4 (yinelenen ve şablon mekânlar, yalnızca rapor)
+
+Bu adım liste çıkarır. Yayından çıkarma yok, silme yok, taslağa alma yok. Onay Adım 5’te.
+
+Komut: `npm run audit:places-quality`. Kontrol: `npm run verify:v4-adim4`. Betik veritabanını salt okur. CSV dosyaları `reports/` içine yazılır ve depoya girmez.
+
+Yerel test veritabanı: 1113 mekân (1093 yayında, 20 arşiv). Depodaki yer listesi: 1090. Şablon, ortak görsel ve kategori sayıları ikisinde aynı. Fazla satırlar yerel test artığı: arşivdeki Verify Upload / Verify Session kayıtları ve yayındaki 3 boş “FAZ2-4 Test Yer”. Aşağıdaki sayılar yer listesiyle aynı.
+
+**A. Şablon adres: 135, hepsi yayında.** Adres kalıbı `şehir + (cultural-district | main-square | waterfront | historic-quarter | central-park | old-town) + şehir`.
+
+- 119 kayıt üretim cümlesiyle duruyor (konum “Old Town, Vienna” gibi). Adım 5’te taslak adayı bunlar.
+- 16 kayıt aynı kalıba uyuyor, konum cümlesi üretim değil. Gerçek eski şehir olabilirler. Adım 5 bunları kendiliğinden taslağa almamalı: Albuquerque Old Town, Bucharest Old Town, Dubrovnik Old Town, Jakarta Old Town, Lubeck Old Town, Lviv Old Town, Nessebar Old Town, Plovdiv Old Town, Rhodes Old Town, Riga Old Town, Salzburg Old Town, Takayama Old Town, Tallinn Old Town, Tbilisi Old Town, Vilnius Old Town, Warsaw Old Town.
+
+**B. Yinelenen aday: 66 çift, 114 mekân.** Aynı şehirde, koordinat 300 metreden yakın veya adresler birbirine çok benziyor. Raporda her çiftin mesafesi ve hangisinin Tiola / görsel / açıklaması daha dolu olduğu var. Doluluk: benzersiz metin karakteri + görsel×100 + Tiola×500. Berabere kalırsa küçük numaralı kayıt dolu sayılır. Hiçbiri bu yüzden kapatılmadı.
+
+- 42 çift yalnızca yakın koordinat. Yan yana iki ayrı durak da bu listeye girer. Örnek: Ayasofya ve Kapalıçarşı. Adım 5’te tek tek bakılır.
+- Aynı ada çok yakın ve bir de 300 metreden yakın olanlar: Split Diocletian Palace / Diocletian Palace, Sagrada Família / Sagrada Familia.
+- 24 çiftin adresi benziyor, mesafe daha uzak. Güçlü kopya adayı: Quebec Old Quebec / Old Quebec, Tac Mahal / Taj Mahal, Dakar Goree Island / Goree Island, Havana Malecón / Havana Malecon, Prince Islands / Princes Islands, Park Güell / Park Guell, Kars Ani Ruins / Ani Ruins, Bursa Cumalikizik Village / Cumalikizik Village, Antalya Termessos Ruins / Termessos Ruins, Dead Sea Ein Bokek / Dead Sea Float, Tokyo Tsukiji Outer Market / Tsukiji Outer Market Sushi, Victoria Peak Hong Kong / Hong Kong Victoria Peak, Rize Firtina Valley / Firtina Valley, Lake Van Akdamar / Van Lake Akdamar, Old City Jerusalem / Jerusalem Old City, Petronas Towers / Petronas Towers Skybridge, Rio Copacabana Beach / Copacabana Beach, Kerala Backwaters Alleppey / Kerala Backwaters, Black Forest Triberg / Black Forest, Lake Baikal / Trans-Siberian Lake Baikal, Zanzibar Stone Town / Stone Town Zanzibar, Atacama Desert Valle de la Luna / Atacama Valle de la Luna, Brussels Atomium / Atomium Brussels, Batu Caves / Kuala Lumpur Batu Caves.
+- Yerel veritabanında ek 88 çift var. 85’i arşivdeki test kaydı, 3’ü boş FAZ2-4 test yeri.
+
+**C. Aynı görsel adresi: 143 grup, 436 mekân.** Aynı fotoğrafın farklı kırpılmış Unsplash adresi: 80 grup daha. Görsel bu adımda değişmedi.
+
+**D. Koordinatı 0 olan 3 yayındaki yer:** Salt Cathedral Zipaquirá, Tallinn Telliskivi Creative City, Medellin Central Park (bu aynı zamanda şablon). Açıklaması boş veya 50 karakterden kısa gerçek yer yok. Eşik site haritasıyla aynı: Türkçe açıklama veya özet 50 karakterden uzun olmalı.
+
+**E. Kategori veya görsel uyumsuz: 11, hepsi yayında ve şablon kayıtlardan.**
+
+- Kategorisi Plaj, adı meydan / eski şehir / park / kültür bölgesi (9): Helsinki Historic Quarter, Milan Central Park, Sofia Old Town, Tashkent Cultural District, Doha Main Square, Tripoli Historic Quarter, Harare Central Park, Guadalajara Old Town, Quito Cultural District.
+- Kategorisi Doğa, görseli plaj havuzundan (2): Bucharest Cultural District, Quito Main Square.
+
+Sıradaki adım Adım 5. Yasin onayından sonra şablonlar taslağa alınır ve kopyada dolu olan kalır. Bu onay gelmeden yer sayısı değişmez.
+
 ## Cursor V4 — Adım 3 (sitemap yalnızca gerçek adresler)
 
 Site haritası artık “bugünün tarihi”ni her adrese yazmıyor. Mekân `updated_at`, yoksa `created_at` kullanır. İkisinin de boş olduğu eski kayıtlar 1 Kasım 2026 tarihini alır (yer listesinin depodaki tarihi). Bu tarih sitemap üretildiği gün değildir. Statik sayfalar da aynı sabit tarihi kullanır. Blog yazısı yayın tarihi, yoksa oluşturulma tarihi.
