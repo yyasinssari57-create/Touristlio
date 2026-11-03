@@ -2,6 +2,22 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 3 (sitemap yalnızca gerçek adresler)
+
+Site haritası artık “bugünün tarihi”ni her adrese yazmıyor. Mekân `updated_at`, yoksa `created_at` kullanır. İkisinin de boş olduğu eski kayıtlar 1 Kasım 2026 tarihini alır (yer listesinin depodaki tarihi). Bu tarih sitemap üretildiği gün değildir. Statik sayfalar da aynı sabit tarihi kullanır. Blog yazısı yayın tarihi, yoksa oluşturulma tarihi.
+
+`/search` ve `/en/search` listeden çıktı. Arama sayfası sorgu olsun olmasın `noindex`. Canonical kendi adresi (`/search`).
+
+`/explore` keşfet ekranı, `/gezilecek-yerler` yer listesi. İkisi aynı sayfa değil. İkisi de sitede ve site haritasında kaldı. Canonical’ları birbirine çekilmedi.
+
+Mekân şartı eskisi gibi: yayında, koordinat geçerli, Türkçe açıklama 50 karakterden uzun. `deleted_at` sütunu yok; taslak ve arşiv zaten dışarıda. Şablon ve yinelenen kayıtlar bu adımda duruyor (Adım 5).
+
+İngilizce mekân adresi ve `hreflang` yalnızca `description_en` veya `overview_en` doluysa yazılır. Bu şemada `name_en` yok; yer adı özel isim. İngilizce metni boş olan blog adresi Adım 2’deki gibi yine yok.
+
+Yerel test veritabanı: 2200 → 2198 adres. Düşenler yalnızca `/search` ve `/en/search`. Kaliteli 1087 mekânın hepsinde İngilizce metin vardı, o yüzden yer adresi düşmedi. lastmod iki farklı gün: 2026-10-31 ve 2026-11-01. XML geçerli. İlk satırlar ana sayfa, `/explore`, `/gezilecek-yerler` ve lastmod `2026-11-01`.
+
+`npm run verify:v4-adim3` (ayrıca `verify:sitemap`, `verify:faz3-4`, `verify:faz3-5`).
+
 ## Cursor V4 — Adım 2 (blog iki dilli)
 
 `/en/blog` artık Türkçe yazı başlığı ve özeti göstermez. İngilizce metin yoksa yazı listede yoktur. Adres açılırsa sayfa “Bu yazı henüz İngilizceye çevrilmedi” der, Türkçe sürüme link verir ve Google’a kapalıdır (`noindex`). O yazı İngilizce site haritasına ve `hreflang`’a girmez.

@@ -656,6 +656,20 @@ function blogMetaTitle(title) {
   return `${text || 'Touristlio'} — Touristlio Blog`;
 }
 
+function placeHasEnglishCopy(p) {
+  // Keep in sync with server/lib/place-i18n.js (description_en or overview_en).
+  return String(p?.descriptionEn || '').trim().length > 0
+    || String(p?.overviewEn || '').trim().length > 0;
+}
+
+function applyPlaceHreflang(p) {
+  const slug = p?.slug || p?.id;
+  if (!slug) return;
+  const trPath = `/places/${encodeURIComponent(slug)}`;
+  const enPath = placeHasEnglishCopy(p) ? `/en${trPath}` : null;
+  setHreflangAlternates(trPath, enPath);
+}
+
 function updateSeoForPlace(p) {
   if (!p) return;
   const title = placeMetaTitle(p);
@@ -680,6 +694,7 @@ function updateSeoForPlace(p) {
   setMetaContent('meta[name="twitter:title"]', title, { name: 'twitter:title' });
   setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
   setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
+  applyPlaceHreflang(p);
   injectPlaceJsonLd(p);
 }
 
@@ -1830,6 +1845,12 @@ function setBlogListingSeo() {
   setHreflangAlternates('/blog', '/en/blog');
 }
 
+function setShellHreflang(barePath) {
+  const bare = barePath || '/';
+  const en = bare === '/' ? '/en/' : `/en${bare}`;
+  setHreflangAlternates(bare, en);
+}
+
 function setCanonical(href) {
   let link = document.querySelector('link[rel="canonical"]');
   if (!link) {
@@ -2054,6 +2075,7 @@ async function showMainTab(tab, skipRoute) {
   if (!skipRoute) syncRoute(true);
   if (tab === 'places') {
     setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
+    setShellHreflang('/gezilecek-yerler');
     setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
   } else if (tab === 'blog') {
     if (!(skipRoute && activeBlogSlug)) {
@@ -2062,7 +2084,12 @@ async function showMainTab(tab, skipRoute) {
     }
   } else if (tab === 'detail') {
     setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
-  } else if (tab !== 'explore') {
+    if (activePlace) applyPlaceHreflang(activePlace);
+  } else if (tab === 'explore') {
+    const raw = (location.pathname || '/').replace(/\/+$/, '') || '/';
+    const bare = raw.replace(/^\/en(?=\/|$)/, '') || '/';
+    setShellHreflang(bare === '/explore' ? '/explore' : '/');
+  } else {
     setCanonical(lang === 'en' ? '/en/' : '/');
     setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
   }

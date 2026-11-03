@@ -1,5 +1,6 @@
 const { db } = require('../db');
 const { blogEnSitemapPath } = require('./blog-i18n');
+const { placeEnSitemapPath } = require('./place-i18n');
 
 function escapeXml(s) {
   return String(s)
@@ -21,22 +22,41 @@ function siteBaseUrl() {
   return base.replace(/\/$/, '');
 }
 
+/**
+ * Calendar day from a stored timestamp. Never the sitemap generation day.
+ * Accepts YYYY-MM-DD and YYYY-MM-DD HH:MM:SS. Invalid values return null.
+ */
 function isoDate(value) {
-  if (!value) return new Date().toISOString().slice(0, 10);
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
-  return d.toISOString().slice(0, 10);
+  if (value == null || value === '') return null;
+  const raw = String(value).trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (!m) return null;
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return `${m[1]}-${m[2]}-${m[3]}`;
+}
+
+function recordLastmod(...values) {
+  for (const value of values) {
+    const iso = isoDate(value);
+    if (iso) return iso;
+  }
+  return null;
 }
 
 /**
  * FAZ3-5 quality bar, mapped onto this schema.
- * PRD `description_tr` → `overview` or `description` (no description_tr column).
- * PRD `blog_posts.body` / `is_published` → `blogs.body` / `status = 'approved'`.
- * PRD `deleted_at` and `updated_at` columns do not exist.
+ * PRD description_tr → overview or description (no description_tr column).
+ * PRD blog body / is_published → blogs.body / status = 'approved'.
+ * PRD deleted_at does not exist; draft and archived are excluded via status.
+ * Places gained created_at / updated_at in V4 Adım 3. Rows without either
+ * keep the places.json git snapshot date, not the day the sitemap is built.
  */
 const PLACE_DESCRIPTION_MIN_CHARS = 50;
 const BLOG_BODY_MIN_CHARS = 200;
 const SITEMAP_PLACE_LIMIT = 10000;
+const CONTENT_SNAPSHOT_DATE = '2026-11-01';
 
 /** Longer of the Turkish blurbs. English columns do not satisfy description_tr. */
 function turkishPlaceBlurbLength(row) {
@@ -63,7 +83,7 @@ function isValidSitemapCoord(lat, lng) {
   return true;
 }
 
-/** Audit verification_status='published' → this schema uses places.status. */
+/** Audit published status → this schema uses places.status. */
 function isPublishedPlaceStatus(status) {
   const s = String(status == null || status === '' ? 'published' : status).trim().toLowerCase();
   return s === 'published';
@@ -78,18 +98,23 @@ function placeSitemapPath(row) {
   return `/places/${encodeURIComponent(slug)}`;
 }
 
+/**
+ * /explore is the discover shell (hero, map, filters).
+ * /gezilecek-yerler is the places directory. Different sections, own canonicals.
+ * /search is noindex and is not listed.
+ */
 function staticUrls(base) {
+  const stamp = { lastmod: CONTENT_SNAPSHOT_DATE };
   return [
-    { loc: `${base}/`, priority: '1.0', changefreq: 'daily' },
-    { loc: `${base}/explore`, priority: '0.9', changefreq: 'daily' },
-    { loc: `${base}/gezilecek-yerler`, priority: '0.9', changefreq: 'daily' },
-    { loc: `${base}/blog`, priority: '0.8', changefreq: 'daily' },
-    { loc: `${base}/search`, priority: '0.6', changefreq: 'weekly' },
-    { loc: `${base}/legal/about.html`, priority: '0.4', changefreq: 'monthly' },
-    { loc: `${base}/legal/contact.html`, priority: '0.4', changefreq: 'monthly' },
-    { loc: `${base}/legal/privacy.html`, priority: '0.3', changefreq: 'yearly' },
-    { loc: `${base}/legal/kvkk.html`, priority: '0.3', changefreq: 'yearly' },
-    { loc: `${base}/legal/terms.html`, priority: '0.3', changefreq: 'yearly' },
+    { loc: `${base}/`, priority: '1.0', changefreq: 'daily', ...stamp },
+    { loc: `${base}/explore`, priority: '0.9', changefreq: 'daily', ...stamp },
+    { loc: `${base}/gezilecek-yerler`, priority: '0.9', changefreq: 'daily', ...stamp },
+    { loc: `${base}/blog`, priority: '0.8', changefreq: 'daily', ...stamp },
+    { loc: `${base}/legal/about.html`, priority: '0.4', changefreq: 'monthly', ...stamp },
+    { loc: `${base}/legal/contact.html`, priority: '0.4', changefreq: 'monthly', ...stamp },
+    { loc: `${base}/legal/privacy.html`, priority: '0.3', changefreq: 'yearly', ...stamp },
+    { loc: `${base}/legal/kvkk.html`, priority: '0.3', changefreq: 'yearly', ...stamp },
+    { loc: `${base}/legal/terms.html`, priority: '0.3', changefreq: 'yearly', ...stamp },
   ];
 }
 
@@ -97,39 +122,60 @@ function isBlogDetailPath(pathname) {
   return /^\/blog\/[^/]+$/.test(pathname || '');
 }
 
-/** /places/slug → /en/places/slug. Already-English locs are skipped. Blog posts are not mirrored. */
+function isPlaceDetailPath(pathname) {
+  return /^\/places\/[^/]+$/.test(pathname || '');
+}
+
+/** /places/slug → /en/places/slug. Already-English locs are skipped. */
 function englishAlternateLoc(loc, base) {
   const root = String(base || '').replace(/\/$/, '');
   const full = String(loc || '');
   if (!root || !full.startsWith(root)) return null;
   const path = full.slice(root.length) || '/';
+  if (path === '/search') return null;
   if (path === '/en' || path === '/en/' || path.startsWith('/en/')) return null;
   return path === '/' ? `${root}/en/` : `${root}/en${path}`;
 }
 
 function withEnglishAlternates(urls, base) {
+  const kept = [];
   const extra = [];
   const root = String(base || '').replace(/\/$/, '');
   for (const u of urls) {
     const path = String(u.loc || '').startsWith(root)
       ? (String(u.loc).slice(root.length) || '/')
       : '';
-    if (isBlogDetailPath(path)) continue;
+    if (path === '/search') continue;
+    kept.push(u);
+    if (u.alternateLoc) {
+      extra.push({
+        loc: u.alternateLoc,
+        lastmod: u.lastmod,
+        priority: u.priority,
+        changefreq: u.changefreq,
+      });
+      continue;
+    }
+    if (isBlogDetailPath(path) || isPlaceDetailPath(path)) continue;
+    if (path === '/en' || path.startsWith('/en/')) continue;
     const enLoc = englishAlternateLoc(u.loc, base);
     if (!enLoc) continue;
     extra.push({
-      ...u,
       loc: enLoc,
+      lastmod: u.lastmod,
       priority: path === '/' ? '0.9' : u.priority,
+      changefreq: u.changefreq,
     });
   }
-  return [...urls, ...extra];
+  return [...kept, ...extra];
 }
 
 async function loadPlaceUrls(base) {
   try {
     const rows = await db.prepare(`
-      SELECT slug, lat, lng, status, overview, description FROM places
+      SELECT slug, lat, lng, status, overview, description,
+             description_en, overview_en, updated_at, created_at
+      FROM places
       WHERE COALESCE(NULLIF(TRIM(status), ''), 'published') = 'published'
         AND slug IS NOT NULL AND TRIM(slug) <> ''
         AND lat IS NOT NULL AND lng IS NOT NULL
@@ -145,10 +191,14 @@ async function loadPlaceUrls(base) {
     for (const row of rows) {
       const path = placeSitemapPath(row);
       if (!path) continue;
+      const lastmod = recordLastmod(row.updated_at, row.created_at) || CONTENT_SNAPSHOT_DATE;
+      const enPath = placeEnSitemapPath(row);
       urls.push({
         loc: `${base}${path}`,
+        lastmod,
         priority: '0.8',
         changefreq: 'weekly',
+        alternateLoc: enPath ? `${base}${enPath}` : null,
       });
     }
     return urls;
@@ -170,7 +220,7 @@ async function loadBlogUrls(base) {
     const urls = [];
     for (const b of rows) {
       if (!isQualityBlogBody(b)) continue;
-      const lastmod = isoDate(b.published_at || b.created_at);
+      const lastmod = recordLastmod(b.published_at, b.created_at) || CONTENT_SNAPSHOT_DATE;
       urls.push({
         loc: `${base}/blog/${encodeURIComponent(b.slug)}`,
         lastmod,
@@ -192,23 +242,26 @@ async function loadBlogUrls(base) {
   }
 }
 
-async function buildSitemapXml() {
-  const base = siteBaseUrl();
-  const today = isoDate();
-  const urls = withEnglishAlternates(
-    [...staticUrls(base), ...(await loadPlaceUrls(base)), ...(await loadBlogUrls(base))],
-    base,
-  );
+function renderUrlSet(urls) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url>
     <loc>${escapeXml(u.loc)}</loc>
-    <lastmod>${escapeXml(u.lastmod || today)}</lastmod>
+    <lastmod>${escapeXml(u.lastmod)}</lastmod>
     <changefreq>${escapeXml(u.changefreq || 'weekly')}</changefreq>
     <priority>${escapeXml(u.priority || '0.5')}</priority>
   </url>`).join('\n')}
 </urlset>
 `;
+}
+
+async function buildSitemapXml() {
+  const base = siteBaseUrl();
+  const urls = withEnglishAlternates(
+    [...staticUrls(base), ...(await loadPlaceUrls(base)), ...(await loadBlogUrls(base))],
+    base,
+  );
+  return renderUrlSet(urls);
 }
 
 const ROBOTS_PRIVATE_PATHS = [
@@ -240,6 +293,9 @@ module.exports = {
   siteBaseUrl,
   buildSitemapXml,
   buildRobotsTxt,
+  renderUrlSet,
+  isoDate,
+  recordLastmod,
   isValidSitemapCoord,
   isPublishedPlaceStatus,
   isQualityPlaceDescription,
@@ -249,9 +305,12 @@ module.exports = {
   PLACE_DESCRIPTION_MIN_CHARS,
   BLOG_BODY_MIN_CHARS,
   SITEMAP_PLACE_LIMIT,
+  CONTENT_SNAPSHOT_DATE,
   englishAlternateLoc,
   withEnglishAlternates,
   isBlogDetailPath,
+  isPlaceDetailPath,
+  staticUrls,
   ROBOTS_PRIVATE_PATHS,
   SITEMAP_CACHE_CONTROL,
 };

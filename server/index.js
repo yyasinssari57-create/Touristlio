@@ -309,12 +309,17 @@ app.get('/places/:slug', async (req, res) => {
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
   const tiolas = await loadApprovedTiolasForPlace(place.id);
   const { generateMeta } = require('./lib/seo');
+  const { placeHasEnglishCopy } = require('./lib/place-i18n');
   const meta = generateMeta('place', { place }, lang);
+  const slug = String(row.slug || req.params.slug || '').trim();
+  const trPath = `/places/${encodeURIComponent(slug)}`;
+  const enPath = placeHasEnglishCopy(row) ? `/en${trPath}` : null;
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: meta.title,
     description: meta.description,
     image: meta.ogImage || place.imageUrl,
     ogType: 'place',
+    alternates: { tr: trPath, en: enPath },
     jsonLd: jsonLdForPlace(place, tiolas, lang),
   });
 });

@@ -4,11 +4,11 @@
  *
  * Sunucu/veritabanı gerekmez. Şablonlar, head enjeksiyonu ve istemci
  * metinlerinin aynı başlıkları kullandığını kontrol eder.
- * FAZ3-4 (arama noindex) bu script'te bilinçli olarak uygulanmaz.
+ * /search noindex kuralı V4 Adım 3 ile her zaman açıktır.
  */
 const fs = require('fs');
 const path = require('path');
-const { generateMeta, SEO_TEMPLATES, buildSeoHead, siteBaseUrl } = require('../lib/seo');
+const { generateMeta, SEO_TEMPLATES, buildSeoHead, siteBaseUrl, shouldNoindexPath } = require('../lib/seo');
 
 const ROOT = path.join(__dirname, '..', '..');
 let failed = 0;
@@ -112,9 +112,13 @@ const exploreEnHead = buildSeoHead({ pathname: '/en/explore', lang: 'en' });
 headHas(exploreEnHead, exploreEn.title, 'EN /explore title');
 headHas(exploreEnHead, `${base}/en/explore`, 'EN explore canonical');
 
-const searchHead = buildSeoHead({ pathname: '/search', lang: 'tr' });
-if (searchHead.includes('noindex')) fail('FAZ3-4 leaked: /search is noindex');
-else ok('/search stays indexable (FAZ3-4 not in this change)');
+const searchHead = buildSeoHead({
+  pathname: '/search',
+  lang: 'tr',
+  noindex: shouldNoindexPath('/search', {}),
+});
+if (!searchHead.includes('noindex')) fail('/search must be noindex (V4 Adım 3)');
+else ok('/search is noindex');
 headHas(searchHead, 'Destinasyon ara — Touristlio', 'search title unchanged');
 
 const indexJs = read('server/index.js');

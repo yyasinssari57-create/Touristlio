@@ -3,8 +3,9 @@
  * Usage: node server/scripts/verify-faz3-5-sitemap.js
  *
  * PRD sütunları bu şemada yok: verification_status, deleted_at, description_tr,
- * updated_at, blog_posts, is_published. Karşılıklar places.status / overview /
- * description ve blogs.status / body. Sayfa görünümü değişmez.
+ * blog_posts, is_published. Karşılıklar places.status / overview / description
+ * ve blogs.status / body. V4 Adım 3 places.created_at / updated_at ekledi.
+ * Sayfa görünümü değişmez.
  */
 const fs = require('fs');
 const path = require('path');
