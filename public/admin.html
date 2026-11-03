@@ -459,6 +459,14 @@
               </label>
               <textarea class="ain full adm-textarea-sm" id="bpExcerpt" placeholder="Özet" aria-label="Özet"></textarea>
               <textarea class="ain full" id="bpBody" placeholder="İçerik *" aria-label="İçerik" style="min-height:120px"></textarea>
+              <label class="adm-label-sm full" for="bpTitleEn">İngilizce başlık</label>
+              <input class="ain full" id="bpTitleEn" placeholder="İngilizce başlık" aria-label="İngilizce başlık"/>
+              <label class="adm-label-sm full" for="bpSlugEn">İngilizce slug</label>
+              <input class="ain full" id="bpSlugEn" placeholder="İngilizce slug (boşsa başlıktan)" aria-label="İngilizce slug"/>
+              <label class="adm-label-sm full" for="bpExcerptEn">İngilizce özet</label>
+              <textarea class="ain full adm-textarea-sm" id="bpExcerptEn" placeholder="İngilizce özet" aria-label="İngilizce özet"></textarea>
+              <label class="adm-label-sm full" for="bpBodyEn">İngilizce içerik</label>
+              <textarea class="ain full" id="bpBodyEn" placeholder="İngilizce içerik" aria-label="İngilizce içerik" style="min-height:120px"></textarea>
             </div>
             <button class="btn bp bsm" type="button" id="btnAddBlogPost" data-act="addBlogPost" aria-label="Blog yazısı ekle">Yazı ekle</button>
           </div>
@@ -3055,10 +3063,14 @@ async function addBlogPost() {
         featured: document.getElementById('bpFeatured').checked,
         excerpt: document.getElementById('bpExcerpt').value,
         body: document.getElementById('bpBody').value,
+        titleEn: document.getElementById('bpTitleEn').value,
+        slugEn: document.getElementById('bpSlugEn').value,
+        excerptEn: document.getElementById('bpExcerptEn').value,
+        bodyEn: document.getElementById('bpBodyEn').value,
         publishedAt: fromDatetimeLocalValue(document.getElementById('bpPublishedAt')?.value),
       },
     });
-    ['bpTitle', 'bpSlug', 'bpAuthor', 'bpPlaceId', 'bpImage', 'bpTags', 'bpExcerpt', 'bpBody', 'bpPublishedAt'].forEach((id) => {
+    ['bpTitle', 'bpSlug', 'bpAuthor', 'bpPlaceId', 'bpImage', 'bpTags', 'bpExcerpt', 'bpBody', 'bpPublishedAt', 'bpTitleEn', 'bpSlugEn', 'bpExcerptEn', 'bpBodyEn'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -4778,6 +4790,14 @@ async function openBlogEdit(id) {
         <input class="ain full" id="edBlogPublishedAt" type="datetime-local" value="${toDatetimeLocalValue(b.publishedAt)}" aria-label="Yayın tarihi"/>
         <textarea class="ain full" id="edBlogExcerpt" aria-label="Özet" style="height:50px">${escapeHtml(b.excerpt || '')}</textarea>
         <textarea class="ain full" id="edBlogBody" aria-label="İçerik" style="height:120px">${escapeHtml(b.body || '')}</textarea>
+        <label class="adm-label-sm full" for="edBlogTitleEn">İngilizce başlık</label>
+        <input class="ain full" id="edBlogTitleEn" value="${escapeHtml(b.titleEn || '')}" aria-label="İngilizce başlık"/>
+        <label class="adm-label-sm full" for="edBlogSlugEn">İngilizce slug</label>
+        <input class="ain full" id="edBlogSlugEn" value="${escapeHtml(b.slugEn || '')}" aria-label="İngilizce slug"/>
+        <label class="adm-label-sm full" for="edBlogExcerptEn">İngilizce özet</label>
+        <textarea class="ain full" id="edBlogExcerptEn" aria-label="İngilizce özet" style="height:50px">${escapeHtml(b.excerptEn || '')}</textarea>
+        <label class="adm-label-sm full" for="edBlogBodyEn">İngilizce içerik</label>
+        <textarea class="ain full" id="edBlogBodyEn" aria-label="İngilizce içerik" style="height:120px">${escapeHtml(b.bodyEn || '')}</textarea>
       </div>
       <div id="edBlogModHistory" class="adm-mod-history-wrap" data-content-type="blog" data-content-id="${b.id}"></div>
       <p style="font-size:.78rem;color:var(--t2)">Hesap: ${escapeHtml(b.userName)}</p>`,
@@ -4809,6 +4829,10 @@ async function saveBlogEdit(id, approveAfter) {
         featured: document.getElementById('edBlogFeatured').checked,
         excerpt: document.getElementById('edBlogExcerpt').value,
         body: document.getElementById('edBlogBody').value,
+        titleEn: document.getElementById('edBlogTitleEn').value,
+        slugEn: document.getElementById('edBlogSlugEn').value,
+        excerptEn: document.getElementById('edBlogExcerptEn').value,
+        bodyEn: document.getElementById('edBlogBodyEn').value,
         publishedAt: fromDatetimeLocalValue(document.getElementById('edBlogPublishedAt')?.value),
       },
     });

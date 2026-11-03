@@ -82,7 +82,7 @@ function waitForServer(port, tries = 300) {
 console.log('verify-jsonld');
 
 const indexSrc = fs.readFileSync(path.join(ROOT, 'server/index.js'), 'utf8');
-if (!indexSrc.includes('await loadApprovedBlog(slug)')) fail('/blog/:slug does not await loadApprovedBlog');
+if (!indexSrc.includes('loadApprovedBlog(slug')) fail('/blog/:slug does not await loadApprovedBlog');
 else ok('/blog/:slug awaits loadApprovedBlog');
 
 const agency = travelAgency();

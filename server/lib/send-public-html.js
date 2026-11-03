@@ -167,8 +167,11 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   const { injectSeoHead, langFromPath, shouldNoindexDocument } = require('./seo');
   const { autoJsonLd } = require('./jsonld');
   const lang = seo.lang || req?.tlLang || langFromPath(pathname);
+  const beforeInject = seo.beforeInject;
   const seoRest = { ...seo };
   delete seoRest.errorDetail;
+  delete seoRest.beforeInject;
+  if (typeof beforeInject === 'function') html = beforeInject(html);
   if (relativePath === '404.html') {
     res.status(publicHtmlStatus(relativePath, res.statusCode));
     if (!seoRest.title) {

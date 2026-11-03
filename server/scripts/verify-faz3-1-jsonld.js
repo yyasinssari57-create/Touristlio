@@ -232,10 +232,17 @@ async function findFixtures() {
     `).get();
     if (withGeo?.slug) fixtures.placeWithGeo = withGeo.slug;
 
+    const { blogEnFields } = require('../lib/blog-i18n');
     const blog = await db.prepare(`
-      SELECT slug FROM blogs WHERE status = 'approved' AND slug IS NOT NULL ORDER BY id LIMIT 1
+      SELECT slug, title, title_en, excerpt_en, body_en, slug_en
+      FROM blogs WHERE status = 'approved' AND slug IS NOT NULL AND btrim(slug) <> ''
+      ORDER BY id LIMIT 1
     `).get();
-    if (blog?.slug) fixtures.blogSlug = blog.slug;
+    if (blog?.slug) {
+      fixtures.blogSlug = blog.slug;
+      fixtures.blogTitle = blog.title || '';
+      fixtures.blogTranslated = blogEnFields(blog).translated;
+    }
   } catch (e) {
     fail(`fixture sorgusu başarısız: ${e.message}`);
   }
@@ -340,25 +347,53 @@ async function curlCheck(port) {
     ok('(0,0) koordinatlı test satırı yok (atlandı) — temiz bir DB\'de bu normal');
   }
 
-  // 6) Blog detay — TR + EN, Article var ve URL dile uyuyor.
+  // 6) Blog detay — TR Article Türkçe. EN çevirisi yoksa noindex, Türkçe Article yok.
   if (fixtures.blogSlug) {
-    for (const [label, prefix] of [['TR', ''], ['EN', '/en']]) {
-      const res = await get(`${prefix}/blog/${encodeURIComponent(fixtures.blogSlug)}`);
-      if (res.status === 200) {
-        const blocks = parseScripts(res.body);
-        const article = blocks.find((b) => b['@type'] === 'Article');
-        const wantLang = label === 'EN' ? 'en' : 'tr';
-        const url = String(article?.url || '');
-        const urlOk = label === 'EN' ? /\/en\/blog\//.test(url) : (/\/blog\//.test(url) && !/\/en\/blog\//.test(url));
-        if (article?.headline && article.inLanguage === wantLang && urlOk) {
-          ok(`Blog detay (${label}): Article var, inLanguage="${article.inLanguage}", url dile uyuyor`);
-        } else if (!article) {
-          fail(`Blog detay (${label}): Article bulunamadı`);
-        } else {
-          fail(`Blog detay (${label}): inLanguage/url uyumsuz (inLanguage=${article.inLanguage}, url=${url})`);
-        }
+    const trRes = await get(`/blog/${encodeURIComponent(fixtures.blogSlug)}`);
+    if (trRes.status === 200) {
+      const blocks = parseScripts(trRes.body);
+      const article = blocks.find((b) => b['@type'] === 'Article');
+      const url = String(article?.url || '');
+      const urlOk = /\/blog\//.test(url) && !/\/en\/blog\//.test(url);
+      if (article?.headline && article.inLanguage === 'tr' && urlOk) {
+        ok(`Blog detay (TR): Article var, inLanguage="tr", url dile uyuyor`);
+      } else if (!article) {
+        fail('Blog detay (TR): Article bulunamadı');
       } else {
-        fail(`GET ${prefix}/blog/${fixtures.blogSlug} (${label}) → HTTP ${res.status}`);
+        fail(`Blog detay (TR): inLanguage/url uyumsuz (inLanguage=${article.inLanguage}, url=${url})`);
+      }
+    } else {
+      fail(`GET /blog/${fixtures.blogSlug} (TR) → HTTP ${trRes.status}`);
+    }
+
+    const enRes = await get(`/en/blog/${encodeURIComponent(fixtures.blogSlug)}`);
+    if (enRes.status !== 200) {
+      fail(`GET /en/blog/${fixtures.blogSlug} (EN) → HTTP ${enRes.status}`);
+    } else if (!fixtures.blogTranslated) {
+      const blocks = parseScripts(enRes.body);
+      const article = blocks.find((b) => b['@type'] === 'Article');
+      const robots = enRes.body.match(/name="robots" content="([^"]+)"/);
+      const headline = String(article?.headline || '');
+      const leakedTr = fixtures.blogTitle && headline === fixtures.blogTitle;
+      if ((robots?.[1] || '').includes('noindex')
+        && enRes.body.includes('Bu yazı henüz İngilizceye çevrilmedi')
+        && !article
+        && !leakedTr) {
+        ok('Blog detay (EN, çevirisiz): noindex, not, Türkçe Article yok');
+      } else {
+        fail(`Blog detay (EN, çevirisiz) beklenen noindex değil (robots=${robots && robots[1]}, article=${!!article})`);
+      }
+    } else {
+      const blocks = parseScripts(enRes.body);
+      const article = blocks.find((b) => b['@type'] === 'Article');
+      const url = String(article?.url || '');
+      if (article?.headline && article.inLanguage === 'en' && /\/en\/blog\//.test(url)
+        && article.headline !== fixtures.blogTitle) {
+        ok('Blog detay (EN, çevirili): Article İngilizce');
+      } else if (article?.headline && article.inLanguage === 'en' && /\/en\/blog\//.test(url)) {
+        ok('Blog detay (EN, çevirili): Article inLanguage=en');
+      } else {
+        fail(`Blog detay (EN, çevirili): Article uyumsuz (inLanguage=${article && article.inLanguage}, url=${url})`);
       }
     }
   } else {

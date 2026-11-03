@@ -31,7 +31,7 @@ function mapBlogCategory(row) {
     id: row.id,
     slug: row.slug,
     nameTr: row.name_tr,
-    nameEn: row.name_en || row.name_tr,
+    nameEn: row.name_en || '',
     icon: row.icon || '',
     sortOrder: row.sort_order,
     isActive: !!row.is_active,
@@ -138,13 +138,28 @@ async function deleteBlogCategory(id, { reassignTo } = {}) {
   return { ok: true, deleted: false, deactivated: true, reassigned: used > 0 ? used : 0 };
 }
 
+async function slugTaken(db, slug, excludeId) {
+  const sql = excludeId
+    ? 'SELECT id FROM blogs WHERE (slug = ? OR slug_en = ?) AND id != ?'
+    : 'SELECT id FROM blogs WHERE slug = ? OR slug_en = ?';
+  const params = excludeId ? [slug, slug, excludeId] : [slug, slug];
+  try {
+    return await db.prepare(sql).get(...params);
+  } catch (err) {
+    if (!/slug_en/i.test(String(err.message || ''))) throw err;
+    const legacy = excludeId
+      ? 'SELECT id FROM blogs WHERE slug = ? AND id != ?'
+      : 'SELECT id FROM blogs WHERE slug = ?';
+    const legacyParams = excludeId ? [slug, excludeId] : [slug];
+    return await db.prepare(legacy).get(...legacyParams);
+  }
+}
+
 async function uniqueBlogSlug(db, base, excludeId) {
   let slug = base;
   let n = 2;
   while (true) {
-    const row = excludeId
-      ? await db.prepare('SELECT id FROM blogs WHERE slug = ? AND id != ?').get(slug, excludeId)
-      : await db.prepare('SELECT id FROM blogs WHERE slug = ?').get(slug);
+    const row = await slugTaken(db, slug, excludeId);
     if (!row) return slug;
     slug = `${base}-${n++}`;
   }
@@ -261,7 +276,10 @@ async function blogCategoryLabel(slugOrObj, lang = 'tr') {
   const db = getDb();
   const row = await db.prepare('SELECT name_tr, name_en, icon FROM blog_categories WHERE slug = ? AND is_active = 1').get(slug);
   if (!row) return slug;
-  const name = lang === 'en' ? (row.name_en || row.name_tr) : row.name_tr;
+  const name = lang === 'en'
+    ? String(row.name_en || '').trim()
+    : String(row.name_tr || '').trim();
+  if (!name) return slug;
   return row.icon ? `${row.icon} ${name}` : name;
 }
 

@@ -24,6 +24,7 @@ const { upsertLiveData, applyInfoBoxUpdates, buildInfoBoxesResponse } = require(
 const { buildPlaceInfoBoxes, normalizePlaceInfoPatch, mapInfoColumns } = require('../lib/place-info-boxes');
 const catalogDb = require('../lib/catalog-db');
 const blogDb = require('../lib/blog-db');
+const { blogEnFields } = require('../lib/blog-i18n');
 const settingsService = require('../modules/settings/settings.service');
 const adminPlace = require('../lib/admin-place');
 const placesService = require('../modules/places/places.service');
@@ -1773,8 +1774,27 @@ router.post('/tools/validate', requireRole('admin'), adminToolLimiter, async (re
   return ok(res, { output: (result.stdout || '').slice(0, 2000) });
 });
 
+async function englishBlogColumns(body, existing, id) {
+  const pick = (key, prev, max) => {
+    if (body[key] === undefined) return prev || null;
+    const clean = sanitizeText(body[key], max);
+    return clean || null;
+  };
+  let titleEn = pick('titleEn', existing?.title_en, 200);
+  let excerptEn = pick('excerptEn', existing?.excerpt_en, 500);
+  let bodyEn = pick('bodyEn', existing?.body_en, 20000);
+  let slugEn = pick('slugEn', existing?.slug_en, 120);
+  if (!titleEn && !excerptEn && !bodyEn) {
+    return { titleEn: null, excerptEn: null, bodyEn: null, slugEn: null };
+  }
+  if (!slugEn && titleEn) slugEn = await blogDb.slugify(titleEn);
+  if (slugEn) slugEn = await blogDb.uniqueBlogSlug(db, slugEn, id || null);
+  return { titleEn, excerptEn, bodyEn, slugEn };
+}
+
 async function mapAdminBlog(row, lang = 'tr') {
   const category = blogDb.categorySlugFromUnknown(row.category);
+  const en = blogEnFields(row);
   return {
     id: row.id,
     userId: row.user_id,
@@ -1786,6 +1806,11 @@ async function mapAdminBlog(row, lang = 'tr') {
     title: row.title,
     excerpt: row.excerpt,
     body: row.body,
+    titleEn: en.title,
+    excerptEn: en.excerpt,
+    bodyEn: en.body,
+    slugEn: en.slug,
+    translated: en.translated,
     imageUrl: row.image_url,
     placeId: row.place_id,
     tags: blogDb.parseTagsStored(row.tags),
@@ -1870,9 +1895,9 @@ router.get('/blogs', checkPermission('admin.content'), async (req, res) => {
     params.push(category);
   }
   if (q && String(q).trim()) {
-    where += ' AND (b.title LIKE ? OR b.slug LIKE ? OR b.excerpt LIKE ?)';
+    where += ' AND (b.title LIKE ? OR b.slug LIKE ? OR b.excerpt LIKE ? OR b.title_en LIKE ? OR b.slug_en LIKE ?)';
     const like = `%${sanitizeText(q, 80)}%`;
-    params.push(like, like, like);
+    params.push(like, like, like, like, like);
   }
   const rows = await db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
@@ -1905,11 +1930,13 @@ router.post('/blogs', checkPermission('admin.content'), async (req, res) => {
   } else if (publishedAtInput) {
     publishedAt = publishedAtInput;
   }
+  const en = await englishBlogColumns(req.body || {}, null, null);
   const info = await db.prepare(`
     INSERT INTO blogs (
       user_id, category, title, slug, excerpt, body, image_url, place_id,
-      tags, featured, author_name, status, published_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      tags, featured, author_name, status, published_at,
+      title_en, excerpt_en, body_en, slug_en
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     userId ? Number(userId) : req.user.id,
     blogDb.categorySlugFromUnknown(category) || 'guide',
@@ -1924,6 +1951,10 @@ router.post('/blogs', checkPermission('admin.content'), async (req, res) => {
     authorName ? sanitizeText(authorName, 80) : null,
     nextStatus,
     publishedAt,
+    en.titleEn,
+    en.excerptEn,
+    en.bodyEn,
+    en.slugEn,
   );
   const row = await db.prepare(`
     SELECT b.*, u.name AS user_name FROM blogs b
@@ -1981,10 +2012,12 @@ router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
   } else if (nextStatus !== 'approved' && rawPublishedAt === null) {
     publishedAt = null;
   }
+  const en = await englishBlogColumns(req.body || {}, existing, id);
   await db.prepare(`
     UPDATE blogs SET
       category = ?, title = ?, slug = ?, excerpt = ?, body = ?, image_url = ?,
-      place_id = ?, tags = ?, featured = ?, author_name = ?, status = ?, published_at = ?
+      place_id = ?, tags = ?, featured = ?, author_name = ?, status = ?, published_at = ?,
+      title_en = ?, excerpt_en = ?, body_en = ?, slug_en = ?
     WHERE id = ?
   `).run(
     (category != null ? (blogDb.categorySlugFromUnknown(category) || existing.category) : existing.category),
@@ -1999,6 +2032,10 @@ router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
     authorName != null ? (authorName ? sanitizeText(authorName, 80) : null) : existing.author_name,
     nextStatus,
     publishedAt,
+    en.titleEn,
+    en.excerptEn,
+    en.bodyEn,
+    en.slugEn,
     id,
   );
   const row = await db.prepare(`

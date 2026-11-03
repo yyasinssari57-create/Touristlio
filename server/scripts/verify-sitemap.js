@@ -200,18 +200,34 @@ async function checkDatabase() {
     if (leaked) fail(`${leaked} thin or invalid places leaked into sitemap`);
     else ok('thin, draft, archived places not listed');
 
-    const blogs = await db.prepare('SELECT slug, status, body FROM blogs').all();
+    const { blogEnFields } = require('../lib/blog-i18n');
+    const blogs = await db.prepare(`
+      SELECT slug, slug_en, title_en, excerpt_en, body_en, status, body FROM blogs
+    `).all();
     let expectedBlogs = 0;
     let blogLeaked = 0;
     let blogMissing = 0;
     for (const row of blogs) {
       const slug = String(row.slug || '').trim();
       const pathName = slug ? `/blog/${encodeURIComponent(slug)}` : null;
+      const en = blogEnFields(row);
+      const enPath = en.translated ? `/en/blog/${encodeURIComponent(en.slug)}` : null;
       const publicBlog = row.status === 'approved' && pathName && isQualityBlogBody(row);
       if (publicBlog) {
         expectedBlogs += 1;
-        if (!locSet.has(pathName) || !locSet.has(`/en${pathName}`)) blogMissing += 1;
-      } else if (pathName && (locSet.has(pathName) || locSet.has(`/en${pathName}`))) {
+        if (!locSet.has(pathName)) blogMissing += 1;
+        if (en.translated) {
+          if (!locSet.has(enPath)) blogMissing += 1;
+        } else if (locSet.has(`/en/blog/${encodeURIComponent(slug)}`)) {
+          blogLeaked += 1;
+        }
+      } else if (pathName && (locSet.has(pathName) || locSet.has(`/en/blog/${encodeURIComponent(slug)}`))) {
+        blogLeaked += 1;
+      } else if (enPath && locSet.has(enPath)) {
+        blogLeaked += 1;
+      }
+      if (!en.translated && en.slug && en.slug !== slug
+        && locSet.has(`/en/blog/${encodeURIComponent(en.slug)}`)) {
         blogLeaked += 1;
       }
     }

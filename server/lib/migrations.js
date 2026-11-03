@@ -121,6 +121,10 @@ async function runMigrations(db) {
     await addColumnIfMissing(db, 'blogs', 'featured', 'INTEGER DEFAULT 0');
     await addColumnIfMissing(db, 'blogs', 'author_name', 'TEXT');
     await addColumnIfMissing(db, 'blogs', 'published_at', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'title_en', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'excerpt_en', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'body_en', 'TEXT');
+    await addColumnIfMissing(db, 'blogs', 'slug_en', 'TEXT');
 
     await db.exec(`
     CREATE TABLE IF NOT EXISTS cities (
@@ -274,6 +278,7 @@ async function runMigrations(db) {
     await ensureIndex(db, 'idx_places_status', 'places', 'status');
     await ensureIndex(db, 'idx_places_slug', 'places', 'slug');
     await ensureIndex(db, 'idx_blogs_slug', 'blogs', 'slug');
+    await ensureIndex(db, 'idx_blogs_slug_en', 'blogs', 'slug_en');
     await ensureIndex(db, 'idx_blogs_featured', 'blogs', ['featured', 'created_at']);
     await ensureIndex(db, 'idx_tiolas_parent', 'tiolas', 'parent_id');
 
