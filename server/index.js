@@ -300,13 +300,22 @@ app.get('/places/:slug', async (req, res) => {
   const { mapPlaceRow } = require('./lib/place-map');
   const { placeStats } = require('./db');
   const { jsonLdForPlace, loadApprovedTiolasForPlace } = require('./lib/jsonld');
+  const { isPublishedPlaceStatus } = require('./lib/place-status');
+  const { publishedRedirectSlug } = require('./lib/place-redirects');
   const row = await findPlaceRow(req.params.slug);
-  if (!row) {
+  const lang = req.tlLang === 'en' ? 'en' : 'tr';
+  if (!row || !isPublishedPlaceStatus(row.status)) {
+    const fromSlug = (row && row.slug) || String(req.params.slug || '').trim().toLowerCase();
+    const target = await publishedRedirectSlug(fromSlug);
+    if (target) {
+      const dest = `${lang === 'en' ? '/en' : ''}/places/${encodeURIComponent(target)}`;
+      const q = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+      return res.redirect(301, dest + q);
+    }
     res.status(404);
     return sendPublicHtml(res, PUBLIC_DIR, '404.html');
   }
   const place = mapPlaceRow(row, await placeStats(row.id));
-  const lang = req.tlLang === 'en' ? 'en' : 'tr';
   const tiolas = await loadApprovedTiolasForPlace(place.id);
   const { generateMeta } = require('./lib/seo');
   const { placeHasEnglishCopy } = require('./lib/place-i18n');

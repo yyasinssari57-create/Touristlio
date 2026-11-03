@@ -667,7 +667,9 @@ router.get('/places', checkPermission('admin.places'), async (req, res) => {
     const offset = Number(req.query.offset) || 0;
     const issue = req.query.issue || null;
     const data = await adminPlace.listAdminPlaces({
-      q, limit, offset, issue, includeArchived: req.query.all === '1',
+      q, limit, offset, issue,
+      status: req.query.status || null,
+      includeArchived: req.query.all === '1' || req.query.status === 'archived',
     });
     return ok(res, data);
   } catch (err) {

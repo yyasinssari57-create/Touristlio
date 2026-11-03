@@ -1,6 +1,7 @@
 const { sanitizeName, sanitizeText } = require('./sanitize');
 const { getCityImage } = require('./city-images');
 const { slugify } = require('./slugify');
+const { publishedPlaceSql } = require('./place-status');
 
 /** Lazy db access — avoids circular require with db.js → migrations → catalog-db */
 function getDb(externalDb) {
@@ -91,7 +92,7 @@ async function listCities({ includeInactive = false } = {}) {
   const counts = await db.prepare(`
     SELECT TRIM(city) AS city, TRIM(country) AS country, COUNT(*) AS c
     FROM places
-    WHERE COALESCE(status, 'published') != 'archived'
+    WHERE ${publishedPlaceSql('status')}
     GROUP BY TRIM(city), TRIM(country)
   `).all();
   const countMap = new Map(counts.map((r) => [`${r.country}|${r.city}`, r.c]));
@@ -228,7 +229,7 @@ async function loadCategoryPlaceCounts(database) {
     SELECT pc.slug, COUNT(DISTINCT p.id) AS c
     FROM place_categories pc
     LEFT JOIN places p
-      ON COALESCE(p.status, 'published') != 'archived'
+      ON ${publishedPlaceSql('p.status')}
      AND (
        p.category = pc.slug
        OR (p.categories IS NOT NULL AND p.categories LIKE '%"' || pc.slug || '"%')

@@ -2910,6 +2910,7 @@
   },
   {
     "id": 28,
+    "status": "draft",
     "name": "Tac Mahal",
     "location": "Agra, Uttar Pradesh",
     "country": "India",
@@ -11672,6 +11673,7 @@
   },
   {
     "id": 109,
+    "status": "draft",
     "name": "Victoria Peak Hong Kong",
     "location": "Hong Kong",
     "country": "China",
@@ -12754,6 +12756,7 @@
   },
   {
     "id": 119,
+    "status": "draft",
     "name": "Petronas Towers",
     "location": "Kuala Lumpur",
     "country": "Malaysia",
@@ -13729,6 +13732,7 @@
   },
   {
     "id": 128,
+    "status": "draft",
     "name": "Old City Jerusalem",
     "location": "Jerusalem",
     "country": "Israel",
@@ -13946,6 +13950,7 @@
   },
   {
     "id": 130,
+    "status": "draft",
     "name": "Dead Sea Ein Bokek",
     "location": "Negev",
     "country": "Israel",
@@ -18707,6 +18712,7 @@
   },
   {
     "id": 174,
+    "status": "draft",
     "name": "Lake Baikal",
     "location": "Irkutsk",
     "country": "Russia",
@@ -20757,6 +20763,7 @@
   },
   {
     "id": 193,
+    "status": "draft",
     "name": "Havana Malecón",
     "location": "Havana",
     "country": "Cuba",
@@ -26502,6 +26509,7 @@
   },
   {
     "id": 246,
+    "status": "draft",
     "name": "Prince Islands",
     "location": "Adalar, İstanbul",
     "country": "Turkey",
@@ -26830,6 +26838,7 @@
   },
   {
     "id": 249,
+    "status": "draft",
     "name": "Lake Van Akdamar",
     "location": "Van",
     "country": "Turkey",
@@ -42806,6 +42815,7 @@
   },
   {
     "id": 397,
+    "status": "draft",
     "name": "Kuala Lumpur Batu Caves",
     "location": "Selangor",
     "country": "Malaysia",
@@ -46038,6 +46048,7 @@
   },
   {
     "id": 427,
+    "status": "draft",
     "name": "Kerala Backwaters Alleppey",
     "location": "Kerala",
     "country": "India",
@@ -48406,6 +48417,7 @@
   },
   {
     "id": 449,
+    "status": "draft",
     "name": "Dakar Goree Island",
     "location": "Dakar",
     "country": "Senegal",
@@ -49374,6 +49386,7 @@
   },
   {
     "id": 458,
+    "status": "draft",
     "name": "Stone Town Zanzibar",
     "location": "Zanzibar",
     "country": "Tanzania",
@@ -52710,6 +52723,7 @@
   },
   {
     "id": 489,
+    "status": "draft",
     "name": "Brussels Atomium",
     "location": "Brussels",
     "country": "Belgium",
@@ -57238,6 +57252,7 @@
   },
   {
     "id": 531,
+    "status": "draft",
     "name": "Quebec Old Quebec",
     "location": "Quebec",
     "country": "Canada",
@@ -58533,6 +58548,7 @@
   },
   {
     "id": 543,
+    "status": "draft",
     "name": "Atacama Valle de la Luna",
     "location": "San Pedro",
     "country": "Chile",
@@ -62735,6 +62751,7 @@
   },
   {
     "id": 582,
+    "status": "draft",
     "name": "Rize Firtina Valley",
     "location": "Rize",
     "country": "Turkey",
@@ -63279,6 +63296,7 @@
   },
   {
     "id": 587,
+    "status": "draft",
     "name": "Bursa Cumalikizik Village",
     "location": "Bursa",
     "country": "Turkey",
@@ -64259,6 +64277,7 @@
   },
   {
     "id": 596,
+    "status": "draft",
     "name": "Kars Ani Ruins",
     "location": "Kars",
     "country": "Turkey",
@@ -64803,6 +64822,7 @@
   },
   {
     "id": 601,
+    "status": "draft",
     "name": "Antalya Termessos Ruins",
     "location": "Antalya",
     "country": "Turkey",
@@ -75358,6 +75378,7 @@
   },
   {
     "id": 698,
+    "status": "draft",
     "name": "Rio Copacabana Beach",
     "location": "Rio de Janeiro",
     "country": "Brazil",
@@ -80485,6 +80506,7 @@
   },
   {
     "id": 745,
+    "status": "draft",
     "name": "Tsukiji Outer Market Sushi",
     "location": "Tsukiji, Tokyo",
     "country": "Japan",
@@ -85167,6 +85189,7 @@
   },
   {
     "id": 788,
+    "status": "draft",
     "name": "Park Guell",
     "location": "Barcelona, Spain",
     "country": "Spain",
@@ -86873,6 +86896,7 @@
   },
   {
     "id": 804,
+    "status": "draft",
     "name": "Black Forest",
     "location": "Triberg, Germany",
     "country": "Germany",
@@ -104789,6 +104813,7 @@
   },
   {
     "id": 972,
+    "status": "draft",
     "name": "Vienna Old Town",
     "location": "Old Town, Vienna",
     "country": "Austria",
@@ -104897,6 +104922,7 @@
   },
   {
     "id": 973,
+    "status": "draft",
     "name": "Vienna Central Park",
     "location": "Central Park, Vienna",
     "country": "Austria",
@@ -105005,6 +105031,7 @@
   },
   {
     "id": 974,
+    "status": "draft",
     "name": "Prague Historic Quarter",
     "location": "Historic Quarter, Prague",
     "country": "Czech Republic",
@@ -105112,6 +105139,7 @@
   },
   {
     "id": 975,
+    "status": "draft",
     "name": "Prague Waterfront",
     "location": "Waterfront, Prague",
     "country": "Czech Republic",
@@ -105220,6 +105248,7 @@
   },
   {
     "id": 976,
+    "status": "draft",
     "name": "Budapest Main Square",
     "location": "Main Square, Budapest",
     "country": "Hungary",
@@ -105328,6 +105357,7 @@
   },
   {
     "id": 977,
+    "status": "draft",
     "name": "Budapest Cultural District",
     "location": "Cultural District, Budapest",
     "country": "Hungary",
@@ -105436,6 +105466,7 @@
   },
   {
     "id": 978,
+    "status": "draft",
     "name": "Warsaw Central Park",
     "location": "Central Park, Warsaw",
     "country": "Poland",
@@ -105544,6 +105575,7 @@
   },
   {
     "id": 979,
+    "status": "draft",
     "name": "Stockholm Historic Quarter",
     "location": "Historic Quarter, Stockholm",
     "country": "Sweden",
@@ -105652,6 +105684,7 @@
   },
   {
     "id": 980,
+    "status": "draft",
     "name": "Stockholm Waterfront",
     "location": "Waterfront, Stockholm",
     "country": "Sweden",
@@ -105760,6 +105793,7 @@
   },
   {
     "id": 981,
+    "status": "draft",
     "name": "Oslo Main Square",
     "location": "Main Square, Oslo",
     "country": "Norway",
@@ -105868,6 +105902,7 @@
   },
   {
     "id": 982,
+    "status": "draft",
     "name": "Oslo Cultural District",
     "location": "Cultural District, Oslo",
     "country": "Norway",
@@ -105976,6 +106011,7 @@
   },
   {
     "id": 983,
+    "status": "draft",
     "name": "Copenhagen Old Town",
     "location": "Old Town, Copenhagen",
     "country": "Denmark",
@@ -106084,6 +106120,7 @@
   },
   {
     "id": 984,
+    "status": "draft",
     "name": "Copenhagen Central Park",
     "location": "Central Park, Copenhagen",
     "country": "Denmark",
@@ -106191,6 +106228,7 @@
   },
   {
     "id": 985,
+    "status": "draft",
     "name": "Helsinki Historic Quarter",
     "location": "Historic Quarter, Helsinki",
     "country": "Finland",
@@ -106299,6 +106337,7 @@
   },
   {
     "id": 986,
+    "status": "draft",
     "name": "Helsinki Waterfront",
     "location": "Waterfront, Helsinki",
     "country": "Finland",
@@ -106407,6 +106446,7 @@
   },
   {
     "id": 987,
+    "status": "draft",
     "name": "Dublin Main Square",
     "location": "Main Square, Dublin",
     "country": "Ireland",
@@ -106515,6 +106555,7 @@
   },
   {
     "id": 988,
+    "status": "draft",
     "name": "Dublin Cultural District",
     "location": "Cultural District, Dublin",
     "country": "Ireland",
@@ -106623,6 +106664,7 @@
   },
   {
     "id": 989,
+    "status": "draft",
     "name": "Lisbon Old Town",
     "location": "Old Town, Lisbon",
     "country": "Portugal",
@@ -106731,6 +106773,7 @@
   },
   {
     "id": 990,
+    "status": "draft",
     "name": "Lisbon Central Park",
     "location": "Central Park, Lisbon",
     "country": "Portugal",
@@ -106839,6 +106882,7 @@
   },
   {
     "id": 991,
+    "status": "draft",
     "name": "Madrid Historic Quarter",
     "location": "Historic Quarter, Madrid",
     "country": "Spain",
@@ -106947,6 +106991,7 @@
   },
   {
     "id": 992,
+    "status": "draft",
     "name": "Madrid Waterfront",
     "location": "Waterfront, Madrid",
     "country": "Spain",
@@ -107055,6 +107100,7 @@
   },
   {
     "id": 993,
+    "status": "draft",
     "name": "Barcelona Main Square",
     "location": "Main Square, Barcelona",
     "country": "Spain",
@@ -107163,6 +107209,7 @@
   },
   {
     "id": 994,
+    "status": "draft",
     "name": "Barcelona Cultural District",
     "location": "Cultural District, Barcelona",
     "country": "Spain",
@@ -107271,6 +107318,7 @@
   },
   {
     "id": 995,
+    "status": "draft",
     "name": "Milan Old Town",
     "location": "Old Town, Milan",
     "country": "Italy",
@@ -107378,6 +107426,7 @@
   },
   {
     "id": 996,
+    "status": "draft",
     "name": "Milan Central Park",
     "location": "Central Park, Milan",
     "country": "Italy",
@@ -107486,6 +107535,7 @@
   },
   {
     "id": 997,
+    "status": "draft",
     "name": "Florence Historic Quarter",
     "location": "Historic Quarter, Florence",
     "country": "Italy",
@@ -107594,6 +107644,7 @@
   },
   {
     "id": 998,
+    "status": "draft",
     "name": "Florence Waterfront",
     "location": "Waterfront, Florence",
     "country": "Italy",
@@ -107702,6 +107753,7 @@
   },
   {
     "id": 999,
+    "status": "draft",
     "name": "Venice Main Square",
     "location": "Main Square, Venice",
     "country": "Italy",
@@ -107810,6 +107862,7 @@
   },
   {
     "id": 1000,
+    "status": "draft",
     "name": "Venice Cultural District",
     "location": "Cultural District, Venice",
     "country": "Italy",
@@ -107918,6 +107971,7 @@
   },
   {
     "id": 1001,
+    "status": "draft",
     "name": "Athens Old Town",
     "location": "Old Town, Athens",
     "country": "Greece",
@@ -108026,6 +108080,7 @@
   },
   {
     "id": 1002,
+    "status": "draft",
     "name": "Athens Central Park",
     "location": "Central Park, Athens",
     "country": "Greece",
@@ -108134,6 +108189,7 @@
   },
   {
     "id": 1003,
+    "status": "draft",
     "name": "Dubrovnik Historic Quarter",
     "location": "Historic Quarter, Dubrovnik",
     "country": "Croatia",
@@ -108242,6 +108298,7 @@
   },
   {
     "id": 1004,
+    "status": "draft",
     "name": "Dubrovnik Waterfront",
     "location": "Waterfront, Dubrovnik",
     "country": "Croatia",
@@ -108350,6 +108407,7 @@
   },
   {
     "id": 1005,
+    "status": "draft",
     "name": "Bucharest Main Square",
     "location": "Main Square, Bucharest",
     "country": "Romania",
@@ -108458,6 +108516,7 @@
   },
   {
     "id": 1006,
+    "status": "draft",
     "name": "Bucharest Cultural District",
     "location": "Cultural District, Bucharest",
     "country": "Romania",
@@ -108565,6 +108624,7 @@
   },
   {
     "id": 1007,
+    "status": "draft",
     "name": "Sofia Old Town",
     "location": "Old Town, Sofia",
     "country": "Bulgaria",
@@ -108673,6 +108733,7 @@
   },
   {
     "id": 1008,
+    "status": "draft",
     "name": "Sofia Central Park",
     "location": "Central Park, Sofia",
     "country": "Bulgaria",
@@ -108781,6 +108842,7 @@
   },
   {
     "id": 1009,
+    "status": "draft",
     "name": "Belgrade Historic Quarter",
     "location": "Historic Quarter, Belgrade",
     "country": "Serbia",
@@ -108889,6 +108951,7 @@
   },
   {
     "id": 1010,
+    "status": "draft",
     "name": "Belgrade Waterfront",
     "location": "Waterfront, Belgrade",
     "country": "Serbia",
@@ -108997,6 +109060,7 @@
   },
   {
     "id": 1011,
+    "status": "draft",
     "name": "Tbilisi Main Square",
     "location": "Main Square, Tbilisi",
     "country": "Georgia",
@@ -109105,6 +109169,7 @@
   },
   {
     "id": 1012,
+    "status": "draft",
     "name": "Tbilisi Cultural District",
     "location": "Cultural District, Tbilisi",
     "country": "Georgia",
@@ -109213,6 +109278,7 @@
   },
   {
     "id": 1013,
+    "status": "draft",
     "name": "Baku Old Town",
     "location": "Old Town, Baku",
     "country": "Azerbaijan",
@@ -109321,6 +109387,7 @@
   },
   {
     "id": 1014,
+    "status": "draft",
     "name": "Baku Central Park",
     "location": "Central Park, Baku",
     "country": "Azerbaijan",
@@ -109429,6 +109496,7 @@
   },
   {
     "id": 1015,
+    "status": "draft",
     "name": "Almaty Historic Quarter",
     "location": "Historic Quarter, Almaty",
     "country": "Kazakhstan",
@@ -109537,6 +109605,7 @@
   },
   {
     "id": 1016,
+    "status": "draft",
     "name": "Almaty Waterfront",
     "location": "Waterfront, Almaty",
     "country": "Kazakhstan",
@@ -109645,6 +109714,7 @@
   },
   {
     "id": 1017,
+    "status": "draft",
     "name": "Tashkent Main Square",
     "location": "Main Square, Tashkent",
     "country": "Uzbekistan",
@@ -109752,6 +109822,7 @@
   },
   {
     "id": 1018,
+    "status": "draft",
     "name": "Tashkent Cultural District",
     "location": "Cultural District, Tashkent",
     "country": "Uzbekistan",
@@ -109860,6 +109931,7 @@
   },
   {
     "id": 1019,
+    "status": "draft",
     "name": "Tehran Old Town",
     "location": "Old Town, Tehran",
     "country": "Iran",
@@ -109968,6 +110040,7 @@
   },
   {
     "id": 1020,
+    "status": "draft",
     "name": "Tehran Central Park",
     "location": "Central Park, Tehran",
     "country": "Iran",
@@ -110076,6 +110149,7 @@
   },
   {
     "id": 1021,
+    "status": "draft",
     "name": "Baghdad Historic Quarter",
     "location": "Historic Quarter, Baghdad",
     "country": "Iraq",
@@ -110184,6 +110258,7 @@
   },
   {
     "id": 1022,
+    "status": "draft",
     "name": "Baghdad Waterfront",
     "location": "Waterfront, Baghdad",
     "country": "Iraq",
@@ -110292,6 +110367,7 @@
   },
   {
     "id": 1023,
+    "status": "draft",
     "name": "Beirut Main Square",
     "location": "Main Square, Beirut",
     "country": "Lebanon",
@@ -110400,6 +110476,7 @@
   },
   {
     "id": 1024,
+    "status": "draft",
     "name": "Beirut Cultural District",
     "location": "Cultural District, Beirut",
     "country": "Lebanon",
@@ -110508,6 +110585,7 @@
   },
   {
     "id": 1025,
+    "status": "draft",
     "name": "Damascus Old Town",
     "location": "Old Town, Damascus",
     "country": "Syria",
@@ -110616,6 +110694,7 @@
   },
   {
     "id": 1026,
+    "status": "draft",
     "name": "Damascus Central Park",
     "location": "Central Park, Damascus",
     "country": "Syria",
@@ -110724,6 +110803,7 @@
   },
   {
     "id": 1027,
+    "status": "draft",
     "name": "Riyadh Historic Quarter",
     "location": "Historic Quarter, Riyadh",
     "country": "Saudi Arabia",
@@ -110832,6 +110912,7 @@
   },
   {
     "id": 1028,
+    "status": "draft",
     "name": "Riyadh Waterfront",
     "location": "Waterfront, Riyadh",
     "country": "Saudi Arabia",
@@ -110939,6 +111020,7 @@
   },
   {
     "id": 1029,
+    "status": "draft",
     "name": "Doha Main Square",
     "location": "Main Square, Doha",
     "country": "Qatar",
@@ -111047,6 +111129,7 @@
   },
   {
     "id": 1030,
+    "status": "draft",
     "name": "Doha Cultural District",
     "location": "Cultural District, Doha",
     "country": "Qatar",
@@ -111155,6 +111238,7 @@
   },
   {
     "id": 1031,
+    "status": "draft",
     "name": "Kuwait City Old Town",
     "location": "Old Town, Kuwait City",
     "country": "Kuwait",
@@ -111263,6 +111347,7 @@
   },
   {
     "id": 1032,
+    "status": "draft",
     "name": "Kuwait City Central Park",
     "location": "Central Park, Kuwait City",
     "country": "Kuwait",
@@ -111371,6 +111456,7 @@
   },
   {
     "id": 1033,
+    "status": "draft",
     "name": "Manama Historic Quarter",
     "location": "Historic Quarter, Manama",
     "country": "Bahrain",
@@ -111479,6 +111565,7 @@
   },
   {
     "id": 1034,
+    "status": "draft",
     "name": "Manama Waterfront",
     "location": "Waterfront, Manama",
     "country": "Bahrain",
@@ -111587,6 +111674,7 @@
   },
   {
     "id": 1035,
+    "status": "draft",
     "name": "Muscat Main Square",
     "location": "Main Square, Muscat",
     "country": "Oman",
@@ -111695,6 +111783,7 @@
   },
   {
     "id": 1036,
+    "status": "draft",
     "name": "Muscat Cultural District",
     "location": "Cultural District, Muscat",
     "country": "Oman",
@@ -111803,6 +111892,7 @@
   },
   {
     "id": 1037,
+    "status": "draft",
     "name": "Nairobi Old Town",
     "location": "Old Town, Nairobi",
     "country": "Kenya",
@@ -111911,6 +112001,7 @@
   },
   {
     "id": 1038,
+    "status": "draft",
     "name": "Nairobi Central Park",
     "location": "Central Park, Nairobi",
     "country": "Kenya",
@@ -112019,6 +112110,7 @@
   },
   {
     "id": 1039,
+    "status": "draft",
     "name": "Addis Ababa Historic Quarter",
     "location": "Historic Quarter, Addis Ababa",
     "country": "Ethiopia",
@@ -112126,6 +112218,7 @@
   },
   {
     "id": 1040,
+    "status": "draft",
     "name": "Addis Ababa Waterfront",
     "location": "Waterfront, Addis Ababa",
     "country": "Ethiopia",
@@ -112234,6 +112327,7 @@
   },
   {
     "id": 1041,
+    "status": "draft",
     "name": "Accra Main Square",
     "location": "Main Square, Accra",
     "country": "Ghana",
@@ -112342,6 +112436,7 @@
   },
   {
     "id": 1042,
+    "status": "draft",
     "name": "Accra Cultural District",
     "location": "Cultural District, Accra",
     "country": "Ghana",
@@ -112450,6 +112545,7 @@
   },
   {
     "id": 1043,
+    "status": "draft",
     "name": "Lagos Old Town",
     "location": "Old Town, Lagos",
     "country": "Nigeria",
@@ -112558,6 +112654,7 @@
   },
   {
     "id": 1044,
+    "status": "draft",
     "name": "Lagos Central Park",
     "location": "Central Park, Lagos",
     "country": "Nigeria",
@@ -112666,6 +112763,7 @@
   },
   {
     "id": 1045,
+    "status": "draft",
     "name": "Casablanca Historic Quarter",
     "location": "Historic Quarter, Casablanca",
     "country": "Morocco",
@@ -112774,6 +112872,7 @@
   },
   {
     "id": 1046,
+    "status": "draft",
     "name": "Casablanca Waterfront",
     "location": "Waterfront, Casablanca",
     "country": "Morocco",
@@ -112882,6 +112981,7 @@
   },
   {
     "id": 1047,
+    "status": "draft",
     "name": "Tunis Main Square",
     "location": "Main Square, Tunis",
     "country": "Tunisia",
@@ -112990,6 +113090,7 @@
   },
   {
     "id": 1048,
+    "status": "draft",
     "name": "Tunis Cultural District",
     "location": "Cultural District, Tunis",
     "country": "Tunisia",
@@ -113098,6 +113199,7 @@
   },
   {
     "id": 1049,
+    "status": "draft",
     "name": "Algiers Old Town",
     "location": "Old Town, Algiers",
     "country": "Algeria",
@@ -113206,6 +113308,7 @@
   },
   {
     "id": 1050,
+    "status": "draft",
     "name": "Algiers Central Park",
     "location": "Central Park, Algiers",
     "country": "Algeria",
@@ -113313,6 +113416,7 @@
   },
   {
     "id": 1051,
+    "status": "draft",
     "name": "Tripoli Historic Quarter",
     "location": "Historic Quarter, Tripoli",
     "country": "Libya",
@@ -113421,6 +113525,7 @@
   },
   {
     "id": 1052,
+    "status": "draft",
     "name": "Tripoli Waterfront",
     "location": "Waterfront, Tripoli",
     "country": "Libya",
@@ -113529,6 +113634,7 @@
   },
   {
     "id": 1053,
+    "status": "draft",
     "name": "Khartoum Main Square",
     "location": "Main Square, Khartoum",
     "country": "Sudan",
@@ -113637,6 +113743,7 @@
   },
   {
     "id": 1054,
+    "status": "draft",
     "name": "Khartoum Cultural District",
     "location": "Cultural District, Khartoum",
     "country": "Sudan",
@@ -113745,6 +113852,7 @@
   },
   {
     "id": 1055,
+    "status": "draft",
     "name": "Kampala Old Town",
     "location": "Old Town, Kampala",
     "country": "Uganda",
@@ -113853,6 +113961,7 @@
   },
   {
     "id": 1056,
+    "status": "draft",
     "name": "Kampala Central Park",
     "location": "Central Park, Kampala",
     "country": "Uganda",
@@ -113961,6 +114070,7 @@
   },
   {
     "id": 1057,
+    "status": "draft",
     "name": "Kigali Historic Quarter",
     "location": "Historic Quarter, Kigali",
     "country": "Rwanda",
@@ -114069,6 +114179,7 @@
   },
   {
     "id": 1058,
+    "status": "draft",
     "name": "Kigali Waterfront",
     "location": "Waterfront, Kigali",
     "country": "Rwanda",
@@ -114177,6 +114288,7 @@
   },
   {
     "id": 1059,
+    "status": "draft",
     "name": "Maputo Main Square",
     "location": "Main Square, Maputo",
     "country": "Mozambique",
@@ -114285,6 +114397,7 @@
   },
   {
     "id": 1060,
+    "status": "draft",
     "name": "Maputo Cultural District",
     "location": "Cultural District, Maputo",
     "country": "Mozambique",
@@ -114393,6 +114506,7 @@
   },
   {
     "id": 1061,
+    "status": "draft",
     "name": "Harare Old Town",
     "location": "Old Town, Harare",
     "country": "Zimbabwe",
@@ -114500,6 +114614,7 @@
   },
   {
     "id": 1062,
+    "status": "draft",
     "name": "Harare Central Park",
     "location": "Central Park, Harare",
     "country": "Zimbabwe",
@@ -114608,6 +114723,7 @@
   },
   {
     "id": 1063,
+    "status": "draft",
     "name": "Windhoek Historic Quarter",
     "location": "Historic Quarter, Windhoek",
     "country": "Namibia",
@@ -114716,6 +114832,7 @@
   },
   {
     "id": 1064,
+    "status": "draft",
     "name": "Windhoek Waterfront",
     "location": "Waterfront, Windhoek",
     "country": "Namibia",
@@ -114824,6 +114941,7 @@
   },
   {
     "id": 1065,
+    "status": "draft",
     "name": "Gaborone Main Square",
     "location": "Main Square, Gaborone",
     "country": "Botswana",
@@ -114932,6 +115050,7 @@
   },
   {
     "id": 1066,
+    "status": "draft",
     "name": "Gaborone Cultural District",
     "location": "Cultural District, Gaborone",
     "country": "Botswana",
@@ -115040,6 +115159,7 @@
   },
   {
     "id": 1067,
+    "status": "draft",
     "name": "Antananarivo Old Town",
     "location": "Old Town, Antananarivo",
     "country": "Madagascar",
@@ -115148,6 +115268,7 @@
   },
   {
     "id": 1068,
+    "status": "draft",
     "name": "Antananarivo Central Park",
     "location": "Central Park, Antananarivo",
     "country": "Madagascar",
@@ -115256,6 +115377,7 @@
   },
   {
     "id": 1069,
+    "status": "draft",
     "name": "Port Louis Historic Quarter",
     "location": "Historic Quarter, Port Louis",
     "country": "Mauritius",
@@ -115364,6 +115486,7 @@
   },
   {
     "id": 1070,
+    "status": "draft",
     "name": "Port Louis Waterfront",
     "location": "Waterfront, Port Louis",
     "country": "Mauritius",
@@ -115472,6 +115595,7 @@
   },
   {
     "id": 1071,
+    "status": "draft",
     "name": "Mexico City Main Square",
     "location": "Main Square, Mexico City",
     "country": "Mexico",
@@ -115580,6 +115704,7 @@
   },
   {
     "id": 1072,
+    "status": "draft",
     "name": "Mexico City Cultural District",
     "location": "Cultural District, Mexico City",
     "country": "Mexico",
@@ -115687,6 +115812,7 @@
   },
   {
     "id": 1073,
+    "status": "draft",
     "name": "Guadalajara Old Town",
     "location": "Old Town, Guadalajara",
     "country": "Mexico",
@@ -115795,6 +115921,7 @@
   },
   {
     "id": 1074,
+    "status": "draft",
     "name": "Guadalajara Central Park",
     "location": "Central Park, Guadalajara",
     "country": "Mexico",
@@ -115903,6 +116030,7 @@
   },
   {
     "id": 1075,
+    "status": "draft",
     "name": "Monterrey Historic Quarter",
     "location": "Historic Quarter, Monterrey",
     "country": "Mexico",
@@ -116011,6 +116139,7 @@
   },
   {
     "id": 1076,
+    "status": "draft",
     "name": "Monterrey Waterfront",
     "location": "Waterfront, Monterrey",
     "country": "Mexico",
@@ -116119,6 +116248,7 @@
   },
   {
     "id": 1077,
+    "status": "draft",
     "name": "Bogota Main Square",
     "location": "Main Square, Bogota",
     "country": "Colombia",
@@ -116227,6 +116357,7 @@
   },
   {
     "id": 1078,
+    "status": "draft",
     "name": "Bogota Cultural District",
     "location": "Cultural District, Bogota",
     "country": "Colombia",
@@ -116335,6 +116466,7 @@
   },
   {
     "id": 1079,
+    "status": "draft",
     "name": "Medellin Old Town",
     "location": "Old Town, Medellin",
     "country": "Colombia",
@@ -116443,6 +116575,7 @@
   },
   {
     "id": 1080,
+    "status": "draft",
     "name": "Medellin Central Park",
     "location": "Central Park, Medellin",
     "country": "Colombia",
@@ -116551,6 +116684,7 @@
   },
   {
     "id": 1081,
+    "status": "draft",
     "name": "Lima Historic Quarter",
     "location": "Historic Quarter, Lima",
     "country": "Peru",
@@ -116659,6 +116793,7 @@
   },
   {
     "id": 1082,
+    "status": "draft",
     "name": "Lima Waterfront",
     "location": "Waterfront, Lima",
     "country": "Peru",
@@ -116767,6 +116902,7 @@
   },
   {
     "id": 1083,
+    "status": "draft",
     "name": "Quito Main Square",
     "location": "Main Square, Quito",
     "country": "Ecuador",
@@ -116874,6 +117010,7 @@
   },
   {
     "id": 1084,
+    "status": "draft",
     "name": "Quito Cultural District",
     "location": "Cultural District, Quito",
     "country": "Ecuador",
@@ -116982,6 +117119,7 @@
   },
   {
     "id": 1085,
+    "status": "draft",
     "name": "La Paz Old Town",
     "location": "Old Town, La Paz",
     "country": "Bolivia",
@@ -117090,6 +117228,7 @@
   },
   {
     "id": 1086,
+    "status": "draft",
     "name": "La Paz Central Park",
     "location": "Central Park, La Paz",
     "country": "Bolivia",
@@ -117198,6 +117337,7 @@
   },
   {
     "id": 1087,
+    "status": "draft",
     "name": "Asuncion Historic Quarter",
     "location": "Historic Quarter, Asuncion",
     "country": "Paraguay",
@@ -117306,6 +117446,7 @@
   },
   {
     "id": 1088,
+    "status": "draft",
     "name": "Asuncion Waterfront",
     "location": "Waterfront, Asuncion",
     "country": "Paraguay",
@@ -117414,6 +117555,7 @@
   },
   {
     "id": 1089,
+    "status": "draft",
     "name": "Montevideo Main Square",
     "location": "Main Square, Montevideo",
     "country": "Uruguay",
@@ -117522,6 +117664,7 @@
   },
   {
     "id": 1090,
+    "status": "draft",
     "name": "Montevideo Cultural District",
     "location": "Cultural District, Montevideo",
     "country": "Uruguay",

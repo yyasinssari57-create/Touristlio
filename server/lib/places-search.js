@@ -1,6 +1,7 @@
 const { db } = require('../db');
 const { normalizeSearch } = require('./search-normalize');
 const { DISCOVER_GROUPS, FILTER_GROUPS } = require('./place-content');
+const { publishedPlaceSql } = require('./place-status');
 
 function buildFtsQuery(q) {
   const qNorm = normalizeSearch(q);
@@ -37,7 +38,7 @@ function buildPlacesWhere(filters = {}) {
     q, country, city, category, group, district, localOnly, entry,
     minScore, minTiola, score, categoryMode,
   } = filters;
-  const where = [];
+  const where = [publishedPlaceSql('p.status')];
   const params = [];
   const ftsQuery = q ? buildFtsQuery(q) : null;
   if (ftsQuery) {

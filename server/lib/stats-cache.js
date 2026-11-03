@@ -1,4 +1,5 @@
 const { db, allPlaceStats } = require('../db');
+const { publishedPlaceSql } = require('./place-status');
 
 const STATS_CACHE_TTL = 2 * 60 * 1000;
 
@@ -33,11 +34,11 @@ async function primeStatsMap() {
 async function queryHomepageStats() {
   const placesRow = await db.prepare(`
     SELECT COUNT(*) AS c FROM places
-    WHERE COALESCE(status, 'published') != 'archived'
+    WHERE ${publishedPlaceSql('status')}
   `).get();
   const countriesRow = await db.prepare(`
     SELECT COUNT(DISTINCT country) AS c FROM places
-    WHERE COALESCE(status, 'published') != 'archived'
+    WHERE ${publishedPlaceSql('status')}
       AND country IS NOT NULL AND TRIM(country) != ''
   `).get();
   const tiolasRow = await db.prepare(`

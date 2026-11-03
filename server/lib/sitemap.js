@@ -1,6 +1,7 @@
 const { db } = require('../db');
 const { blogEnSitemapPath } = require('./blog-i18n');
 const { placeEnSitemapPath } = require('./place-i18n');
+const { isPublishedPlaceStatus } = require('./place-status');
 
 function escapeXml(s) {
   return String(s)
@@ -81,12 +82,6 @@ function isValidSitemapCoord(lat, lng) {
   if (la === 0 || ln === 0) return false;
   if (Math.abs(la) > 90 || Math.abs(ln) > 180) return false;
   return true;
-}
-
-/** Audit published status → this schema uses places.status. */
-function isPublishedPlaceStatus(status) {
-  const s = String(status == null || status === '' ? 'published' : status).trim().toLowerCase();
-  return s === 'published';
 }
 
 function placeSitemapPath(row) {

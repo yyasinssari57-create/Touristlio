@@ -42,10 +42,20 @@ for (const [name, meta] of [['homeTr', homeTr], ['homeEn', homeEn], ['exploreTr'
   if (!meta.description || meta.description.length > 160) fail(`${name} description length ${meta.description && meta.description.length}`);
   else ok(`${name} description ≤ 160 (${meta.description.length})`);
 }
-if (!homeTr.description.includes('135 ülke') || !homeTr.description.includes('1.090+')) fail('home TR count copy');
-else ok('home TR uses real 135 / 1.090 counts');
-if (!exploreEn.description.includes('135 countries') || !exploreEn.description.includes('1,090+')) fail('explore EN count copy');
-else ok('explore EN count copy');
+if (homeTr.description.includes('135') || homeTr.description.includes('1.090') || homeTr.description.includes('1,090')) {
+  fail('home TR still hardcodes place counts');
+} else ok('home TR description has no fixed count');
+const countedHome = generateMeta('home', { counts: { countries: 12, places: 340 } }, 'tr');
+const countedExplore = generateMeta('explore', { counts: { countries: 12, places: 340 } }, 'en');
+if (!countedHome.description.includes('12 ülke') || !countedHome.description.includes('340 destinasyon')) {
+  fail(`home TR did not use passed counts: ${countedHome.description}`);
+} else ok('home TR description uses published counts');
+if (!countedExplore.description.includes('340 destinations') || !countedExplore.description.includes('12 countries')) {
+  fail(`explore EN did not use passed counts: ${countedExplore.description}`);
+} else ok('explore EN description uses published counts');
+if (countedHome.description.includes('1.090') || countedExplore.description.includes('1,090')) {
+  fail('counted meta still mentions the old 1,090 figure');
+} else ok('old 1,090 figure is not reused');
 
 const placeTr = generateMeta('place', {
   place: { name: 'Ayasofya', city: 'Istanbul', overview: 'A'.repeat(400), imageUrl: '/images/ayasofya.webp' },

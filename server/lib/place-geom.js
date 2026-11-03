@@ -211,7 +211,7 @@ async function findNearbyPlacesSql(originRow, mapPlace, limit = 6) {
       FROM places p
       WHERE p.id != ?
         AND p.geom IS NOT NULL
-        AND COALESCE(p.status, 'published') != 'archived'
+        AND COALESCE(NULLIF(TRIM(p.status), ''), 'published') = 'published'
         AND ST_DWithin(p.geom, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, 21000000)
       ORDER BY
         (CASE WHEN p.country = ? THEN 0 ELSE 10000 END)

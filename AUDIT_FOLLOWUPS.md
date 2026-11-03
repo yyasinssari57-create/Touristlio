@@ -2,6 +2,40 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 5 (şablon ve kopya taslak)
+
+Yasin “geç” dedi. Bu adım onaylı güvenli kümeyi yayından çıkardı. Kayıt silinmedi. Durum `draft`. Admin → Gezilecek Yerler → Yayın durumu → Taslak ile geri açılır.
+
+Yer listesi (`server/data/places.json`) ve açılışta çalışan `018_v4_adim5_draft_places` aynı slug/id listesini kullanır. Canlı veritabanı doluysa seed yeniden yazmaz; migration durumu günceller. Boş kurulumda seed `status` alanını da yazar.
+
+**Önce → sonra (yer listesi, 1090 kayıt):**
+
+| | Önce | Sonra |
+| --- | --- | --- |
+| Yayında | 1090 | 947 |
+| Taslak | 0 | 143 |
+| Üretim şablonu yayında | 119 | 0 |
+| Gözden geçir eski şehir yayında | 16 | 16 |
+| Adres benzeri çiftin ikisi de yayında | 24 | 0 |
+| Yalnızca yakın koordinat çifti | 42 | 42 (dokunulmadı) |
+| Ülke (yayındaki yer) | 135 | 128 |
+
+143 taslak = 119 üretim şablonu + 24 zayıf kopya. Ortak Unsplash gruplarına bu yüzden dokunulmadı.
+
+**Korunan 16 eski şehir (yayında kaldı):** Albuquerque Old Town, Bucharest Old Town, Dubrovnik Old Town, Jakarta Old Town, Lubeck Old Town, Lviv Old Town, Nessebar Old Town, Plovdiv Old Town, Rhodes Old Town, Riga Old Town, Salzburg Old Town, Takayama Old Town, Tallinn Old Town, Tbilisi Old Town, Vilnius Old Town, Warsaw Old Town.
+
+**24 kopyada dolu olan kaldı, zayıf olan taslak.** Eski adres, kalan adrese 301 döner. Yeniden yayınlanırsa yönlendirme durur. Örnek: Kars Ani Ruins → Ani Ruins. Aynı ada düşen Malecón / Malecon ve Güell / Guell ayrı slug (`-2`) ile duruyor; skor düşük olan taslak.
+
+Yalnızca 300 metre içindeki 42 çift duruyor. Ayasofya ve Kapalıçarşı gibi yan yana iki yer kapanmadı. Fırtına Vadisi ve Prens Adaları, başka bir yere yakın oldukları için değil, adres benzeri kopyanın zayıf tarafı oldukları için taslak.
+
+Yerel test veritabanı: migration 143 kaydı taslağa aldı, 24 yönlendirme yazdı. Yayında 950 kaldı (yer listesindeki 947 artı 3 eski test kaydı). Arşiv 20. Site haritasındaki kaliteli yer 945. Taslaklar listede yok. Sıfır koordinatlı iki gerçek yer (Salt Cathedral, Telliskivi) eskisi gibi haritada yok.
+
+Ana sayfa sayacı ve açıklama metni artık yayındaki sayıdan gelir (sabit “1.090+” kalktı). Yer listesinde taslaklar görünmez. Admin’de Taslak filtresi var.
+
+`npm run verify:v4-adim5` ve `AUDIT_PLACES_SOURCE=json npm run audit:places-quality`.
+
+Sıradaki adım Adım 6: yayın kalite kapısı ve boş bölüm başlıkları. Eksik yayın kayıtları yalnızca listelenir, kendiliğinden taslağa çekilmez.
+
 ## Cursor V4 — Adım 4 (yinelenen ve şablon mekânlar, yalnızca rapor)
 
 Bu adım liste çıkarır. Yayından çıkarma yok, silme yok, taslağa alma yok. Onay Adım 5’te.
@@ -31,7 +65,7 @@ Yerel test veritabanı: 1113 mekân (1093 yayında, 20 arşiv). Depodaki yer lis
 - Kategorisi Plaj, adı meydan / eski şehir / park / kültür bölgesi (9): Helsinki Historic Quarter, Milan Central Park, Sofia Old Town, Tashkent Cultural District, Doha Main Square, Tripoli Historic Quarter, Harare Central Park, Guadalajara Old Town, Quito Cultural District.
 - Kategorisi Doğa, görseli plaj havuzundan (2): Bucharest Cultural District, Quito Main Square.
 
-Sıradaki adım Adım 5. Yasin onayından sonra şablonlar taslağa alınır ve kopyada dolu olan kalır. Bu onay gelmeden yer sayısı değişmez.
+Bu raporun ardından Adım 5 çalıştı. Yasin “geç” dedi. Üretim şablonları ve adres benzeri kopyanın zayıf tarafı taslak. Ayrıntı yukarıda.
 
 ## Cursor V4 — Adım 3 (sitemap yalnızca gerçek adresler)
 

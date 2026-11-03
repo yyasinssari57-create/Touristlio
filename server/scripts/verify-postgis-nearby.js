@@ -44,8 +44,8 @@ else ok('findNearbyPlacesSql returns null when PostGIS is missing');
 const geoSrc = read('server/lib/geo.js');
 if (/\bST_|geography\(|PostGIS/i.test(geoSrc)) fail('geo.js must stay haversine');
 else ok('geo.js still haversine on lat/lng');
-if (!geoSrc.includes("!== 'archived'")) fail('haversine fallback still keeps archived places');
-else ok('haversine skips archived places, same as the SQL filter');
+if (!geoSrc.includes('isPublishedPlaceStatus')) fail('haversine fallback still lists unpublished places');
+else ok('haversine lists published places only');
 
 const legacy = read('server/routes/places-legacy.js');
 if (!legacy.includes('findNearbyPlacesSql') || !/findNearbyPlacesSql\([\s\S]*\|\|[\s\S]*findNearbyPlaces\(/.test(legacy)) {
