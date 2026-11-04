@@ -318,19 +318,19 @@ app.get('/places/:slug', async (req, res) => {
   const place = mapPlaceRow(row, await placeStats(row.id));
   const tiolas = await loadApprovedTiolasForPlace(place.id);
   const { generateMeta } = require('./lib/seo');
-  const { placeHasEnglishCopy } = require('./lib/place-i18n');
+  const { placePageIndexing } = require('./lib/place-i18n');
   const { isPlaceholderImage } = require('./lib/place-image');
   const meta = generateMeta('place', { place }, lang);
   const shareImage = [meta.ogImage, place.imageUrl].find((url) => url && !isPlaceholderImage(url)) || null;
   const slug = String(row.slug || req.params.slug || '').trim();
-  const trPath = `/places/${encodeURIComponent(slug)}`;
-  const enPath = placeHasEnglishCopy(row) ? `/en${trPath}` : null;
+  const indexing = placePageIndexing({ ...row, slug }, lang);
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: meta.title,
     description: meta.description,
     image: shareImage,
     ogType: 'place',
-    alternates: { tr: trPath, en: enPath },
+    noindex: indexing.noindex,
+    alternates: { tr: indexing.trPath, en: indexing.enPath },
     jsonLd: jsonLdForPlace(place, tiolas, lang),
   });
 });

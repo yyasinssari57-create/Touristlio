@@ -2,6 +2,22 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 8 (EN mekân sayfaları: eksik çeviride noindex)
+
+Yasin “geç” dedi. İngilizce çevirisi eksik mekânın İngilizce sayfası açılmaya devam eder. Ziyaretçi Türkçe metni görür. Google’a kapanır (`noindex`). O adres İngilizce site haritasına girmez. `hreflang` içinde `en` karşılığı yazılmaz. Türkçe sayfa eskisi gibi dizine açık kalır.
+
+Bu şemada `name_en` sütunu yok. Yer adı özel isimdir ve `name` alanındadır. Ayrı bir İngilizce ad uydurulmaz, yeni sütun açılmaz. Çeviri tamam sayılır: ad doluysa ve İngilizce açıklama (`description_en`) ya da, o boşsa, İngilizce özet (`overview_en`) doluysa. İkisi de boşsa veya yalnızca boşluksa çeviri eksiktir. Ad alanı boş bırakılırsa da eksik sayılır. Yayın kapısı İngilizceyi zorunlu tutmaz. Kalite skoru bu yüzden düşmez.
+
+Yer listesi (`server/data/places.json`): 1090 kaydın hepsinde İngilizce açıklama var. Gerçek mekânların İngilizce adresi bu yüzden kapanmaz. Ayasofya’nın İngilizce sayfası dizine açık kaldı, `hreflang` duruyor.
+
+Yerel test veritabanı: 1113 mekân, çevirisi eksik 3. Üçü de boş “FAZ2-4 Test Yer” (Türkçe açıklaması da yok). Site haritasının kalite eşiğine zaten girmezler. Deneme kaydı açıldı: İngilizce sayfa 200 döndü, Türkçe metin duruyordu, `noindex` vardı, `en` hreflang yoktu. Türkçe sayfa `index,follow` kaldı. Deneme kaydı silindi. Mekân sayısı 1113’te kaldı.
+
+Admin → Gezilecek Yerler listesinde “EN çeviri eksik” etiketi ve filtresi var. Açıklama kutusu boş olan kayıt bu etiketi alır.
+
+Komut: `npm run verify:v4-adim8`. Adım 3 site haritası kontrolü de geçti.
+
+Sıradaki adım Adım 9: Botlar ne görüyor?
+
 ## Cursor V4 — Adım 7 (görsel doğrulama)
 
 Yasin “geç” dedi. Yanlış eşleşen kategori yedeği artık yayındaki mekân kartında ve mekân sayfasında görünmez. Kayıt silinmedi. Unsplash adresi veritabanında durur.
@@ -24,7 +40,7 @@ Yerel test veritabanı: yayında 950 (yer listesindeki 947 artı 3 test kaydı),
 
 Komut: `npm run verify:v4-adim7`.
 
-Sıradaki adım Adım 8: EN mekân sayfaları, eksik çeviride noindex.
+Bu raporun ardından Adım 8 çalıştı. Ayrıntı yukarıda.
 
 ## Cursor V4 — Adım 6 (yayın kalite kapısı + boş bölüm başlıkları)
 
