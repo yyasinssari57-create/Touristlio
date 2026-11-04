@@ -45,6 +45,8 @@
     "verify:v4-adim8": "node server/scripts/verify-v4-adim8-place-noindex.js",
     "audit:bot-html": "node server/scripts/audit-bot-html.js",
     "verify:v4-adim9": "node server/scripts/verify-v4-adim9-bot-html.js",
+    "verify:v4-adim10": "node server/scripts/verify-v4-adim10-perf.js",
+    "measure:v4-adim10": "node server/scripts/measure-v4-adim10.js",
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",
     "verify:faz2-1": "node server/scripts/verify-faz2-1-code-split.js",

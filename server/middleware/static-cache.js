@@ -25,6 +25,11 @@ function isPublicPlacesListGet(req) {
   return PUBLIC_PLACES_GET_PATHS.some((re) => re.test(p));
 }
 
+function requestHasAssetVersion(res) {
+  const raw = (res && res.req && (res.req.originalUrl || res.req.url)) || '';
+  return /[?&]v=[^&]+/.test(String(raw));
+}
+
 function staticAssetHeaders(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
 
@@ -41,9 +46,10 @@ function staticAssetHeaders(res, filePath) {
     return;
   }
 
-  // Unversioned brand images / fonts (hero.webp can change). 1 day, not 1 year.
+  // Brand images keep a stable filename (hero.webp can be replaced).
+  // One day, unless the URL already carries ?v= (logo-round.webp?v=6).
   if (/\.(png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)$/i.test(ext)) {
-    res.setHeader('Cache-Control', DAY_CACHE);
+    res.setHeader('Cache-Control', requestHasAssetVersion(res) ? VERSIONED_ASSET_CACHE : DAY_CACHE);
   }
 }
 

@@ -2,6 +2,46 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 10 (performans: önce ölç, sonra düzelt)
+
+Yasin “geç” dedi. Görünüm aynı. Karusel hâlâ 5 slayt, 5 saniyede bir, 1,5 saniyelik solma. Harita sekmesi açılınca harita eskisi gibi çıkıyor. Yeni çerçeve yok.
+
+Ölçüm, kod değişmeden önce. Masaüstü pencere 1366×768. Önbellek kapalı. Sayfa yüklenince 0,8 saniye daha beklendi. Bu pencere “ilk yükleme”. Kaynak: yerel sunucu, `origin/main` ile aynı kod. Komut: `npm run measure:v4-adim10`. Canlı başlıklar `curl -I` ile https://www.touristlio.com (4 Kasım 2026).
+
+### Önbellek (curl -I)
+
+| Adres | Cache-Control | Karar |
+|---|---|---|
+| `/` HTML | `no-cache, no-store, must-revalidate` | Böyle kaldı. |
+| `/css/style.css` ve `/js/app.js` | `public, max-age=31536000, immutable` | Uzun önbellek zaten vardı. Adreste `?v=` var. Dokunulmadı. |
+| `/images/hero.webp` | `public, max-age=86400` | 1 gün. Dosya adı sabit (`hero.webp`). 1 yıl vermek, görsel değişince bir yıl eski resmi gösterir. Hash’li yeni ad üretilmedi. |
+| `/images/logo-round.webp?v=6` | önce 1 gün, şimdi `public, max-age=31536000, immutable` | Adreste sürüm vardı, başlık bunu yok sayıyordu. Sürüm varsa 1 yıl. |
+| Supabase örnek görsel `…/places/1092/1793643023217-5517.webp` | `private, no-cache` | Uzun önbellek yoktu. Dosya adında zaten zaman damgası var. Yeni yüklemeler `public, max-age=31536000, immutable` gönderir. Durmakta olan görseller yeniden yüklenmeden değişmez. Servis anahtarı bu ortamda yok, toplu güncelleme yapılmadı. |
+
+### İlk yükleme, önce / sonra
+
+Aynı yöntem, aynı yerel veritabanı.
+
+| | İstek | Bayt |
+|---|---:|---:|
+| Önce | 50 | 2.416.380 |
+| Sonra | 42 | 1.034.908 |
+| Fark | −8 | −1.381.472 |
+
+İlk yüklemeden çıkanlar (ölçülen bayt):
+
+- Dört sonraki karusel görseli (Unsplash): 1.229.755 bayt. Sayfa açıldıktan yaklaşık 1,2 saniye sonra sıradaki slayt inmeye başlıyor. Geçişten önce hazır olsun diye. Hareket azaltıldıysa bu görseller hiç inmez; ilk slayt durur.
+- Leaflet CSS üç dosya: 19.216 bayt. Ana sayfada yok. Harita sekmesi açılınca CSS ve JS birlikte geliyor. Denemede harita kutusu oluştu, 18 karo indi, konsol hatası yok.
+- Kullanılmayan varsayılan `hero.webp`: 135.079 bayt. Görünen ilk görsel ayarlardaki kahraman fotoğrafı. Ön yükleme artık ona bakıyor, `fetchpriority="high"` duruyor. Ayar boşsa ön yükleme yine `/images/hero.webp`.
+
+Harita yükleyici ve karusel betiği biraz büyüdü, HTML biraz küçüldü. Net sonuç yukarıdaki tablo.
+
+Leaflet JavaScript zaten harita açılınca yükleniyordu. Ona dokunulmadı.
+
+Kontrol: `npm run verify:v4-adim10`. Karusel, Faz 1 ve Faz 3 kontrolleri de geçti.
+
+Sıradaki adım Adım 11: Şifre kuralı tutarlılığı.
+
 ## Cursor V4 — Adım 9 (botlar ne görüyor?)
 
 Yasin “geç” dedi. Bu adım denetimdir. Sayfa görünümü aynı kaldı. Yer listesi sunucuda basılmadı. Mekân metni sunucuda basılmadı. Öneri aşağıda. Onay gelmeden uygulanmaz.

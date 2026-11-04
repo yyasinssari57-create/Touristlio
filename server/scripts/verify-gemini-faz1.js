@@ -112,10 +112,14 @@ else ok('AVIF not added to upload pipeline');
 
 const indexHtml = read('public/index.html');
 const mapLoader = read('public/js/map-loader.js');
-if (!indexHtml.includes('/vendor/leaflet/leaflet.css')
-  || !indexHtml.includes('/vendor/leaflet.markercluster/MarkerCluster.css')) {
-  fail('Leaflet vendor CSS missing from index.html');
-} else ok('Leaflet + MarkerCluster CSS still local vendor');
+if (/<link[^>]+href="\/vendor\/leaflet\/leaflet\.css/.test(indexHtml)) {
+  fail('Leaflet CSS is still in the homepage head');
+} else ok('Leaflet CSS is not on the homepage first load');
+if (!mapLoader.includes('/vendor/leaflet/leaflet.css')
+  || !mapLoader.includes('/vendor/leaflet.markercluster/MarkerCluster.css')
+  || !mapLoader.includes('MarkerCluster.Default.css')) {
+  fail('map-loader does not load Leaflet CSS when the map opens');
+} else ok('Leaflet CSS loads with the map, still from local vendor files');
 if (!fs.existsSync(path.join(ROOT, 'public/vendor/leaflet/leaflet.js'))
   || !fs.existsSync(path.join(ROOT, 'public/vendor/leaflet.markercluster/leaflet.markercluster.js'))) {
   fail('Leaflet vendor JS missing from disk');

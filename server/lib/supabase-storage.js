@@ -5,6 +5,8 @@
 const logger = require('./logger');
 
 const BUCKET = String(process.env.SUPABASE_STORAGE_BUCKET || 'uploads').trim() || 'uploads';
+/** Object keys already include a timestamp, so a replaced photo is a new URL. */
+const OBJECT_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 function supabaseUrl() {
   return String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
@@ -64,7 +66,7 @@ async function createSignedUrl(objectPath, expiresIn = 120) {
   return `${supabaseUrl()}/storage/v1${signed.startsWith('/') ? signed : `/${signed}`}`;
 }
 
-async function storageFetch(pathname, { method = 'GET', body, contentType, json } = {}) {
+async function storageFetch(pathname, { method = 'GET', body, contentType, json, cacheControl } = {}) {
   if (!isEnabled()) {
     const err = new Error('Supabase Storage tanımlı değil (SUPABASE_URL / SUPABASE_SERVICE_KEY)');
     err.status = 500;
@@ -81,6 +83,7 @@ async function storageFetch(pathname, { method = 'GET', body, contentType, json 
   } else if (contentType) {
     headers['Content-Type'] = contentType;
   }
+  if (cacheControl) headers['cache-control'] = cacheControl;
   const res = await fetch(`${supabaseUrl()}/storage/v1${pathname}`, {
     method,
     headers,
@@ -153,6 +156,7 @@ async function uploadObject(objectPath, buffer, contentType = 'image/webp') {
     method: 'POST',
     body: buffer,
     contentType,
+    cacheControl: OBJECT_CACHE_CONTROL,
   });
   return publicObjectUrl(key);
 }
@@ -166,6 +170,7 @@ async function uploadObjectUpsert(objectPath, buffer, contentType = 'image/webp'
       method: 'POST',
       body: buffer,
       contentType,
+      cacheControl: OBJECT_CACHE_CONTROL,
     });
   } catch (err) {
     if (err.status !== 409 && !/already exists|Duplicate/i.test(String(err.message || ''))) throw err;
@@ -173,6 +178,7 @@ async function uploadObjectUpsert(objectPath, buffer, contentType = 'image/webp'
       method: 'PUT',
       body: buffer,
       contentType,
+      cacheControl: OBJECT_CACHE_CONTROL,
     });
   }
   return publicObjectUrl(key);
@@ -230,6 +236,7 @@ async function listAllObjects(prefix = '', limit = 2000) {
 
 module.exports = {
   BUCKET,
+  OBJECT_CACHE_CONTROL,
   isEnabled,
   supabaseUrl,
   publicObjectUrl,
