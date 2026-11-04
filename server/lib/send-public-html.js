@@ -151,6 +151,13 @@ function injectFaviconLinks(html) {
   return `${FAVICON_LINKS}\n${html}`;
 }
 
+function htmlAttr(url) {
+  return String(url)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '');
+}
+
 function injectHeroBackground(html, url) {
   const src = String(url || '').trim();
   if (!src) return html;
@@ -158,8 +165,15 @@ function injectHeroBackground(html, url) {
   const safe = cssUrlValue(src);
   const css = `<style id="tl-hero-bg">.hbg{background-image:url("${safe}") !important;}</style>`;
   if (/id="tl-hero-bg"/.test(html)) return html;
-  if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, `${css}</head>`);
-  return css + html;
+  let next = html;
+  // The visible first slide is this URL. Point the high-priority preload at it
+  // so the unused /images/hero.webp file is not downloaded as well.
+  const preload = `<link rel="preload" as="image" href="${htmlAttr(src)}" fetchpriority="high"/>`;
+  if (/<link rel="preload" as="image" href="\/images\/hero\.webp"/.test(next)) {
+    next = next.replace(/<link rel="preload" as="image" href="\/images\/hero\.webp"[^>]*>/, preload);
+  }
+  if (/<\/head>/i.test(next)) return next.replace(/<\/head>/i, `${css}</head>`);
+  return css + next;
 }
 
 async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {

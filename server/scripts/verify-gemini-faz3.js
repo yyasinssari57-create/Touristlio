@@ -39,10 +39,13 @@ if (/<script[^>]+src="\/vendor\/leaflet\/leaflet\.js/.test(indexHtml)
   fail('Leaflet / map.js still eager on homepage');
 } else ok('homepage does not eager-load Leaflet or map.js');
 
-if (!indexHtml.includes('/vendor/leaflet/leaflet.css')
-  || !indexHtml.includes('/vendor/leaflet.markercluster/MarkerCluster.css')) {
-  fail('Leaflet CSS removed from homepage (would layout-shift)');
-} else ok('Leaflet CSS stays in head');
+if (/<link[^>]+href="\/vendor\/leaflet\/leaflet\.css/.test(indexHtml)) {
+  fail('Leaflet CSS is eager in the homepage head');
+} else ok('Leaflet CSS is not in the homepage head');
+if (!mapLoader.includes('/vendor/leaflet/leaflet.css')
+  || !mapLoader.includes('/vendor/leaflet.markercluster/MarkerCluster.css')) {
+  fail('map-loader does not load Leaflet CSS on demand');
+} else ok('Leaflet CSS loads when a map surface opens');
 
 if (!indexHtml.includes('/js/map-loader.js?v=')) fail('index.html missing map-loader.js');
 else ok('index.html loads map-loader.js');
@@ -132,8 +135,9 @@ async function checkLive(base) {
   } else ok('live homepage has no eager leaflet.js');
   if (!home.body.includes('/js/map-loader.js')) fail('live homepage missing map-loader.js');
   else ok('live homepage includes map-loader.js');
-  if (!home.body.includes('/vendor/leaflet/leaflet.css')) fail('live homepage dropped Leaflet CSS');
-  else ok('live homepage still has Leaflet CSS');
+  if (/<link[^>]+href="[^"]*\/vendor\/leaflet\/leaflet\.css/.test(home.body)) {
+    fail('live homepage still eager-loads Leaflet CSS');
+  } else ok('live homepage does not eager-load Leaflet CSS');
 
   const places = await fetchText(`${base}/api/places?limit=1`);
   const placesCc = cacheControl(places.headers);

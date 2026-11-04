@@ -79,6 +79,18 @@ const unsplash = [
 if (unsplash.every((id) => html.includes(id))) ok('Paris, Kyoto, Rome, Santorini Unsplash slides');
 else fail('expected Unsplash destination slides missing');
 
+if (/<div class="hero-slide"[^>]*style="background-image/.test(html)) {
+  fail('later hero slides still download via inline background-image');
+} else ok('later hero slides do not use an inline background-image');
+if ((html.match(/data-bg="https:\/\/images\.unsplash\.com\//g) || []).length === 4) {
+  ok('four later slides keep their URL in data-bg');
+} else fail('later slides lost data-bg');
+if (!js.includes("addEventListener('load'") && !js.includes('addEventListener("load"')) {
+  fail('later slides are not deferred until window load');
+} else ok('later slides wait for window load');
+if (!js.includes('data-bg')) fail('carousel does not read data-bg');
+else ok('carousel applies data-bg when the next slide is due');
+
 if (failed) {
   console.error(`verify-hero-carousel FAILED (${failed})`);
   process.exit(1);
