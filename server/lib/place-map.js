@@ -1,4 +1,4 @@
-const { resolvePlaceImageUrl } = require('./place-image');
+const { publicPlaceMedia } = require('./place-image');
 const { boolOrNull } = require('./place-info-boxes');
 
 function parseJson(val, fallback) {
@@ -15,7 +15,7 @@ function mapPlaceRow(row, stats) {
   const categories = parseJson(row.categories, [row.category].filter(Boolean));
   const thingsToDo = parseJson(row.things_to_do, []);
   const thingsToDoEn = parseJson(row.things_to_do_en, []);
-  const photos = parseJson(row.photos, row.image_url ? [resolvePlaceImageUrl(row.image_url, row.category, row.id)] : []);
+  const media = publicPlaceMedia(row);
   const tiolaCount = (stats && stats.tiolaCount != null)
     ? stats.tiolaCount
     : (row.tiola_count || 0);
@@ -36,7 +36,10 @@ function mapPlaceRow(row, stats) {
     district: row.district,
     category: row.category,
     categories,
-    imageUrl: resolvePlaceImageUrl(row.image_url, row.category, row.id),
+    imageUrl: media.imageUrl,
+    imageVerified: media.imageVerified,
+    imageCredit: media.imageCredit,
+    imageSourceUrl: media.imageSourceUrl,
     isLocal: !!row.is_local,
     entryFee: row.entry_fee,
     entryFeeEn: row.entry_fee_en,
@@ -56,7 +59,7 @@ function mapPlaceRow(row, stats) {
     travelTipsEn: row.travel_tips_en || row.tips_en,
     howToGetThere: row.how_to_get_there,
     howToGetThereEn: row.how_to_get_there_en,
-    photos: photos.map((url) => (url.startsWith('http') ? url : resolvePlaceImageUrl(url, row.category, row.id))),
+    photos: media.photos,
     tips: row.tips,
     tipsEn: row.tips_en,
     tags,

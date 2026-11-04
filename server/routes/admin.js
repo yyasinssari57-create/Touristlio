@@ -36,6 +36,15 @@ const { processImageUpload } = require('../middleware/process-image-upload');
 const { deleteStoredImage, diskUploadRoot } = require('../lib/image-process');
 const { imageUploader } = require('../lib/image-uploader');
 const { publicImageUrl } = require('../lib/media-url');
+const {
+  loadImageIndex,
+  externalMediaItems,
+  attachUsage,
+  findPlacesUsingImage,
+  replacePlaceImage,
+  imageKey,
+  UNVERIFIED_PUBLISHED_SQL,
+} = require('../lib/image-usage');
 const supabaseStorage = require('../lib/supabase-storage');
 const backupSafe = require('../lib/backup-safe');
 const logger = require('../lib/logger');
@@ -677,6 +686,13 @@ router.get('/places', checkPermission('admin.places'), async (req, res) => {
   }
 });
 
+router.get('/places/image-usage', checkPermission('admin.places'), async (req, res) => {
+  const url = sanitizeText(req.query.url, 500);
+  const excludeId = Number(req.query.excludeId);
+  const places = await findPlacesUsingImage(url, Number.isFinite(excludeId) ? excludeId : null);
+  return ok(res, { count: places.length, places: places.slice(0, 12) });
+});
+
 router.get('/places/export', checkPermission('admin.places'), async (req, res) => {
   const format = String(req.query.format || 'json').toLowerCase();
   if (format === 'csv') {
@@ -794,8 +810,16 @@ router.post('/places/:id/photos', checkPermission('admin.places'), upload.array(
   });
 
   const imageUrl = newUrls[0];
-  await db.prepare('UPDATE places SET photos = ?, image_url = ? WHERE id = ?').run(
+  const verifiedAt = new Date().toISOString();
+  await db.prepare(`
+    UPDATE places
+    SET photos = ?, image_url = ?, image_verified = ?, image_verified_at = ?, image_source_url = ?
+    WHERE id = ?
+  `).run(
     JSON.stringify(photos),
+    imageUrl,
+    true,
+    verifiedAt,
     imageUrl,
     placeId,
   );
@@ -1479,6 +1503,10 @@ router.get('/content-quality', checkPermission('admin.dashboard'), async (_req, 
   const noFaq = (await db.prepare("SELECT COUNT(*) AS c FROM places WHERE faq_tr IS NULL OR faq_tr = '[]'").get()).c;
   const noCoords = (await db.prepare('SELECT COUNT(*) AS c FROM places WHERE lat IS NULL OR lng IS NULL').get()).c;
   const shortDesc = (await db.prepare('SELECT COUNT(*) AS c FROM places WHERE length(description) < 80').get()).c;
+  let unverifiedImage = 0;
+  try {
+    unverifiedImage = (await db.prepare(`SELECT COUNT(*) AS c FROM places WHERE ${UNVERIFIED_PUBLISHED_SQL}`).get()).c;
+  } catch { unverifiedImage = 0; }
   return ok(res, {
     total,
     issues: {
@@ -1486,6 +1514,7 @@ router.get('/content-quality', checkPermission('admin.dashboard'), async (_req, 
       noFaq: { count: noFaq, label: 'FAQ eksik' },
       noCoords: { count: noCoords, label: 'Koordinat eksik' },
       shortDesc: { count: shortDesc, label: 'Kısa açıklama' },
+      unverifiedImage: { count: unverifiedImage, label: 'Görsel doğrulanmamış' },
     },
     score: Math.round(100 - ((noPhoto + noFaq + noCoords + shortDesc) / Math.max(total, 1)) * 25),
   });
@@ -2389,8 +2418,6 @@ router.get('/media', checkPermission('admin.places', 'admin.content'), async (re
         let linkedPlaceId = null;
         const placeMatch = relPath.match(/^(?:places\/)?(\d+)\//);
         if (placeMatch) linkedPlaceId = Number(placeMatch[1]);
-        if (placeIdFilter && linkedPlaceId !== placeIdFilter) continue;
-        if (q && !name.toLowerCase().includes(q.toLowerCase())) continue;
         all.push({
           path: relPath,
           url: publicImageUrl(relPath),
@@ -2404,14 +2431,64 @@ router.get('/media', checkPermission('admin.places', 'admin.content'), async (re
       logger.warn({ msg: 'Storage media list failed', err: err.message });
     }
   } else {
-    scanUploadsDir(uploadRoot, '', placeIdFilter, q, all);
+    scanUploadsDir(uploadRoot, '', null, '', all);
   }
-  all.sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
-  const total = all.length;
-  const totalBytes = all.reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
-  const items = all.slice(offset, offset + limit);
+  let index = { byKey: new Map() };
+  try { index = await loadImageIndex(); } catch (err) {
+    logger.warn({ msg: 'Place image index failed', err: err.message });
+  }
+  const storage = all.map((item) => attachUsage({ ...item, source: 'storage' }, index));
+  const storageKeys = new Set(storage.map((item) => imageKey(item.url)).filter(Boolean));
+  const external = externalMediaItems(index).filter((item) => !storageKeys.has(item.key));
+  let merged = [...storage, ...external];
+  const source = String(req.query.source || 'all');
+  if (source === 'storage' || source === 'external') {
+    merged = merged.filter((item) => item.source === source);
+  }
+  if (placeIdFilter) {
+    merged = merged.filter((item) => (
+      item.placeId === placeIdFilter
+      || (item.places || []).some((place) => place.id === placeIdFilter)
+    ));
+  }
+  if (q) {
+    const needle = q.toLowerCase();
+    merged = merged.filter((item) => {
+      const blob = [
+        item.filename, item.url, item.path,
+        ...(item.places || []).flatMap((place) => [place.name, place.id]),
+      ].join(' ').toLowerCase();
+      return blob.includes(needle);
+    });
+  }
+  merged.sort((a, b) => (Date.parse(b.modifiedAt) || 0) - (Date.parse(a.modifiedAt) || 0));
+  const total = merged.length;
+  const storageCount = merged.filter((item) => item.source === 'storage').length;
+  const externalCount = merged.filter((item) => item.source === 'external').length;
+  const totalBytes = merged.reduce((sum, file) => sum + (file.sizeBytes || 0), 0);
+  const items = merged.slice(offset, offset + limit).map(({ key, ...item }) => item);
 
-  return ok(res, { items, total, page, limit, totalBytes });
+  return ok(res, { items, total, page, limit, totalBytes, storageCount, externalCount });
+});
+
+router.post('/media/replace', checkPermission('admin.places'), async (req, res) => {
+  try {
+    const placeId = Number(req.body?.placeId);
+    if (!Number.isFinite(placeId) || placeId <= 0) return fail(res, 'Mekân seçin', 400);
+    const updated = await replacePlaceImage({
+      placeId,
+      fromUrl: req.body?.fromUrl,
+      toUrl: req.body?.toUrl,
+      imageCredit: req.body?.imageCredit,
+    });
+    if (!updated) return fail(res, 'Yer bulunamadı', 404);
+    clearCache('places-list');
+    clearCache('search');
+    logAdmin(req, 'place.image_replace', 'place', placeId, updated.imageUrl);
+    return ok(res, updated);
+  } catch (err) {
+    return fail(res, err.message || 'Görsel değiştirilemedi', err.statusCode || 400);
+  }
 });
 
 router.delete('/media', checkPermission('admin.places', 'admin.content'), async (req, res) => {
@@ -2453,6 +2530,9 @@ router.delete('/media', checkPermission('admin.places', 'admin.content'), async 
         nextImage,
         placeId,
       );
+      if (nextImage !== row.image_url) {
+        await db.prepare('UPDATE places SET image_verified = false, image_verified_at = NULL WHERE id = ?').run(placeId);
+      }
       clearCache('places-list');
       clearCache('search');
     }

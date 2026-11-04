@@ -97,7 +97,7 @@
               <option value="draft">Taslak</option>
               <option value="archived">Arşiv</option>
             </select>
-            <p class="adm-field-hint full">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
+            <p class="adm-field-hint full">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, doğrulanmış görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. Görseli yükleyin veya “Bu görsel bu mekâna ait” kutusunu işaretleyin. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
             <label class="adm-label-sm full" for="plSourceUrl">Kaynak URL</label>
             <input class="ain full" id="plSourceUrl" placeholder="https://… (yayın için)" aria-label="Kaynak URL"/>
             <input class="ain" id="plAliases" placeholder="Arama alias (virgülle)" aria-label="Arama aliasları"/>
@@ -106,6 +106,12 @@
             <label class="adm-label-sm full" for="plImage">Kapak görseli URL</label>
             <input class="ain full" id="plImage" placeholder="https://… veya /uploads/… (boş bırakılabilir)" aria-label="Kapak görseli URL"/>
             <p class="adm-field-hint" id="plImageHint">Unsplash veya harici URL yerine yüklenen görsel kullanmanız önerilir.</p>
+            <label class="adm-field-hint full" for="plImageVerified" style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="plImageVerified"/> Bu görsel bu mekâna ait
+            </label>
+            <input class="ain" id="plImageCredit" placeholder="Fotoğrafçı adı (Unsplash)" aria-label="Fotoğrafçı adı"/>
+            <input class="ain" id="plImageSource" placeholder="Görselin kaynak adresi" aria-label="Görsel kaynak adresi"/>
+            <p class="adm-img-warn full" id="plImageDup" hidden></p>
             <div id="plImagePreview" class="photo-preview-row" aria-live="polite"></div>
             <div class="adm-photo-section full">
               <p class="adm-photo-title">Fotoğraflar</p>
@@ -576,8 +582,13 @@
         <h2 class="adm-h2-tight">Medya kütüphanesi</h2>
         <div class="admin-card adm-mod-filters">
           <div class="admin-form adm-mod-filter-row">
-            <input class="ain" id="mediaSearchQ" placeholder="Dosya adı ara…" aria-label="Medya ara"/>
+            <input class="ain" id="mediaSearchQ" placeholder="Dosya, adres veya mekân ara…" aria-label="Medya ara"/>
             <input class="ain" id="mediaPlaceFilter" placeholder="Yer ID" inputmode="numeric" aria-label="Yer ID"/>
+            <select class="ain" id="mediaSourceFilter" aria-label="Görsel kaynağı">
+              <option value="all">Tümü</option>
+              <option value="storage">Yüklenen dosyalar</option>
+              <option value="external">Harici adresler</option>
+            </select>
             <button class="btn bp bsm" type="button" data-act="loadMediaLibrary" data-arg="1">Filtrele</button>
           </div>
           <p id="mediaStats" class="adm-mod-count" aria-live="polite"></p>
@@ -961,7 +972,7 @@
 
           <div id="guide-medya" class="admin-card adm-guide-block">
             <h3>Medya</h3>
-            <p>Yüklenen tüm görsellerin kütüphanesi. Yer, şehir ve kategori formlarından yüklenen dosyalar burada listelenir.</p>
+            <p>Yüklenen dosyalar ve mekânlarda kayıtlı harici adresler burada durur. Hangi mekânda kullanıldığı yazılır; görseli o mekân için değiştirebilirsiniz.</p>
             <ul class="adm-guide-list">
               <li>Dosya adı ve yer ID ile arama/filtreleme</li>
               <li>Her görselin URL'sini kopyalayıp formlarda kullanabilirsiniz</li>
@@ -1156,6 +1167,49 @@ let blogApprovedSelected = new Set();
 let blogPendingPage = 1;
 let blogApprovedPage = 1;
 let mediaPage = 1;
+let mediaLibraryItems = [];
+let imageDupTimer = null;
+
+function showImageDupWarning(warnId, places, count) {
+  const el = document.getElementById(warnId);
+  if (!el) return;
+  const names = (places || []).map((p) => p.name).filter(Boolean);
+  const total = count || names.length;
+  if (!total) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  const shown = names.slice(0, 6);
+  const hidden = Math.max(total, names.length) - shown.length;
+  const more = hidden > 0 ? ` ve ${hidden} mekân daha` : '';
+  el.hidden = false;
+  el.textContent = `Bu görsel başka kayıtlarda da kullanılıyor (${total}): ${shown.join(', ')}${more}. Yanlış eşleşmeyi önlemek için bu mekâna ait görseli yükleyin.`;
+}
+
+function scheduleImageDupCheck(inputId, warnId, excludeId) {
+  clearTimeout(imageDupTimer);
+  imageDupTimer = setTimeout(() => refreshImageDupWarning(inputId, warnId, excludeId), 350);
+}
+
+async function refreshImageDupWarning(inputId, warnId, excludeId) {
+  const url = document.getElementById(inputId)?.value?.trim();
+  const el = document.getElementById(warnId);
+  if (!el) return;
+  if (!url) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  try {
+    const qs = new URLSearchParams({ url });
+    if (excludeId) qs.set('excludeId', String(excludeId));
+    const data = await api('/admin/places/image-usage?' + qs);
+    showImageDupWarning(warnId, data.places || [], data.count || 0);
+  } catch {
+    el.hidden = true;
+  }
+}
 let auditPage = 1;
 let contactInboxPage = 1;
 let userDetailTab = 'genel';
@@ -1170,6 +1224,7 @@ const MOD_ACTION_LABELS = { approve: 'Onayladı', reject: 'Reddetti', remove: 'K
 const PLACE_ISSUE_LABELS = {
   noCoords: 'Koordinat eksik',
   noPhoto: 'Fotoğraf eksik',
+  unverifiedImage: 'Görsel doğrulanmamış',
   noFaq: 'FAQ eksik',
   shortDesc: 'Kısa açıklama',
 };
@@ -3325,7 +3380,10 @@ async function showPanel(user) {
   bindCityImageInput('ctImageFile', 'ctImage', 'ctImagePreview', 'ctImageHint');
   bindCityImageInput('catImageFile', 'catImage', 'catImagePreview', 'catImageHint');
   bindHeroImageInput();
-  document.getElementById('plImage')?.addEventListener('input', () => updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview'));
+  document.getElementById('plImage')?.addEventListener('input', () => {
+    updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview');
+    scheduleImageDupCheck('plImage', 'plImageDup');
+  });
   updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview');
   await loadCategoryOptions();
   await refresh();
@@ -3579,7 +3637,7 @@ async function openPlaceEdit(id) {
             <option value="draft" ${p.status === 'draft' ? 'selected' : ''}>Taslak</option>
             <option value="archived" ${p.status === 'archived' ? 'selected' : ''}>Arşiv</option>
           </select>
-          <p class="adm-field-hint">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
+          <p class="adm-field-hint">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, doğrulanmış görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. Görseli yükleyin veya “Bu görsel bu mekâna ait” kutusunu işaretleyin. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
         </div>
         <div class="full">
           <label class="adm-label-sm" for="edLocation">Adres / konum metni</label>
@@ -3606,6 +3664,12 @@ async function openPlaceEdit(id) {
         <label class="adm-label-sm full" for="edImage">Kapak görseli URL</label>
         <input class="ain full" id="edImage" value="${escapeHtml(p.imageUrl || '')}" aria-label="Kapak görseli URL"/>
         <p class="adm-field-hint" id="edImageHint">${imageSourceBadge(p.imageUrl)} Görseli değiştirmek için URL düzenleyin veya yeni görsel yükleyin.</p>
+        <label class="adm-field-hint full" for="edImageVerified" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="edImageVerified" ${p.imageVerified ? 'checked' : ''}/> Bu görsel bu mekâna ait
+        </label>
+        <input class="ain" id="edImageCredit" value="${escapeHtml(p.imageCredit || '')}" placeholder="Fotoğrafçı adı (Unsplash)" aria-label="Fotoğrafçı adı"/>
+        <input class="ain full" id="edImageSource" value="${escapeHtml(p.imageSourceUrl || '')}" placeholder="Görselin kaynak adresi" aria-label="Görsel kaynak adresi"/>
+        <p class="adm-img-warn full" id="edImageDup" hidden></p>
         <div id="edImagePreview" class="photo-preview-row" aria-live="polite"></div>
         <div class="adm-photo-section full">
           <p class="adm-photo-title">Fotoğraflar</p>
@@ -3742,8 +3806,13 @@ async function openPlaceEdit(id) {
     );
     renderExistingPhotos('edPhotoExisting', editExistingPhotos);
     bindPlacePhotoInput('edPhotos', 'edPhotoNewPreview', 'edPhotoCount');
-    document.getElementById('edImage')?.addEventListener('input', () => updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview'));
+    document.getElementById('edImage')?.addEventListener('input', () => {
+      updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview');
+      scheduleImageDupCheck('edImage', 'edImageDup', id);
+    });
     updateImageUrlHint('edImage', 'edImageHint', 'edImagePreview');
+    showImageDupWarning('edImageDup', p.imageDuplicates || [], p.imageDuplicateCount || 0);
+    scheduleImageDupCheck('edImage', 'edImageDup', id);
   } catch (e) { showErr(e.message); }
 }
 
@@ -3856,6 +3925,9 @@ async function savePlaceEdit(id) {
       entryFee: info.fee,
       bestTime: info.best,
       infoSourceUrl: document.getElementById('infoSourceUrl')?.value || '',
+      imageVerified: document.getElementById('edImageVerified')?.checked === true,
+      imageCredit: document.getElementById('edImageCredit')?.value || '',
+      imageSourceUrl: document.getElementById('edImageSource')?.value || '',
     };
     await api('/admin/places/' + id, { method: 'PUT', body: placeBody });
     const uploaded = await uploadPlacePhotos(id, 'edPhotos');
@@ -3953,6 +4025,9 @@ async function addPlace() {
       lat: parseFloat(document.getElementById('plLat').value) || undefined,
       lng: parseFloat(document.getElementById('plLng').value) || undefined,
       infoSourceUrl: document.getElementById('plSourceUrl')?.value || '',
+      imageVerified: document.getElementById('plImageVerified')?.checked === true,
+      imageCredit: document.getElementById('plImageCredit')?.value || '',
+      imageSourceUrl: document.getElementById('plImageSource')?.value || '',
     };
     if (imageUrl) body.imageUrl = imageUrl;
     let placeId = pendingNewPlaceId;
@@ -3982,6 +4057,10 @@ async function addPlace() {
     if (photoInput) photoInput.value = '';
     const photoCount = document.getElementById('plPhotoCount');
     if (photoCount) photoCount.textContent = '';
+    const verifiedBox = document.getElementById('plImageVerified');
+    if (verifiedBox) verifiedBox.checked = false;
+    const dup = document.getElementById('plImageDup');
+    if (dup) { dup.hidden = true; dup.textContent = ''; }
     updateImageUrlHint('plImage', 'plImageHint', 'plImagePreview');
     updatePhotoBtnLabel('plPhotos', 'plPhotosBtnLabel');
     await loadPlacesList();
@@ -4640,20 +4719,89 @@ async function loadMediaLibrary(page) {
     const qs = new URLSearchParams({ page: String(mediaPage), limit: '24' });
     const q = document.getElementById('mediaSearchQ')?.value?.trim();
     const placeId = document.getElementById('mediaPlaceFilter')?.value?.trim();
+    const source = document.getElementById('mediaSourceFilter')?.value || 'all';
     if (q) qs.set('q', q);
     if (placeId) qs.set('placeId', placeId);
+    if (source && source !== 'all') qs.set('source', source);
     const data = await api('/admin/media?' + qs);
     const mb = ((data.totalBytes || 0) / (1024 * 1024)).toFixed(1);
-    if (stats) stats.textContent = `${data.total || 0} dosya · ${mb} MB toplam`;
+    if (stats) {
+      stats.textContent = `${data.total || 0} görsel · yüklenen ${data.storageCount || 0} · harici ${data.externalCount || 0} · ${mb} MB`;
+    }
     const items = data.items || [];
-    grid.innerHTML = items.length ? items.map((m) => `
+    mediaLibraryItems = items;
+    grid.innerHTML = items.length ? items.map((m, index) => {
+      const places = m.places || [];
+      const placeLinks = places.slice(0, 4).map((p) =>
+        `<button type="button" data-act="openPlaceEdit" data-arg="${p.id}">${escapeHtml(p.name || ('#' + p.id))}</button>`
+      ).join('<br>');
+      const more = places.length > 4 ? `<br>+${places.length - 4}` : '';
+      const del = m.source !== 'external' && m.path
+        ? `<button type="button" class="adm-media-del" data-act="confirmDeleteMedia" data-arg="${escapeHtml(m.path)}">Sil</button>`
+        : '';
+      const badge = m.source === 'external' ? 'Harici' : 'Dosya';
+      return `
       <div class="adm-media-item">
-        <img src="${escapeHtml(m.url)}" alt="${escapeHtml(m.filename)}" loading="lazy"/>
-        <button type="button" class="adm-media-del" data-act="confirmDeleteMedia" data-arg="${escapeHtml(m.path)}">Sil</button>
-        <div class="adm-media-meta">${escapeHtml(m.filename)}${m.placeId ? `<br>Yer #${m.placeId}` : ''}</div>
-      </div>`).join('') : '<p style="color:var(--t3)">Medya bulunamadı.</p>';
+        <img src="${escapeHtml(m.url)}" alt="${escapeHtml(m.filename || 'Görsel')}" loading="lazy"/>
+        ${del}
+        <div class="adm-media-meta">${badge}${m.duplicate ? ' · yinelenen' : ''}<br>${escapeHtml(m.filename || m.url)}
+          <div class="adm-media-places">${placeLinks || 'Mekâna bağlı değil'}${more}</div>
+          <button type="button" class="btn bo bsm" data-act="openMediaReplace" data-arg="${index}">Değiştir</button>
+        </div>
+      </div>`;
+    }).join('') : '<p style="color:var(--t3)">Medya bulunamadı.</p>';
     renderPagination('mediaPagination', mediaPage, data.total || 0, data.limit || 24, 'loadMediaLibrary');
   } catch (e) { grid.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`; }
+}
+
+function openMediaReplace(index) {
+  const item = mediaLibraryItems[Number(index)];
+  if (!item) return;
+  const places = item.places || [];
+  if (!places.length) {
+    showErr('Bu dosya bir mekâna bağlı değil. Mekân kaydından kapak adresini değiştirin.');
+    return;
+  }
+  const options = places.map((p, i) =>
+    `<option value="${p.id}" ${i === 0 ? 'selected' : ''}>${escapeHtml(p.name || ('#' + p.id))}</option>`
+  ).join('');
+  openModal('Görseli değiştir', `
+    <p class="adm-field-hint">Yalnızca seçtiğiniz mekânın görseli değişir. Yeni görsel doğrulanmış sayılır.</p>
+    <label class="adm-label-sm" for="mediaReplacePlace">Mekân</label>
+    <select class="ain" id="mediaReplacePlace">${options}</select>
+    <label class="adm-label-sm" for="mediaReplaceUrl">Yeni adres</label>
+    <input class="ain" id="mediaReplaceUrl" placeholder="https://… veya /uploads/…" aria-label="Yeni görsel adresi"/>
+    <label class="adm-label-sm" for="mediaReplaceFile">veya dosya yükle</label>
+    <input type="file" id="mediaReplaceFile" accept="image/jpeg,image/png,image/webp" aria-label="Yeni görsel dosyası"/>
+    <label class="adm-label-sm" for="mediaReplaceCredit">Fotoğrafçı</label>
+    <input class="ain" id="mediaReplaceCredit" value="${escapeHtml(item.credit || '')}" placeholder="Unsplash fotoğrafçısı" aria-label="Fotoğrafçı"/>
+  `, [
+    { label: 'İptal', onClick: closeModal },
+    { label: 'Kaydet', primary: true, onClick: () => saveMediaReplace(item.url) },
+  ]);
+}
+
+async function saveMediaReplace(fromUrl) {
+  const placeId = Number(document.getElementById('mediaReplacePlace')?.value);
+  const credit = document.getElementById('mediaReplaceCredit')?.value || '';
+  const file = document.getElementById('mediaReplaceFile')?.files?.[0];
+  let toUrl = document.getElementById('mediaReplaceUrl')?.value?.trim() || '';
+  try {
+    if (file) {
+      const fd = new FormData();
+      fd.append('image', file);
+      const uploaded = await api('/admin/media', { method: 'POST', body: fd });
+      toUrl = uploaded.url;
+    }
+    if (!toUrl) throw new Error('Yeni görsel adresi veya dosya gerekli');
+    await api('/admin/media/replace', {
+      method: 'POST',
+      body: { placeId, fromUrl, toUrl, imageCredit: credit },
+    });
+    closeModal();
+    showToast('Görsel güncellendi');
+    loadMediaLibrary(mediaPage);
+  } catch (e) { showErr(e.message); }
 }
 
 function confirmDeleteMedia(path) {

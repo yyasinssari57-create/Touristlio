@@ -154,6 +154,17 @@ function photoUrl(pid, variant = 0) {
   return `${base}&crop=focalpoint&fp-x=${fp.toFixed(2)}&fp-y=0.50`;
 }
 
+function placeImagesFilled(place) {
+  const url = String(place?.imageUrl || place?.image_url || place?.hero_image || place?.heroImage || '').trim();
+  if (url && !/^(undefined|null|placeholder)$/i.test(url) && !/place-placeholder\.svg/i.test(url)) return true;
+  const photos = Array.isArray(place?.photos) ? place.photos : [];
+  return photos.some((item) => {
+    const src = typeof item === 'string' ? item : (item && (item.url || item.src));
+    const clean = String(src || '').trim();
+    return clean && !/^(undefined|null|placeholder)$/i.test(clean) && !/place-placeholder\.svg/i.test(clean);
+  });
+}
+
 function hashStr(s) {
   let h = 2166136261;
   for (const ch of String(s)) {
@@ -171,6 +182,12 @@ function assignUniqueImages(places) {
   const out = new Array(places.length);
 
   for (const { p, idx, id } of indexed) {
+    if (placeImagesFilled(p)) {
+      const kept = String(p.imageUrl || p.image_url || '').trim();
+      if (kept) used.add(kept);
+      out[idx] = p;
+      continue;
+    }
     const pool = poolForCategory(p.category);
     const seed = hashStr(`${id}|${p.name}|${p.category}`);
     let chosen = null;

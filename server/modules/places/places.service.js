@@ -15,7 +15,7 @@ const { searchPlacesPage } = require('../../lib/places-search');
 const { isPublishedPlaceStatus, publishedPlaceSql } = require('../../lib/place-status');
 const { parseListPagination, paginationMeta } = require('../../lib/pagination');
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v4img7';
 const META_CACHE_TTL = 60 * 1000;
 
 
@@ -76,6 +76,12 @@ function toApiPlace(p) {
     name: p.name,
 
     imageUrl: p.imageUrl,
+
+    imageVerified: p.imageVerified === true,
+
+    imageCredit: p.imageCredit || null,
+
+    photos: p.photos || [],
 
     tiolaRating: p.tiolaRating,
 

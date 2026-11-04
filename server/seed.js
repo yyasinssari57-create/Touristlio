@@ -8,6 +8,7 @@ const { slugify } = require('./lib/catalog-db');
 const { uniquePlaceSlug, slugFromPlace } = require('./lib/place-lookup');
 const logger = require('./lib/logger');
 const { planSitemapBlog } = require('./lib/blog-sitemap-body');
+const { mergePlaceImages, isImageVerifiedFlag } = require('./lib/place-image');
 
 const placesPath = path.join(__dirname, 'data', 'places.json');
 const blogsSeed = [
@@ -41,7 +42,8 @@ async function seedPlaces(options = {}) {
      culture_food, culture_food_en, travel_tips, travel_tips_en,
      how_to_get_there, how_to_get_there_en, photos,
      tips, tips_en, tags, search_aliases, categories, lat, lng, popularity,
-     faq_tr, faq_en, status)
+     faq_tr, faq_en, status,
+     image_credit, image_source_url, image_verified, image_verified_at)
     VALUES (@id, @name, @slug, @location, @country, @city, @district, @category,
             @imageUrl, @isLocal, @entryFee, @entryFeeEn, @bestTime, @bestTimeEn,
             @description, @descriptionEn, @overview, @overviewEn,
@@ -49,7 +51,8 @@ async function seedPlaces(options = {}) {
             @cultureFood, @cultureFoodEn, @travelTips, @travelTipsEn,
             @howToGetThere, @howToGetThereEn, @photos,
             @tips, @tipsEn, @tags, @searchAliases, @categories, @lat, @lng, @popularity,
-            @faqTR, @faqEN, @status)
+            @faqTR, @faqEN, @status,
+            @imageCredit, @imageSourceUrl, @imageVerified, @imageVerifiedAt)
   `);
 
   const usedSlugs = new Set();
@@ -64,9 +67,23 @@ async function seedPlaces(options = {}) {
         n += 1;
       }
       usedSlugs.add(slug);
+      const existing = await db.prepare(`
+        SELECT image_url, photos, image_credit, image_source_url, image_verified, image_verified_at
+        FROM places WHERE id = ?
+      `).get(p.id);
+      const images = mergePlaceImages(existing || {}, p);
+      const verifiedAt = existing?.image_verified_at instanceof Date
+        ? existing.image_verified_at.toISOString()
+        : (existing?.image_verified_at || null);
       await insert.run({
         ...p,
         slug,
+        imageUrl: images.imageUrl,
+        photos: JSON.stringify(images.photos),
+        imageCredit: existing?.image_credit || null,
+        imageSourceUrl: existing?.image_source_url || null,
+        imageVerified: existing ? isImageVerifiedFlag(existing.image_verified) : false,
+        imageVerifiedAt: existing && isImageVerifiedFlag(existing.image_verified) ? verifiedAt : null,
         isLocal: p.isLocal ? 1 : 0,
         entryFeeEn: p.entryFeeEn || null,
         bestTimeEn: p.bestTimeEn || null,
@@ -82,7 +99,6 @@ async function seedPlaces(options = {}) {
         travelTipsEn: p.travelTipsEn || p.tipsEn,
         howToGetThere: p.howToGetThere || null,
         howToGetThereEn: p.howToGetThereEn || null,
-        photos: JSON.stringify(p.photos || (p.imageUrl ? [p.imageUrl] : [])),
         tipsEn: p.tipsEn || null,
         tags: JSON.stringify(p.tags || []),
         searchAliases: JSON.stringify(p.searchAliases || []),

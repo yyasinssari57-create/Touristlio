@@ -4,6 +4,8 @@ const { sanitizeName, sanitizeText } = require('./sanitize');
 const { uniquePlaceSlug, slugFromPlace } = require('./place-lookup');
 const { boolOrNull, cleanSourceUrl } = require('./place-info-boxes');
 const { assertCanPublish } = require('./publish-quality');
+const { isImageVerifiedFlag } = require('./place-image');
+const { duplicatesForPlace } = require('./image-usage');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
@@ -54,6 +56,66 @@ function imageVerifiedFrom(src, row) {
   return undefined;
 }
 
+function textOrNull(value, max) {
+  if (value === undefined || value === null) return null;
+  const cleaned = sanitizeText(value, max);
+  return cleaned || null;
+}
+
+/**
+ * Checkbox or upload sets the flag. A changed cover without an explicit flag
+ * is unverified until someone confirms it belongs to this place.
+ */
+function resolveImageVerification(src, row, nextImageUrl) {
+  const prevUrl = String(row?.image_url || '').trim();
+  const nextUrl = String(nextImageUrl || '').trim();
+  const urlChanged = nextUrl !== prevUrl;
+  const explicit = src && (src.imageVerified !== undefined || src.image_verified !== undefined);
+  let verified;
+  if (explicit) verified = isImageVerifiedFlag(src.imageVerified !== undefined ? src.imageVerified : src.image_verified);
+  else if (!row) verified = false;
+  else if (urlChanged) verified = false;
+  else verified = isImageVerifiedFlag(row.image_verified);
+
+  const creditExplicit = src && (src.imageCredit !== undefined || src.image_credit !== undefined);
+  const credit = creditExplicit
+    ? textOrNull(src.imageCredit !== undefined ? src.imageCredit : src.image_credit, 180)
+    : (row?.image_credit || null);
+
+  const sourceExplicit = src && (src.imageSourceUrl !== undefined || src.image_source_url !== undefined);
+  let sourceUrl;
+  if (sourceExplicit) {
+    sourceUrl = textOrNull(src.imageSourceUrl !== undefined ? src.imageSourceUrl : src.image_source_url, 500);
+  } else if (urlChanged) {
+    sourceUrl = nextUrl || null;
+  } else {
+    sourceUrl = row?.image_source_url || null;
+  }
+  if (sourceUrl && !/^https?:\/\//i.test(sourceUrl) && !(sourceUrl.startsWith('/') && !sourceUrl.startsWith('//'))) {
+    sourceUrl = null;
+  }
+
+  let verifiedAt = null;
+  if (verified) {
+    if (row && isImageVerifiedFlag(row.image_verified) && !urlChanged && row.image_verified_at) {
+      verifiedAt = row.image_verified_at instanceof Date
+        ? row.image_verified_at.toISOString()
+        : row.image_verified_at;
+    } else {
+      verifiedAt = new Date().toISOString();
+    }
+  }
+  return { verified, credit, sourceUrl, verifiedAt };
+}
+
+async function persistImageVerification(id, meta) {
+  await db.prepare(`
+    UPDATE places
+    SET image_credit = ?, image_source_url = ?, image_verified = ?, image_verified_at = ?
+    WHERE id = ?
+  `).run(meta.credit, meta.sourceUrl, !!meta.verified, meta.verifiedAt, id);
+}
+
 function mapAdminPlace(row) {
   let photos = [];
   try { photos = JSON.parse(row.photos || '[]'); } catch { photos = []; }
@@ -93,12 +155,19 @@ function mapAdminPlace(row) {
     infoVerifiedAt: row.info_verified_at instanceof Date
       ? row.info_verified_at.toISOString()
       : (row.info_verified_at || null),
+    imageCredit: row.image_credit || '',
+    imageSourceUrl: row.image_source_url || '',
+    imageVerified: isImageVerifiedFlag(row.image_verified),
+    imageVerifiedAt: row.image_verified_at instanceof Date
+      ? row.image_verified_at.toISOString()
+      : (row.image_verified_at || null),
   };
 }
 
 const ISSUE_FILTERS = {
   noCoords: 'lat IS NULL OR lng IS NULL',
   noPhoto: "photos IS NULL OR photos = '[]' OR photos = ''",
+  unverifiedImage: "image_verified IS NOT TRUE",
   noFaq: "faq_tr IS NULL OR faq_tr = '[]'",
   shortDesc: 'length(description) < 80',
 };
@@ -130,9 +199,15 @@ async function listAdminPlaces({ q, limit = 100, offset = 0, status, issue, incl
 async function getAdminPlace(id) {
   const row = await db.prepare('SELECT * FROM places WHERE id = ?').get(id);
   if (!row) return null;
+  let imageDuplicates = [];
+  try {
+    imageDuplicates = await duplicatesForPlace(row);
+  } catch { /* index is optional for the form */ }
   return {
     ...mapAdminPlace(row),
     tiolaCount: await countPlaceTiolas(id),
+    imageDuplicates,
+    imageDuplicateCount: imageDuplicates.length,
   };
 }
 
@@ -212,6 +287,7 @@ async function insertPlace(body) {
   const source = resolveInfoSource(src);
   if (source.error) throw new Error(source.error);
   const statusIn = src.status || 'published';
+  const imageMeta = resolveImageVerification(src, null, src.imageUrl || src.image_url || '');
   assertCanPublish(null, {
     name: src.name,
     description: src.description,
@@ -222,8 +298,8 @@ async function insertPlace(body) {
     photos: src.photos,
     infoSourceUrl: source.provided ? source.url : null,
     infoVerifiedAt: src.infoVerifiedAt !== undefined ? src.infoVerifiedAt : src.info_verified_at,
-    imageVerified: src.imageVerified,
-    image_verified: src.image_verified,
+    imageVerified: imageMeta.verified,
+    image_verified: imageMeta.verified,
     status: statusIn,
   });
   const { enriched, status, photosJson } = await buildPlacePayload(src);
@@ -281,6 +357,7 @@ async function insertPlace(body) {
   if (source.provided) {
     await db.prepare('UPDATE places SET info_source_url = ? WHERE id = ?').run(source.url, id);
   }
+  await persistImageVerification(id, imageMeta);
   await persistPlaceSlug(id, enriched);
   try {
     const { syncPlaceGeom } = require('./place-geom');
@@ -333,6 +410,7 @@ async function updatePlace(id, body) {
   const infoVerifiedAt = (src.infoVerifiedAt !== undefined || src.info_verified_at !== undefined)
     ? (src.infoVerifiedAt !== undefined ? src.infoVerifiedAt : src.info_verified_at)
     : row.info_verified_at;
+  const imageMeta = resolveImageVerification(src, row, merged.imageUrl);
   assertCanPublish(row.status, {
     name: merged.name,
     description: merged.description,
@@ -343,7 +421,7 @@ async function updatePlace(id, body) {
     photos: merged.photos,
     infoSourceUrl,
     infoVerifiedAt,
-    image_verified: imageVerifiedFrom(src, row),
+    image_verified: imageMeta.verified,
     status: merged.status,
   });
   const { enriched, status, photosJson } = await buildPlacePayload(merged, id);
@@ -390,6 +468,7 @@ async function updatePlace(id, body) {
     infoSourceUrl,
     id,
   );
+  await persistImageVerification(id, imageMeta);
   await persistPlaceSlug(id, enriched);
   try {
     const { syncPlaceGeom } = require('./place-geom');

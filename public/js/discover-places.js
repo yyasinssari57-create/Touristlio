@@ -70,14 +70,21 @@ window.TL_DISCOVER = (function () {
       if (s.startsWith('/') && !s.startsWith('//')) return s;
       return '';
     };
+    const flag = p?.imageVerified ?? p?.image_verified;
+    const known = flag !== undefined && flag !== null && flag !== '';
+    const verified = flag === true || flag === 1 || flag === '1' || flag === 'true';
     const candidates = [p?.imageUrl, ...(Array.isArray(p?.photos) ? p.photos : [])];
+    let stored = '';
     for (const raw of candidates) {
       const url = safe(raw);
-      if (url.startsWith('http') && !/undefined|null|placeholder/i.test(url)) return url;
-      if (url.startsWith('/')) return url;
+      if (!url || /place-placeholder\.svg/i.test(url) || /undefined|null|placeholder/i.test(url)) continue;
+      if (url.startsWith('http') || url.startsWith('/')) { stored = url; break; }
     }
+    if (known) return (verified && stored) ? stored : '/images/place-placeholder.svg';
+    if (stored) return stored;
+    if (p && (p.name || p.slug || p.status)) return '/images/place-placeholder.svg';
     if (typeof fallbackImgUrl === 'function') return fallbackImgUrl(p?.category, p?.id);
-    return '/images/icon.svg';
+    return '/images/place-placeholder.svg';
   }
 
   function escapeHtml(s) {
