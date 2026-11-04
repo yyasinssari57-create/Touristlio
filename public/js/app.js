@@ -685,9 +685,26 @@ function blogMetaTitle(title) {
 }
 
 function placeHasEnglishCopy(p) {
-  // Keep in sync with server/lib/place-i18n.js (description_en or overview_en).
-  return String(p?.descriptionEn || '').trim().length > 0
-    || String(p?.overviewEn || '').trim().length > 0;
+  // Keep in sync with server/lib/place-i18n.js placeEnTranslationComplete.
+  // No name_en column: a non-empty name is the proper noun. Description
+  // is descriptionEn, or overviewEn when that is the only English text.
+  if (!p) return false;
+  const hasNameField = p.name != null || p.nameEn != null || p.name_en != null;
+  const explicitEnName = p.nameEn != null || p.name_en != null;
+  const name = String(explicitEnName ? (p.nameEn || p.name_en || '') : (p.name || '')).trim();
+  const nameOk = hasNameField ? name.length > 0 : true;
+  const description = String(p.descriptionEn || p.description_en || '').trim();
+  const overview = String(p.overviewEn || p.overview_en || '').trim();
+  return nameOk && (description.length > 0 || overview.length > 0);
+}
+
+function applyPlaceRobots(p) {
+  const block = lang === 'en' && p && !placeHasEnglishCopy(p);
+  setMetaContent(
+    'meta[name="robots"]',
+    block ? 'noindex, nofollow' : 'index,follow',
+    { name: 'robots' },
+  );
 }
 
 function applyPlaceHreflang(p) {
@@ -724,6 +741,7 @@ function updateSeoForPlace(p) {
   setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
   setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
   applyPlaceHreflang(p);
+  applyPlaceRobots(p);
   injectPlaceJsonLd(p);
 }
 
@@ -2113,7 +2131,7 @@ async function showMainTab(tab, skipRoute) {
       setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
     }
   } else if (tab === 'detail') {
-    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+    applyPlaceRobots(activePlace);
     if (activePlace) applyPlaceHreflang(activePlace);
   } else if (tab === 'explore') {
     const raw = (location.pathname || '/').replace(/\/+$/, '') || '/';

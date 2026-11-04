@@ -97,7 +97,7 @@
               <option value="draft">Taslak</option>
               <option value="archived">Arşiv</option>
             </select>
-            <p class="adm-field-hint full">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, doğrulanmış görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. Görseli yükleyin veya “Bu görsel bu mekâna ait” kutusunu işaretleyin. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
+            <p class="adm-field-hint full">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, doğrulanmış görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. Görseli yükleyin veya “Bu görsel bu mekâna ait” kutusunu işaretleyin. İngilizce zorunlu değil. İngilizce açıklama boşsa sayfa açılır, ziyaretçi Türkçe metni görür, Google’a kapalıdır. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
             <label class="adm-label-sm full" for="plSourceUrl">Kaynak URL</label>
             <input class="ain full" id="plSourceUrl" placeholder="https://… (yayın için)" aria-label="Kaynak URL"/>
             <input class="ain" id="plAliases" placeholder="Arama alias (virgülle)" aria-label="Arama aliasları"/>
@@ -144,6 +144,11 @@
               <option value="published">Yayında</option>
               <option value="draft">Taslak</option>
               <option value="archived">Arşiv</option>
+            </select>
+            <label class="sr-only" for="placeEnFilter">İngilizce çeviri</label>
+            <select class="ain" id="placeEnFilter" aria-label="İngilizce çeviri" data-act="loadPlacesList">
+              <option value="">EN çeviri: tümü</option>
+              <option value="missing">EN çeviri eksik</option>
             </select>
             <button class="btn bo bsm" type="button" data-act="exportPlaces" data-arg="json">Dışa aktar (JSON)</button>
             <button class="btn bo bsm" type="button" data-act="exportPlaces" data-arg="csv">Dışa aktar (CSV)</button>
@@ -843,6 +848,7 @@
               <li><strong>Yayın durumu</strong> — Yayında, Taslak veya Arşiv</li>
               <li><strong>Fotoğraflar</strong> — 16:9 kırpma; yüklenen görseller tercih edilir. Unsplash/harici URL'ler turuncu etiketle işaretlenir</li>
               <li><strong>Yer listesi</strong> — arama, JSON/CSV dışa aktarma ve içe aktarma</li>
+              <li><strong>EN çeviri eksik</strong> — İngilizce açıklama yoksa listede etiket görünür. O mekânın İngilizce sayfası Google’a kapalıdır; ziyaretçi Türkçe metni görmeye devam eder</li>
               <li><strong>Kalite çubuğu</strong> — koordinat, fotoğraf, FAQ veya açıklama eksik yerleri filtrelemenizi sağlar</li>
             </ul>
             <p>Listedeki bir yere <strong>Düzenle</strong> ile mevcut kaydı güncelleyebilir veya silebilirsiniz.</p>
@@ -3564,8 +3570,10 @@ async function loadPlacesList() {
   try {
     const q = document.getElementById('placeSearch')?.value || '';
     const status = document.getElementById('placeStatusFilter')?.value || '';
-    const qs = new URLSearchParams({ q, limit: status ? '200' : '80' });
+    const enFilter = document.getElementById('placeEnFilter')?.value || '';
+    const qs = new URLSearchParams({ q, limit: (status || enFilter) ? '200' : '80' });
     if (status) qs.set('status', status);
+    if (enFilter === 'missing') qs.set('en', 'missing');
     if (placeQualityFilter) qs.set('issue', placeQualityFilter);
     const data = await api('/admin/places?' + qs);
     const rows = data.places || [];
@@ -3577,7 +3585,7 @@ async function loadPlacesList() {
       <thead><tr><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>Durum</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((p) => `<tr>
         <td>${p.id}</td>
-        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}</td>
         <td>${escapeHtml(p.city)}</td>
         <td>${escapeHtml(p.country)}</td>
         <td>${escapeHtml(displayLabel(p.category))}</td>
@@ -3587,7 +3595,7 @@ async function loadPlacesList() {
           <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" data-act="confirmDeletePlace" data-arg="${p.id}">Sil</button>
         </td>
       </tr>`).join('')}</tbody></table>
-      <p style="font-size:.72rem;color:var(--t3);margin-top:8px">Toplam: ${data.total || rows.length}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
+      <p style="font-size:.72rem;color:var(--t3);margin-top:8px">Toplam: ${data.total || rows.length}${enFilter === 'missing' ? ' · Filtre: EN çeviri eksik' : ''}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
     loadPlacesQualityBar();
   } catch (e) {
     wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
@@ -3637,7 +3645,7 @@ async function openPlaceEdit(id) {
             <option value="draft" ${p.status === 'draft' ? 'selected' : ''}>Taslak</option>
             <option value="archived" ${p.status === 'archived' ? 'selected' : ''}>Arşiv</option>
           </select>
-          <p class="adm-field-hint">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, doğrulanmış görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. Görseli yükleyin veya “Bu görsel bu mekâna ait” kutusunu işaretleyin. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
+          <p class="adm-field-hint">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, doğrulanmış görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. Görseli yükleyin veya “Bu görsel bu mekâna ait” kutusunu işaretleyin. İngilizce zorunlu değil. İngilizce açıklama boşsa sayfa açılır, ziyaretçi Türkçe metni görür, Google’a kapalıdır. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
         </div>
         <div class="full">
           <label class="adm-label-sm" for="edLocation">Adres / konum metni</label>

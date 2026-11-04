@@ -6,6 +6,7 @@ const { boolOrNull, cleanSourceUrl } = require('./place-info-boxes');
 const { assertCanPublish } = require('./publish-quality');
 const { isImageVerifiedFlag } = require('./place-image');
 const { duplicatesForPlace } = require('./image-usage');
+const { placeEnTranslationComplete, PLACE_EN_MISSING_SQL } = require('./place-i18n');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
@@ -161,6 +162,7 @@ function mapAdminPlace(row) {
     imageVerifiedAt: row.image_verified_at instanceof Date
       ? row.image_verified_at.toISOString()
       : (row.image_verified_at || null),
+    enTranslationMissing: !placeEnTranslationComplete(row),
   };
 }
 
@@ -172,7 +174,9 @@ const ISSUE_FILTERS = {
   shortDesc: 'length(description) < 80',
 };
 
-async function listAdminPlaces({ q, limit = 100, offset = 0, status, issue, includeArchived = false } = {}) {
+async function listAdminPlaces({
+  q, limit = 100, offset = 0, status, issue, enTranslation, includeArchived = false,
+} = {}) {
   let where = '1=1';
   const params = [];
   if (status && VALID_STATUS.has(status)) {
@@ -183,6 +187,9 @@ async function listAdminPlaces({ q, limit = 100, offset = 0, status, issue, incl
   }
   if (issue && ISSUE_FILTERS[issue]) {
     where += ` AND (${ISSUE_FILTERS[issue]})`;
+  }
+  if (enTranslation === 'missing') {
+    where += ` AND ${PLACE_EN_MISSING_SQL}`;
   }
   if (q) {
     where += ' AND (name LIKE ? OR city LIKE ? OR country LIKE ?)';

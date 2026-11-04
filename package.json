@@ -42,6 +42,7 @@
     "audit:publish-quality": "node server/scripts/audit-publish-quality.js",
     "verify:v4-adim6": "node server/scripts/verify-v4-adim6-publish.js",
     "verify:v4-adim7": "node server/scripts/verify-v4-adim7-images.js",
+    "verify:v4-adim8": "node server/scripts/verify-v4-adim8-place-noindex.js",
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",
     "verify:faz2-1": "node server/scripts/verify-faz2-1-code-split.js",

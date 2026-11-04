@@ -1,7 +1,8 @@
 /**
  * V4 Adım 6 — mekân sayfasında boş bölüm.
  * İçerik yoksa sekme ve başlık gösterilmez. "—" yer tutucu içerik sayılmaz.
- * İngilizce boşsa Türkçe metne düşülür (placeField ile aynı). Adım 8 noindex burada yok.
+ * İngilizce boşsa Türkçe metne düşülür (placeField ile aynı).
+ * noindex bu dosyada yok; sunucu SEO ve app.js yazar.
  */
 (function (root, factory) {
   const api = factory();
