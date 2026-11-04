@@ -2,7 +2,8 @@ const { db } = require('../db');
 const { enrichContentFields } = require('./place-content');
 const { sanitizeName, sanitizeText } = require('./sanitize');
 const { uniquePlaceSlug, slugFromPlace } = require('./place-lookup');
-const { boolOrNull } = require('./place-info-boxes');
+const { boolOrNull, cleanSourceUrl } = require('./place-info-boxes');
+const { assertCanPublish } = require('./publish-quality');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
@@ -30,6 +31,27 @@ async function persistPlaceSlug(id, placeLike) {
   const slug = await uniquePlaceSlug(db, slugFromPlace(placeLike), id);
   await db.prepare('UPDATE places SET slug = ? WHERE id = ?').run(slug, id);
   return slug;
+}
+
+/** Kaynak URL gövdede varsa doğrula. Yoksa kayıtlı değer durur. */
+function resolveInfoSource(src) {
+  if (!src || (src.infoSourceUrl === undefined && src.info_source_url === undefined)) {
+    return { provided: false, url: undefined };
+  }
+  const raw = src.infoSourceUrl !== undefined ? src.infoSourceUrl : src.info_source_url;
+  const cleaned = cleanSourceUrl(raw);
+  if (cleaned && typeof cleaned === 'object' && cleaned.error) {
+    return { provided: true, error: cleaned.error };
+  }
+  return { provided: true, url: cleaned || null };
+}
+
+function imageVerifiedFrom(src, row) {
+  if (src && src.imageVerified !== undefined) return src.imageVerified;
+  if (src && src.image_verified !== undefined) return src.image_verified;
+  if (row && Object.prototype.hasOwnProperty.call(row, 'image_verified')) return row.image_verified;
+  if (row && Object.prototype.hasOwnProperty.call(row, 'imageVerified')) return row.imageVerified;
+  return undefined;
 }
 
 function mapAdminPlace(row) {
@@ -151,7 +173,7 @@ async function buildPlacePayload(body, existingId) {
     entryFeeEn,
     bestTime: bestTime || 'Sabah erken',
     bestTimeEn,
-    description: description || safeName,
+    description: description || '',
     descriptionEn,
     overview,
     overviewEn,
@@ -187,6 +209,23 @@ async function insertPlace(body) {
   if (src.lng !== undefined && src.lng !== null && src.lng !== '') {
     src.lng = parseOptionalCoord(src.lng, -180, 180);
   }
+  const source = resolveInfoSource(src);
+  if (source.error) throw new Error(source.error);
+  const statusIn = src.status || 'published';
+  assertCanPublish(null, {
+    name: src.name,
+    description: src.description,
+    lat: src.lat,
+    lng: src.lng,
+    category: src.category,
+    imageUrl: src.imageUrl || src.image_url,
+    photos: src.photos,
+    infoSourceUrl: source.provided ? source.url : null,
+    infoVerifiedAt: src.infoVerifiedAt !== undefined ? src.infoVerifiedAt : src.info_verified_at,
+    imageVerified: src.imageVerified,
+    image_verified: src.image_verified,
+    status: statusIn,
+  });
   const { enriched, status, photosJson } = await buildPlacePayload(src);
   const id = enriched.id;
   await db.prepare(`
@@ -239,6 +278,9 @@ async function insertPlace(body) {
     0,
     status,
   );
+  if (source.provided) {
+    await db.prepare('UPDATE places SET info_source_url = ? WHERE id = ?').run(source.url, id);
+  }
   await persistPlaceSlug(id, enriched);
   try {
     const { syncPlaceGeom } = require('./place-geom');
@@ -285,6 +327,25 @@ async function updatePlace(id, body) {
     searchAliases: src.searchAliases !== undefined ? src.searchAliases : parseJsonList(row.search_aliases),
     photos: src.photos ?? JSON.parse(row.photos || '[]'),
   };
+  const source = resolveInfoSource(src);
+  if (source.error) throw new Error(source.error);
+  const infoSourceUrl = source.provided ? source.url : (row.info_source_url || null);
+  const infoVerifiedAt = (src.infoVerifiedAt !== undefined || src.info_verified_at !== undefined)
+    ? (src.infoVerifiedAt !== undefined ? src.infoVerifiedAt : src.info_verified_at)
+    : row.info_verified_at;
+  assertCanPublish(row.status, {
+    name: merged.name,
+    description: merged.description,
+    lat: merged.lat,
+    lng: merged.lng,
+    category: merged.category,
+    imageUrl: merged.imageUrl,
+    photos: merged.photos,
+    infoSourceUrl,
+    infoVerifiedAt,
+    image_verified: imageVerifiedFrom(src, row),
+    status: merged.status,
+  });
   const { enriched, status, photosJson } = await buildPlacePayload(merged, id);
   const nextOverview = (overviewTouched || descriptionChanged) ? enriched.overview : row.overview;
   const nextOverviewEn = (overviewEnTouched || descriptionEnChanged)
@@ -298,6 +359,7 @@ async function updatePlace(id, body) {
       description = ?, description_en = ?, overview = ?, overview_en = ?,
       history = ?, tips = ?, travel_tips = ?,
       photos = ?, search_aliases = ?, categories = ?, lat = ?, lng = ?, status = ?,
+      info_source_url = ?,
       updated_at = datetime('now'),
       created_at = COALESCE(NULLIF(btrim(created_at), ''), datetime('now'))
     WHERE id = ?
@@ -325,6 +387,7 @@ async function updatePlace(id, body) {
     enriched.lat,
     enriched.lng,
     status,
+    infoSourceUrl,
     id,
   );
   await persistPlaceSlug(id, enriched);

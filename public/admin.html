@@ -97,6 +97,9 @@
               <option value="draft">Taslak</option>
               <option value="archived">Arşiv</option>
             </select>
+            <p class="adm-field-hint full">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
+            <label class="adm-label-sm full" for="plSourceUrl">Kaynak URL</label>
+            <input class="ain full" id="plSourceUrl" placeholder="https://… (yayın için)" aria-label="Kaynak URL"/>
             <input class="ain" id="plAliases" placeholder="Arama alias (virgülle)" aria-label="Arama aliasları"/>
             <input class="ain" id="plLat" placeholder="Enlem" aria-label="Enlem" type="number" step="any"/>
             <input class="ain" id="plLng" placeholder="Boylam" aria-label="Boylam" type="number" step="any"/>
@@ -1140,6 +1143,8 @@ let categoryOptions = [];
 let placesDebounce = null;
 let placeQualityFilter = null;
 let editExistingPhotos = [];
+let editPlaceStatus = 'published';
+let pendingNewPlaceId = null;
 let pendingTiolaCache = {};
 let modFilter = 'pending';
 let approvedTiolaSearchTimer;
@@ -3539,6 +3544,7 @@ async function openPlaceEdit(id) {
     ]);
     const p = data.place;
     const ib = infoData.infoBoxes || {};
+    editPlaceStatus = p.status || 'published';
     editExistingPhotos = [...(p.photos || [])];
     const hasExistingPhoto = editExistingPhotos.length > 0 || !!p.imageUrl;
     const catOpts = categoryOptions.map((c) =>
@@ -3573,6 +3579,7 @@ async function openPlaceEdit(id) {
             <option value="draft" ${p.status === 'draft' ? 'selected' : ''}>Taslak</option>
             <option value="archived" ${p.status === 'archived' ? 'selected' : ''}>Arşiv</option>
           </select>
+          <p class="adm-field-hint">Yayına almak için ad, Türkçe açıklama, koordinat, kategori, görsel ve kaynak URL veya doğrulama tarihi dolu olmalı. İngilizce zorunlu değil. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
         </div>
         <div class="full">
           <label class="adm-label-sm" for="edLocation">Adres / konum metni</label>
@@ -3825,30 +3832,44 @@ async function savePlaceEdit(id) {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    await api('/admin/places/' + id, {
-      method: 'PUT',
-      body: {
-        name: document.getElementById('edName').value,
-        country: document.getElementById('edCountry').value,
-        city: document.getElementById('edCity').value,
-        district: document.getElementById('edDistrict').value,
-        location: document.getElementById('edLocation').value,
-        category: document.getElementById('edCat').value,
-        status: document.getElementById('edStatus').value,
-        lat,
-        lng,
-        imageUrl: imageUrl || (photos?.[0] || undefined),
-        photos,
-        description: document.getElementById('edDesc').value,
-        descriptionEn: document.getElementById('edDescEn').value,
-        overview: document.getElementById('edOverview').value,
-        overviewEn: document.getElementById('edOverviewEn').value,
-        searchAliases: aliases,
-        entryFee: info.fee,
-        bestTime: info.best,
-      },
-    });
-    await uploadPlacePhotos(id, 'edPhotos');
+    const nextStatus = document.getElementById('edStatus').value;
+    const publishing = nextStatus === 'published' && editPlaceStatus !== 'published';
+    const hasImage = !!(imageUrl || (photos && photos.length));
+    const publishAfterUpload = publishing && willUpload && !hasImage;
+    const placeBody = {
+      name: document.getElementById('edName').value,
+      country: document.getElementById('edCountry').value,
+      city: document.getElementById('edCity').value,
+      district: document.getElementById('edDistrict').value,
+      location: document.getElementById('edLocation').value,
+      category: document.getElementById('edCat').value,
+      status: publishAfterUpload ? editPlaceStatus : nextStatus,
+      lat,
+      lng,
+      imageUrl: imageUrl || (photos?.[0] || undefined),
+      photos,
+      description: document.getElementById('edDesc').value,
+      descriptionEn: document.getElementById('edDescEn').value,
+      overview: document.getElementById('edOverview').value,
+      overviewEn: document.getElementById('edOverviewEn').value,
+      searchAliases: aliases,
+      entryFee: info.fee,
+      bestTime: info.best,
+      infoSourceUrl: document.getElementById('infoSourceUrl')?.value || '',
+    };
+    await api('/admin/places/' + id, { method: 'PUT', body: placeBody });
+    const uploaded = await uploadPlacePhotos(id, 'edPhotos');
+    if (uploaded?.photos) editExistingPhotos = uploaded.photos;
+    if (uploaded?.imageUrl && !imageUrl) {
+      const cover = document.getElementById('edImage');
+      if (cover) cover.value = uploaded.imageUrl;
+    }
+    if (publishAfterUpload) {
+      await api('/admin/places/' + id, {
+        method: 'PUT',
+        body: { status: 'published' },
+      });
+    }
     await api('/admin/places/' + id + '/info-boxes', {
       method: 'PUT',
       body: {
@@ -3913,26 +3934,42 @@ async function addPlace() {
   clearFormErr('placeFormErr');
   setBtnLoading(btn, true, 'Kaydediliyor…');
   try {
-    const created = await api('/admin/places', {
-      method: 'POST',
-      body: {
-        name: document.getElementById('plName').value,
-        country: document.getElementById('plCountry').value,
-        city: document.getElementById('plCity').value,
-        district: document.getElementById('plDistrict').value,
-        location: document.getElementById('plLocation').value,
-        category: document.getElementById('plCat').value,
-        status: document.getElementById('plStatus').value,
-        imageUrl: document.getElementById('plImage').value,
-        description: document.getElementById('plDesc').value,
-        descriptionEn: document.getElementById('plDescEn').value,
-        searchAliases: document.getElementById('plAliases').value.split(',').map((s) => s.trim()).filter(Boolean),
-        lat: parseFloat(document.getElementById('plLat').value) || undefined,
-        lng: parseFloat(document.getElementById('plLng').value) || undefined,
-      },
-    });
-    const placeId = created.id || created.place?.id;
-    if (placeId) await uploadPlacePhotos(placeId, 'plPhotos');
+    syncCroppedFiles('plPhotos');
+    const status = document.getElementById('plStatus').value;
+    const imageUrl = document.getElementById('plImage').value.trim();
+    const willUpload = (document.getElementById('plPhotos')?.files?.length || 0) > 0;
+    const publishAfterUpload = status === 'published' && willUpload && !imageUrl;
+    const body = {
+      name: document.getElementById('plName').value,
+      country: document.getElementById('plCountry').value,
+      city: document.getElementById('plCity').value,
+      district: document.getElementById('plDistrict').value,
+      location: document.getElementById('plLocation').value,
+      category: document.getElementById('plCat').value,
+      status: publishAfterUpload ? 'draft' : status,
+      description: document.getElementById('plDesc').value,
+      descriptionEn: document.getElementById('plDescEn').value,
+      searchAliases: document.getElementById('plAliases').value.split(',').map((s) => s.trim()).filter(Boolean),
+      lat: parseFloat(document.getElementById('plLat').value) || undefined,
+      lng: parseFloat(document.getElementById('plLng').value) || undefined,
+      infoSourceUrl: document.getElementById('plSourceUrl')?.value || '',
+    };
+    if (imageUrl) body.imageUrl = imageUrl;
+    let placeId = pendingNewPlaceId;
+    if (!placeId) {
+      const created = await api('/admin/places', { method: 'POST', body });
+      placeId = created.id || created.place?.id;
+      if (placeId && publishAfterUpload) pendingNewPlaceId = placeId;
+    } else {
+      const patch = { ...body };
+      if (!imageUrl) delete patch.imageUrl;
+      await api('/admin/places/' + placeId, { method: 'PUT', body: patch });
+    }
+    if (placeId && willUpload) await uploadPlacePhotos(placeId, 'plPhotos');
+    if (placeId && publishAfterUpload) {
+      await api('/admin/places/' + placeId, { method: 'PUT', body: { status: 'published' } });
+    }
+    pendingNewPlaceId = null;
     document.getElementById('placeForm').querySelectorAll('input,textarea,select').forEach((i) => {
       if (i.id === 'plCat') return;
       if (i.id === 'plStatus') { i.value = 'published'; return; }
@@ -3950,7 +3987,13 @@ async function addPlace() {
     await loadPlacesList();
     await refresh();
     showToast('Yer eklendi');
-  } catch (e) { showFormErr('placeFormErr', e.message); }
+  } catch (e) {
+    const extra = pendingNewPlaceId
+      ? ' Kayıt taslak olarak duruyor; düzeltip yeniden kaydedin (yeni kayıt açılmaz).'
+      : '';
+    showFormErr('placeFormErr', (e.message || 'Kaydedilemedi') + extra);
+    if (pendingNewPlaceId) loadPlacesList();
+  }
   finally { setBtnLoading(btn, false); }
 }
 

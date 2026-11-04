@@ -207,6 +207,7 @@ function mapInfoColumns(row) {
 module.exports = {
   BUDGET_LEVELS,
   boolOrNull,
+  cleanSourceUrl,
   buildPlaceInfoBoxes,
   normalizePlaceInfoPatch,
   mapInfoColumns,
