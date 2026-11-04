@@ -2,6 +2,66 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 9 (botlar ne görüyor?)
+
+Yasin “geç” dedi. Bu adım denetimdir. Sayfa görünümü aynı kaldı. Yer listesi sunucuda basılmadı. Mekân metni sunucuda basılmadı. Öneri aşağıda. Onay gelmeden uygulanmaz.
+
+Komut: `npm run audit:bot-html`. Kontrol: `npm run verify:v4-adim9`. Denetim JS çalıştırmaz. Canlı siteye salt okunur istek atar. Çıktı `reports/v4-adim9-bot-html.json` dosyasına yazılır. Bu dosya depoya girmez.
+
+Kaynak: https://www.touristlio.com — 4 Kasım 2026. Üç adres de HTTP 200. Üçü de aynı `index.html` kabuğunu gönderir (`server/index.js`). JS çalışınca dolan liste ve mekân metni ham HTML’de yok. Açık görünen bölüm üç adreste de Keşfet. Blog, gezilecek yerler ve mekân detayı `hidden`.
+
+### /
+
+- Başlık: Touristlio — Gerçek Gezginlerle Dünyayı Keşfet
+- Açıklama (136 karakter): Gizli köşelerden ikonik yapılara, gerçek gezginlerin Tiola deneyimleriyle dünyanın en güzel yerlerini keşfet. 129 ülke, 949 destinasyon. Bu sayı sunucuda yazılıyor.
+- Canonical: https://www.touristlio.com/
+- robots: index,follow
+- hreflang: tr `/`, en `/en/`, x-default `/`
+- h1: 1 — “Sadece Ziyaret Etme. Hisset.”
+- JSON-LD: TravelAgency, WebSite
+- `<a href="/places/...">`: 0. Yazı linki de 0. Sayfadaki 12 link: atlama, ana sayfa, yasal sayfalar, OpenStreetMap.
+- `#pgrid` boş. Sayaç “0 yer bulundu”. Gezilecek yerler sayacı da 0.
+- Slogan, arama kutusu ve İstanbul / Paris / Tokyo düğmeleri HTML’de. Bu düğmelerin adresi yok.
+- Yer listesi JS ile geliyor. JS çalıştıktan sonra keşfet kartı yine `<div role="link">`. Gerçek `<a href="/places/...">` orada da yok (`public/js/app.js`). Gezilecek yerler kartı da düğme gibi duran bir kutu (`public/js/discover-places.js`).
+
+### /places/ayasofya-istanbul
+
+- Başlık: Ayasofya | İstanbul Gezilecek Yerler — Touristlio
+- Açıklama 160 karakterde kesiliyor. Cümle “hizmet” sözcüğünde bitiyor. JSON-LD içindeki TouristAttraction açıklaması 237 karakter ve cümleyi tamamlıyor.
+- Canonical: https://www.touristlio.com/places/ayasofya-istanbul
+- robots: index,follow
+- hreflang: tr bu adres, en `/en/places/ayasofya-istanbul`, x-default tr
+- h1: 1 — yine “Sadece Ziyaret Etme. Hisset.” Mekân adı bu başlıkta yok.
+- JSON-LD: TouristAttraction (ad Ayasofya, açıklama, koordinat, görsel alanı boş), BreadcrumbList, FAQPage. Tarihçe, yapılacaklar, kültür ve ipuçları gövdede boş. “Justinianos” gövde metninde yok. Başlıkta, meta açıklamada ve JSON-LD’de var.
+- `<a href="/places/...">`: 0
+- `#pdTitle` ve `#pdOverview` boş. Detay bölümü gizli. Botun gördüğü açık bölüm Keşfet. “0 yer bulundu” bu adreste de duruyor.
+- Paylaşım görseli mekân fotoğrafı değil, sitenin kahraman görseli. JSON-LD’de görsel yok. Bu Adım 7 kuralı: doğrulanmamış görsel şemaya girmez.
+
+### /blog
+
+- Başlık: Seyahat Hikayeleri — Touristlio
+- Açıklama: Yerel yazarlardan gezi rehberleri, gizli köşeler ve kültürel keşifler.
+- Canonical: https://www.touristlio.com/blog
+- robots: index,follow
+- hreflang: tr `/blog`, en `/en/blog`, x-default `/blog`
+- h1: 1 — yine ana sayfa sloganı. “Seyahat Hikayeleri” sayfada h2 ve gizli blog bölümünün içinde.
+- JSON-LD: CollectionPage
+- `<a href="/places/...">`: 0. `<a href="/blog/...">`: 0
+- `#blogGrid` boş. Blog bölümü gizli. Açık bölüm yine Keşfet. “0 yer bulundu” burada da duruyor.
+- Yazı listesi JS ile geliyor. JS sonrası blog kartı gerçek `<a href="/blog/...">` olur. Ham HTML’de bu link yok.
+
+Aynı kabuğun yazı adresi de bakıldı (üç zorunlu adresin dışında, yalnızca doğrulama): `/blog/safakta-istanbul-kalabalik-gelmeden-once`. HTTP 200. Başlık ve Article JSON-LD var (başlık, kısa açıklama, görsel, tarih). `articleBody` yok. `#blogDetailBody` boş. h1 yine slogan. Açık bölüm yine Keşfet. Yazı metni JS ile geliyor.
+
+### Öneri (uygulanmadı, onay bekliyor)
+
+Ana sayfanın görünümünü değiştiren bir şey eklenmedi.
+
+1. Mekân sayfası. `/places/:slug` ham HTML’inde detay bölümü açık, Keşfet gizli olsun. Tek h1 mekân adı olsun. Genel bakış ve dolu bölümler bugünkü boş kutulara yazılsın. Boş bölüm başlığı Adım 6’daki gibi gizli kalsın. JS’li ziyaretçi aynı mekân sayfasını görür. Fark: metin ilk HTML’de durur. Yeni kutu yok.
+2. Ana sayfa. Popüler yerler için gerçek `<a href="/places/slug">` sunucuda üretilsin. Sayaç 0 kalmasın. Kart, JS’in bastığı kartla aynı görünsün. Bu, kartların JS’den önce çıkması demektir. Görünümü etkiler. Onay şart. Şehir düğmelerini link yapmak ayrı onay.
+3. Blog. `/blog` açıldığında blog bölümü görünsün ve yazı linkleri sunucuda olsun. Yazı sayfasının gövdesi de aynı şekilde ilk HTML’e yazılabilir. Bu da onay.
+
+Bu adımda düzeltilen bir davranış yok. Onay gelirse sıradaki iş yukarıdaki üç öneri. Onay gelmezse sıradaki adım Adım 10: Performans, önce ölç sonra düzelt.
+
 ## Cursor V4 — Adım 8 (EN mekân sayfaları: eksik çeviride noindex)
 
 Yasin “geç” dedi. İngilizce çevirisi eksik mekânın İngilizce sayfası açılmaya devam eder. Ziyaretçi Türkçe metni görür. Google’a kapanır (`noindex`). O adres İngilizce site haritasına girmez. `hreflang` içinde `en` karşılığı yazılmaz. Türkçe sayfa eskisi gibi dizine açık kalır.
