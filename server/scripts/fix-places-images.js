@@ -12,37 +12,18 @@ const path = require('path');
 
 const { assignUniqueImages } = require('../lib/photo-pools');
 
-const { resolvePlaceImageUrl } = require('../lib/place-image');
-
 const outPath = path.join(__dirname, '..', 'data', 'places.json');
 
-
-
-const BAD_PATTERNS = /photo-1552832230-c0197dd311b5|photo-1469854523086-cc02fe5d8800/;
-
-
-
-let fixed = 0;
-
 let places = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-
-for (const p of places) {
-
-  const resolved = resolvePlaceImageUrl(p.imageUrl, p.category, p.id);
-
-  if (resolved !== p.imageUrl || BAD_PATTERNS.test(p.imageUrl || '')) {
-
-    p.imageUrl = resolved;
-
-    fixed += 1;
-
-  }
-
-}
-
-
-
+const before = places.map((p) => `${p.imageUrl || ''}|${JSON.stringify(p.photos || [])}`);
 places = assignUniqueImages(places);
+let kept = 0;
+let filled = 0;
+places.forEach((p, i) => {
+  const after = `${p.imageUrl || ''}|${JSON.stringify(p.photos || [])}`;
+  if (before[i] && before[i] !== '|[]' && before[i] !== '|') kept += 1;
+  else if (after !== before[i]) filled += 1;
+});
 
 const urls = places.map((p) => p.imageUrl);
 
@@ -52,5 +33,5 @@ const dup = urls.length - new Set(urls).size;
 
 fs.writeFileSync(outPath, JSON.stringify(places, null, 2), 'utf8');
 
-console.log('fix-places-images:', fixed, 'bad fixed, total', places.length, '| duplicate URLs:', dup);
+console.log('fix-places-images: kept', kept, '| filled empty', filled, '| total', places.length, '| duplicate URLs:', dup);
 

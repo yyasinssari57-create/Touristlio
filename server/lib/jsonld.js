@@ -7,6 +7,7 @@ const { sanitizeText } = require('./sanitize');
 const { slugify } = require('./slugify');
 const { isValidSitemapCoord } = require('./sitemap');
 const { localizeBlog, blogAuthorName, findBlogRow } = require('./blog-i18n');
+const { isPlaceholderImage } = require('./place-image');
 
 const LOGO_PATH = '/images/logo.webp';
 const AGENCY_DESCRIPTION = 'Sadece Ziyaret Etme. Hisset. Topluluk tabanlı seyahat rehberliği.';
@@ -161,7 +162,7 @@ function touristAttraction(place, lang = 'tr') {
     name: place.name,
     description: String(desc || '').slice(0, 5000) || undefined,
     url,
-    image: place.imageUrl ? absUrl(place.imageUrl) : undefined,
+    image: place.imageUrl && !isPlaceholderImage(place.imageUrl) ? absUrl(place.imageUrl) : undefined,
     address: compact({
       '@type': 'PostalAddress',
       addressLocality: place.city || undefined,

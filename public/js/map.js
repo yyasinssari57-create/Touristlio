@@ -60,10 +60,11 @@ window.TL_MAP = (function () {
   }
 
   function popupHtml(m, lang) {
-    const img = m.imageUrl
+    const imgSrc = m.imageUrl || '/images/place-placeholder.svg';
+    const img = imgSrc
       ? (window.TL_IMG?.tag
-        ? window.TL_IMG.tag(m.imageUrl, { alt: m.name, kind: 'thumb', extra: 'style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px"' })
-        : `<img src="${m.imageUrl}" alt="${m.name || ''}" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`)
+        ? window.TL_IMG.tag(imgSrc, { alt: m.name, kind: 'thumb', extra: 'style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px"' })
+        : `<img src="${imgSrc}" alt="${m.name || ''}" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`)
       : '';
     return `<div class="map-popup">
       ${img}

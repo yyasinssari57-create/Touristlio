@@ -24,7 +24,12 @@ async function main() {
 
   for (let i = 0; i < places.length; i++) {
     const p = places[i];
-    if (Array.isArray(p.photos) && p.photos.length >= 5) continue;
+    const hasPhotos = Array.isArray(p.photos) && p.photos.some((item) => String(item || '').trim());
+    const hasCover = String(p.imageUrl || p.hero_image || '').trim();
+    if (hasPhotos || hasCover) {
+      if (hasCover && !hasPhotos) p.photos = [p.imageUrl || p.hero_image];
+      continue;
+    }
 
     const photos = await fetchPlacePhotos(p, 5);
     if (photos.length) {

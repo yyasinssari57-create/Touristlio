@@ -2,6 +2,30 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 7 (görsel doğrulama)
+
+Yasin “geç” dedi. Yanlış eşleşen kategori yedeği artık yayındaki mekân kartında ve mekân sayfasında görünmez. Kayıt silinmedi. Unsplash adresi veritabanında durur.
+
+Dört yeni alan: `image_credit`, `image_source_url`, `image_verified`, `image_verified_at`. Açılışta `019_v4_adim7_image_verify` bunları ekler. Eski Unsplash adresi doğrulanmış sayılmaz. Doğrulanmış görsel yoksa site nötr yer tutucu gösterir (`/images/place-placeholder.svg`). Kategori havuzundan rastgele Ayasofya veya plaj fotoğrafı basılmaz.
+
+Görsel yeniden görünür: yönetici “Bu görsel bu mekâna ait” kutusunu işaretler ya da dosya yükler. Daha önce yüklenmiş dosya (`/uploads/` veya Supabase Storage) ve galerisinde Unsplash yoksa açılışta doğrulanmış sayılır. Bu yerel test veritabanında böyle dosya yok.
+
+Aynı görsel başka mekânda da varsa (aynı adres veya aynı Unsplash karesinin farklı kırpımı) yer düzenleme ekranında uyarı çıkar. Yer listesinde “Görsel doğrulanmamış” filtresi var. Kalite skoru bu sayıya göre düşmez.
+
+Admin → Medya: yüklenen dosyalar ve harici adresler birlikte listelenir. Hangi mekânda kullanıldığı yazılır. Değiştir, yalnızca seçilen mekânın görselini değiştirir ve doğrular. Dosya silme eskisi gibi durur.
+
+Seed ve içe aktarma dolu kapak (`image_url`) veya galeri (`photos`) üzerine yazmaz. Yönetici yüklemesi de durur. Yalnızca ikisi de boşsa doldurur. `assignUniqueImages` ve `places:fetch-photos` aynı kuralı kullanır.
+
+Unsplash fotoğrafçı adı doluysa ve görsel doğrulanmışsa mekân sayfasında küçük “Fotoğraf: …” satırı görünür. Ad boşsa uydurulmaz. Ana sayfa kahraman görseli ve kategori çipleri bu adımda değişmedi.
+
+Yer listesi (`server/data/places.json`): yayında 947. Paylaşılan görsel grubu 78. En büyük grup 54 mekân. Bunlar sitede yer tutucu olur.
+
+Yerel test veritabanı: yayında 950 (yer listesindeki 947 artı 3 test kaydı), doğrulanmış 0. Ayasofya kaydındaki Unsplash adresi duruyor; site ve API yer tutucu döndürüyor. Paylaşım görseli yanlış mekân fotoğrafı değil, sitenin kendi kahraman görseli. JSON-LD’de bu mekânın görseli yok.
+
+Komut: `npm run verify:v4-adim7`.
+
+Sıradaki adım Adım 8: EN mekân sayfaları, eksik çeviride noindex.
+
 ## Cursor V4 — Adım 6 (yayın kalite kapısı + boş bölüm başlıkları)
 
 Yasin “geç” dedi. Küçük onay (boş bölüm başlığını gizleme) bu adımda uygulandı. Kayıt silinmedi. Yayındaki eksikler taslağa çekilmedi.
@@ -35,7 +59,7 @@ Yerel test veritabanı: 1113 mekân, yayında 950 (yer listesindeki 947 + 3 boş
 
 Komut: `npm run audit:publish-quality`. Kontrol: `npm run verify:v4-adim6`. Rapor `reports/` içine yazılır, depoya girmez.
 
-Sıradaki adım Adım 7: görsel doğrulama (yanlış eşleşme ve yinelenen görsel).
+Bu raporun ardından Adım 7 çalıştı. Doğrulanmamış görsel sitede yer tutucu. Ayrıntı yukarıda.
 
 ## Cursor V4 — Adım 5 (şablon ve kopya taslak)
 

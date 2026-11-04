@@ -2547,6 +2547,17 @@ body.admin-body:not(.admin-session) {
   color: var(--t3);
   word-break: break-all;
 }
+.adm-img-warn {
+  color: #9a3412;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: .75rem;
+  margin: 6px 0;
+}
+.adm-media-places { margin-top: 4px; }
+.adm-media-places button { font-size: .65rem; padding: 0; border: 0; background: none; color: var(--b2); cursor: pointer; text-align: left; }
 .adm-media-del {
   position: absolute;
   top: 4px;

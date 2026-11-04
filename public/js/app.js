@@ -39,21 +39,49 @@ function renderTiolaPhotoHtml(ti, extraClass = '') {
   return responsiveImg(url, { className: extraClass, kind: 'card' });
 }
 
-function placeImg(p) {
+const PLACE_PLACEHOLDER = '/images/place-placeholder.svg';
+
+function isPlaceholderImage(url) {
+  return /place-placeholder\.svg/i.test(String(url || ''));
+}
+
+function firstStoredPlaceImage(p) {
   const candidates = [p?.imageUrl, ...(Array.isArray(p?.photos) ? p.photos : [])];
   for (const raw of candidates) {
-    const url = safeUrl(raw);
-    if (url.startsWith('http') && !/undefined|null|placeholder/i.test(url)) return url;
-    if (url.startsWith('/')) return url;
+    const url = safeUrl(typeof raw === 'string' ? raw : (raw && (raw.url || raw.src)));
+    if (!url || /undefined|null|placeholder/i.test(url) || isPlaceholderImage(url)) continue;
+    if (url.startsWith('http') || url.startsWith('/')) return url;
   }
+  return '';
+}
+
+function placeImageVerified(p) {
+  const flag = p?.imageVerified ?? p?.image_verified;
+  if (flag === undefined || flag === null || flag === '') return null;
+  return flag === true || flag === 1 || flag === '1' || flag === 'true';
+}
+
+function placeImg(p) {
+  const verified = placeImageVerified(p);
+  const stored = firstStoredPlaceImage(p);
+  if (verified === true && stored) return stored;
+  if (verified === false) return PLACE_PLACEHOLDER;
+  if (stored) return stored;
+  if (p && (p.name || p.slug || p.status)) return PLACE_PLACEHOLDER;
   return fallbackImgUrl(p?.category, p?.id);
 }
 
-function imgFallback(el, category, placeId) {
+function placeImgAlt(p) {
+  if (placeImageVerified(p) === true && firstStoredPlaceImage(p)) return p.name || t('placePhotoAria');
+  if (p && (p.name || p.slug || placeImageVerified(p) === false)) return t('photoPendingAlt');
+  return p?.name || t('placePhotoAria');
+}
+
+function imgFallback(el) {
   el.onerror = null;
-  const url = fallbackImgUrl(category, placeId);
-  if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(el, url, { kind: el.dataset.imgKind || 'card' });
-  else el.src = url;
+  if (isPlaceholderImage(el.getAttribute('src') || el.currentSrc || '')) return;
+  if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(el, PLACE_PLACEHOLDER, { kind: el.dataset.imgKind || 'card' });
+  else el.src = PLACE_PLACEHOLDER;
 }
 
 function responsiveImg(url, opts) {
@@ -686,7 +714,8 @@ function updateSeoForPlace(p) {
   if (ogT) ogT.content = title;
   if (ogD) ogD.content = desc;
   if (ogI) {
-    const img = p.imageUrl && p.imageUrl.startsWith('http') ? p.imageUrl : (publicOrigin() + placeImg(p));
+    const shown = placeImg(p);
+    const img = isPlaceholderImage(shown) ? '' : (shown.startsWith('http') ? shown : (publicOrigin() + shown));
     ogI.content = img;
     setMetaContent('meta[name="twitter:image"]', img, { name: 'twitter:image' });
   }
@@ -834,7 +863,8 @@ function injectHomeJsonLd(tiolas) {
 
 function injectPlaceJsonLd(p, tiolas) {
   const origin = schemaOrigin();
-  const img = absSchemaUrl(placeImg(p));
+  const shownImg = placeImg(p);
+  const img = shownImg && !isPlaceholderImage(shownImg) ? absSchemaUrl(shownImg) : undefined;
   const attraction = {
     '@context': 'https://schema.org',
     '@type': 'TouristAttraction',
@@ -1319,7 +1349,7 @@ function renderGrid(list, append = false) {
   const html = list.map((p) => `
     <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
       <div class="pc-img">
-        ${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
+        ${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
         <div class="pc-badge">${catLabel(p.category)}</div>
         ${p.isLocal ? `<div class="pc-local">${t('localPick')}</div>` : ''}
         <button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, savedIds.has(p.id))}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" data-stop data-act="toggleSave" data-el data-arg="${p.id}">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
@@ -1661,7 +1691,7 @@ function onSearch(val) {
             : escapeHtml(s.emptyLabel);
           return `
           <div class="sd-item" tabindex="0" role="option" data-act-mousedown="pickSearch" data-arg="${p.id}" data-act="pickSearch" data-arg="${p.id}">
-            ${responsiveImg(placeImg(p), { alt: p.name, className: 'sd-img', kind: 'thumb', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
+            ${responsiveImg(placeImg(p), { alt: placeImgAlt(p), className: 'sd-img', kind: 'thumb', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
             <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(geoText(p.location))}</div>
             <div class="sd-rat">${scoreHtml}</div></div>
           </div>`;
@@ -2550,6 +2580,23 @@ function updateDistrictList(city) {
   if (dists) dists.forEach((d) => appendGeoOption(ds, d));
 }
 
+function renderPhotoCredit(p) {
+  const el = document.getElementById('pdPhotoCredit');
+  if (!el) return;
+  const credit = String(p?.imageCredit || p?.image_credit || '').trim();
+  const shown = placeImg(p);
+  const unsplash = /images\.unsplash\.com/i.test(shown) || /images\.unsplash\.com/i.test(p?.imageSourceUrl || p?.image_source_url || '');
+  if (!credit || placeImageVerified(p) !== true || isPlaceholderImage(shown)) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  let text = t('photoCredit').replace('{name}', credit);
+  if (unsplash && !/unsplash/i.test(credit)) text += ' · Unsplash';
+  el.hidden = false;
+  el.textContent = text;
+}
+
 function renderDetailGallery(p) {
   const gal = document.getElementById('pdGallery');
   if (!gal) return;
@@ -2646,12 +2693,13 @@ async function openDetail(id, skipRoute) {
     activePlace = p;
     updateSeoForPlace(p);
     const imgEl = document.getElementById('pdImg');
-    if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(imgEl, placeImg(p), { kind: 'detail', alt: p.name });
+    if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(imgEl, placeImg(p), { kind: 'detail', alt: placeImgAlt(p) });
     else {
       imgEl.src = placeImg(p);
       imgEl.loading = 'lazy';
     }
-    imgEl.alt = p.name || t('placePhotoAria');
+    imgEl.alt = placeImgAlt(p);
+    renderPhotoCredit(p);
     renderDetailGallery(p);
     document.getElementById('pdCat').textContent = catLabel(p.category);
     document.getElementById('pdTitle').textContent = p.name;
@@ -3236,7 +3284,7 @@ async function updateProfilePage() {
         if (ve) ve.style.display = 'none';
         vg.innerHTML = visited.places.map((p) => `
           <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
-            <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card' })}</div>
+            <div class="pc-img">${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card' })}</div>
             <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${p.visitedAt || ''}</div></div>
           </div>`).join('');
       }
@@ -3283,7 +3331,7 @@ async function updateProfilePage() {
     se.style.display = 'none';
     sg.innerHTML = saved.places.map((p) => `
       <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
-        <div class="pc-img">${responsiveImg(placeImg(p), { alt: p.name, kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}<button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, true)}" aria-pressed="true" data-stop data-act="toggleSave" data-el data-arg="${p.id}">❤️</button></div>
+        <div class="pc-img">${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}<button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, true)}" aria-pressed="true" data-stop data-act="toggleSave" data-el data-arg="${p.id}">❤️</button></div>
         <div class="pc-body"><div class="pc-name">${p.name}</div></div>
       </div>`).join('');
   }

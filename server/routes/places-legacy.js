@@ -37,7 +37,7 @@ function validationError(req, res) {
 async function searchHandler(req, res) {
   const q = req.query.q.trim();
   const limit = Math.min(Number(req.query.limit) || 8, 20);
-  const key = cacheKey('search', { q, limit });
+  const key = cacheKey('search-v4img7', { q, limit });
   const result = await wrap(key, async () => {
     const rows = await db.prepare('SELECT * FROM places').all();
     const statsMap = await getStatsMap();

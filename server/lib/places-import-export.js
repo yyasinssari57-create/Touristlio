@@ -1,6 +1,7 @@
 const { db } = require('../db');
 const adminPlace = require('./admin-place');
 const { sanitizeText } = require('./sanitize');
+const { mergePlaceImages } = require('./place-image');
 
 function escapeCsv(val) {
   const s = val == null ? '' : String(val);
@@ -40,6 +41,9 @@ async function exportPlacesJson() {
       tags,
       searchAliases,
       categories,
+      imageCredit: row.image_credit || '',
+      imageSourceUrl: row.image_source_url || '',
+      imageVerified: row.image_verified === true || row.image_verified === 1 || row.image_verified === '1' || row.image_verified === 'true',
     };
   });
 }
@@ -107,6 +111,9 @@ function normalizeImportRow(row) {
     lng: Number.isFinite(lng) ? lng : undefined,
     status: ['published', 'draft', 'archived'].includes(row.status) ? row.status : 'published',
     photos: Array.isArray(row.photos) ? row.photos : undefined,
+    imageCredit: row.imageCredit || row.image_credit || undefined,
+    imageSourceUrl: row.imageSourceUrl || row.image_source_url || undefined,
+    imageVerified: row.imageVerified !== undefined ? row.imageVerified : row.image_verified,
     searchAliases: Array.isArray(row.searchAliases) ? row.searchAliases
       : (row.search_aliases ? String(row.search_aliases).split(',').map((s) => s.trim()) : undefined),
   };
@@ -145,7 +152,18 @@ async function importPlaces(items, { updateExisting = true } = {}) {
           errors.push({ index: i, error: 'Zaten mevcut', id: existing.id });
           continue;
         }
-        await adminPlace.updatePlace(existing.id, row);
+        const full = await db.prepare('SELECT image_url, photos FROM places WHERE id = ?').get(existing.id);
+        const images = mergePlaceImages(full || {}, row);
+        const patch = { ...row };
+        if (images.keptExisting) {
+          delete patch.imageUrl;
+          delete patch.photos;
+          delete patch.imageCredit;
+          delete patch.imageSourceUrl;
+          delete patch.imageVerified;
+          delete patch.image_verified;
+        }
+        await adminPlace.updatePlace(existing.id, patch);
         updated += 1;
       } else {
         const createdRow = await adminPlace.insertPlace(row);

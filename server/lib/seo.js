@@ -7,6 +7,7 @@ const {
   EN_UNTRANSLATED_TITLE,
   EN_UNTRANSLATED_DESCRIPTION,
 } = require('./blog-i18n');
+const { isPlaceholderImage } = require('./place-image');
 
 /** FAZ3-2 titles. Home and explore descriptions come from published counts. */
 const SEO_TEMPLATES = {
@@ -67,7 +68,7 @@ function generateMeta(type, data = {}, locale = 'tr') {
     return {
       title,
       description: clipMetaDescription(desc),
-      ogImage: p.imageUrl || p.hero_image || p.heroImage || null,
+      ogImage: [p.imageUrl, p.hero_image, p.heroImage].find((url) => url && !isPlaceholderImage(url)) || null,
     };
   }
 

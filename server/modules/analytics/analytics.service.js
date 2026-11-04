@@ -30,6 +30,11 @@ async function contentQuality() {
 
   const shortDesc = (await db.prepare('SELECT COUNT(*) AS c FROM places WHERE length(description) < 80').get()).c;
 
+  let unverifiedImage = 0;
+  try {
+    unverifiedImage = (await db.prepare(`SELECT COUNT(*) AS c FROM places WHERE image_verified IS NOT TRUE AND COALESCE(status, 'published') = 'published'`).get()).c;
+  } catch { unverifiedImage = 0; }
+
   return {
 
     total,
@@ -39,6 +44,7 @@ async function contentQuality() {
       noFaq: { count: noFaq, label: 'FAQ eksik' },
       noCoords: { count: noCoords, label: 'Koordinat eksik' },
       shortDesc: { count: shortDesc, label: 'Kısa açıklama' },
+      unverifiedImage: { count: unverifiedImage, label: 'Görsel doğrulanmamış' },
     },
 
     score: Math.round(100 - ((noPhoto + noFaq + noCoords + shortDesc) / Math.max(total, 1)) * 25),
