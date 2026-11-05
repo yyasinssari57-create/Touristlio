@@ -47,6 +47,7 @@
     "verify:v4-adim9": "node server/scripts/verify-v4-adim9-bot-html.js",
     "verify:v4-adim10": "node server/scripts/verify-v4-adim10-perf.js",
     "verify:v4-adim11": "node server/scripts/verify-v4-adim11-password.js",
+    "verify:v4-adim12": "node server/scripts/verify-v4-adim12-honeypot.js",
     "measure:v4-adim10": "node server/scripts/measure-v4-adim10.js",
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",
