@@ -366,7 +366,8 @@
                   <div class="admin-form">
                     <input class="ain" id="modName" placeholder="Ad" aria-label="Moderatör adı"/>
                     <input class="ain" id="modEmail" placeholder="E-posta" aria-label="Moderatör e-posta" type="email"/>
-                    <input class="ain full" id="modPass" type="password" placeholder="Geçici şifre" aria-label="Geçici şifre"/>
+                    <input class="ain full" id="modPass" type="password" placeholder="Geçici şifre" aria-label="Geçici şifre" data-pw-policy="new" minlength="__PW_MIN__" pattern="__PW_PATTERN__" title="__PW_MSG_TR__" autocomplete="new-password"/>
+                    <p class="adm-cat-hint">__PW_MSG_TR__</p>
                     <button class="btn bp bsm full" type="button" id="btnAddModerator" data-act="addModerator" aria-label="Moderatör oluştur">Moderatör oluştur</button>
                   </div>
                 </div>
@@ -4396,6 +4397,12 @@ async function toggleUserBlock(userId, blocked) {
 async function addModerator() {
   const btn = document.getElementById('btnAddModerator');
   clearFormErr('modFormErr');
+  const password = document.getElementById('modPass').value;
+  const pwErr = password && window.TL_PASSWORD ? window.TL_PASSWORD.error(password, 'tr') : '';
+  if (pwErr) {
+    showFormErr('modFormErr', pwErr);
+    return;
+  }
   setBtnLoading(btn, true, 'Oluşturuluyor…');
   try {
     await api('/admin/moderators', {

@@ -156,11 +156,11 @@
           <h4 class="settings-subtitle" data-i18n="settingsChangePassword">Şifre değiştir</h4>
           <label class="sr-only" for="pwdCurrent" data-i18n="settingsCurrentPassword">Mevcut şifre</label>
           <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
-          <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">Yeni şifre (min 12 karakter)</label>
-          <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 12 karakter)"/>
+          <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">__PW_NEW_TR__</label>
+          <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" data-pw-policy="new" minlength="__PW_MIN__" pattern="__PW_PATTERN__" title="__PW_MSG_TR__" placeholder="__PW_NEW_TR__"/>
           <button type="button" class="btn bp bsm" id="btnSavePassword" data-act="submitChangePassword" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
         </div>
-        <p class="settings-note" data-i18n="settingsNote">Şifre en az 12 karakter, bir büyük harf ve bir rakam içermelidir.</p>
+        <p class="settings-note" data-i18n="settingsNote">__PW_MSG_TR__</p>
       </section>
 
       <div class="settings-block settings-logout-block">
@@ -257,6 +257,9 @@ function apiErrorMessage(data) {
 
 async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
+  if (!headers['X-TL-Lang'] && !headers['x-tl-lang']) {
+    headers['X-TL-Lang'] = lang === 'en' ? 'en' : 'tr';
+  }
   const isForm = opts.body instanceof FormData;
   if (!isForm && opts.body != null) headers['Content-Type'] = 'application/json';
   const body = isForm ? opts.body : (opts.body != null ? JSON.stringify(opts.body) : undefined);
@@ -388,6 +391,9 @@ function renderProfileSettings(u) {
 async function submitChangePassword() {
 
   const btn = document.getElementById('btnSavePassword');
+  if (!pwdCurrent.value || !pwdNew.value) return;
+  const pwErr = window.TL_PASSWORD?.error(pwdNew.value, lang);
+  if (pwErr) { alert(pwErr); return; }
   window.TL_SKELETON?.button(btn, true);
   try {
 

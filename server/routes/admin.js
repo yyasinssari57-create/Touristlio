@@ -5,6 +5,7 @@ const multer = require('multer');
 const { db } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
 const { createUser, findUserByEmail, sanitizeUser, passwordPolicyError } = require('../auth');
+const { passwordLangFromRequest } = require('../lib/password-policy');
 const { clear: clearCache } = require('../lib/cache');
 const { computeUserRiskScore, computeUserRiskReasons, checkPermission, PANEL_ROLES, ASSIGNABLE_ROLES, assertCanManageUser } = require('../middleware/rbac');
 const auditLog = require('../lib/auditLog');
@@ -656,7 +657,7 @@ router.post('/moderators', requireRole('admin'), async (req, res) => {
   if (!name || !email || !password) {
     return fail(res, 'Ad, e-posta ve şifre gerekli');
   }
-  const pwErr = passwordPolicyError(password);
+  const pwErr = passwordPolicyError(password, passwordLangFromRequest(req));
   if (pwErr) {
     return fail(res, pwErr);
   }

@@ -10,17 +10,18 @@ const controller = require('./auth.controller');
 const { validateUploadedImage } = require('../../lib/image-mime');
 const { processImageUpload } = require('../../middleware/process-image-upload');
 const { imageUploader } = require('../../lib/image-uploader');
-const { MIN_PASSWORD_LENGTH } = require('../../auth');
+const { passwordPolicyError, passwordLangFromRequest } = require('../../lib/password-policy');
 
 const avatarUpload = imageUploader({ fileSize: 3 * 1024 * 1024, files: 1 });
 
 const router = express.Router();
 
 const passwordRules = () =>
-  body('password')
-    .isLength({ min: MIN_PASSWORD_LENGTH }).withMessage(`Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı`)
-    .matches(/[A-Z]/).withMessage('Şifre en az bir büyük harf içermeli')
-    .matches(/[0-9]/).withMessage('Şifre en az bir rakam içermeli');
+  body('password').custom((value, { req }) => {
+    const err = passwordPolicyError(value, passwordLangFromRequest(req));
+    if (err) throw new Error(err);
+    return true;
+  });
 
 const emailRule = (message = 'Geçerli e-posta girin') =>
   body('email').trim().custom((v) => {

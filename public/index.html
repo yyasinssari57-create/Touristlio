@@ -754,11 +754,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
               <h4 class="settings-subtitle" data-i18n="settingsChangePassword">Şifre değiştir</h4>
               <label class="sr-only" for="pwdCurrent" data-i18n="settingsCurrentPassword">Mevcut şifre</label>
               <input class="ain settings-inp" id="pwdCurrent" type="password" autocomplete="current-password" data-i18n-placeholder="settingsCurrentPassword" placeholder="Mevcut şifre"/>
-              <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">Yeni şifre (min 12 karakter)</label>
-              <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" placeholder="Yeni şifre (min 12 karakter)"/>
+              <label class="sr-only" for="pwdNew" data-i18n="settingsNewPassword">__PW_NEW_TR__</label>
+              <input class="ain settings-inp" id="pwdNew" type="password" autocomplete="new-password" data-i18n-placeholder="settingsNewPassword" data-pw-policy="new" minlength="__PW_MIN__" pattern="__PW_PATTERN__" title="__PW_MSG_TR__" placeholder="__PW_NEW_TR__"/>
               <button type="button" class="btn bp bsm" id="btnSavePassword" data-act="submitChangePassword" data-i18n="settingsSavePassword">Şifreyi güncelle</button>
             </div>
-            <p class="settings-note" data-i18n="settingsNote">Şifre en az 12 karakter, bir büyük harf ve bir rakam içermelidir.</p>
+            <p class="settings-note" data-i18n="settingsNote">__PW_MSG_TR__</p>
           </section>
           <div class="settings-block settings-logout-block">
             <button type="button" class="btn bo bsm bdanger" data-act="doLogout" data-i18n="settingsLogout">Çıkış Yap</button>

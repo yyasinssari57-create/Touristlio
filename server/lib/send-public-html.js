@@ -3,6 +3,7 @@ const path = require('path');
 const { getAppVersion } = require('./app-version');
 const { nonceFromRes, injectNonce } = require('../middleware/csp-nonce');
 const { buildEarlyBootScript } = require('../../public/js/locale-resolve');
+const { decoratePasswordPolicyHtml } = require('./password-policy');
 
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -180,6 +181,7 @@ async function sendPublicHtml(res, publicDir, relativePath, seo = {}) {
   let html = readPublicHtml(publicDir, relativePath);
   html = injectEarlyLangBoot(html);
   html = injectLocaleModule(html);
+  html = decoratePasswordPolicyHtml(html);
   html = injectClientErrorBoundary(html);
   html = injectAnalyticsScripts(html, relativePath);
   html = injectErrorDetail(html, seo.errorDetail);

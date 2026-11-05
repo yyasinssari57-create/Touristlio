@@ -82,6 +82,13 @@ window.TL_I18N = (function () {
     return activeLang || resolveLang();
   }
 
+  function passwordCopy(lang, field) {
+    const policy = typeof window !== 'undefined' ? window.TL_PASSWORD : null;
+    const pack = policy && policy.copy ? policy.copy[lang === 'en' ? 'en' : 'tr'] : null;
+    const value = pack && pack[field];
+    return typeof value === 'string' ? value : '';
+  }
+
   const dict = {
     tr: {
       login: 'Giriş Yap', join: 'Katıl', explore: 'Keşfet', discoverPlaces: 'Gezilecek Yerler', blog: 'Blog', profile: 'Profilim', admin: 'Admin',
@@ -107,7 +114,8 @@ window.TL_I18N = (function () {
       authNote: 'Misafirler okuyabilir · Tiola yazmak için üye olun',
       authSecure: '🔒 Güvenli şifreleme ile korunuyor · KVKK & GDPR uyumlu',
       authOr: '— veya —',
-      authEmail: 'E-posta', authPass: 'Şifre', authName: 'Ad Soyad', authPassMin: 'Şifre (min 12 karakter)',
+      authEmail: 'E-posta', authPass: 'Şifre', authName: 'Ad Soyad',
+      get authPassMin() { return passwordCopy('tr', 'label'); },
       authCreate: 'Hesap Oluştur', authKvkkLabel: 'KVKK ve Kullanım Şartları kabul ediyorum',
       authAccept: 'kabul ediyorum',
       tiolaPending: "Tiola'n alındı. Onay sonrası yayınlanacak.",
@@ -310,13 +318,13 @@ window.TL_I18N = (function () {
       settingsResendVerify: 'Doğrulama e-postası gönder',
       settingsChangePassword: 'Şifre değiştir',
       settingsCurrentPassword: 'Mevcut şifre',
-      settingsNewPassword: 'Yeni şifre (min 12 karakter)',
+      get settingsNewPassword() { return passwordCopy('tr', 'newLabel'); },
       settingsSavePassword: 'Şifreyi güncelle',
       settingsChangeEmail: 'E-posta değiştir',
       settingsNewEmail: 'Yeni e-posta',
       settingsConfirmPassword: 'Onay için mevcut şifre',
       settingsSaveEmail: 'E-postayı güncelle',
-      settingsNote: 'Şifre en az 12 karakter, bir büyük harf ve bir rakam içermelidir.',
+      get settingsNote() { return passwordCopy('tr', 'message'); },
       settingsLogout: 'Çıkış Yap',
       settingsPasswordUpdated: 'Şifre güncellendi',
       settingsEmailUpdated: 'E-posta güncellendi. Lütfen yeni adresinizi doğrulayın.',
@@ -399,7 +407,8 @@ window.TL_I18N = (function () {
       authNote: 'Guests can browse · Sign up to write a Tiola',
       authSecure: '🔒 Protected with secure encryption · GDPR compliant',
       authOr: '— or —',
-      authEmail: 'Email', authPass: 'Password', authName: 'Full name', authPassMin: 'Password (min 12 characters)',
+      authEmail: 'Email', authPass: 'Password', authName: 'Full name',
+      get authPassMin() { return passwordCopy('en', 'label'); },
       authCreate: 'Create account', authKvkkLabel: 'I accept the Privacy Policy and Terms of Use',
       authAccept: 'I accept',
       tiolaPending: 'Your Tiola was received. It will be published after review.',
@@ -602,13 +611,13 @@ window.TL_I18N = (function () {
       settingsResendVerify: 'Resend verification email',
       settingsChangePassword: 'Change password',
       settingsCurrentPassword: 'Current password',
-      settingsNewPassword: 'New password (min 12 characters)',
+      get settingsNewPassword() { return passwordCopy('en', 'newLabel'); },
       settingsSavePassword: 'Update password',
       settingsChangeEmail: 'Change email',
       settingsNewEmail: 'New email',
       settingsConfirmPassword: 'Current password to confirm',
       settingsSaveEmail: 'Update email',
-      settingsNote: 'Password must be at least 12 characters with one uppercase letter and one number.',
+      get settingsNote() { return passwordCopy('en', 'message'); },
       settingsLogout: 'Log out',
       settingsPasswordUpdated: 'Password updated',
       settingsEmailUpdated: 'Email updated. Please verify your new address.',
@@ -873,6 +882,13 @@ window.TL_I18N = (function () {
       const key = el.getAttribute('data-i18n-placeholder');
       const val = t(lang, key);
       if (val) el.placeholder = val;
+    });
+    document.querySelectorAll('[data-pw-policy]').forEach((el) => {
+      const policy = window.TL_PASSWORD;
+      if (!policy) return;
+      el.minLength = policy.minLength;
+      el.setAttribute('pattern', policy.pattern);
+      el.title = policy.message(lang);
     });
     document.querySelectorAll('[data-i18n-html]').forEach((el) => {
       const key = el.getAttribute('data-i18n-html');
