@@ -2,6 +2,26 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 12 (honeypot alanı görünmesin)
+
+Yasin “geç” dedi. Website kutusu kaldırılmadı. Ekrandan gizlendi. Sunucudaki kontrol aynı kaldı.
+
+Bu iş Adım 12’den önce kapanmıştı (FAZ4-2, PR #82). Alan zaten `.tl-hp` içinde. `type="text"`. `display: none` yok. Kutu ekranın dışında: `position: absolute` ve `left: -10000px`. Rehberdeki örnek `-9999px`. Kilitli değer daha dışarıda. Bu tur o sayıyı oynatmadı. `tabindex="-1"`, `aria-hidden="true"`, `autocomplete="off"`. “Website” yazısı bu gizli kutunun içinde. Ekran okuyucu buna ayrı etiket basmaz.
+
+Bu tur renk, yerleşim ve buton değiştirmedi. Yeni kontrol üç formu ayrı ayrı ölçer.
+
+1. İletişim formu (`public/legal/contact.html`, `#contactForm`). Sunucu `POST /api/contact`. Dolu website sahte “mesaj alındı” der. Kayıt açılmaz.
+2. Mekân sayfasındaki Tiola formu (`#tiolaDetailForm`).
+3. Profildeki “Tiola Yaz” formu (`#writeTiolaForm`).
+
+İki Tiola formu da `POST /api/tiolas` üzerinden aynı kontrole gider. Dolu website sahte “Tiola alındı” der. Yorum yazılmaz. Boş kutu normal gönderimi kesmez.
+
+Chrome, 1280 piksel genişlikte, üç kutuyu ayrı ölçtü. Üçü de `position: absolute`, `left: -10000px`, `opacity: 0`. Üçü de ekranda değil. Sayfa yana kaymıyor.
+
+Kontrol: `npm run verify:v4-adim12`. Bu komut `verify:faz4-2` kilidini de çalıştırır.
+
+Sıradaki adım Adım 13: Anahtar hijyeni.
+
 ## Cursor V4 — Adım 11 (şifre kuralı tutarlılığı)
 
 Yasin “geç” dedi. Karar: yeni şifre en az 9 karakter, bir büyük harf ve bir rakam. Eski şifreler girişte aynen duruyor. Argon2id ayarı değişmedi (m=65536, t=3, p=1).
