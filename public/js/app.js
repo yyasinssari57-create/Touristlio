@@ -1193,6 +1193,9 @@ function handleSessionExpired(msg) {
 
 window.api = async function api(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
+  if (!headers['X-TL-Lang'] && !headers['x-tl-lang']) {
+    headers['X-TL-Lang'] = lang === 'en' ? 'en' : 'tr';
+  }
   const isForm = opts.body instanceof FormData;
   const method = String(opts.method || 'GET').toUpperCase();
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !headers['X-CSRF-Token'] && !headers['x-csrf-token']) {
@@ -3421,10 +3424,22 @@ function renderProfileSettings(u) {
   renderProfileMeta(u);
 }
 
+function passwordFieldAttrs() {
+  const policy = window.TL_PASSWORD;
+  if (!policy) return '';
+  const title = escapeHtml(policy.message(lang));
+  return `minlength="${policy.minLength}" pattern="${escapeHtml(policy.pattern)}" title="${title}" data-pw-policy="new"`;
+}
+
 async function submitChangePassword() {
   const currentPassword = document.getElementById('pwdCurrent')?.value;
   const password = document.getElementById('pwdNew')?.value;
   if (!currentPassword || !password) return;
+  const pwErr = window.TL_PASSWORD?.error(password, lang);
+  if (pwErr) {
+    window.TL_TOAST?.error(pwErr);
+    return;
+  }
   const btn = document.getElementById('btnSavePassword');
   window.TL_SKELETON?.button(btn, true);
   try {
@@ -3707,7 +3722,8 @@ function buildAuthForm(m) {
        <label class="sr-only" for="regEmail">${t('authEmail')}</label>
        <input class="ain" id="regEmail" type="email" placeholder="${t('authEmail')}" autocomplete="email"/>
        <label class="sr-only" for="regPass">${t('authPassMin')}</label>
-       <input class="ain" id="regPass" type="password" placeholder="${t('authPassMin')}" autocomplete="new-password"/>
+       <input class="ain" id="regPass" type="password" placeholder="${escapeHtml(t('authPassMin'))}" autocomplete="new-password" ${passwordFieldAttrs()}/>
+       <p class="auth-page-sub" style="font-size:.78rem;margin:-4px 0 8px">${escapeHtml(t('settingsNote'))}</p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
        <div style="display:flex;gap:6px;align-items:flex-start;font-size:.68rem;color:var(--t2);margin-bottom:8px">
          <input type="checkbox" id="gC" style="accent-color:var(--b);margin-top:2px"/>
@@ -3819,6 +3835,8 @@ async function doRegSubmit() {
     return;
   }
   if (!password) { showAuthFormError(t('authPassRequired')); return; }
+  const pwErr = window.TL_PASSWORD?.error(password, lang);
+  if (pwErr) { showAuthFormError(pwErr); return; }
   if (!document.getElementById('gC')?.checked) { showAuthFormError(t('kvkkRequired')); return; }
   const btn = document.getElementById('authSubmitBtn');
   window.TL_SKELETON?.button(btn, true);

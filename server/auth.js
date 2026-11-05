@@ -5,6 +5,7 @@ const { db } = require('./db');
 const { effectivePermissions } = require('./middleware/rbac');
 const { sanitizeName } = require('./lib/sanitize');
 const { publicImageUrl } = require('./lib/media-url');
+const { MIN_PASSWORD_LENGTH, passwordPolicyError } = require('./lib/password-policy');
 
 const crypto = require('crypto');
 
@@ -81,7 +82,6 @@ function verifyToken(token) {
 }
 
 const BCRYPT_ROUNDS = 12;
-const MIN_PASSWORD_LENGTH = 12;
 const ARGON2_MEMORY_KIB = 65536;
 const ARGON2_TIME_COST = 3;
 const ARGON2_PARALLELISM = 1;
@@ -148,16 +148,6 @@ async function comparePassword(password, hash) {
     await argon2.verify(DUMMY_ARGON2_HASH, candidate);
   } catch { /* ignore malformed dummy */ }
   return false;
-}
-
-function passwordPolicyError(password) {
-  const pw = String(password || '');
-  if (pw.length < MIN_PASSWORD_LENGTH) {
-    return `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı`;
-  }
-  if (!/[A-Z]/.test(pw)) return 'Şifre en az bir büyük harf içermeli';
-  if (!/[0-9]/.test(pw)) return 'Şifre en az bir rakam içermeli';
-  return null;
 }
 
 async function sanitizeUser(row) {

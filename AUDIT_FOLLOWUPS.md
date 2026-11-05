@@ -2,6 +2,21 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 11 (şifre kuralı tutarlılığı)
+
+Yasin “geç” dedi. Karar: yeni şifre en az 9 karakter, bir büyük harf ve bir rakam. Eski şifreler girişte aynen duruyor. Argon2id ayarı değişmedi (m=65536, t=3, p=1).
+
+Kural tek yerde: `server/lib/password-policy.js`. Kayıt, şifre sıfırlama, şifre değiştirme ve yeni moderatör şifresi bunu kullanır. Giriş kullanmaz. Ekrandaki Türkçe ve İngilizce cümle, kutunun minlength/pattern değeri ve sunucunun reddettiği metin aynı cümledir.
+
+Türkçe: “Şifre en az 9 karakter, bir büyük harf ve bir rakam içermelidir.”
+İngilizce: “Password must be at least 9 characters with one uppercase letter and one number.”
+
+Sayfa bu metni sunucudan HTML’in içine yazar. Ayrı bir dosya indirilmez. Ana sayfaya yeni bir istek eklenmedi.
+
+Kontrol: `npm run verify:v4-adim11`. 8 karakter, büyük harfsiz ve rakamsız şifre reddedilir. 9 karakterlik uygun şifre kabul edilir. Kısa eski şifreyle giriş çalışır.
+
+Sıradaki adım Adım 12: Honeypot alanı görünmesin. Bu adım onay ister. Kod yazmadan önce sor.
+
 ## Cursor V4 — Adım 10 (performans: önce ölç, sonra düzelt)
 
 Yasin “geç” dedi. Görünüm aynı. Karusel hâlâ 5 slayt, 5 saniyede bir, 1,5 saniyelik solma. Harita sekmesi açılınca harita eskisi gibi çıkıyor. Yeni çerçeve yok.
@@ -2307,7 +2322,7 @@ Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, e
 - AES hiçbir zaman kullanılmadı; `createCipher` yok. UI “AES-256” yazmıyor — “Güvenli şifreleme ile korunuyor”.
 - JWT `tl_token` **HttpOnly** çerez (JSON body’de token yok). Süre 7 gün kaldı; 15 dakika oturumu yarıda keser.
 - sameSite varsayılan `strict` (Gemini Faz 1). E-posta doğrulama URL token kullanır. `COOKIE_SAMESITE=lax` ile eski davranış.
-- 8–11 karakterlik eski şifreler login’de geçerli; 12 karakter kuralı sadece kayıt / reset / şifre değiştir / moderatör oluşturma.
+- Eski şifreler girişte geçerli kalır. Yeni ve değişen şifre: en az 9 karakter, bir büyük harf, bir rakam (Adım 11).
 - Varsayılan `ADMIN_PASSWORD` (`ChangeMe123!`) 12 karakter; üretimde mutlaka `.env` ile değiştirilmeli.
 - `argon2` native bağlama; Render build’de derlenir. bcryptjs yalnızca eski hash doğrulama için duruyor.
 - `npm run verify:passwords`

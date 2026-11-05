@@ -21,8 +21,9 @@
   <input class="ain" id="regName" type="text" data-i18n-placeholder="authName" placeholder="Ad Soyad" autocomplete="name"/>
   <label class="sr-only" for="regEmail" data-i18n="authEmail">E-posta</label>
   <input class="ain" id="regEmail" type="email" data-i18n-placeholder="authEmail" placeholder="E-posta" autocomplete="email"/>
-  <label class="sr-only" for="regPass" data-i18n="authPassMin">Şifre (min 12 karakter)</label>
-  <input class="ain" id="regPass" type="password" data-i18n-placeholder="authPassMin" placeholder="Şifre (min 12 karakter)" autocomplete="new-password"/>
+  <label class="sr-only" for="regPass" data-i18n="authPassMin">__PW_LABEL_TR__</label>
+  <input class="ain" id="regPass" type="password" data-i18n-placeholder="authPassMin" data-pw-policy="new" minlength="__PW_MIN__" pattern="__PW_PATTERN__" title="__PW_MSG_TR__" placeholder="__PW_LABEL_TR__" autocomplete="new-password"/>
+  <p class="auth-page-sub" style="font-size:.78rem;margin-top:-4px" data-i18n="settingsNote">__PW_MSG_TR__</p>
   <div class="tl-hp" aria-hidden="true">
     <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"/></label>
   </div>
@@ -58,6 +59,8 @@ async function doReg(){
   if(name.length < 2){ showErr(t('authNameRequired')); return; }
   if(!EMAIL_RE.test(email)){ showErr(t('contactEmailInvalid') || 'Geçerli e-posta girin'); return; }
   if(!password){ showErr(t('authPassRequired')); return; }
+  const pwErr = window.TL_PASSWORD?.error(password, lang);
+  if(pwErr){ showErr(pwErr); return; }
   if(!gC.checked){ showErr(t('kvkkRequired')); return; }
   const btn = document.getElementById('regSubmit');
   window.TL_SKELETON?.button(btn, true);
@@ -67,7 +70,7 @@ async function doReg(){
     }, 'register');
     const res = await fetch('/api/auth/register', {
       method:'POST', credentials:'include',
-      headers:{'Content-Type':'application/json'},
+      headers:{ 'Content-Type':'application/json', 'X-TL-Lang': lang === 'en' ? 'en' : 'tr' },
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));

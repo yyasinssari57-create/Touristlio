@@ -241,9 +241,11 @@ async function checkLive(base) {
       website: '',
     },
   });
-  if (shortPw.status !== 400 || !/12/.test(errMsg(shortPw.json))) {
-    fail(`short password expected 400 / 12 chars, got ${shortPw.status} ${shortPw.body.slice(0, 180)}`);
-  } else ok('register short password → 400 with min-12 message');
+  const { passwordPolicyError } = require('../lib/password-policy');
+  const shortExpected = passwordPolicyError('Short1', 'tr');
+  if (shortPw.status !== 400 || errMsg(shortPw.json) !== shortExpected) {
+    fail(`short password expected 400 / shared rule, got ${shortPw.status} ${shortPw.body.slice(0, 180)}`);
+  } else ok('register short password → 400 with the shared password rule');
 
   const noKvkk = await request(`${root}/api/auth/register`, {
     method: 'POST',
