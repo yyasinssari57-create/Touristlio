@@ -1733,7 +1733,10 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
 
   try {
     fs.writeFileSync(tmpPath, plain);
-    const result = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-f', tmpPath], {
+    // One transaction: a later error undoes earlier statements. A plain
+    // psql -f commits each statement, so a failed dump used to leave writes
+    // behind when the snapshot replay could not drop existing tables.
+    const result = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', tmpPath], {
       encoding: 'utf8',
       timeout: SCRIPT_TIMEOUT_MS,
       maxBuffer: 32 * 1024 * 1024,
@@ -1741,7 +1744,9 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
     unlinkQuiet(tmpPath);
     if (result.error) throw result.error;
     if (result.status !== 0) {
-      throw new Error((result.stderr || result.stdout || 'psql başarısız').slice(0, 500));
+      const applyErr = new Error((result.stderr || result.stdout || 'psql başarısız').slice(0, 500));
+      applyErr.transactionAborted = true;
+      throw applyErr;
     }
     unlinkQuiet(snapshotPath);
     logAdmin(req, 'db.restore_applied', 'database', null, safeName);
@@ -1755,20 +1760,25 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
     });
   } catch (err) {
     unlinkQuiet(tmpPath);
-    let rolledBack = false;
+    let rolledBack = Boolean(err.transactionAborted);
     try {
       if (fs.existsSync(snapshotPath)) {
-        const rb = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-f', snapshotPath], {
+        const rb = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', snapshotPath], {
           encoding: 'utf8',
           timeout: SCRIPT_TIMEOUT_MS,
           maxBuffer: 32 * 1024 * 1024,
         });
-        rolledBack = !rb.error && rb.status === 0;
+        if (!rb.error && rb.status === 0) rolledBack = true;
+        else if (!rolledBack) {
+          logger.warn({ msg: 'Restore snapshot replay failed', err: (rb.stderr || rb.error?.message || '').slice(0, 300) });
+        }
         logAdmin(req, rolledBack ? 'db.restore_rollback_ok' : 'db.restore_rollback_failed', 'database', null, snapshotId);
+      } else if (rolledBack) {
+        logAdmin(req, 'db.restore_rollback_ok', 'database', null, snapshotId);
       }
     } catch (rbErr) {
       logger.warn({ msg: 'Restore rollback failed', err: rbErr.message });
-      logAdmin(req, 'db.restore_rollback_failed', 'database', null, snapshotId);
+      logAdmin(req, rolledBack ? 'db.restore_rollback_ok' : 'db.restore_rollback_failed', 'database', null, snapshotId);
     }
     unlinkQuiet(snapshotPath);
     logAdmin(req, 'db.restore_failed', 'database', null, safeName);
