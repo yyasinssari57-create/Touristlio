@@ -2,6 +2,48 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 13 (anahtar hijyeni)
+
+Yasin “geç” dedi. Kodun içine yeni anahtar yazılmadı. Eski anahtar da uydurulmadı. Yenileme Yasin’in işi; adımlar aşağıda.
+
+Tarayıcıya giden dosyalar (`public/` altındaki bütün JS ve HTML, hazır kütüphaneler dahil) tarandı.
+
+| Aranan | Sonuç |
+|---|---|
+| `sb_secret` | Yok |
+| `service_role` | Yok |
+| `AIza` | Yok |
+| `sk_` | Yok |
+| `secret` | Yok |
+| `SMTP` | 6 satır. Hepsi yönetici yardım yazısı (“SMTP yapılandırılmamış”). Anahtar yok. |
+| `password` | Giriş, kayıt ve şifre kutularının adı. Anahtar yok. |
+
+Taşınacak bir anahtar yoktu. Giriş kutuları yerinde duruyor.
+
+`.gitignore` içinde `.env` vardı. `.env.local` ve `.env.production` gibi gerçek dosyalar listeye girmiyordu; artık onlar da girmez. `.env.example`, `.env.production.example` ve `deploy/hetzner/.env.hetzner.example` durur. Bu üç dosyada değerler boş ya da örnek (`your-brevo-smtp-key-here`, `GERÇEK_ŞİFRE`). `git` bu örnekleri izlemeye devam eder. Gerçek `.env` izlenmez.
+
+Git geçmişi: `git log -S` ile `sb_secret`, `service_role`, `AIza`, `sk_live`, `sk_test`, `xkeysib-`, `xsmtpsib-`, `ghp_`, özel anahtar başlığı ve `postgresql://` arandı. Eklenen satırlarda gerçek anahtar yok. `.env` adlı bir dosya hiç commit edilmemiş. README’deki veritabanı satırında şifre yok; yerine `GERÇEK_ŞİFRE` yazıyor. Supabase proje adresi README’de duruyor. Bu bir anahtar değil.
+
+Render planında `DATABASE_URL`, `SUPABASE_SERVICE_KEY`, `SMTP_PASS`, `BREVO_API_KEY` ve `ADMIN_PASSWORD` depoya yazılmaz (`sync: false`). `JWT_SECRET` Render’da üretilir.
+
+Kontrol: `npm run verify:v4-adim13`. Bu komut yukarıdaki taramayı tekrarlar. Değeri yazdırmaz.
+
+### Yasin’in yapacağı işler (kod bunu yapmaz)
+
+Bu anahtarlar sohbette ve bir ekran görüntüsünde görünmüştü. Depoda olmasalar da eski kopyalar duruyor olabilir. Hepsini yenile.
+
+1. **Brevo e-posta anahtarı.** Brevo → Ayarlar → SMTP & API → yeni SMTP anahtarı üret. Render → Environment → `SMTP_PASS` değerini yenisiyle değiştir. Eski SMTP anahtarını Brevo’dan sil. Ekranda API anahtarı da göründüyse `BREVO_API_KEY` satırını da aynı şekilde yenile. Başka sunucuya (Hetzner) yapıştırdıysan oradaki dosyayı da değiştir.
+2. **Supabase gizli anahtar.** Supabase’te secret key’i yenile. Render’da `SUPABASE_SERVICE_KEY` değerini yenisiyle değiştir. Eski anahtarı kapat.
+3. **Veritabanı şifresi.** Supabase → Project Settings → Database → şifreyi yenile. Render’da `DATABASE_URL` içindeki şifreyi yenisiyle değiştir. Şifrede `@` varsa `%40` yaz. Eski şifreyle bağlanan kopya kalmasın.
+
+Her adımdan sonra, diğerine geçmeden siteyi dene:
+
+- Giriş yapılabiliyor mu
+- Yeni kayıtta doğrulama e-postası geliyor mu
+- Yönetici panelinden bir mekâna görsel yükleniyor mu ve sitede görünüyor mu
+
+Sıradaki adım Adım 14: Yönetici yetki testi (güvenli yöntem).
+
 ## Cursor V4 — Adım 12 (honeypot alanı görünmesin)
 
 Yasin “geç” dedi. Website kutusu kaldırılmadı. Ekrandan gizlendi. Sunucudaki kontrol aynı kaldı.

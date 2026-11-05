@@ -12,7 +12,11 @@ data/*.db-*
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm
+# Gerçek ortam dosyaları depoya girmez. *.example dosyaları girer.
 .env
+.env.*
+!.env.example
+!.env.*.example
 *.log
 .DS_Store
 Thumbs.db
