@@ -2,6 +2,54 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 15 (güvenlik başlıkları)
+
+Yasin “geç” dedi. Görünüm aynı. Yeni çerçeve yok.
+
+Helmet zaten duruyordu. Şunlar bu turda da aynı kaldı:
+
+- İçerik güvenlik kuralı (CSP) açık. Komutlara tek kullanımlık nonce var. `script-src-attr` hâlâ `'none'`.
+- HSTS (`max-age` + `includeSubDomains`), `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`.
+- `X-Powered-By` yok. Sayfa başka siteden gömülmesin diye `frame-ancestors 'self'`.
+
+İki başlık eksikti:
+
+1. **Yönlendiren kaynak.** Helmet’in varsayılanı `Referrer-Policy: no-referrer`. Analitik, ziyaretçinin hangi siteden geldiğini göremezdi. Artık `strict-origin-when-cross-origin`. HTTPS siteden HTTPS analitiğe yalnız site adresi gider (`https://www.touristlio.com`). Adresin geri kalanı gitmez. HTTP’ye düşerse hiçbir şey gitmez.
+2. **İzin başlığı.** `Permissions-Policy` yoktu. Eklendi: kamera, mikrofon ve ödeme kapalı. Konum yalnız bu site. Haritadaki “Konumum” düğmesi bundan yararlanır. Başka sitenin çerçevesi konumu açamaz.
+
+### Satır içi stil neden duruyor
+
+`style-src 'unsafe-inline'` üç `<style>` bloğu için duruyor:
+
+- Ana sayfadaki kritik stil (`#tl-critical`). Sayfa kaymadan önce menü ve sekmeler yerinde kalsın diye. Dış dosyaya taşımak ilk anda her sekmeyi birden gösterir.
+- Kahraman fotoğrafının adresi (`#tl-hero-bg`). Adres ayardan gelir, dosyaya yazılamaz.
+- Hata perdesi. Sayfa bozulunca `error-boundary.js` kendi `<style>` etiketini ekler. Stil dosyası inmese de perde okunur.
+
+`style-src-attr 'unsafe-inline'` şunlar için duruyor. Bunları sınıfa çevirmek düğmelerin açılıp kapanmasını bozar:
+
+- Leaflet işaretin yerini `element.style` ile yazar. Harita onsuz kayar.
+- Gizle/göster kodu kutunun `style.display` değerini okur. Başlangıçtaki `display:none` bu yüzden yerinde.
+- Kırpma aracı piksel piksel `img.style` yazar.
+- Harita işaretinin rengi kategoriye göre değişir. Yalnız renk satır içi kaldı. Boyut ve çerçeve sınıfa geçti.
+
+Kolay olan sabit stiller sınıfa geçti. Ölçüler aynı. Taşınanlar: şifre notu, giriş düğmesinin genişliği, blog kutusunun yüksekliği, birkaç üst boşluk, harita penceresindeki resim ve yazı, “Konumum” noktası, iskelet satırının esnemesi.
+
+Kalan satır içi `style=` (public, hazır kütüphane hariç): 239. Bunun 41’i `display:none`. Yönetici sayfasında 199 tane duruyor (10’u gizleme). Ana sayfada kalan 23’ünün hepsi gizleme. Avatar renkleri ve kırpma ölçüsü de dinamik.
+
+Kontrol: `npm run verify:v4-adim15`. Aynı turda `npm run verify:csp` de geçti.
+
+Chrome, 1280 piksel, yerel sunucu, CSP açık:
+
+| Deneme | Sonuç |
+|---|---|
+| Ana sayfa | Açıldı. Tek h1. CSP ihlali yok. |
+| İzinler | Kamera, mikrofon, ödeme kapalı. Konum açık. |
+| Giriş | Form açıldı. Kötü e-posta yerinde uyarı verdi. Sunucu “E-posta veya şifre hatalı” dedi. |
+| Harita | Kutu oluştu. 20 karo istendi. “Konumum” düğmesi duruyor. |
+| Görsel | 1 piksellik önizleme göründü. Yükleme isteği sunucuya vardı. Oturum olmadığı için 401. Kayıt açılmadı. |
+
+Sıradaki adım Adım 16: Otomatik kontrol (bir daha bozulmasın).
+
 ## Cursor V4 — Adım 14 (yönetici yetki testi)
 
 Yasin “geç” dedi. Canlı sitede geri yükleme denenmedi. Yetkisiz çağrı ve yedek denemesi yerel kopyada yapıldı. Canlı siteye istek gitmedi.

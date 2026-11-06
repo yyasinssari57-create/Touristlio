@@ -209,7 +209,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <div class="no-res" id="noRes" style="display:none">
         <p data-i18n="noResults">🔍 Sonuç bulunamadı. Farklı filtreler deneyin.</p>
-        <button type="button" class="btn bo bsm" id="noResClear" style="margin-top:12px" data-act="resetFilters" data-i18n="filterClear">Filtreler Temizle</button>
+        <button type="button" class="btn bo bsm tl-mt-12" id="noResClear" data-act="resetFilters" data-i18n="filterClear">Filtreler Temizle</button>
       </div>
       <div class="osm-hint" id="osmHint" style="display:none"></div>
     </div>
@@ -411,7 +411,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <div class="discover-empty" id="discoverEmpty" style="display:none">
             <div class="empty-icon">🗺️</div>
             <p data-i18n="discoverEmpty">Bu filtrede yer bulunamadı.</p>
-            <button type="button" class="btn bo bsm" id="discoverEmptyClear" style="margin-top:12px" data-i18n="filterClear">Filtreler Temizle</button>
+            <button type="button" class="btn bo bsm tl-mt-12" id="discoverEmptyClear" data-i18n="filterClear">Filtreler Temizle</button>
           </div>
         </div>
       </div>
@@ -650,7 +650,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <label class="sr-only" for="blogCat" data-i18n="searchCatAria">Kategori</label>
           <select class="w-sel" id="blogCat" aria-label="Blog kategorisi"></select>
           <label class="sr-only" for="blogBody" data-i18n="blogBodyPh">Uzun rehber yazınız...</label>
-          <textarea class="rft" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..." style="min-height:140px"></textarea>
+          <textarea class="rft blog-body" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..."></textarea>
           <button class="btn bp bsm" id="blogSendBtn" type="button" data-act="submitBlog" data-i18n="submitBlog">Blog Gönder</button>
         </div>
       </div>
@@ -665,7 +665,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="ptab-c" id="ptab-saved">
         <div class="pgrid" id="savedGrid"></div>
         <div class="empty-state" id="savedEmpty"><div class="empty-icon">❤️</div><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.<br>Kartlardaki 🤍 ikonuna tıklayın.</p>
-        <a href="/" class="btn bo bsm" style="margin-top:12px" data-prevent data-act="showMainTab" data-arg="explore" data-i18n="explore">Keşfet</a></div>
+        <a href="/" class="btn bo bsm tl-mt-12" data-prevent data-act="showMainTab" data-arg="explore" data-i18n="explore">Keşfet</a></div>
       </div>
       <div class="ptab-c" id="ptab-write">
         <div class="write-card">

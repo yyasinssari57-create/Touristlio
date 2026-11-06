@@ -1325,8 +1325,8 @@ function showGridSkeleton() {
       grid.classList.add('skeleton');
       grid.setAttribute('aria-busy', 'true');
       grid.innerHTML = Array(8).fill(0).map(() => `
-    <div class="pc sk"><div class="pc-img" style="background:var(--l2)"></div>
-    <div class="pc-body"><div style="height:12px;background:var(--l2);border-radius:4px;width:70%;margin-bottom:8px"></div></div></div>`).join('');
+    <div class="pc sk"><div class="pc-img sk-block"></div>
+    <div class="pc-body"><div class="sk-line sk-w70"></div></div></div>`).join('');
     }
   }
   const noRes = document.getElementById('noRes');
@@ -1381,7 +1381,7 @@ function renderGrid(list, append = false) {
         <div class="pc-rats">
           ${renderTiolaRatingLine(p)}
         </div>
-        <div class="pc-foot"><div class="pc-type">${catLabel(p.category)}</div><div style="font-size:.61rem;color:var(--t3)">${escapeHtml(geoLabel(p.country))}</div></div>
+        <div class="pc-foot"><div class="pc-type">${catLabel(p.category)}</div><div class="pc-geo">${escapeHtml(geoLabel(p.country))}</div></div>
       </div>
     </div>`).join('');
   if (append && grid) grid.insertAdjacentHTML('beforeend', html);
@@ -1703,7 +1703,7 @@ function onSearch(val) {
       const data = await api('/places/search?q=' + encodeURIComponent(q) + '&limit=7');
       const res = data.places;
       if (!res.length) {
-        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm" style="margin-top:8px" data-act="exploreOnMap">${t('mapExploreBtn')}</button></div>`;
+        drop.innerHTML = `<div class="sd-empty">${t('noResults')}<br><button type="button" class="btn bo bsm tl-mt-8" data-act="exploreOnMap">${t('mapExploreBtn')}</button></div>`;
       } else {
         drop.innerHTML = res.map((p) => {
           const s = formatTiolaScore(p);
@@ -3113,7 +3113,7 @@ async function openBlogDetail(slug, skipRoute) {
       ${b.excerpt ? `<p class="bd-excerpt">${escapeHtml(b.excerpt)}</p>` : ''}
       ${restBody ? `<div class="bd-body">${escapeHtml(restBody)}</div>` : ''}
       ${tags ? `<div class="bd-tags">${tags}</div>` : ''}
-      ${b.placeId ? `<p style="margin-top:16px"><button class="btn bp bsm" type="button" data-before="closeBlogDetail" data-act="openDetail" data-arg="${b.placeId}">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
+      ${b.placeId ? `<p class="tl-mt-16"><button class="btn bp bsm" type="button" data-before="closeBlogDetail" data-act="openDetail" data-arg="${b.placeId}">${escapeHtml(blogPageLabels().viewPlace)}</button></p>` : ''}
       <div class="tiola-actions-row bd-like-row" data-stop>
         ${renderLikeBar('blog', b.id, b.likeCount, b.likedByMe)}
         ${menuBtn}
@@ -3306,7 +3306,7 @@ async function updateProfilePage() {
         vg.innerHTML = visited.places.map((p) => `
           <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
             <div class="pc-img">${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card' })}</div>
-            <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${p.visitedAt || ''}</div></div>
+            <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div class="pc-meta">${p.visitedAt || ''}</div></div>
           </div>`).join('');
       }
     }
@@ -3334,10 +3334,10 @@ async function updateProfilePage() {
       return `
       <div class="my-rev-item" data-content-type="${contentType}" data-content-id="${item.id}">
         <div>
-          <div style="font-weight:600">${escapeHtml(label)}</div>
+          <div class="my-rev-label">${escapeHtml(label)}</div>
           <span class="status-${item.status || 'pending'}">${statusLabel(item.status || 'pending')}</span>
           ${rejectNote}
-          <div style="font-size:.72rem;color:var(--t3);margin-top:4px">${isBlog ? t('pendingBlog') : t('pendingTiola')}</div>
+          <div class="my-rev-note">${isBlog ? t('pendingBlog') : t('pendingTiola')}</div>
         </div>
         ${menuBtn}
       </div>`;
@@ -3715,22 +3715,22 @@ function buildAuthForm(m) {
        <input class="ain" id="loginPass" type="password" placeholder="${t('authPass')}" autocomplete="current-password"/>
        <p id="authFormError" class="auth-inline-error" hidden></p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
-       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px;margin-top:2px" data-act="doLoginSubmit">${t('login')}</button>
-       <p class="auth-page-link" style="margin-top:10px"><button type="button" class="link-btn" data-act="doForgotPassword">${t('forgotPassword')}</button></p>`
+       <button class="btn bp auth-submit auth-submit-login" id="authSubmitBtn" data-act="doLoginSubmit">${t('login')}</button>
+       <p class="auth-page-link auth-forgot"><button type="button" class="link-btn" data-act="doForgotPassword">${t('forgotPassword')}</button></p>`
     : `<label class="sr-only" for="regName">${t('authName')}</label>
        <input class="ain" id="regName" type="text" placeholder="${t('authName')}" autocomplete="name"/>
        <label class="sr-only" for="regEmail">${t('authEmail')}</label>
        <input class="ain" id="regEmail" type="email" placeholder="${t('authEmail')}" autocomplete="email"/>
        <label class="sr-only" for="regPass">${t('authPassMin')}</label>
        <input class="ain" id="regPass" type="password" placeholder="${escapeHtml(t('authPassMin'))}" autocomplete="new-password" ${passwordFieldAttrs()}/>
-       <p class="auth-page-sub" style="font-size:.78rem;margin:-4px 0 8px">${escapeHtml(t('settingsNote'))}</p>
+       <p class="auth-page-sub auth-policy-modal">${escapeHtml(t('settingsNote'))}</p>
        ${window.TL_FORM_SECURITY ? window.TL_FORM_SECURITY.honeypotHtml() : ''}
-       <div style="display:flex;gap:6px;align-items:flex-start;font-size:.68rem;color:var(--t2);margin-bottom:8px">
-         <input type="checkbox" id="gC" style="accent-color:var(--b);margin-top:2px"/>
+       <div class="auth-kvkk">
+         <input type="checkbox" id="gC"/>
          <label for="gC"><a href="/legal/kvkk.html" target="_blank" rel="noopener">${t('legalKvkk')}</a> · <a href="/legal/terms.html" target="_blank" rel="noopener">${t('termsShort')}</a> — ${t('authAccept')}</label>
        </div>
        <p id="authFormError" class="auth-inline-error" hidden></p>
-       <button class="btn bp" id="authSubmitBtn" style="width:100%;padding:11px" data-act="doRegSubmit">${t('authCreate')}</button>`;
+       <button class="btn bp auth-submit" id="authSubmitBtn" data-act="doRegSubmit">${t('authCreate')}</button>`;
   } catch (e) {
     window.TL_ERROR_BOUNDARY?.capture('form', e);
   }

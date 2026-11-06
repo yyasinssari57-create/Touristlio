@@ -56,21 +56,21 @@ window.TL_MAP = (function () {
   }
 
   function markerHtml(color) {
-    return `<span style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);display:block"></span>`;
+    return `<span class="tl-map-dot" style="background:${color}"></span>`;
   }
 
   function popupHtml(m, lang) {
     const imgSrc = m.imageUrl || '/images/place-placeholder.svg';
     const img = imgSrc
       ? (window.TL_IMG?.tag
-        ? window.TL_IMG.tag(imgSrc, { alt: m.name, kind: 'thumb', extra: 'style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px"' })
-        : `<img src="${imgSrc}" alt="${m.name || ''}" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`)
+        ? window.TL_IMG.tag(imgSrc, { alt: m.name, kind: 'thumb', className: 'map-popup-img' })
+        : `<img src="${imgSrc}" alt="${m.name || ''}" class="map-popup-img" loading="lazy"/>`)
       : '';
     return `<div class="map-popup">
       ${img}
       <strong>${m.name}</strong>
-      <div style="font-size:.72rem;color:#64748b;margin:4px 0">${m.shortDesc || ''}</div>
-      <button type="button" data-act="openDetail" data-arg="${m.id}" style="font-size:.7rem;color:#0ea5e9;border:none;background:none;cursor:pointer;padding:0">
+      <div class="map-popup-desc">${m.shortDesc || ''}</div>
+      <button type="button" class="map-popup-link" data-act="openDetail" data-arg="${m.id}">
         ${window.TL_I18N?.t(lang, 'viewDetails') || (lang === 'en' ? 'View details →' : 'Detay →')}
       </button>
     </div>`;
@@ -313,7 +313,7 @@ window.TL_MAP = (function () {
         if (userMarker) userMarker.remove();
         const icon = L.divIcon({
           className: 'tl-user-pin',
-          html: '<span style="background:#ef4444;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:block"></span>',
+          html: '<span class="tl-user-dot"></span>',
           iconSize: [16, 16],
           iconAnchor: [8, 8],
         });

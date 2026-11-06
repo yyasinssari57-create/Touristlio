@@ -90,7 +90,7 @@
 
     <div class="profile-content-card">
     <h3 class="profile-section-title" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</h3>
-    <div id="visitedCountries" class="badge-row" style="margin-bottom:12px"></div>
+    <div id="visitedCountries" class="badge-row tl-mb-12"></div>
     <div class="pgrid" id="visitedGrid"></div>
     <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n="emptyVisited">Henüz ziyaret kaydı yok.</p></div>
     </div>
@@ -101,7 +101,7 @@
     <div class="pgrid" id="savedGrid"></div>
 
     <div class="empty-state" id="savedEmpty"><div class="empty-icon">❤️</div><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.</p>
-    <a href="/" class="btn bo bsm" style="margin-top:12px" data-i18n="explore">Keşfet</a></div>
+    <a href="/" class="btn bo bsm tl-mt-12" data-i18n="explore">Keşfet</a></div>
     </div>
 
     <div class="profile-settings-card">
@@ -339,8 +339,8 @@ function renderTiolas(tiolas) {
     return `<a class="pc" ${ti.placeId ? `href="${placeHref(ti)}"` : ''}>
       <div class="pc-body">
         <div class="pc-name">${place || 'Tiola'}</div>
-        <div style="font-size:.72rem;color:var(--gold)">${stars}</div>
-        <div style="font-size:.78rem;color:var(--t2);margin-top:4px">${escapeHtml((ti.text || '').slice(0, 160))}</div>
+        <div class="pc-stars">${stars}</div>
+        <div class="pc-snippet">${escapeHtml((ti.text || '').slice(0, 160))}</div>
       </div>
     </a>`;
   }).join('');
@@ -366,7 +366,7 @@ function renderVisited(places, countries) {
   if (empty) empty.style.display = 'none';
   grid.innerHTML = list.map((p) => `<a class="pc" href="${placeHref(p)}">
     <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" width="400" height="300" loading="lazy" decoding="async" />`}</div>
-    <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div style="font-size:.65rem;color:var(--t3)">${escapeHtml(p.visitedAt || geoLabel(p.country) || '')}</div></div>
+    <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div class="pc-meta">${escapeHtml(p.visitedAt || geoLabel(p.country) || '')}</div></div>
   </a>`).join('');
 }
 

@@ -22,6 +22,7 @@ const { parseCorsOrigins, getConnectSrcOrigins, isCorsOriginAllowed } = require(
 const { canonicalHostMiddleware } = require('./middleware/canonical-host');
 const { canonicalPageRedirectMiddleware } = require('./middleware/canonical-page-redirects');
 const { cspNonceMiddleware } = require('./middleware/csp-nonce');
+const { permissionsPolicyMiddleware } = require('./middleware/permissions-policy');
 const { recaptchaConfig, publicRecaptchaConfig } = require('./middleware/recaptcha');
 const { publicAnalyticsConfig, gaCspSources } = require('./lib/analytics-config');
 
@@ -91,8 +92,11 @@ app.use(helmet({
       ],
       // Inline on* handlers removed (bind-actions.js). Do not re-add 'unsafe-inline'.
       scriptSrcAttr: ["'none'"],
-      // unsafe-inline: index.html critical <style> + admin panel visibility toggles (style="" / el.style)
+      // <style> blocks, not attributes: #tl-critical (first paint), #tl-hero-bg
+      // (hero URL), error-boundary.js fallback <style>. See AUDIT Adım 15.
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      // Leaflet element.style, el.style.display toggles, crop pixel sizes,
+      // dynamic marker colors. Static style="" that could move already did.
       styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       // Raster tiles are <img> requests (img-src). 'https:' already allows them;
@@ -107,7 +111,11 @@ app.use(helmet({
     },
   } : false,
   crossOriginEmbedderPolicy: false,
+  // Helmet's default is no-referrer. Analytics needs the site origin on
+  // cross-site HTTPS calls (GA). Downgrade to HTTP still sends nothing.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
+app.use(permissionsPolicyMiddleware());
 app.use(async (req, res, next) => {
   cors({
     origin(origin, cb) {
