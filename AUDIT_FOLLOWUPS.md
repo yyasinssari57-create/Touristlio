@@ -2,6 +2,44 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 14 (yönetici yetki testi)
+
+Yasin “geç” dedi. Canlı sitede geri yükleme denenmedi. Yetkisiz çağrı ve yedek denemesi yerel kopyada yapıldı. Canlı siteye istek gitmedi.
+
+96 uç listelendi. Yönetim paneli, kullanıcı rolü, moderasyon ve ayarlar. Her yönetim mutasyonunda ya `requireRole('admin')` ya da `checkPermission` var.
+
+Beş kimlik denendi: anonim, normal üye, editör, moderatör, staff.
+
+Yetkisi olmayan 292 çağrının hepsi 401 veya 403 döndü. Üyenin rolü admin yapılmadı. `adim14_probe` ayar anahtarı yazılmadı. Admin bile birine admin rolü veremiyor. Yedek geri yükleme ve silme, yetkisiz kimlikte işlemeden kapıda durdu.
+
+Yetkisi olan rolde 164 çağrı 401 değildi. Bu, o rolün kendi işi. Örnek: moderatör bekleyen Tiola listesini açar. Boş gövdeyle yeni yer, şehir veya kategori açabilecek 24 çağrı gönderilmedi. Kayıt açılmasın diye.
+
+Yedek denemesi ayrı yerel veritabanında (`touristlio_adim14`). İş bitince bu veritabanı silindi.
+
+| Deneme | Sonuç |
+|---|---|
+| Dry-run | Checksum ve dump başlığı doğrulandı. Sentinel `before` kaldı. Uygulanmadı. |
+| Yanlış checksum | 400. Sentinel durdu. |
+| Klasör dışına yazma | `../` ve mutlak yol reddedildi. Dışarıda dosya oluşmadı. |
+| Hatalı SQL | Önce sentinel `hacked` kalıyordu. Her cümle ayrı kaydoluyor, sonraki hata geri alamıyordu. Artık dosya tek işlemde çalışıyor. Hata olunca işlem geri alınıyor. Sentinel `before` kaldı. HTTP 500. |
+
+Denetim kaydı, geçici veritabanından, sonra silindi:
+
+- `tools.cache_clear`
+- `db.restore_failed` — `touristlio-backup-adim14-bad.sql`
+- `db.restore_rollback_ok`
+- `db.restore_snapshot`
+- `db.restore_checksum_mismatch`
+- `db.restore_dry_run`
+
+Editör notu: eski bir veritabanı adımı editöre şehir ve kategori iznini de yazmış. Kodun yedek listesinde editörde bu iki izin yok. Bu tur o izni silmedi. Moderatör yine yönetici olamıyor. Ayar ve yedek ona kapalı.
+
+Kontrol: `npm run verify:v4-adim14`. Aynı betik `npm run test:admin-authz`.
+
+Canlıda yalnız yetkisiz çağrı için adres `TEST_ADMIN_AUTHZ_URL`. Üye için `TEST_MEMBER_EMAIL` ve `TEST_MEMBER_PASSWORD`. Canlıda silme ve geri yükleme gönderilmez. Bu tur o adres verilmedi.
+
+Sıradaki adım Adım 15: Güvenlik başlıkları (küçük).
+
 ## Cursor V4 — Adım 13 (anahtar hijyeni)
 
 Yasin “geç” dedi. Kodun içine yeni anahtar yazılmadı. Eski anahtar da uydurulmadı. Yenileme Yasin’in işi; adımlar aşağıda.
