@@ -94,6 +94,20 @@ Tam liste ve diğer isteğe bağlı değişkenler: `.env.production.example`
 
 Sağlık kontrolü: `https://<servis-adı>.onrender.com/api/health` → `{"ok":true,...}`
 
+Yayından sonra sayfa kontrolü (yalnızca okur, kayıt silmez). Bilgisayarda Chrome açık olmalı:
+
+```bash
+SMOKE_BASE_URL=https://www.touristlio.com npm run test:smoke
+```
+
+Kod deposundaki kilitlerin hepsi, yerelde:
+
+```bash
+npm run verify:v4
+```
+
+Bu komut Adım 1’den 15’e kadar kontrolleri ve aynı sayfa testini sırayla çalıştırır. Biri bozulursa komut hata ile biter.
+
 ### 4. Veritabanını doldur (ilk kurulum — zorunlu)
 
 Render → servis → **Shell**:
