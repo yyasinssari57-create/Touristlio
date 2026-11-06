@@ -2,6 +2,43 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V4 — Adım 16 (otomatik kontrol)
+
+Yasin “geç” dedi. V4’ün son adımı. Görünüm aynı. Yeni düğme yok.
+
+Tek komut: `npm run verify:v4`. Aynı işi `npm run verify:v4-adim16` de yapar.
+
+Komut, Adım 1’den 15’e kadar kilitli kontrolleri sırayla çalıştırır. Sonra sayfa duman testini koşturur. Biri kırılırsa komut hata ile biter. Geçen ve kalan adımlar en sonda listelenir.
+
+Duman testi tek başına da çalışır: `npm run test:smoke`
+
+Baktıkları:
+
+- `/blog` ve `/en/blog`: ekranda “[object Object]” yok. İngilizce blog Türkçe başlık basmaz.
+- Tarayıcıda dil İngilizce kayıtlıyken `/blog` adresi değişmez. Sayfa Türkçe kalır.
+- Genel sayfalarda tek h1.
+- `/sitemap.xml` açılır, XML’dir, `/search` yoktur, tarihler birbirinden farklıdır.
+- 320 ve 390 piksel genişlikte sayfa yana kaymaz.
+- Giriş yapmadan yönetim istekleri 401 döner. Silme ve yedek indirme yok.
+
+Yerelde, proje klasöründe:
+
+```bash
+npm run verify:v4
+```
+
+Bilgisayarda Chrome kurulu olmalı. Chrome başka klasördeyse yolu `CHROME_PATH` ile verilir.
+
+Yayından sonra, canlı siteye karşı (yalnızca okur, kayıt silmez):
+
+```bash
+SMOKE_BASE_URL=https://www.touristlio.com npm run test:smoke
+```
+
+Bu turda `npm run verify:v4` 16 kontrolün hepsini geçti.
+
+V4 bitti. Rehberde Adım 17 yok. Kalan adım: 0.
+
 ## Cursor V4 — Adım 15 (güvenlik başlıkları)
 
 Yasin “geç” dedi. Görünüm aynı. Yeni çerçeve yok.
@@ -48,7 +85,7 @@ Chrome, 1280 piksel, yerel sunucu, CSP açık:
 | Harita | Kutu oluştu. 20 karo istendi. “Konumum” düğmesi duruyor. |
 | Görsel | 1 piksellik önizleme göründü. Yükleme isteği sunucuya vardı. Oturum olmadığı için 401. Kayıt açılmadı. |
 
-Sıradaki adım Adım 16: Otomatik kontrol (bir daha bozulmasın).
+Adım 16 üstte. V4 bitti. Kalan adım yok.
 
 ## Cursor V4 — Adım 14 (yönetici yetki testi)
 
