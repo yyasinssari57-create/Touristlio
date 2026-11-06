@@ -18,12 +18,12 @@ window.TL_MAP_DISCOVER = (function () {
     const imgSrc = m.imageUrl || '/images/place-placeholder.svg';
     const img = imgSrc
       ? (window.TL_IMG?.tag
-        ? window.TL_IMG.tag(imgSrc, { alt: m.name, kind: 'thumb', extra: 'style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px"' })
-        : `<img src="${imgSrc}" alt="${m.name || ''}" style="width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy"/>`)
+        ? window.TL_IMG.tag(imgSrc, { alt: m.name, kind: 'thumb', className: 'map-popup-img' })
+        : `<img src="${imgSrc}" alt="${m.name || ''}" class="map-popup-img" loading="lazy"/>`)
       : '';
     return `<div class="map-popup">${img}<strong>${m.name}</strong>
-      <div style="font-size:.72rem;color:#64748b;margin:4px 0">${m.shortDesc || ''}</div>
-      <button type="button" data-act="openDetail" data-arg="${m.id}" style="font-size:.7rem;color:#0ea5e9;border:none;background:none;cursor:pointer;padding:0">
+      <div class="map-popup-desc">${m.shortDesc || ''}</div>
+      <button type="button" class="map-popup-link" data-act="openDetail" data-arg="${m.id}">
         ${window.TL_I18N?.t(lang, 'viewDetails') || (lang === 'en' ? 'View details →' : 'Detay →')}
       </button></div>`;
   }
@@ -112,7 +112,7 @@ window.TL_MAP_DISCOVER = (function () {
         const color = window.TL_MAP?.colorFor?.(m.category) || '#0ea5e9';
         const icon = L.divIcon({
           className: 'tl-map-pin',
-          html: `<span style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);display:block"></span>`,
+          html: `<span class="tl-map-dot" style="background:${color}"></span>`,
           iconSize: [18, 18],
           iconAnchor: [9, 9],
         });

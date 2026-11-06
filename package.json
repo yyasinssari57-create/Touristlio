@@ -51,6 +51,7 @@
     "verify:v4-adim13": "node server/scripts/verify-v4-adim13-key-hygiene.js",
     "test:admin-authz": "node server/scripts/test-admin-authz.js",
     "verify:v4-adim14": "node server/scripts/test-admin-authz.js",
+    "verify:v4-adim15": "node server/scripts/verify-v4-adim15-headers.js",
     "measure:v4-adim10": "node server/scripts/measure-v4-adim10.js",
     "verify:sprint1": "node server/scripts/verify-gemini-sprint1.js",
     "verify:faz3": "node server/scripts/verify-gemini-faz3.js",

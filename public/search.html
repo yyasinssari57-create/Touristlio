@@ -201,7 +201,7 @@ async function runSearch(resetPage) {
         <div class="pc-body"><div class="pc-loc">📍 ${geoText(pl.location)}</div><div class="pc-name">${pl.name}</div>${scoreHtml}</div>
       </a>`;
     }).join('');
-    grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/explore#explore/map" class="btn bo bsm" style="margin-top:12px;display:inline-flex">${t('mapExploreBtn')}</a></div>`;
+    grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/explore#explore/map" class="btn bo bsm tl-mt-12">${t('mapExploreBtn')}</a></div>`;
     renderSearchPager();
     updateUrl();
   } catch (e) {

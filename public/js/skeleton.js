@@ -31,7 +31,7 @@ window.TL_SKELETON = (function () {
     return Array(count).fill(0).map(() => `
       <div class="sd-item sk ${SHIM}" aria-hidden="true">
         <div class="sd-img sk-block"></div>
-        <div style="flex:1"><div class="sk-line sk-w80"></div><div class="sk-line sk-w60"></div></div>
+        <div class="sk-flex"><div class="sk-line sk-w80"></div><div class="sk-line sk-w60"></div></div>
       </div>`).join('');
   }
 
@@ -40,7 +40,7 @@ window.TL_SKELETON = (function () {
     return Array(count).fill(0).map(() => `
       <div class="discover-place-card sk ${SHIM}" aria-hidden="true">
         <div class="sk-block sk-thumb"></div>
-        <div style="flex:1">
+        <div class="sk-flex">
           <div class="sk-line sk-w70"></div>
           <div class="sk-line sk-w50"></div>
         </div>
