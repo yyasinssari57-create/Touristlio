@@ -118,6 +118,7 @@
     "verify:cache": "node server/scripts/verify-cache-headers.js",
     "verify:analytics": "node server/scripts/verify-analytics.js",
     "verify:empty-states": "node server/scripts/verify-empty-states.js",
+    "verify:place-like-profile": "node server/scripts/verify-place-like-profile-bugs.js",
     "verify:faz1-4": "node server/scripts/verify-faz1-4-ratelimit.js",
     "verify:faz1-5": "node server/scripts/verify-faz1-5-rbac-audit.js",
     "verify:admin-image-upload": "node server/scripts/verify-admin-image-upload.js",

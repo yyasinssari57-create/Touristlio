@@ -101,7 +101,7 @@
 
   function nameIconControls(root) {
     const scope = root && root.querySelectorAll ? root : document;
-    const sel = '.aclose, .pc-save, .pd-save, .nav-toggle, .filter-sheet-close, .avatar-crop-zoom-btn, .place-crop-zoom-btn';
+    const sel = '.aclose, .pc-save, .pd-save, .pc-visit, .pd-visit, .nav-toggle, .filter-sheet-close, .avatar-crop-zoom-btn, .place-crop-zoom-btn';
     const nodes = [];
     if (scope.matches && scope.matches(sel)) nodes.push(scope);
     if (scope.querySelectorAll) scope.querySelectorAll(sel).forEach((el) => nodes.push(el));
@@ -114,6 +114,13 @@
             && el.closest('.pc').querySelector('.pc-name').textContent)
           || '').trim();
         const base = t('saveAria', 'Favorilere ekle');
+        el.setAttribute('aria-label', name ? base + ': ' + name : base);
+      } else if (el.classList.contains('pc-visit') || el.classList.contains('pd-visit')) {
+        const name = (el.getAttribute('data-place-name')
+          || (el.closest('.pc') && el.closest('.pc').querySelector('.pc-name')
+            && el.closest('.pc').querySelector('.pc-name').textContent)
+          || '').trim();
+        const base = t('visitAria', 'Ziyaret ettiklerime ekle');
         el.setAttribute('aria-label', name ? base + ': ' + name : base);
       } else if (el.classList.contains('nav-toggle')) {
         el.setAttribute('aria-label', t('menuAria', 'Menü'));
