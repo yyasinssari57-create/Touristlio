@@ -145,11 +145,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   <!-- EXPLORE SUB-NAV -->
   <div class="explore-nav">
     <div class="explore-nav-inner" role="tablist" aria-label="Keşfet sekmeleri">
-      <button type="button" class="etab on" id="et-discover" role="tab" aria-selected="true" data-act="showExploreTab" data-el data-arg="discover" data-i18n="tabDiscover">🗺️ Destinasyonlar</button>
-      <button type="button" class="etab" id="et-map" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="map" data-i18n="tabMap">🗺️ Harita</button>
-      <button type="button" class="etab" id="et-filter" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="filter" data-i18n="tabFilter">⚙️ Gelişmiş Filtrele</button>
-      <button type="button" class="etab" id="et-tiolas" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="tiolas" data-i18n="tabTiolas">✨ Tiola'lar</button>
-      <button type="button" class="etab" id="et-categories" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="categories" data-i18n="tabCategories">📂 Kategoriler</button>
+      <button type="button" class="etab on" id="et-discover" role="tab" aria-selected="true" data-act="showExploreTab" data-el data-arg="discover" data-i18n="tabDiscover">Destinasyonlar</button>
+      <button type="button" class="etab" id="et-map" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="map" data-i18n="tabMap">Harita</button>
+      <button type="button" class="etab" id="et-filter" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="filter" data-i18n="tabFilter">Gelişmiş Filtrele</button>
+      <button type="button" class="etab" id="et-tiolas" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="tiolas" data-i18n="tabTiolas">Tiola'lar</button>
+      <button type="button" class="etab" id="et-categories" role="tab" aria-selected="false" data-act="showExploreTab" data-el data-arg="categories" data-i18n="tabCategories">Kategoriler</button>
     </div>
   </div>
 
@@ -157,13 +157,13 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   <div class="explore-section" id="es-map" data-error-boundary="map" hidden aria-hidden="true">
     <div class="discover-wrap map-tab-wrap">
       <div class="explore-map-hd">
-        <h4 data-i18n="mapTitle">🗺️ Harita</h4>
+        <h4 data-i18n="mapTitle">Harita</h4>
         <span class="map-sub" data-i18n="mapSub">OpenStreetMap · kategoriye göre işaretler</span>
       </div>
       <div class="map-controls">
         <label class="sr-only" for="mapSearchInput" data-i18n="mapSearchAria">Harita arama</label>
         <input type="search" id="mapSearchInput" class="map-search-inp" data-i18n-placeholder="searchPh" placeholder="Haritada ara..." aria-label="Harita arama"/>
-        <button type="button" class="btn bo bsm" id="mapLocateBtn" data-i18n="mapLocate">📍 Konumum</button>
+        <button type="button" class="btn bo bsm" id="mapLocateBtn" data-i18n="mapLocate">Konumum</button>
         <button type="button" class="btn bo bsm filter-sheet-open" id="filterSheetOpenMap" hidden aria-haspopup="dialog" aria-expanded="false" aria-controls="filterSheet" data-i18n="filterSheetOpen">Filtrele</button>
       </div>
       <div class="map-wrap">
@@ -202,7 +202,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <button type="button" class="btn bo" id="loadMoreBtn" style="display:none" data-act="loadMorePlaces" data-i18n="loadMore">Daha Fazla Yükle</button>
       </div>
       <div class="no-res" id="noRes" style="display:none">
-        <p data-i18n="noResults">🔍 Sonuç bulunamadı. Farklı filtreler deneyin.</p>
+        <p data-i18n="noResults">Sonuç bulunamadı. Farklı filtreler deneyin.</p>
         <button type="button" class="btn bo bsm tl-mt-12" id="noResClear" data-act="resetFilters" data-i18n="filterClear">Filtreler Temizle</button>
       </div>
       <div class="osm-hint" id="osmHint" style="display:none"></div>
@@ -212,7 +212,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   <!-- FILTER TAB -->
   <div class="explore-section" id="es-filter" hidden aria-hidden="true">
     <div class="filter-tab-wrap" id="filterTabWrap">
-      <div class="filter-tab-title" data-i18n="filterTitle">🎛️ Gelişmiş Filtreleme</div>
+      <div class="filter-tab-title" data-i18n="filterTitle">Gelişmiş Filtreleme</div>
       <div class="filter-tab-sub" data-i18n="filterSub">Ülke, şehir, ilçe ve daha fazlasına göre filtrele</div>
 
       <div class="filter-grid">
@@ -292,9 +292,9 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <div class="fcs-title" data-i18n="filterMinTiola">Minimum Tiola puanı</div>
         <div class="fchips">
           <button type="button" class="fchip gold on" data-act="setStar" data-el-first data-arg="0" data-score="0" data-i18n="all">Tümü</button>
-          <button type="button" class="fchip gold" data-act="setStar" data-el-first data-arg="3" data-score="3">⭐ 3+</button>
-          <button type="button" class="fchip gold" data-act="setStar" data-el-first data-arg="4" data-score="4">⭐ 4+</button>
-          <button type="button" class="fchip gold" data-act="setStar" data-el-first data-arg="4.5" data-score="4.5">⭐ 4.5+</button>
+          <button type="button" class="fchip gold" data-act="setStar" data-el-first data-arg="3" data-score="3">3+</button>
+          <button type="button" class="fchip gold" data-act="setStar" data-el-first data-arg="4" data-score="4">4+</button>
+          <button type="button" class="fchip gold" data-act="setStar" data-el-first data-arg="4.5" data-score="4.5">4.5+</button>
         </div>
       </div>
 
@@ -302,8 +302,8 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <div class="fcs-title" data-i18n="filterEntry">Giriş Ücreti</div>
         <div class="fchips">
           <button type="button" class="fchip on" data-act="setEntryFilter" data-el-first data-arg="all" data-entry="all" data-i18n="all">Tümü</button>
-          <button type="button" class="fchip entry-chip" data-act="setEntryFilter" data-el-first data-arg="free" data-entry="free" data-i18n="entryFree">🆓 Ücretsiz</button>
-          <button type="button" class="fchip entry-chip" data-act="setEntryFilter" data-el-first data-arg="paid" data-entry="paid" data-i18n="entryPaid">💳 Ücretli</button>
+          <button type="button" class="fchip entry-chip" data-act="setEntryFilter" data-el-first data-arg="free" data-entry="free" data-i18n="entryFree">Ücretsiz</button>
+          <button type="button" class="fchip entry-chip" data-act="setEntryFilter" data-el-first data-arg="paid" data-entry="paid" data-i18n="entryPaid">Ücretli</button>
         </div>
       </div>
 
@@ -311,33 +311,33 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <div class="fcs-title" data-i18n="filterPlaces">Yerler</div>
         <div class="fchips">
           <button type="button" class="fchip on" data-act="setLocalFilter" data-el-first data-arg="all" data-local="all" data-i18n="all">Tümü</button>
-          <button type="button" class="fchip teal local-chip" data-act="setLocalFilter" data-el-first data-arg="local" data-local="local" data-i18n="filterLocalPicks">👤 Yerel Seçimleri</button>
+          <button type="button" class="fchip teal local-chip" data-act="setLocalFilter" data-el-first data-arg="local" data-local="local" data-i18n="filterLocalPicks">Yerel Seçimleri</button>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterWeather">Hava Durumuna Göre</div>
         <div class="fchips">
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherOutdoor">☀️ Açık Hava</button>
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherIndoor">🌧️ Kapalı Mekan</button>
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherWinter">❄️ Kış Aktivitesi</button>
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherSunrise">🌅 Gün Doğumu/Batımı</button>
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherNight">🌙 Gece</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherOutdoor">Açık Hava</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherIndoor">Kapalı Mekan</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherWinter">Kış Aktivitesi</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherSunrise">Gün Doğumu/Batımı</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="weatherNight">Gece</button>
         </div>
       </div>
 
       <div class="filter-chips-section">
         <div class="fcs-title" data-i18n="filterAccess">Erişilebilirlik</div>
         <div class="fchips">
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessWheel">♿ Engelli Erişimi</button>
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessFamily">👨‍👩‍👧 Aile Dostu</button>
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessPet">🐶 Evcil Hayvan</button>
-          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessParking">🅿️ Otopark Var</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessWheel">Engelli Erişimi</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessFamily">Aile Dostu</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessPet">Evcil Hayvan</button>
+          <button type="button" class="fchip" data-ephemeral="1" data-act="tlToggleOn" data-el data-i18n="accessParking">Otopark Var</button>
         </div>
       </div>
 
       <div class="filter-actions">
-        <button class="btn bp" type="button" data-act="applyExploreFiltersAndShow" data-i18n="filterShow">🔍 Sonuçları Göster</button>
+        <button class="btn bp" type="button" data-act="applyExploreFiltersAndShow" data-i18n="filterShow">Sonuçları Göster</button>
         <button class="btn bo" data-act="resetFilters" data-i18n="filterClear">Filtreler Temizle</button>
       </div>
     </div>
@@ -551,7 +551,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
           <div class="aside-card" id="pdLiveData"></div>
           <div class="aside-card" id="pdAffiliate" style="display:none"></div>
           <div class="aside-card">
-            <div class="ac-title" data-i18n="infoTitle">📋 Bilgiler</div>
+            <div class="ac-title" data-i18n="infoTitle">Bilgiler</div>
             <div class="ic-row"><span class="ic-lbl" data-i18n="infoCountry">Ülke</span><span class="ic-val" id="icCountry"></span></div>
             <div class="ic-row"><span class="ic-lbl" data-i18n="infoCity">Şehir</span><span class="ic-val" id="icCity"></span></div>
             <div class="ic-row"><span class="ic-lbl" data-i18n="infoCategory">Kategori</span><span class="ic-val" id="icCat"></span></div>
@@ -559,11 +559,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             <div class="ic-row"><span class="ic-lbl" data-i18n="infoBest">En İyi Dönem</span><span class="ic-val" id="icBest"></span></div>
           </div>
           <div class="aside-card">
-            <div class="ac-title" data-i18n="nearbyTitle">📍 Yakındaki Yerler</div>
+            <div class="ac-title" data-i18n="nearbyTitle">Yakındaki Yerler</div>
             <div id="nearbyList"></div>
           </div>
           <div class="aside-card">
-            <div class="ac-title" data-i18n="similarTitle">✨ Benzer Yerler</div>
+            <div class="ac-title" data-i18n="similarTitle">Benzer Yerler</div>
             <div id="similarList"></div>
           </div>
         </div>

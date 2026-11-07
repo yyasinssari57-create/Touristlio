@@ -3952,12 +3952,12 @@ async function openPlaceEdit(id) {
         <p class="adm-field-hint full">Saat ve hava durumu otomatik akar; elle yazılmaz. Para, bütçe ve bilgi kutucukları kaydedilir.</p>
 
         <div class="adm-side-card">
-          <p class="adm-side-card-title">🌤️ Hava Durumu</p>
+          <p class="adm-side-card-title">Hava Durumu</p>
           <p class="adm-side-card-hint">Canlı hava, yerin enlem ve boylamından otomatik gelir. İklim metni aşağıdaki Bilgi Kutucukları’ndadır.</p>
         </div>
 
         <div class="adm-side-card">
-          <p class="adm-side-card-title">🕐 Yerel Bilgi</p>
+          <p class="adm-side-card-title">Yerel Bilgi</p>
           <p class="adm-side-card-hint">Yerel saat konumuna göre kendiliğinden akar. Para birimi gösterimini buradan değiştirebilirsiniz.</p>
           <label class="adm-label-sm" for="edCurrencyCode">Para birimi kodu</label>
           <input class="ain" id="edCurrencyCode" value="${escapeHtml(ib.currencyCode || '')}" placeholder="TRY" aria-label="Para birimi kodu"/>
@@ -3966,18 +3966,18 @@ async function openPlaceEdit(id) {
         </div>
 
         <div class="adm-side-card">
-          <p class="adm-side-card-title">💰 Günlük Bütçe Tahmini</p>
-          <p class="adm-side-card-hint">Ekonomik, orta ve ilçe otel ortalaması (₺). Otel ortalaması boşsa ziyaretçide gösterilmez.</p>
+          <p class="adm-side-card-title">Günlük Bütçe Tahmini</p>
+          <p class="adm-side-card-hint">Ekonomik, orta ve bölge otel ortalaması (₺). Otel ortalaması boşsa ziyaretçide gösterilmez.</p>
           <label class="adm-label-sm" for="edBudgetLow">Ekonomik (₺/gün)</label>
           <input class="ain" id="edBudgetLow" type="number" min="0" value="${ib.budgetLow || ''}" placeholder="350" aria-label="Ekonomik bütçe"/>
           <label class="adm-label-sm" for="edBudgetMid">Orta (₺/gün)</label>
           <input class="ain" id="edBudgetMid" type="number" min="0" value="${ib.budgetMid || ''}" placeholder="900" aria-label="Orta bütçe"/>
-          <label class="adm-label-sm full" for="edHotelAvg">İlçe otel ortalaması (₺/gece)</label>
-          <input class="ain full" id="edHotelAvg" type="number" min="0" value="${ib.hotelAvg || ''}" placeholder="Boşsa gizlenir" aria-label="İlçe otel ortalaması"/>
+          <label class="adm-label-sm full" for="edHotelAvg">Bölge otel ortalaması (₺/gece)</label>
+          <input class="ain full" id="edHotelAvg" type="number" min="0" value="${ib.hotelAvg || ''}" placeholder="Boşsa gizlenir" aria-label="Bölge otel ortalaması"/>
         </div>
 
         <div class="adm-side-card">
-          <p class="adm-side-card-title">📋 Bilgiler</p>
+          <p class="adm-side-card-title">Bilgiler</p>
           <p class="adm-side-card-hint">Ülke, şehir ve kategori yukarıdaki yer bilgilerindedir. En iyi zaman ayları üstteki bölümde seçilir.</p>
           <label class="adm-label-sm full" for="edCategoryLabel">Kategori gösterim metni (isteğe bağlı)</label>
           <input class="ain full" id="edCategoryLabel" value="${escapeHtml(ib.infoCategoryLabel || '')}" placeholder="Boş bırakılırsa kategori adı kullanılır" aria-label="Kategori gösterim metni"/>

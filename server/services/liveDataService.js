@@ -217,7 +217,7 @@ function applyInfoBoxUpdates(existingPayload, body) {
   if (hotelAvg !== undefined) {
     const hotel = hotelAvg === '' || hotelAvg === null ? null : toNum(hotelAvg);
     if (hotel) {
-      // İlçe (district) otel ortalaması — yalnız yönetici girerse ziyaretçide gösterilir.
+      // Bölge otel ortalaması (veri ilçe düzeyinde; etiket «bölge») — yalnız yönetici girerse gösterilir.
       payload.hotel = {
         ...(payload.hotel || {}),
         avgPriceTry: hotel,
