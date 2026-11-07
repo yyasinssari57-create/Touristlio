@@ -88,7 +88,7 @@ Tam liste ve diğer isteğe bağlı değişkenler: `.env.production.example`
 ### 3. İlk deploy’u bekle
 
 - Build: `npm ci` — native `better-sqlite3` yok; `pg` (JavaScript) kullanılır
-- Start: `npm run start:prod` → `JWT_SECRET` yoksa veya zayıfsa **sunucu başlamaz** (kasıtlı güvenlik). `DATABASE_URL` yoksa veya şifre yer tutucusu ise **sunucu başlamaz**.
+- Start: `npm run start:prod` → `JWT_SECRET` yoksa, kısaysa veya zayıfsa **sunucu başlamaz** ve anahtar üretilmez (kasıtlı güvenlik). `DATABASE_URL` yoksa veya şifre yer tutucusu ise **sunucu başlamaz**.
 
 `better-sqlite3` kaldırıldı; Node 22.16.0 hâlâ önerilir. Blueprint güncellemesinden sonra **Manual Deploy** yapın.
 
