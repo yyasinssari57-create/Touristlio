@@ -1,8 +1,10 @@
 require('dotenv').config();
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { db } = require('./db');
 const { createUser, findUserByEmail, hashPassword } = require('./auth');
+const { passwordPolicyError } = require('./lib/password-policy');
 const { enrichContentFields } = require('./lib/place-content');
 const { slugify } = require('./lib/catalog-db');
 const { uniquePlaceSlug, slugFromPlace } = require('./lib/place-lookup');
@@ -122,26 +124,80 @@ async function clearLockout(userId) {
   await db.prepare('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = ?').run(userId);
 }
 
-async function seedAdmin() {
-  const email = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase().trim();
-  const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
-  const name = process.env.ADMIN_NAME || 'Yasin';
-  const existing = await findUserByEmail(email);
-  if (existing) {
-    const hash = await hashPassword(password);
-    await db.prepare('UPDATE users SET password_hash = ?, name = ?, role = ? WHERE id = ?').run(
-      hash, name.trim(), 'admin', existing.id,
-    );
-    await markEmailVerified(existing.id);
-    await clearLockout(existing.id);
-    logger.info({ msg: 'Admin updated from .env', email });
-    return;
-  }
-  const user = await createUser({ name, email, password, role: 'admin' });
-  await markEmailVerified(user.id);
-  logger.info({ msg: 'Admin created', email });
+/** SHA-256 of the retired built-in admin password. The plaintext is not in the repo. */
+const RETIRED_DEFAULT_SHA256 = '9a4aabf0e5cf71cae2cea646613ce7e2a5919fa758e56819704be25a3a2c1f0b';
+/** Only when NODE_ENV is not production and ADMIN_PASSWORD is empty. */
+const DEV_ONLY_FALLBACK = 'LocalDevAdmin1';
+
+function isProductionEnv() {
+  return process.env.NODE_ENV === 'production';
 }
 
+function configuredAdminPassword() {
+  return String(process.env.ADMIN_PASSWORD ?? '').trim();
+}
+
+function isRetiredDefaultAdminPassword(password) {
+  const digest = crypto.createHash('sha256').update(String(password), 'utf8').digest('hex');
+  return digest === RETIRED_DEFAULT_SHA256;
+}
+
+/**
+ * Password for a new admin, or for the manual ensure-admin reset.
+ * Production never substitutes a built-in password.
+ */
+function resolveAdminPassword() {
+  const production = isProductionEnv();
+  let password = configuredAdminPassword();
+  let source = 'env';
+  if (!password) {
+    if (production) {
+      return {
+        ok: false,
+        reason: 'ADMIN_PASSWORD tanımlı değil. Üretimde zorunlu; varsayılan şifre yok.',
+      };
+    }
+    password = DEV_ONLY_FALLBACK;
+    source = 'development-default';
+  }
+  if (production && isRetiredDefaultAdminPassword(password)) {
+    return {
+      ok: false,
+      reason: 'ADMIN_PASSWORD üretimde kullanılamaz. Render ortamına benzersiz bir şifre yazın.',
+    };
+  }
+  if (passwordPolicyError(password)) {
+    return {
+      ok: false,
+      reason: 'ADMIN_PASSWORD şifre kuralına uymuyor: en az 9 karakter, bir büyük harf, bir rakam.',
+    };
+  }
+  return { ok: true, password, source };
+}
+
+async function seedAdmin() {
+  const email = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase().trim();
+  const existing = await findUserByEmail(email);
+  if (existing) {
+    logger.info({ msg: 'Admin already exists', email });
+    return { action: 'exists', email };
+  }
+  const resolved = resolveAdminPassword();
+  if (!resolved.ok) {
+    logger.error({ msg: 'Admin not created', email, reason: resolved.reason });
+    return { action: 'skipped', email, reason: resolved.reason };
+  }
+  const name = process.env.ADMIN_NAME || 'Yasin';
+  const user = await createUser({ name, email, password: resolved.password, role: 'admin' });
+  await markEmailVerified(user.id);
+  logger.info({ msg: 'Admin created', email, source: resolved.source });
+  return { action: 'created', email, source: resolved.source };
+}
+
+/**
+ * Manual only (`npm run admin:ensure`). Startup and `npm run seed` must not call this.
+ * When ADMIN_EMAIL moved off the legacy address, that old admin row is updated too.
+ */
 async function syncLegacyAdminPassword(password) {
   const legacyEmail = 'yasin@touristlio.local';
   const envEmail = (process.env.ADMIN_EMAIL || legacyEmail).toLowerCase().trim();
@@ -199,7 +255,6 @@ async function runFullSeed(options = {}) {
   await initDb();
   await seedPlaces(options);
   await seedAdmin();
-  await syncLegacyAdminPassword(process.env.ADMIN_PASSWORD || 'ChangeMe123!');
   await seedDemoBlogs();
 }
 
@@ -209,6 +264,9 @@ module.exports = {
   seedPlaces,
   seedAdmin,
   syncLegacyAdminPassword,
+  resolveAdminPassword,
+  DEV_ONLY_FALLBACK,
+  RETIRED_DEFAULT_SHA256,
   seedDemoBlogs,
   runFullSeed,
 };

@@ -342,14 +342,14 @@ nano .env
 | `STORAGE_PERSISTENT` | `true` | VPS’te disk kalıcıdır; admin panelinde “geçici depolama” uyarısı çıkmaz. |
 | `JWT_SECRET` | 32+ karakter rastgele | Oturum token’ları. **Boş bırakmayın.** Üretmek için (başka terminalde veya önce): `npm run generate:jwt-secret` |
 | `ADMIN_EMAIL` | `admin@touristlio.com` | `/admin` giriş e-postası. |
-| `ADMIN_PASSWORD` | güçlü şifre | Admin şifresi — kimseyle paylaşmayın. |
+| `ADMIN_PASSWORD` | güçlü şifre | Admin şifresi — kimseyle paylaşmayın. Açılış var olan şifreyi ezmez. Sıfırlamak: `npm run admin:ensure`. |
 | `ADMIN_NAME` | `Admin` | Görünen ad. |
 | `SITE_URL` | `https://touristlio.com` | Sitede tarayıcıda gördüğünüz adres (**https**, sondaki `/` yok). |
 | `CORS_ORIGIN` | `https://touristlio.com` | Genelde `SITE_URL` ile aynı. |
 | `COOKIE_SECURE` | `true` | HTTPS çerezleri. |
 | `COOKIE_SAMESITE` | `strict` | Giriş/admin aynı origin. Eski `lax` için env ile override. |
 | `REQUIRE_EMAIL_VERIFICATION` | `true` | Kayıtta e-posta doğrulama — SMTP gerekir. |
-| `SEED_ON_START` | `true` | Veritabanı boşsa yerler ve admin otomatik dolar. |
+| `SEED_ON_START` | `true` | Veritabanı boşsa yerler yüklenir. Admin yoksa ve şifre uygunsa oluşturulur; var olan şifre değişmez. |
 | `SITEMAP_ON_START` | `true` | Başlangıçta sitemap üretir. |
 | `LIVE_DATA_CRON` | `true` | Canlı veri güncelleme görevi. |
 | `SMTP_HOST` | `smtp-relay.brevo.com` | Brevo SMTP sunucusu. |

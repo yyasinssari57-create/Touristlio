@@ -2,6 +2,28 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 1 (admin şifresi açılışta sıfırlanmasın)
+
+Panelden değişen admin şifresi, bir sonraki açılışta geri geliyordu. Artık gelmez.
+
+- Bu e-posta zaten kayıtlıysa açılış şifreyi, adı, rolü ve kilidi değiştirmez. Log’da yalnız hesabın durduğu yazılır.
+- Hesap yoksa üretimde `ADMIN_PASSWORD` dolu ve kurala uygun olmalıdır (en az 9 karakter, bir büyük harf, bir rakam). Değilse admin oluşturulmaz. Site ayakta kalır.
+- Eski yerleşik şifre koddan, örnek dosyalardan ve belgelerden silindi. Üretimde o değer verilirse de kabul edilmez.
+- Geliştirmede şifre boşsa ve admin yoksa yerel yedek `LocalDevAdmin1` bir kez kullanılır. İkinci açılışta değişmez.
+- Eski hesabın şifresini açılışta eşitleyen kod kalktı. Bilinçli sıfırlama: `npm run admin:ensure`. Üretimde şifre zorunlu, varsayılan yok.
+
+Kontrol: `npm run verify:v5-adim1` — çıktı `verify-v5-adim1 OK`.
+
+- Admin varken uygulama iki kez yeniden başladı. Şifre hash’i, ad, rol ve kilit aynı kaldı.
+- Üretimde `ADMIN_PASSWORD` boşken yeni admin oluşmadı. `/api/health` 200 kaldı.
+- Depoda eski varsayılan şifre araması sonuç vermedi.
+
+Aynı turda `npm run verify:admin-role`, `npm run verify:admin-security` ve `npm run verify:v4-adim11` de geçti.
+
+Yasin, Render → Environment: `ADMIN_PASSWORD` güçlü ve benzersiz olsun. Hesap zaten varsa bu yayın şifreyi değiştirmez. Yenilemek için shell’de `npm run admin:ensure`.
+
+V5’te bu tur yalnız Adım 1. Kalan adım: 12.
+
 ## Cursor V4 — Adım 16 (otomatik kontrol)
 
 Yasin “geç” dedi. V4’ün son adımı. Görünüm aynı. Yeni düğme yok.
@@ -2508,7 +2530,7 @@ Bilinçli bırakılanlar: tasarım 2–5 (OG kart, yazar sıralama, affiliate, e
 - JWT `tl_token` **HttpOnly** çerez (JSON body’de token yok). Süre 7 gün kaldı; 15 dakika oturumu yarıda keser.
 - sameSite varsayılan `strict` (Gemini Faz 1). E-posta doğrulama URL token kullanır. `COOKIE_SAMESITE=lax` ile eski davranış.
 - Eski şifreler girişte geçerli kalır. Yeni ve değişen şifre: en az 9 karakter, bir büyük harf, bir rakam (Adım 11).
-- Varsayılan `ADMIN_PASSWORD` (`ChangeMe123!`) 12 karakter; üretimde mutlaka `.env` ile değiştirilmeli.
+- Üretimde yerleşik admin şifresi yok (V5 Adım 1). `ADMIN_PASSWORD` Render’da benzersiz olmalı. Açılış var olan şifreyi değiştirmez.
 - `argon2` native bağlama; Render build’de derlenir. bcryptjs yalnızca eski hash doğrulama için duruyor.
 - `npm run verify:passwords`
 

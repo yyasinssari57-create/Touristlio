@@ -52,7 +52,7 @@ Deploy başlamadan veya ilk deploy sonrası **Environment** sekmesinde aşağıd
 | `SUPABASE_SERVICE_KEY` | `sb_secret_…` | Storage service key — tarayıcıya koyma |
 | `CORS_ORIGIN` | `https://www.touristlio.com` | Tarayıcı CORS; kod apex eşini otomatik kabul eder. |
 | `ADMIN_EMAIL` | `admin@touristlio.com` | İlk admin hesabı |
-| `ADMIN_PASSWORD` | güçlü şifre | Seed/ensure-admin ile kullanılır |
+| `ADMIN_PASSWORD` | güçlü şifre | İlk admin için zorunlu (en az 9 karakter, bir büyük harf, bir rakam). Sonraki açılışlar şifreyi değiştirmez. Sıfırlamak: `npm run admin:ensure` |
 | `SMTP_HOST` | `smtp-relay.brevo.com` | E-posta doğrulama / şifre sıfırlama |
 | `SMTP_USER` | Brevo giriş e-postası | |
 | `SMTP_PASS` | Brevo SMTP anahtarı | API anahtarı değil |
@@ -116,7 +116,7 @@ Render → servis → **Shell**:
 npm run seed
 ```
 
-Bu komut `server/data/places.json` içeriğini **Supabase PostgreSQL** tablosuna yükler ve admin kullanıcıyı oluşturur. `DATABASE_URL` Render Environment’ta tanımlı olmalıdır.
+Bu komut `server/data/places.json` içeriğini **Supabase PostgreSQL** tablosuna yükler. Admin hesabı yoksa ve `ADMIN_PASSWORD` kurala uyuyorsa hesabı oluşturur. Hesap zaten varsa şifresi değişmez. Üretimde şifre yoksa veya kural dışıysa admin oluşturulmaz; yerler yine yüklenir, site ayakta kalır. `DATABASE_URL` Render Environment’ta tanımlı olmalıdır.
 
 İsteğe bağlı:
 
@@ -149,7 +149,8 @@ npm run verify:smtp
 ### 7. Admin girişi
 
 - URL: `https://<domain>/admin`
-- E-posta / şifre: `ADMIN_EMAIL` / `ADMIN_PASSWORD`
+- E-posta: `ADMIN_EMAIL`
+- Şifre: panelden kaydettiğiniz şifre. Ortam değişkeni yalnızca ilk oluşturmada ve `npm run admin:ensure` ile yazılır.
 
 ---
 
