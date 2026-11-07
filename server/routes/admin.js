@@ -451,7 +451,8 @@ router.post('/blogs/:id/approve', checkPermission('admin.content'), async (req, 
   if (!id) return;
   await db.prepare(`
     UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
-      published_at = COALESCE(published_at, datetime('now'))
+      published_at = COALESCE(published_at, datetime('now')),
+      updated_at = datetime('now')
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
   logAdmin(req, 'blog.approve', 'blog', id, null);
@@ -480,7 +481,7 @@ router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, r
 
   await db.prepare(`
     UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-      rejection_reason = ?, published_at = NULL
+      rejection_reason = ?, published_at = NULL, updated_at = datetime('now')
     WHERE id = ? AND status = 'approved'
   `).run(req.user.id, reason, id);
 
@@ -525,7 +526,8 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
   if (!['pending', 'spam'].includes(row.status)) return fail(res, 'Bu blog zaten işlendi', 409);
 
   await db.prepare(`
-    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
+      rejection_reason = ?, updated_at = datetime('now')
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, reason, id);
 
@@ -580,7 +582,8 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
     if (action === 'approve') {
       const rows = validIds.length ? await db.prepare(`
         UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
-          published_at = COALESCE(published_at, datetime('now'))
+          published_at = COALESCE(published_at, datetime('now')),
+          updated_at = datetime('now')
         WHERE id = ANY(?::int[]) AND status IN ('pending', 'spam')
         RETURNING id
       `).all(req.user.id, validIds) : [];
@@ -609,13 +612,14 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
         const eligibleIds = eligible.map((r) => r.id);
         if (action === 'reject') {
           await db.prepare(`
-            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
+              rejection_reason = ?, updated_at = datetime('now')
             WHERE id = ANY(?::int[])
           `).run(req.user.id, cleanReason, eligibleIds);
         } else {
           await db.prepare(`
             UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-              rejection_reason = ?, published_at = NULL
+              rejection_reason = ?, published_at = NULL, updated_at = datetime('now')
             WHERE id = ANY(?::int[])
           `).run(req.user.id, cleanReason, eligibleIds);
         }
@@ -840,7 +844,8 @@ router.post('/places/:id/photos', checkPermission('admin.places'), upload.array(
   const verifiedAt = new Date().toISOString();
   await db.prepare(`
     UPDATE places
-    SET photos = ?, image_url = ?, image_verified = ?, image_verified_at = ?, image_source_url = ?
+    SET photos = ?, image_url = ?, image_verified = ?, image_verified_at = ?, image_source_url = ?,
+        updated_at = datetime('now')
     WHERE id = ?
   `).run(
     JSON.stringify(photos),
@@ -2122,7 +2127,8 @@ router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
     UPDATE blogs SET
       category = ?, title = ?, slug = ?, excerpt = ?, body = ?, image_url = ?,
       place_id = ?, tags = ?, featured = ?, author_name = ?, status = ?, published_at = ?,
-      title_en = ?, excerpt_en = ?, body_en = ?, slug_en = ?
+      title_en = ?, excerpt_en = ?, body_en = ?, slug_en = ?,
+      updated_at = datetime('now')
     WHERE id = ?
   `).run(
     (category != null ? (blogDb.categorySlugFromUnknown(category) || existing.category) : existing.category),
@@ -2161,7 +2167,8 @@ router.delete('/blogs/:id', checkPermission('admin.content'), async (req, res) =
     return ok(res, { deleted: true, soft: true });
   }
   await db.prepare(`
-    UPDATE blogs SET status = 'deleted', moderated_by = ?, moderated_at = datetime('now')
+    UPDATE blogs SET status = 'deleted', moderated_by = ?, moderated_at = datetime('now'),
+      updated_at = datetime('now')
     WHERE id = ?
   `).run(req.user.id, id);
   logAdmin(req, 'blog.delete', 'blog', id, existing.title || null);

@@ -2,6 +2,16 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 9 (sitemap DB hatası + lastmod)
+
+- DB hatasında statik-only 200 yok: last-good bellek cache varsa stale XML; yoksa **503 + Retry-After**.
+- Places/blogs `lastmod`: `updated_at` → `published_at`/`created_at`; yoksa etiket yok. `CONTENT_SNAPSHOT_DATE` yalnız statik sayfalar.
+- Admin blog/place yazıları `updated_at` dokunur. Migration `021_v5_adim9_blog_updated_at`.
+
+Kontrol: `npm run verify:v5-adim9` → OK.
+
+V5’te bu tur yalnız Adım 9. Kalan adım: 4.
+
 ## Cursor V5 — Adım 8 (/en/blog boşken indexlenmesin)
 
 Çevrilmiş + onaylı EN blog yoksa: `/en/blog` → `noindex,follow`; sitemap’te `/en/blog` yok; TR `/blog` → `/en/blog` hreflang yok. En az 1 tam çeviri (title/excerpt/body/slug_en) yayınlanınca otomatik normale döner. Çeviri içeriği üretilmedi.

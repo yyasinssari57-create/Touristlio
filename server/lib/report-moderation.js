@@ -206,12 +206,13 @@ async function removeReportedContent(content, adminId, reason) {
     if (content.status === 'approved') {
       await db.prepare(`
         UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-          rejection_reason = ?, published_at = NULL
+          rejection_reason = ?, published_at = NULL, updated_at = datetime('now')
         WHERE id = ? AND status = 'approved'
       `).run(adminId, reason, content.id);
     } else if (content.status === 'pending') {
       await db.prepare(`
-        UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+        UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
+          rejection_reason = ?, updated_at = datetime('now')
         WHERE id = ? AND status = 'pending'
       `).run(adminId, reason, content.id);
     } else if (content.status === 'rejected') {
@@ -262,14 +263,15 @@ async function restoreReportedContent(report) {
     if (prev === 'approved') {
       await db.prepare(`
         UPDATE blogs SET status = 'approved', moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL,
-          published_at = COALESCE(published_at, datetime('now'))
+          published_at = COALESCE(published_at, datetime('now')), updated_at = datetime('now')
         WHERE id = ? AND status = 'rejected'
       `).run(content.id);
       return { ok: true, restored: true };
     }
     if (prev === 'pending') {
       await db.prepare(`
-        UPDATE blogs SET status = 'pending', moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL
+        UPDATE blogs SET status = 'pending', moderated_by = NULL, moderated_at = NULL, rejection_reason = NULL,
+          updated_at = datetime('now')
         WHERE id = ? AND status = 'rejected'
       `).run(content.id);
       return { ok: true, restored: true };
