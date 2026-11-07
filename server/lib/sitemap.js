@@ -40,13 +40,18 @@ function recordLastmod(...values) {
  * PRD description_tr → overview or description (no description_tr column).
  * PRD blog body / is_published → blogs.body / status = 'approved'.
  * PRD deleted_at does not exist; draft and archived are excluded via status.
- * Places gained created_at / updated_at in V4 Adım 3. Rows without either
- * keep the places.json git snapshot date, not the day the sitemap is built.
+ * Places/blogs: lastmod from updated_at then created_at/published_at.
+ * No fixed snapshot fallback on dynamic rows (V5 Adım 9). Static pages keep
+ * CONTENT_SNAPSHOT_DATE. DB errors must not return a static-only 200.
  */
 const PLACE_DESCRIPTION_MIN_CHARS = 50;
 const BLOG_BODY_MIN_CHARS = 200;
 const SITEMAP_PLACE_LIMIT = 10000;
 const CONTENT_SNAPSHOT_DATE = '2026-11-01';
+const SITEMAP_RETRY_AFTER_SEC = 120;
+
+/** Last successful full sitemap XML (memory only). */
+let lastGoodSitemapXml = null;
 
 /** Longer of the Turkish blurbs. English columns do not satisfy description_tr. */
 function turkishPlaceBlurbLength(row) {
@@ -162,105 +167,105 @@ function withEnglishAlternates(urls, base, opts = {}) {
 }
 
 async function loadPlaceUrls(base) {
-  try {
-    const rows = await db.prepare(`
-      SELECT slug, lat, lng, status, overview, description,
-             description_en, overview_en, updated_at, created_at
-      FROM places
-      WHERE COALESCE(NULLIF(TRIM(status), ''), 'published') = 'published'
-        AND slug IS NOT NULL AND TRIM(slug) <> ''
-        AND lat IS NOT NULL AND lng IS NOT NULL
-        AND lat <> 0 AND lng <> 0
-        AND GREATEST(
-          char_length(btrim(COALESCE(overview, ''))),
-          char_length(btrim(COALESCE(description, '')))
-        ) > ${PLACE_DESCRIPTION_MIN_CHARS}
-      ORDER BY id DESC
-      LIMIT ${SITEMAP_PLACE_LIMIT}
-    `).all();
-    const urls = [];
-    for (const row of rows) {
-      const path = placeSitemapPath(row);
-      if (!path) continue;
-      const lastmod = recordLastmod(row.updated_at, row.created_at) || CONTENT_SNAPSHOT_DATE;
-      const enPath = placeEnSitemapPath(row);
-      urls.push({
-        loc: `${base}${path}`,
-        lastmod,
-        priority: '0.8',
-        changefreq: 'weekly',
-        alternateLoc: enPath ? `${base}${enPath}` : null,
-      });
-    }
-    return urls;
-  } catch {
-    return [];
+  const rows = await db.prepare(`
+    SELECT slug, lat, lng, status, overview, description,
+           description_en, overview_en, updated_at, created_at
+    FROM places
+    WHERE COALESCE(NULLIF(TRIM(status), ''), 'published') = 'published'
+      AND slug IS NOT NULL AND TRIM(slug) <> ''
+      AND lat IS NOT NULL AND lng IS NOT NULL
+      AND lat <> 0 AND lng <> 0
+      AND GREATEST(
+        char_length(btrim(COALESCE(overview, ''))),
+        char_length(btrim(COALESCE(description, '')))
+      ) > ${PLACE_DESCRIPTION_MIN_CHARS}
+    ORDER BY id DESC
+    LIMIT ${SITEMAP_PLACE_LIMIT}
+  `).all();
+  const urls = [];
+  for (const row of rows) {
+    const path = placeSitemapPath(row);
+    if (!path) continue;
+    const lastmod = recordLastmod(row.updated_at, row.created_at);
+    const enPath = placeEnSitemapPath(row);
+    urls.push({
+      loc: `${base}${path}`,
+      lastmod,
+      priority: '0.8',
+      changefreq: 'weekly',
+      alternateLoc: enPath ? `${base}${enPath}` : null,
+    });
   }
+  return urls;
 }
 
 async function loadBlogUrls(base) {
-  try {
-    const rows = await db.prepare(`
-      SELECT slug, slug_en, title_en, excerpt_en, body_en, published_at, created_at, body
-      FROM blogs
-      WHERE status = 'approved' AND slug IS NOT NULL AND TRIM(slug) <> ''
-        AND body IS NOT NULL
-        AND char_length(btrim(body)) > ${BLOG_BODY_MIN_CHARS}
-      ORDER BY COALESCE(published_at, created_at) DESC, id DESC
-    `).all();
-    const urls = [];
-    for (const b of rows) {
-      if (!isQualityBlogBody(b)) continue;
-      const lastmod = recordLastmod(b.published_at, b.created_at) || CONTENT_SNAPSHOT_DATE;
-      urls.push({
-        loc: `${base}/blog/${encodeURIComponent(b.slug)}`,
-        lastmod,
-        priority: '0.7',
-        changefreq: 'monthly',
-      });
-      const enPath = blogEnSitemapPath(b);
-      if (!enPath) continue;
-      urls.push({
-        loc: `${base}${enPath}`,
-        lastmod,
-        priority: '0.7',
-        changefreq: 'monthly',
-      });
-    }
-    return urls;
-  } catch {
-    return [];
+  const rows = await db.prepare(`
+    SELECT slug, slug_en, title_en, excerpt_en, body_en,
+           updated_at, published_at, created_at, body
+    FROM blogs
+    WHERE status = 'approved' AND slug IS NOT NULL AND TRIM(slug) <> ''
+      AND body IS NOT NULL
+      AND char_length(btrim(body)) > ${BLOG_BODY_MIN_CHARS}
+    ORDER BY COALESCE(published_at, created_at) DESC, id DESC
+  `).all();
+  const urls = [];
+  for (const b of rows) {
+    if (!isQualityBlogBody(b)) continue;
+    const lastmod = recordLastmod(b.updated_at, b.published_at, b.created_at);
+    urls.push({
+      loc: `${base}/blog/${encodeURIComponent(b.slug)}`,
+      lastmod,
+      priority: '0.7',
+      changefreq: 'monthly',
+    });
+    const enPath = blogEnSitemapPath(b);
+    if (!enPath) continue;
+    urls.push({
+      loc: `${base}${enPath}`,
+      lastmod,
+      priority: '0.7',
+      changefreq: 'monthly',
+    });
   }
+  return urls;
 }
 
 function renderUrlSet(urls) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((u) => `  <url>
-    <loc>${escapeXml(u.loc)}</loc>
-    <lastmod>${escapeXml(u.lastmod)}</lastmod>
+${urls.map((u) => {
+    const lastmod = u.lastmod
+      ? `\n    <lastmod>${escapeXml(u.lastmod)}</lastmod>`
+      : '';
+    return `  <url>
+    <loc>${escapeXml(u.loc)}</loc>${lastmod}
     <changefreq>${escapeXml(u.changefreq || 'weekly')}</changefreq>
     <priority>${escapeXml(u.priority || '0.5')}</priority>
-  </url>`).join('\n')}
+  </url>`;
+  }).join('\n')}
 </urlset>
 `;
+}
+
+function getCachedSitemapXml() {
+  return lastGoodSitemapXml;
 }
 
 async function buildSitemapXml() {
   const base = siteBaseUrl();
   const { hasPublishedEnBlogs } = require('./blog-i18n');
-  let includeEnBlogIndex = true;
-  try {
-    includeEnBlogIndex = await hasPublishedEnBlogs(db);
-  } catch {
-    includeEnBlogIndex = false;
-  }
+  const includeEnBlogIndex = await hasPublishedEnBlogs(db);
+  const placeUrls = await loadPlaceUrls(base);
+  const blogUrls = await loadBlogUrls(base);
   const urls = withEnglishAlternates(
-    [...staticUrls(base), ...(await loadPlaceUrls(base)), ...(await loadBlogUrls(base))],
+    [...staticUrls(base), ...placeUrls, ...blogUrls],
     base,
     { includeEnBlogIndex },
   );
-  return renderUrlSet(urls);
+  const xml = renderUrlSet(urls);
+  lastGoodSitemapXml = xml;
+  return xml;
 }
 
 const ROBOTS_PRIVATE_PATHS = [
@@ -291,6 +296,7 @@ function buildRobotsTxt() {
 module.exports = {
   siteBaseUrl,
   buildSitemapXml,
+  getCachedSitemapXml,
   buildRobotsTxt,
   renderUrlSet,
   isoDate,
@@ -305,11 +311,14 @@ module.exports = {
   BLOG_BODY_MIN_CHARS,
   SITEMAP_PLACE_LIMIT,
   CONTENT_SNAPSHOT_DATE,
+  SITEMAP_RETRY_AFTER_SEC,
   englishAlternateLoc,
   withEnglishAlternates,
   isBlogDetailPath,
   isPlaceDetailPath,
   staticUrls,
+  loadPlaceUrls,
+  loadBlogUrls,
   ROBOTS_PRIVATE_PATHS,
   SITEMAP_CACHE_CONTROL,
 };

@@ -15,7 +15,8 @@ async function publishDueBlogs() {
     UPDATE blogs SET
       status = 'approved',
       moderated_at = COALESCE(moderated_at, datetime('now')),
-      published_at = COALESCE(published_at, datetime('now'))
+      published_at = COALESCE(published_at, datetime('now')),
+      updated_at = datetime('now')
     WHERE status IN ('draft', 'pending')
       AND published_at IS NOT NULL
       AND published_at <= to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')
