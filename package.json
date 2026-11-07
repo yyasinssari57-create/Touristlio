@@ -38,6 +38,7 @@
     "verify:v5-adim2": "node server/scripts/verify-v5-adim2-jwt.js",
     "verify:v5-adim3": "node server/scripts/verify-v5-adim3-deps.js",
     "verify:v5-adim4": "node server/scripts/verify-v5-adim4-token-hash.js",
+    "verify:v5-adim5": "node server/scripts/verify-v5-adim5-csrf.js",
     "migrate:v5-adim4-tokens": "node server/scripts/migrate-v5-adim4-token-hash.js",
     "verify:v4-adim2": "node server/scripts/verify-v4-adim2-blog-i18n.js",
     "verify:v4-adim3": "node server/scripts/verify-v4-adim3-sitemap.js",

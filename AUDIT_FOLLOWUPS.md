@@ -2,6 +2,16 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 5 (eksik CSRF mount’ları)
+
+`csrfProtection` eklendi: `/api/settings`, `/api/travel-lists`, `/api/trip-plans`, `/api/reports`, `/api/notifications`. GET/HEAD/OPTIONS atlanır. `/api/analytics` (track) dokunulmadı.
+
+Kontrol: `npm run verify:v5-adim5` → OK (Origin yok / evil Origin → 403 CSRF; aynı Origin geçer; track CSRF’siz).
+
+Render: ek env yok. Tarayıcıdan kayıtlı yerler, gezi planı, şikayet, bildirim okundu, admin ayar kaydı çalışmaya devam etmeli.
+
+V5’te bu tur yalnız Adım 5. Kalan adım: 8.
+
 ## Cursor V5 — Adım 4 (token’lar log’a düşmesin, DB’de hash’li olsun)
 
 - İstek logu artık query string yazmıyor (`requestLogPath`). Anti-bot path de aynı.

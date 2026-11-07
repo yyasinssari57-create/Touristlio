@@ -196,18 +196,20 @@ app.use('/api/tiolas', csrfProtection, tiolasRoutes);
 app.use('/api/blogs', csrfProtection, blogsRoutes);
 app.use('/api/admin', csrfProtection, adminRoutes);
 app.use('/api/osm', osmRoutes);
-app.use('/api/travel-lists', travelListsRoutes);
-app.use('/api/trip-plans', tripPlansRoutes);
+// V5 Adım 5 — yazma uçlarında Origin CSRF (GET/HEAD/OPTIONS atlanır).
+app.use('/api/travel-lists', csrfProtection, travelListsRoutes);
+app.use('/api/trip-plans', csrfProtection, tripPlansRoutes);
 app.use('/api/live-data', liveDataRoutes);
 app.use('/api/search', searchRoutes);
-app.use('/api/settings', settingsRoutes);
+app.use('/api/settings', csrfProtection, settingsRoutes);
 // /api/users (rol atama) ve /api/moderation (içerik onay/red) admin'e özel
 // mutasyonlar içerir — /api/admin ile aynı CSRF koruması (FAZ1-5).
 app.use('/api/users', csrfProtection, usersRoutes);
 app.use('/api/moderation', csrfProtection, moderationRoutes);
+// /api/analytics/track anonim sayaç — CSRF yok (bilinçli).
 app.use('/api/analytics', analyticsRoutes);
-app.use('/api/notifications', notificationsRoutes);
-app.use('/api/reports', reportsRoutes);
+app.use('/api/notifications', csrfProtection, notificationsRoutes);
+app.use('/api/reports', csrfProtection, reportsRoutes);
 app.use('/api/profiles', csrfProtection, profilesRoutes);
 app.use('/api/contact', csrfProtection, require('./routes/contact'));
 
