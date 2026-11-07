@@ -2,6 +2,37 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 13 (tek komutla kontrol)
+
+Yasin “geç” dedi → V5’ün son adımı. Görünüm aynı. Yeni düğme yok.
+
+Tek komut: `npm run verify:v5`. Aynı işi `npm run verify:v5-adim13` de yapar.
+
+Komut, Adım 1’den 12’ye kadar kilitli kontrolleri sırayla çalıştırır. Biri kırılırsa komut hata ile biter. Geçen ve kalan adımlar en sonda listelenir; rehberdeki Adım 13 maddeleri ayrıca özetlenir.
+
+Rehber kilitleri:
+
+- ADMIN: `seedAdmin` ikinci çalıştırmada şifre hash’ini değiştirmiyor
+- JWT: production’da varsayılan/zayıf anahtarla başlamıyor
+- `npm audit --omit=dev`: kritik/yüksek yok
+- Log’larda `token=` yok; DB’de ham token yok
+- CSRF’siz yazma mount’u yok
+- `/api/health` yalnız `ok`
+- `/en/blog` boşken noindex + sitemap dışı
+- Sitemap DB hatasında 503/önbellek (kısmi 200 değil)
+
+Yerelde:
+
+```bash
+npm run verify:v5
+```
+
+Bu turda `npm run verify:v5` 12 kontrolün hepsini geçti.
+
+**Yan düzeltme (Adım 10 regresyonu):** `verification_token_expires_at` / `password_reset_tokens.expires_at` TEXT; Adım 10’daki `NOW()` karşılaştırması Postgres’te 500 veriyordu. `::timestamp` ile karşılaştırma düzeltildi — doğrulama ve şifre sıfırlama yine çalışır. Görünüm aynı.
+
+V5 bitti. Rehberde Adım 14 yok. Kalan adım: 0.
+
 ## Cursor V5 — Adım 12 (görünüm: h1 + harita + kategori listesi)
 
 Yasin “geç” dedi → Adım 12 onayı. Üç madde:
