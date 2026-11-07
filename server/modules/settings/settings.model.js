@@ -14,9 +14,9 @@ async function upsert(key, value) {
 
   await db.prepare(`
 
-    INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+    INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, NOW())
 
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = NOW()
 
   `).run(key, String(value));
 

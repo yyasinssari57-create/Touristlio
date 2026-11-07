@@ -27,9 +27,9 @@ async function upsertSession(sessionId, userId) {
   // Concurrent POST /track used to SELECT then INSERT; UNIQUE became an unhandledRejection and start-prod exited.
   await db.prepare(`
     INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
-    VALUES (?, ?, datetime('now'), datetime('now'))
+    VALUES (?, ?, NOW(), NOW())
     ON CONFLICT(session_id) DO UPDATE SET
-      last_seen_at = datetime('now'),
+      last_seen_at = NOW(),
       user_id = COALESCE(excluded.user_id, analytics_sessions.user_id)
   `).run(sessionId, userId);
 }
@@ -50,7 +50,7 @@ async function updateSessionDuration(sessionId, endSession) {
   if (endSession) {
     await db.prepare(`
       UPDATE analytics_sessions
-      SET duration_sec = ?, last_seen_at = datetime('now'), ended_at = datetime('now')
+      SET duration_sec = ?, last_seen_at = NOW(), ended_at = NOW()
       WHERE session_id = ?
     `).run(durationSec, sessionId);
     return;
@@ -58,7 +58,7 @@ async function updateSessionDuration(sessionId, endSession) {
 
   await db.prepare(`
     UPDATE analytics_sessions
-    SET duration_sec = ?, last_seen_at = datetime('now')
+    SET duration_sec = ?, last_seen_at = NOW()
     WHERE session_id = ?
   `).run(durationSec, sessionId);
 }
@@ -163,8 +163,8 @@ async function visitorDashboard() {
 
   const onlineNow = (await db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_sessions
-    WHERE last_seen_at >= datetime('now', '-5 minutes')
-      AND (ended_at IS NULL OR ended_at >= datetime('now', '-5 minutes'))
+    WHERE last_seen_at >= NOW() - INTERVAL '5 minutes'
+      AND (ended_at IS NULL OR ended_at >= NOW() - INTERVAL '5 minutes')
   `).get()).c;
 
   const todayPageViews = (await db.prepare(`

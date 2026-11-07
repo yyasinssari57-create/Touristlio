@@ -166,7 +166,12 @@ app.use('/uploads', uploadsStaticHeaders, (req, res, next) => {
   const storage = require('./lib/supabase-storage');
   if (!storage.isEnabled()) return next();
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-  const rel = decodeURIComponent((req.path || '').replace(/^\/+/, ''));
+  let rel;
+  try {
+    rel = decodeURIComponent((req.path || '').replace(/^\/+/, ''));
+  } catch {
+    return res.status(400).type('text/plain; charset=utf-8').send('Bad path');
+  }
   if (!rel || rel.includes('..')) return next();
   return res.redirect(302, storage.publicObjectUrl(rel));
 }, uploadsSrcsetFallback(UPLOADS_DIR), express.static(UPLOADS_DIR));

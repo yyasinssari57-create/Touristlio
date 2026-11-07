@@ -45,7 +45,7 @@ async function insertPasswordReset(userId, token, expires) {
 async function findPasswordReset(token) {
   return await db.prepare(`
     SELECT * FROM password_reset_tokens
-    WHERE token = ? AND used = 0 AND expires_at > datetime('now')
+    WHERE token = ? AND used = 0 AND expires_at > NOW()
   `).get(hashAuthToken(token));
 }
 
@@ -55,7 +55,7 @@ async function usePasswordReset(id, userId, passwordHash) {
   await db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(id);
   await db.prepare(`
     DELETE FROM password_reset_tokens
-    WHERE used = 1 OR expires_at <= datetime('now')
+    WHERE used = 1 OR expires_at <= NOW()
   `).run();
 }
 
@@ -65,7 +65,7 @@ async function verifyEmailToken(token) {
     WHERE verification_token = ?
       AND (
         verification_token_expires_at IS NULL
-        OR verification_token_expires_at > datetime('now')
+        OR verification_token_expires_at > NOW()
       )
   `).get(hashAuthToken(token));
 }

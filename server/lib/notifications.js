@@ -43,14 +43,14 @@ async function listForUser(userId, { unreadOnly = false, limit = 30 } = {}) {
 
 async function markRead(id, userId) {
   return await db.prepare(`
-    UPDATE user_notifications SET read_at = datetime('now')
+    UPDATE user_notifications SET read_at = NOW()
     WHERE id = ? AND user_id = ?
   `).run(id, userId);
 }
 
 async function markAllRead(userId) {
   return await db.prepare(`
-    UPDATE user_notifications SET read_at = datetime('now')
+    UPDATE user_notifications SET read_at = NOW()
     WHERE user_id = ? AND read_at IS NULL
   `).run(userId);
 }

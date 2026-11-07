@@ -257,7 +257,7 @@ router.delete('/:id', authRequired, async (req, res) => {
   }
 
   await db.prepare(`
-    UPDATE blogs SET status = 'deleted', moderated_at = datetime('now')
+    UPDATE blogs SET status = 'deleted', moderated_at = NOW()
     WHERE id = ?
   `).run(id);
 

@@ -76,12 +76,12 @@ async function getAdminPayload(placeId) {
 async function upsertLiveData(placeId, payload) {
   await db.prepare(`
     INSERT INTO place_live_data (place_id, payload, crowd_level, source, updated_at)
-    VALUES (?, ?, ?, ?, datetime('now'))
+    VALUES (?, ?, ?, ?, NOW())
     ON CONFLICT(place_id) DO UPDATE SET
       payload = excluded.payload,
       crowd_level = excluded.crowd_level,
       source = excluded.source,
-      updated_at = datetime('now')
+      updated_at = NOW()
   `).run(placeId, JSON.stringify(payload), payload.crowd || 'moderate', payload.source || 'cron');
 }
 

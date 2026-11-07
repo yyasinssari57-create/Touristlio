@@ -153,7 +153,7 @@ else {
   let missing = 0;
   for (const m of blogUpdateBlocks) {
     const sql = m[0];
-    if (!/updated_at\s*=\s*datetime\('now'\)/.test(sql)) {
+    if (!/updated_at\s*=\s*(?:NOW\(\)|datetime\('now'\))/.test(sql)) {
       missing += 1;
       if (missing <= 3) fail(`admin blogs UPDATE updated_at dokunmuyor: ${sql.slice(0, 80).replace(/\s+/g, ' ')}…`);
     }
@@ -164,7 +164,7 @@ else {
 
 // places main edit path already touches updated_at (admin-place)
 const adminPlace = read('server/lib/admin-place.js');
-if (!/updated_at\s*=\s*datetime\('now'\)/.test(adminPlace)) {
+if (!/updated_at\s*=\s*(?:NOW\(\)|datetime\('now'\))/.test(adminPlace)) {
   fail('admin-place.js places updated_at dokunmuyor');
 } else ok('admin-place places updated_at dokunuyor');
 

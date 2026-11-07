@@ -154,16 +154,16 @@ if (!visitor.includes('await analyticsTablesReady()')) {
 const { convertDialect } = require('../lib/pg-sql');
 const upsertSql = convertDialect(`
     INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
-    VALUES (?, ?, datetime('now'), datetime('now'))
+    VALUES (?, ?, NOW(), NOW())
     ON CONFLICT(session_id) DO UPDATE SET
-      last_seen_at = datetime('now'),
+      last_seen_at = NOW(),
       user_id = COALESCE(excluded.user_id, analytics_sessions.user_id)
 `);
 if (!/ON CONFLICT\s*\(\s*session_id\s*\)/i.test(upsertSql)) {
   fail('pg dialect dropped ON CONFLICT(session_id)');
-} else if (!/to_char\(timezone\('utc',\s*now\(\)\)/i.test(upsertSql)) {
-  fail(`upsert datetime(now) not converted: ${upsertSql.slice(0, 220)}`);
-} else ok('session upsert SQL converts to Postgres ON CONFLICT');
+} else if (!/\bNOW\s*\(\s*\)/i.test(upsertSql)) {
+  fail(`upsert NOW() kayboldu: ${upsertSql.slice(0, 220)}`);
+} else ok('session upsert SQL keeps NOW() + Postgres ON CONFLICT');
 
 const indexHtml = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
 if (indexHtml.includes('googletagmanager.com') || indexHtml.includes('gtag(')) {
@@ -439,9 +439,9 @@ async function checkSessionUpsertRace() {
   const sid = `verify-upsert-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
   const sql = `
     INSERT INTO analytics_sessions (session_id, user_id, started_at, last_seen_at)
-    VALUES (?, ?, datetime('now'), datetime('now'))
+    VALUES (?, ?, NOW(), NOW())
     ON CONFLICT(session_id) DO UPDATE SET
-      last_seen_at = datetime('now'),
+      last_seen_at = NOW(),
       user_id = COALESCE(excluded.user_id, analytics_sessions.user_id)
   `;
   try {

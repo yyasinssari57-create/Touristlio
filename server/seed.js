@@ -230,7 +230,7 @@ async function seedDemoBlogs() {
     INSERT INTO blogs (
       user_id, category, title, slug, excerpt, body, image_url, place_id,
       tags, featured, author_name, status, published_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', datetime('now'))
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', NOW())
   `);
   for (const b of blogsSeed) {
     await insert.run(

@@ -168,7 +168,7 @@ async function countMonthlyPlaceComments(userId, placeId) {
 
     WHERE user_id = ? AND place_id = ? AND parent_id IS NULL
 
-      AND created_at >= datetime('now', 'start of month')
+      AND created_at >= date_trunc('month', NOW())
 
       AND status NOT IN ('rejected', 'deleted')
 
@@ -450,11 +450,11 @@ router.delete('/:id', authRequired, csrfTokenRequired, async (req, res) => {
 
   if (row.parent_id) {
     await db.prepare(`
-      UPDATE tiolas SET status = 'deleted', moderated_at = datetime('now') WHERE id = ?
+      UPDATE tiolas SET status = 'deleted', moderated_at = NOW() WHERE id = ?
     `).run(id);
   } else {
     await db.prepare(`
-      UPDATE tiolas SET status = 'deleted', moderated_at = datetime('now')
+      UPDATE tiolas SET status = 'deleted', moderated_at = NOW()
       WHERE id = ? OR parent_id = ?
     `).run(id, id);
   }
