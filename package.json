@@ -124,6 +124,7 @@
     "verify:admin-image-upload": "node server/scripts/verify-admin-image-upload.js",
     "verify:admin-session": "node server/scripts/verify-admin-session.js",
     "verify:admin-image-picker": "node server/scripts/verify-admin-image-picker.js",
+    "verify:admin-bulk-archive": "node server/scripts/verify-admin-bulk-archive.js",
     "verify:avatar-crop": "node server/scripts/verify-avatar-crop-visibility.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",

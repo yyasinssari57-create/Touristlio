@@ -495,6 +495,20 @@ async function archivePlace(id) {
   return { id, status: 'archived' };
 }
 
+/** Soft-archive many places in one UPDATE (admin bulk). Already-archived rows stay archived. */
+async function archivePlaces(ids) {
+  const validIds = [...new Set((ids || [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id) && id > 0))];
+  if (!validIds.length) return [];
+  return db.prepare(`
+    UPDATE places SET status = 'archived', updated_at = NOW(),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+    WHERE id = ANY(?::int[])
+    RETURNING id, name
+  `).all(validIds);
+}
+
 async function countPlaceTiolas(id) {
   return (await db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE place_id = ?').get(id)).c;
 }
@@ -531,6 +545,7 @@ module.exports = {
   insertPlace,
   updatePlace,
   archivePlace,
+  archivePlaces,
   deletePlace,
   countPlaceTiolas,
   mapAdminPlace,
