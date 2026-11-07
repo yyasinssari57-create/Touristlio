@@ -82,13 +82,15 @@ function convertDialect(sql) {
   s = s.replace(/\bdatetime\s*\(\s*'now'\s*\)/gi, "to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')");
   s = s.replace(/\bIFNULL\s*\(/gi, 'COALESCE(');
   s = s.replace(/\bGLOB\b/gi, 'LIKE');
+  // Emit YYYY-MM-DD only — date - interval yields timestamp whose ::text is
+  // 'YYYY-MM-DD 00:00:00', which never matches LEFT(col, 10) day keys.
   s = s.replace(
     /\bdate\s*\(\s*'now'\s*,\s*'-'\s*\|\|\s*\?\s*\|\|\s*'\s*days'\s*\)/gi,
-    "(CURRENT_DATE - CAST(? AS integer) * INTERVAL '1 day')::text",
+    '(CURRENT_DATE - CAST(? AS integer))::text',
   );
   s = s.replace(
     /\bdate\s*\(\s*'now'\s*,\s*'-(\d+)\s+days'\s*\)/gi,
-    "((CURRENT_DATE - INTERVAL '$1 days')::text)",
+    '(CURRENT_DATE - $1)::text',
   );
   s = s.replace(/\bdate\s*\(\s*'now'\s*\)/gi, 'CURRENT_DATE::text');
   s = s.replace(/\bdate\s*\(\s*\?\s*\)/gi, 'LEFT(?::text, 10)');
