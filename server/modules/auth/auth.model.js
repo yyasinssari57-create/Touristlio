@@ -43,9 +43,10 @@ async function insertPasswordReset(userId, token, expires) {
 }
 
 async function findPasswordReset(token) {
+  // expires_at is TEXT (UTC 'YYYY-MM-DD HH:MM:SS'); cast before comparing to NOW().
   return await db.prepare(`
     SELECT * FROM password_reset_tokens
-    WHERE token = ? AND used = 0 AND expires_at > NOW()
+    WHERE token = ? AND used = 0 AND expires_at::timestamp > NOW()
   `).get(hashAuthToken(token));
 }
 
@@ -55,7 +56,7 @@ async function usePasswordReset(id, userId, passwordHash) {
   await db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(id);
   await db.prepare(`
     DELETE FROM password_reset_tokens
-    WHERE used = 1 OR expires_at <= NOW()
+    WHERE used = 1 OR expires_at::timestamp <= NOW()
   `).run();
 }
 
@@ -65,7 +66,7 @@ async function verifyEmailToken(token) {
     WHERE verification_token = ?
       AND (
         verification_token_expires_at IS NULL
-        OR verification_token_expires_at > NOW()
+        OR verification_token_expires_at::timestamp > NOW()
       )
   `).get(hashAuthToken(token));
 }
