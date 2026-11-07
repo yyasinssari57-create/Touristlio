@@ -3747,6 +3747,26 @@ async function openPlaceEdit(id) {
           <textarea class="ain" id="edDescEn" aria-label="Açıklama İngilizce" style="height:60px">${escapeHtml(p.descriptionEn || '')}</textarea>
         </div>
 
+        <p class="adm-photo-title full" style="margin-top:8px">Detay sayfası bölümleri</p>
+        <p class="adm-field-hint full">Boş bırakılan Kültür &amp; Gastronomi, Ziyaretçi tavsiyeleri ve En iyi zaman ziyaretçi sayfasında gizlenir. Yapılacaklar her satırda bir madde.</p>
+        <div class="full">
+          <label class="adm-label-sm" for="edThingsToDo">Yapılacaklar (TR)</label>
+          <textarea class="ain" id="edThingsToDo" aria-label="Yapılacaklar" style="height:90px" placeholder="Her satıra bir madde">${escapeHtml((p.thingsToDo || []).join('\n'))}</textarea>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edCultureFood">Kültür ve Gastronomi (TR)</label>
+          <textarea class="ain" id="edCultureFood" aria-label="Kültür ve Gastronomi" style="height:70px" placeholder="Boşsa bölüm gösterilmez">${escapeHtml(p.cultureFood || '')}</textarea>
+        </div>
+        <div class="full">
+          <label class="adm-label-sm" for="edTravelTips">Ziyaretçi tavsiyeleri (TR)</label>
+          <textarea class="ain" id="edTravelTips" aria-label="Ziyaretçi tavsiyeleri" style="height:70px" placeholder="Boşsa bölüm gösterilmez">${escapeHtml(p.travelTips || '')}</textarea>
+        </div>
+        <div class="full">
+          <span class="adm-label-sm" id="edBestMonthsLbl">En iyi zaman (aylar)</span>
+          <p class="adm-field-hint">Birden fazla ay seçilebilir. Seçim yoksa bölüm gizlenir.</p>
+          <div class="adm-months" id="edBestMonths" role="group" aria-labelledby="edBestMonthsLbl">${renderBestMonthChecks(p.bestMonths)}</div>
+        </div>
+
         <p class="adm-photo-title full" style="margin-top:8px">Yan panel kartları (destinasyon sayfası)</p>
         <p class="adm-field-hint full">Saat ve hava durumu otomatik akar; elle yazılmaz. Para, bütçe ve bilgi kutucukları kaydedilir.</p>
 
@@ -3766,24 +3786,22 @@ async function openPlaceEdit(id) {
 
         <div class="adm-side-card">
           <p class="adm-side-card-title">💰 Günlük Bütçe Tahmini</p>
-          <p class="adm-side-card-hint">Ekonomik, orta ve otel ortalaması (₺)</p>
+          <p class="adm-side-card-hint">Ekonomik, orta ve ilçe otel ortalaması (₺). Otel ortalaması boşsa ziyaretçide gösterilmez.</p>
           <label class="adm-label-sm" for="edBudgetLow">Ekonomik (₺/gün)</label>
           <input class="ain" id="edBudgetLow" type="number" min="0" value="${ib.budgetLow || ''}" placeholder="350" aria-label="Ekonomik bütçe"/>
           <label class="adm-label-sm" for="edBudgetMid">Orta (₺/gün)</label>
           <input class="ain" id="edBudgetMid" type="number" min="0" value="${ib.budgetMid || ''}" placeholder="900" aria-label="Orta bütçe"/>
-          <label class="adm-label-sm full" for="edHotelAvg">Otel ortalaması (₺/gece)</label>
-          <input class="ain full" id="edHotelAvg" type="number" min="0" value="${ib.hotelAvg || ''}" placeholder="1800" aria-label="Otel ortalaması"/>
+          <label class="adm-label-sm full" for="edHotelAvg">İlçe otel ortalaması (₺/gece)</label>
+          <input class="ain full" id="edHotelAvg" type="number" min="0" value="${ib.hotelAvg || ''}" placeholder="Boşsa gizlenir" aria-label="İlçe otel ortalaması"/>
         </div>
 
         <div class="adm-side-card">
           <p class="adm-side-card-title">📋 Bilgiler</p>
-          <p class="adm-side-card-hint">Ülke, şehir ve kategori yukarıdaki yer bilgilerindedir. Burada yalnızca sağ paneldeki ek metinler durur.</p>
+          <p class="adm-side-card-hint">Ülke, şehir ve kategori yukarıdaki yer bilgilerindedir. En iyi zaman ayları üstteki bölümde seçilir.</p>
           <label class="adm-label-sm full" for="edCategoryLabel">Kategori gösterim metni (isteğe bağlı)</label>
           <input class="ain full" id="edCategoryLabel" value="${escapeHtml(ib.infoCategoryLabel || '')}" placeholder="Boş bırakılırsa kategori adı kullanılır" aria-label="Kategori gösterim metni"/>
           <label class="adm-label-sm" for="edEntryFee">Giriş ücreti</label>
           <input class="ain" id="edEntryFee" value="${escapeHtml(ib.infoEntryFee || p.entryFee || '')}" placeholder="Ücretsiz veya 350 ₺" aria-label="Giriş ücreti"/>
-          <label class="adm-label-sm" for="edBestTime">En iyi dönem</label>
-          <input class="ain" id="edBestTime" value="${escapeHtml(ib.infoBestTime || p.bestTime || '')}" placeholder="Sabah erken" aria-label="En iyi dönem"/>
         </div>
 
         <div class="adm-side-card" id="placeInfoBoxes">
@@ -3804,8 +3822,6 @@ async function openPlaceEdit(id) {
           <input class="ain" id="infoBudgetAmount" value="${escapeHtml(p.budgetAmount || '')}" placeholder="40 € / kişi" aria-label="Bütçe miktarı"/>
           <label class="adm-label-sm" for="infoVisitDuration">Ziyaret süresi</label>
           <input class="ain" id="infoVisitDuration" value="${escapeHtml(p.visitDuration || '')}" placeholder="1-2 saat" aria-label="Ziyaret süresi"/>
-          <label class="adm-label-sm full" for="infoBestTime">En iyi zaman</label>
-          <input class="ain full" id="infoBestTime" value="${escapeHtml(p.bestTime || '')}" placeholder="Nisan–Haziran" aria-label="En iyi zaman"/>
           <label class="adm-label-sm" for="infoEntryFee">Giriş ücreti</label>
           <input class="ain" id="infoEntryFee" value="${escapeHtml(p.entryFee || '')}" placeholder="350 ₺" aria-label="Giriş ücreti"/>
           <label class="adm-label-sm" for="infoIsFree" style="display:flex;align-items:center;gap:8px;margin-top:8px">
@@ -3869,8 +3885,39 @@ function readPlaceCoord(id, min, max, label) {
   return n;
 }
 
+const BEST_MONTH_NAMES_TR = [
+  'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
+];
+
+function renderBestMonthChecks(selected) {
+  const set = new Set((selected || []).map(Number).filter((n) => n >= 1 && n <= 12));
+  return BEST_MONTH_NAMES_TR.map((name, i) => {
+    const m = i + 1;
+    return `<label class="adm-month-chip"><input type="checkbox" class="ed-best-month" value="${m}" ${set.has(m) ? 'checked' : ''} aria-label="${name}"/> ${name}</label>`;
+  }).join('');
+}
+
+function readBestMonths() {
+  return Array.from(document.querySelectorAll('.ed-best-month:checked'))
+    .map((el) => Number(el.value))
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 12)
+    .sort((a, b) => a - b);
+}
+
+function formatBestMonthsTr(months) {
+  return (months || []).map((m) => BEST_MONTH_NAMES_TR[m - 1]).filter(Boolean).join(', ');
+}
+
+function readThingsLines(id) {
+  return (document.getElementById(id)?.value || '')
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function placeInfoPatchBody() {
-  const best = document.getElementById('infoBestTime')?.value || '';
+  const best = formatBestMonthsTr(readBestMonths());
   const fee = document.getElementById('infoEntryFee')?.value || '';
   return {
     best,
@@ -3906,16 +3953,18 @@ async function savePlaceInfo(id) {
   setBtnLoading(btn, true, 'Kaydediliyor…');
   try {
     const info = placeInfoPatchBody();
-    const best = info.best;
     const fee = info.fee;
+    const months = readBestMonths();
     await api('/admin/places/' + id + '/info', {
       method: 'PATCH',
       body: info.body,
     });
+    await api('/admin/places/' + id, {
+      method: 'PUT',
+      body: { bestMonths: months, bestTime: info.best },
+    });
     const oldFee = document.getElementById('edEntryFee');
-    const oldBest = document.getElementById('edBestTime');
     if (oldFee) oldFee.value = fee;
-    if (oldBest) oldBest.value = best;
     showToast('Bilgi kutucukları kaydedildi');
   } catch (e) { showFormErr('edFormErr', e.message); }
   finally { setBtnLoading(btn, false); }
@@ -3967,6 +4016,11 @@ async function savePlaceEdit(id) {
       searchAliases: aliases,
       entryFee: info.fee,
       bestTime: info.best,
+      bestMonths: readBestMonths(),
+      thingsToDo: readThingsLines('edThingsToDo'),
+      cultureFood: document.getElementById('edCultureFood')?.value || '',
+      travelTips: document.getElementById('edTravelTips')?.value || '',
+      tips: document.getElementById('edTravelTips')?.value || '',
       infoSourceUrl: document.getElementById('infoSourceUrl')?.value || '',
       imageVerified: document.getElementById('edImageVerified')?.checked === true,
       imageCredit: document.getElementById('edImageCredit')?.value || '',
@@ -4000,7 +4054,7 @@ async function savePlaceEdit(id) {
         infoCity: document.getElementById('edCity')?.value,
         infoCategoryLabel: document.getElementById('edCategoryLabel')?.value,
         infoEntryFee: document.getElementById('edEntryFee')?.value ?? info.fee,
-        infoBestTime: document.getElementById('edBestTime')?.value ?? info.best,
+        infoBestTime: info.best,
       },
     });
     await api('/admin/places/' + id + '/info', {

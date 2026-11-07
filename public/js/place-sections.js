@@ -47,6 +47,37 @@
     return vals.map(text).filter(Boolean);
   }
 
+  const MONTHS_TR = [
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
+  ];
+  const MONTHS_EN = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  function normalizeMonths(list) {
+    const seen = new Set();
+    const out = [];
+    for (const item of asList(list)) {
+      const n = Number(item);
+      if (!Number.isInteger(n) || n < 1 || n > 12 || seen.has(n)) continue;
+      seen.add(n);
+      out.push(n);
+    }
+    out.sort((a, b) => a - b);
+    return out;
+  }
+
+  function bestTimeText(place, language) {
+    const months = normalizeMonths(place.bestMonths);
+    if (months.length) {
+      const names = language === 'en' ? MONTHS_EN : MONTHS_TR;
+      return months.map((m) => names[m - 1]).filter(Boolean).join(', ');
+    }
+    return field(place, language, 'bestTime');
+  }
+
   function placeSectionVisibility(place, lang) {
     const p = place || {};
     const language = lang === 'en' ? 'en' : 'tr';
@@ -55,7 +86,7 @@
     const things = listField(p, language, 'thingsToDo');
     const culture = field(p, language, 'cultureFood');
     const tips = field(p, language, 'travelTips') || field(p, language, 'tips');
-    const bestTime = field(p, language, 'bestTime');
+    const bestTime = bestTimeText(p, language);
     const howTo = field(p, language, 'howToGetThere');
     const tags = asList(p.tags).map(text).filter(Boolean);
     return {

@@ -1,5 +1,6 @@
 const { publicPlaceMedia } = require('./place-image');
 const { boolOrNull } = require('./place-info-boxes');
+const { parseBestMonths, formatBestMonths } = require('./best-months');
 
 function parseJson(val, fallback) {
   try {
@@ -15,6 +16,7 @@ function mapPlaceRow(row, stats) {
   const categories = parseJson(row.categories, [row.category].filter(Boolean));
   const thingsToDo = parseJson(row.things_to_do, []);
   const thingsToDoEn = parseJson(row.things_to_do_en, []);
+  const bestMonths = parseBestMonths(row.best_months);
   const media = publicPlaceMedia(row);
   const tiolaCount = (stats && stats.tiolaCount != null)
     ? stats.tiolaCount
@@ -43,8 +45,9 @@ function mapPlaceRow(row, stats) {
     isLocal: !!row.is_local,
     entryFee: row.entry_fee,
     entryFeeEn: row.entry_fee_en,
-    bestTime: row.best_time,
-    bestTimeEn: row.best_time_en,
+    bestMonths,
+    bestTime: bestMonths.length ? formatBestMonths(bestMonths, 'tr') : row.best_time,
+    bestTimeEn: bestMonths.length ? formatBestMonths(bestMonths, 'en') : row.best_time_en,
     description: row.description,
     descriptionEn: row.description_en,
     overview: row.overview || row.description,

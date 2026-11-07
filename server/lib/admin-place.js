@@ -7,6 +7,11 @@ const { assertCanPublish } = require('./publish-quality');
 const { isImageVerifiedFlag } = require('./place-image');
 const { duplicatesForPlace } = require('./image-usage');
 const { placeEnTranslationComplete, PLACE_EN_MISSING_SQL } = require('./place-i18n');
+const {
+  parseBestMonths,
+  normalizeBestMonths,
+  bestTimeFromMonths,
+} = require('./best-months');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
@@ -28,6 +33,19 @@ function parseJsonList(raw) {
   } catch {
     return [];
   }
+}
+
+function normalizeThingsList(value) {
+  if (Array.isArray(value)) {
+    return value.map((s) => sanitizeText(String(s || ''), 240)).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(/\r?\n/)
+      .map((s) => sanitizeText(s, 240))
+      .filter(Boolean);
+  }
+  return [];
 }
 
 async function persistPlaceSlug(id, placeLike) {
@@ -142,6 +160,15 @@ function mapAdminPlace(row) {
     isLocal: !!row.is_local,
     entryFee: row.entry_fee || '',
     bestTime: row.best_time || '',
+    bestTimeEn: row.best_time_en || '',
+    bestMonths: parseBestMonths(row.best_months),
+    thingsToDo: parseJsonList(row.things_to_do),
+    thingsToDoEn: parseJsonList(row.things_to_do_en),
+    cultureFood: row.culture_food || '',
+    cultureFoodEn: row.culture_food_en || '',
+    travelTips: row.travel_tips || row.tips || '',
+    travelTipsEn: row.travel_tips_en || row.tips_en || '',
+    history: row.history || '',
     climateInfo: row.climate_info || '',
     currency: row.currency || '',
     budgetLevel: row.budget_level || '',
@@ -218,10 +245,10 @@ async function getAdminPlace(id) {
   };
 }
 
-async function buildPlacePayload(body, existingId) {
+async function buildPlacePayload(body, existingId, opts = {}) {
   const {
     name, location, country, city, district, category,
-    imageUrl, entryFee, entryFeeEn, bestTime, bestTimeEn,
+    imageUrl, entryFee, entryFeeEn, bestTime, bestTimeEn, bestMonths,
     description, descriptionEn, overview, overviewEn,
     history, historyEn, thingsToDo, thingsToDoEn,
     cultureFood, cultureFoodEn, travelTips, travelTipsEn,
@@ -241,6 +268,25 @@ async function buildPlacePayload(body, existingId) {
   }
 
   const id = existingId || ((await db.prepare('SELECT MAX(id) AS m FROM places').get()).m || 0) + 1;
+  const fillPlaceholders = opts.fillPlaceholders !== false && !existingId;
+  const months = bestMonths !== undefined ? normalizeBestMonths(bestMonths) : null;
+  const derivedBestTr = months ? bestTimeFromMonths(months, 'tr') : null;
+  const derivedBestEn = months ? bestTimeFromMonths(months, 'en') : null;
+  const thingsList = thingsToDo !== undefined ? normalizeThingsList(thingsToDo) : thingsToDo;
+  const thingsListEn = thingsToDoEn !== undefined ? normalizeThingsList(thingsToDoEn) : thingsToDoEn;
+  const culture = cultureFood !== undefined
+    ? (sanitizeText(cultureFood, 4000) || '')
+    : cultureFood;
+  const cultureEn = cultureFoodEn !== undefined
+    ? (sanitizeText(cultureFoodEn, 4000) || '')
+    : cultureFoodEn;
+  const tipsTr = travelTips !== undefined || tips !== undefined
+    ? (sanitizeText(travelTips ?? tips ?? '', 4000) || '')
+    : (travelTips || tips);
+  const tipsEnglish = travelTipsEn !== undefined || tipsEn !== undefined
+    ? (sanitizeText(travelTipsEn ?? tipsEn ?? '', 4000) || '')
+    : (travelTipsEn || tipsEn);
+
   const enriched = enrichContentFields({
     id,
     name: safeName,
@@ -251,30 +297,41 @@ async function buildPlacePayload(body, existingId) {
     category: safeCategory,
     imageUrl: imageUrl || '',
     isLocal: !!isLocal,
-    entryFee: entryFee || 'Ücretli',
+    entryFee: entryFee || (fillPlaceholders ? 'Ücretli' : (entryFee || '')),
     entryFeeEn,
-    bestTime: bestTime || 'Sabah erken',
-    bestTimeEn,
+    bestTime: derivedBestTr != null
+      ? derivedBestTr
+      : (bestTime != null ? bestTime : (fillPlaceholders ? 'Sabah erken' : '')),
+    bestTimeEn: derivedBestEn != null ? (derivedBestEn || null) : bestTimeEn,
+    bestMonths: months || [],
     description: description || '',
     descriptionEn,
     overview,
     overviewEn,
     history: history || '',
     historyEn,
-    thingsToDo,
-    thingsToDoEn,
-    cultureFood,
-    cultureFoodEn,
-    travelTips: travelTips || tips,
-    travelTipsEn: travelTipsEn || tipsEn,
-    tips: tips || travelTips,
-    tipsEn,
+    thingsToDo: thingsList,
+    thingsToDoEn: thingsListEn,
+    cultureFood: culture,
+    cultureFoodEn: cultureEn,
+    travelTips: tipsTr,
+    travelTipsEn: tipsEnglish,
+    tips: tipsTr,
+    tipsEn: tipsEnglish,
     tags: tags || [],
     searchAliases: searchAliases || [],
     categories,
     lat,
     lng,
-  }, id);
+  }, id, { fillPlaceholders });
+
+  if (months) {
+    enriched.bestMonths = months;
+    enriched.bestTime = derivedBestTr;
+    enriched.bestTimeEn = derivedBestEn || null;
+  } else if (enriched.bestMonths == null) {
+    enriched.bestMonths = [];
+  }
 
   return {
     enriched,
@@ -314,14 +371,14 @@ async function insertPlace(body) {
   await db.prepare(`
     INSERT INTO places
     (id, name, location, country, city, district, category,
-     image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en,
+     image_url, is_local, entry_fee, entry_fee_en, best_time, best_time_en, best_months,
      description, description_en, overview, overview_en,
      history, history_en, things_to_do, things_to_do_en,
      culture_food, culture_food_en, travel_tips, travel_tips_en,
      how_to_get_there, how_to_get_there_en, photos,
      tips, tips_en, tags, search_aliases, categories, lat, lng, popularity, status,
      created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
   `).run(
     id,
     enriched.name,
@@ -336,6 +393,7 @@ async function insertPlace(body) {
     enriched.entryFeeEn || null,
     enriched.bestTime,
     enriched.bestTimeEn || null,
+    JSON.stringify(normalizeBestMonths(enriched.bestMonths || [])),
     enriched.description,
     enriched.descriptionEn || null,
     enriched.overview,
@@ -404,10 +462,17 @@ async function updatePlace(id, body) {
     status: src.status ?? row.status ?? 'published',
     isLocal: src.isLocal ?? !!row.is_local,
     entryFee: src.entryFee ?? row.entry_fee,
-    bestTime: src.bestTime ?? row.best_time,
-    history: src.history ?? row.history,
-    tips: src.tips ?? row.tips,
-    travelTips: src.travelTips ?? row.travel_tips,
+    bestTime: src.bestTime !== undefined ? src.bestTime : row.best_time,
+    bestTimeEn: src.bestTimeEn !== undefined ? src.bestTimeEn : row.best_time_en,
+    bestMonths: src.bestMonths !== undefined ? src.bestMonths : parseBestMonths(row.best_months),
+    history: src.history !== undefined ? src.history : row.history,
+    thingsToDo: src.thingsToDo !== undefined ? src.thingsToDo : parseJsonList(row.things_to_do),
+    thingsToDoEn: src.thingsToDoEn !== undefined ? src.thingsToDoEn : parseJsonList(row.things_to_do_en),
+    cultureFood: src.cultureFood !== undefined ? src.cultureFood : row.culture_food,
+    cultureFoodEn: src.cultureFoodEn !== undefined ? src.cultureFoodEn : row.culture_food_en,
+    tips: src.tips !== undefined ? src.tips : row.tips,
+    travelTips: src.travelTips !== undefined ? src.travelTips : row.travel_tips,
+    travelTipsEn: src.travelTipsEn !== undefined ? src.travelTipsEn : row.travel_tips_en,
     searchAliases: src.searchAliases !== undefined ? src.searchAliases : parseJsonList(row.search_aliases),
     photos: src.photos ?? JSON.parse(row.photos || '[]'),
   };
@@ -431,18 +496,20 @@ async function updatePlace(id, body) {
     image_verified: imageMeta.verified,
     status: merged.status,
   });
-  const { enriched, status, photosJson } = await buildPlacePayload(merged, id);
+  const { enriched, status, photosJson } = await buildPlacePayload(merged, id, { fillPlaceholders: false });
   const nextOverview = (overviewTouched || descriptionChanged) ? enriched.overview : row.overview;
   const nextOverviewEn = (overviewEnTouched || descriptionEnChanged)
     ? (enriched.overviewEn || null)
     : row.overview_en;
+  const monthsJson = JSON.stringify(normalizeBestMonths(enriched.bestMonths || []));
 
   await db.prepare(`
     UPDATE places SET
       name = ?, location = ?, country = ?, city = ?, district = ?, category = ?,
-      image_url = ?, is_local = ?, entry_fee = ?, best_time = ?,
+      image_url = ?, is_local = ?, entry_fee = ?, best_time = ?, best_time_en = ?, best_months = ?,
       description = ?, description_en = ?, overview = ?, overview_en = ?,
       history = ?, tips = ?, travel_tips = ?,
+      things_to_do = ?, culture_food = ?,
       photos = ?, search_aliases = ?, categories = ?, lat = ?, lng = ?, status = ?,
       info_source_url = ?,
       updated_at = NOW(),
@@ -458,7 +525,9 @@ async function updatePlace(id, body) {
     enriched.imageUrl,
     enriched.isLocal ? 1 : 0,
     enriched.entryFee,
-    enriched.bestTime,
+    enriched.bestTime || null,
+    enriched.bestTimeEn || null,
+    monthsJson,
     enriched.description,
     enriched.descriptionEn || null,
     nextOverview,
@@ -466,6 +535,8 @@ async function updatePlace(id, body) {
     enriched.history,
     enriched.tips,
     enriched.travelTips,
+    JSON.stringify(enriched.thingsToDo || []),
+    enriched.cultureFood || null,
     photosJson,
     JSON.stringify(enriched.searchAliases || []),
     JSON.stringify(enriched.categories || [enriched.category]),

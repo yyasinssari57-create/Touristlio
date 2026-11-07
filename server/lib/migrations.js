@@ -9,6 +9,7 @@ const PLACE_COLUMNS = [
   'how_to_get_there', 'how_to_get_there_en', 'photos',
   'categories', 'lat', 'lng', 'popularity',
   'faq_tr', 'faq_en', 'affiliate_hotel_url', 'affiliate_booking_url', 'timezone',
+  'best_months',
 ];
 
 const USER_COLUMNS = [
