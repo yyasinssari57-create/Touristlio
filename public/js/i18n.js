@@ -893,7 +893,13 @@ window.TL_I18N = (function () {
     document.querySelectorAll('[data-i18n-html]').forEach((el) => {
       const key = el.getAttribute('data-i18n-html');
       if (key === 'heroTitle') {
-        el.innerHTML = `${t(lang, 'heroTitle')}<br><em>${t(lang, 'heroTitleEm')}</em>`;
+        // V5 Adım 12a: /explore h1 sayfa başlığı; / ve nav sloganı aynı kalır.
+        const isHeading = /^H[1-6]$/i.test(el.tagName);
+        if (isHeading && shell === 'explore') {
+          el.textContent = t(lang, 'explore');
+        } else {
+          el.innerHTML = `${t(lang, 'heroTitle')}<br><em>${t(lang, 'heroTitleEm')}</em>`;
+        }
       } else if (key === 'blogHeroTitle') {
         el.innerHTML = `${t(lang, 'blogTitle')} <em>${t(lang, 'blogTitleEm')}</em>`;
       } else if (key === 'tiolaFeedTitle') {

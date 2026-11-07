@@ -45,6 +45,7 @@
     "verify:v5-adim9": "node server/scripts/verify-v5-adim9.js",
     "verify:v5-adim10": "node server/scripts/verify-v5-adim10.js",
     "verify:v5-adim11": "node server/scripts/verify-v5-adim11.js",
+    "verify:v5-adim12": "node server/scripts/verify-v5-adim12.js",
     "migrate:v5-adim4-tokens": "node server/scripts/migrate-v5-adim4-token-hash.js",
     "verify:v4-adim2": "node server/scripts/verify-v4-adim2-blog-i18n.js",
     "verify:v4-adim3": "node server/scripts/verify-v4-adim3-sitemap.js",

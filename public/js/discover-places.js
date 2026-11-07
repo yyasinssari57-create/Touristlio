@@ -130,7 +130,8 @@ window.TL_DISCOVER = (function () {
       if (sub) sub.textContent = `${selectedCity.placeCount || 0} ${t('placesFound')}`;
       if (backBtn) backBtn.style.display = 'inline-flex';
     } else {
-      if (title) title.textContent = t('discoverGlobalTitle') || (lang === 'en' ? 'All places' : 'Tüm gezilecek yerler');
+      // V5 Adım 12a: /gezilecek-yerler h1 → "Gezilecek Yerler" (örnek metin).
+      if (title) title.textContent = t('discoverPlacesTitle') || (lang === 'en' ? 'Places to visit' : 'Gezilecek Yerler');
       if (sub) sub.textContent = t('discoverGlobalSub') || (lang === 'en' ? 'Worldwide · filter by category or city' : 'Dünya geneli · kategori veya şehir filtreleyin');
       if (backBtn) backBtn.style.display = 'none';
     }

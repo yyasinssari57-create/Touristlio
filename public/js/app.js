@@ -1832,6 +1832,19 @@ function retagHeading(el, level) {
   return next;
 }
 
+function syncHeroPageH1() {
+  // V5 Adım 12a: /explore → "Keşfet"; / → slogan. Nav brand-slogan dokunulmaz.
+  const hero = document.querySelector('#page-explore [data-i18n-html="heroTitle"]');
+  if (!hero) return;
+  const raw = (location.pathname || '/').replace(/\/+$/, '') || '/';
+  const bare = raw.replace(/^\/en(?=\/|$)/, '') || '/';
+  if (bare === '/explore') {
+    hero.textContent = t('explore');
+  } else {
+    hero.innerHTML = `${escapeHtml(t('heroTitle'))}<br><em>${escapeHtml(t('heroTitleEm'))}</em>`;
+  }
+}
+
 function syncPageHeading(tab) {
   const hero = document.querySelector('#page-explore [data-i18n-html="heroTitle"]');
   const discover = document.getElementById('discoverCityTitle');
@@ -1848,6 +1861,7 @@ function syncPageHeading(tab) {
   retagHeading(profile, tab === 'profile' ? 1 : 2);
   retagHeading(pd, tab === 'detail' ? 1 : 2);
   retagHeading(blogTitle, articleOn ? 1 : 2);
+  if (tab === 'explore') syncHeroPageH1();
 }
 
 function bodyWithoutExcerpt(excerpt, body) {
@@ -2138,6 +2152,9 @@ function writeRouteToUrl(route, replace = true) {
 
 function syncRoute(replace = true) {
   writeRouteToUrl(getCurrentRoute(), replace);
+  if (document.getElementById('page-explore')?.classList.contains('active')) {
+    syncHeroPageH1();
+  }
 }
 
 async function showMainTab(tab, skipRoute) {

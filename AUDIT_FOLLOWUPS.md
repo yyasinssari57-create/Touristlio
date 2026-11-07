@@ -2,6 +2,44 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 12 (görünüm: h1 + harita + kategori listesi)
+
+Yasin “geç” dedi → Adım 12 onayı. Üç madde:
+
+**a) Sayfa h1**
+- `/` → slogan h1 aynı: “Sadece Ziyaret Etme. Hisset.”
+- `/explore` → h1 “Keşfet” (EN: Explore). Nav’daki brand-slogan değişmedi.
+- `/gezilecek-yerler` → h1 “Gezilecek Yerler” (`discoverPlacesTitle`; şehir seçilince şehir adı).
+- `/blog` → liste h1 “Seyahat Hikayeleri” (zaten `blogHeroTitle` + `syncPageHeading`).
+
+**b) Harita yüksekliği**
+- `.map-full` masaüstü `min-height: 480px` (420–520 bandı), mobil `min-height: 320px`. Yalnız boyut.
+
+**c) Kategori/filtre envanteri (kod birleştirilmedi)**
+Keşfet/Harita çubuğu (FAZ4-7 sonrası, örnek katalog TR):
+1. Tümü
+2. 🏛️ Tarihi (grup)
+3. ⛰️ Doğa (grup)
+4. 🏺 Müzeler (grup)
+5. 🍽️ Yeme-İçme (grup)
+6. 🎯 Aktiviteler (grup)
+7. 🏛️ Simge yapı
+8. 🏖️ Plaj
+9. 🕌 Dini
+10. 🍽️ Restoran
+11. 👁️ Manzara
+12. 🧗 Macera
+13. 🍴 Yemek
+14. 🎭 Eğlence
+
+Çubuktan düşen yüz tekrarları (FAZ4-7): Tarihi / Doğa / Müze kategori çipleri grupla aynı yüz olduğu için yok.
+Ham kategori listesi (kartlar hâlâ hepsini basabilir): Simge yapı, Müze, Doğa, Plaj, Tarihi, Dini, Restoran, Manzara, Macera, Yemek, Eğlence (+ park/kafe/alışveriş vb. DB’de varsa).
+**Birleştirme kararı Yasin’de** — bu turda birleştirme kodu yazılmadı.
+
+Kontrol: `npm run verify:v5-adim12` → OK (`verify:faz4-1` dahil).
+
+V5’te bu tur yalnız Adım 12. Kalan adım: 1 (Adım 13 verify).
+
 ## Cursor V5 — Adım 11 (görseli doğrulanmamış yer → noindex)
 
 Yasin “geç” dedi → önerilen EVET uygulandı: `imageVerified=true` olana kadar yer sayfası ziyaretçiye açık, Google’a `noindex` + sitemap dışı.
