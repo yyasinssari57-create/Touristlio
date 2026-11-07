@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * .env ADMIN_* değerlerini users tablosuna yazar.
- * Kullanım: node server/scripts/ensure-admin.js
+ * Bilinçli admin şifre sıfırlama. Açılış bunu çağırmaz.
+ * Üretimde ADMIN_PASSWORD zorunludur; varsayılan şifre yoktur.
+ * Kullanım: npm run admin:ensure
  */
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { initDb, db } = require('../db');
 const { createUser, findUserByEmail, hashPassword, comparePassword } = require('../auth');
+const { resolveAdminPassword, syncLegacyAdminPassword } = require('../seed');
 
 const email = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase().trim();
-const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
 const name = (process.env.ADMIN_NAME || 'Yasin').trim();
 
 async function markEmailVerified(userId) {
@@ -22,8 +23,17 @@ async function clearLockout(userId) {
 }
 
 async function main() {
+  const resolved = resolveAdminPassword();
+  if (!resolved.ok) {
+    console.error('ERROR:', resolved.reason);
+    process.exit(1);
+  }
+  const password = resolved.password;
+  if (resolved.source === 'development-default') {
+    console.log('ADMIN_PASSWORD boş. Geliştirme yedeği kullanılacak. Üretimde bu yol yok.');
+  }
+
   await initDb();
-  const legacyEmail = 'yasin@touristlio.local';
   const existing = await findUserByEmail(email);
   let action;
   if (existing) {
@@ -41,16 +51,7 @@ async function main() {
     action = 'created';
   }
 
-  if (email !== legacyEmail) {
-    const legacy = await findUserByEmail(legacyEmail);
-    if (legacy && legacy.role === 'admin') {
-      const hash = await hashPassword(password);
-      await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, legacy.id);
-      await markEmailVerified(legacy.id);
-      await clearLockout(legacy.id);
-      console.log('Legacy admin password synced:', legacyEmail);
-    }
-  }
+  await syncLegacyAdminPassword(password);
 
   const user = await findUserByEmail(email);
   const passwordOk = await comparePassword(password, user.password_hash);

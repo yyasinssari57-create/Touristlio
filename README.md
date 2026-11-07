@@ -120,7 +120,7 @@ touristlio/
 
 1. Sunucuda `.env.production.example` dosyasını `.env` olarak kopyalayın.
 2. Güçlü JWT üretin: `npm run generate:jwt-secret` → çıktıyı `.env` içindeki `JWT_SECRET=` satırına yapıştırın.
-3. `ADMIN_PASSWORD`, `CORS_ORIGIN`, `SITE_URL` ve `TRUST_PROXY=true` (Render/Railway) değerlerini ayarlayın.
+3. `ADMIN_PASSWORD`, `CORS_ORIGIN`, `SITE_URL` ve `TRUST_PROXY=true` (Render/Railway) değerlerini ayarlayın. Var olan admin şifresi açılışta ve `npm run seed` ile değişmez. Bilinçli sıfırlama: `npm run admin:ensure`. Üretimde `ADMIN_PASSWORD` boşsa veya kurala uymazsa yeni admin oluşturulmaz; site çalışmaya devam eder. Geliştirmede şifre boşsa ve admin yoksa yerel yedek `LocalDevAdmin1` yalnızca bir kez kullanılır.
 4. SMTP bilgilerini doldurun (e-posta doğrulama açıksa zorunlu), ardından `npm run verify:smtp` ile test edin.
 5. Veritabanı ve seed: `npm run seed` (ilk kurulum).
 6. Başlat: `npm run start:prod` (veya process manager ile `NODE_ENV=production npm start`).

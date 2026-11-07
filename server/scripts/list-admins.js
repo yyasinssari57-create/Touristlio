@@ -21,9 +21,16 @@ async function main() {
   }
 
   const envEmail = (process.env.ADMIN_EMAIL || 'yasin@touristlio.local').toLowerCase();
-  const envPass = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
+  const envPass = String(process.env.ADMIN_PASSWORD ?? '').trim();
   const user = await findUserByEmail(envEmail);
-  if (user) {
+  if (user && !envPass) {
+    console.log('=== .env password check skipped ===');
+    console.log('email:', envEmail);
+    console.log('role:', user.role);
+    console.log('ADMIN_PASSWORD tanımlı değil');
+    console.log('locked:', user.locked_until || null);
+    console.log('failed_login_count:', user.failed_login_count || 0);
+  } else if (user) {
     const ok = await comparePassword(envPass, user.password_hash);
     console.log('=== .env password check ===');
     console.log('email:', envEmail);

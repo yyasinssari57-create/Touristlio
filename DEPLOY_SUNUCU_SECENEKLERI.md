@@ -489,6 +489,8 @@ npm run seed
 npm run verify:smtp
 ```
 
+`npm run seed` var olan admin şifresini değiştirmez. Sıfırlamak için `npm run admin:ensure` (üretimde `ADMIN_PASSWORD` zorunlu).
+
 ### PM2 ile başlat
 
 ```bash

@@ -52,12 +52,12 @@ if (EN !== 'Password must be at least 9 characters with one uppercase letter and
   fail(`English sentence drifted: ${EN}`);
 } else ok('English sentence is the shared rule');
 
-const samples = [SHORT, NO_UPPER, NO_DIGIT, VALID, LEGACY, '', 'ChangeMe123!', 'A1aaaaaaa'];
+const samples = [SHORT, NO_UPPER, NO_DIGIT, VALID, LEGACY, '', 'Zz1234567', 'A1aaaaaaa'];
 for (const lang of ['tr', 'en']) {
   const sentence = lang === 'en' ? EN : TR;
   for (const pw of samples) {
     const err = passwordPolicyError(pw, lang);
-    const valid = pw === VALID || pw === 'ChangeMe123!' || pw === 'A1aaaaaaa';
+    const valid = pw === VALID || pw === 'Zz1234567' || pw === 'A1aaaaaaa';
     if (valid && err) fail(`${lang} rejected a valid password (${pw.length} chars)`);
     if (!valid && err !== sentence) fail(`${lang} bad password did not return the one sentence`);
   }

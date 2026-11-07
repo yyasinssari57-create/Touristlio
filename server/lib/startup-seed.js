@@ -3,7 +3,6 @@ const { db } = require('../db');
 const {
   seedPlaces,
   seedAdmin,
-  syncLegacyAdminPassword,
   seedDemoBlogs,
 } = require('../seed');
 
@@ -25,7 +24,6 @@ function shouldSeedOnStart(count) {
 
 async function ensureAdminUser() {
   await seedAdmin();
-  await syncLegacyAdminPassword(process.env.ADMIN_PASSWORD || 'ChangeMe123!');
 }
 
 async function runStartupSeed() {
@@ -42,7 +40,9 @@ async function runStartupSeed() {
 }
 
 /**
- * On boot: always ensure admin; seed places/blogs when count < MIN_PLACES.
+ * On boot: create the admin only when that email is missing.
+ * An existing password, name, role, and lock are left as they are.
+ * Places and blogs are seeded when count < MIN_PLACES.
  */
 async function maybeSeedOnStartup() {
   try {
