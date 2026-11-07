@@ -2,6 +2,19 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 7 (yedek/geri yükleme sertleştirme)
+
+- `BACKUP_ENCRYPTION_KEY` tanımlıysa restore yalnız şifreli `.sql.enc` (GCM etiketli) kabul eder; düz `.sql` 400.
+- Gerçek restore (dry-run dışı) yönetici şifresi ister.
+- `pg_dump`/`psql` yoksa indirme/geri yükleme **503** + “Supabase Dashboard → Database → Backups kullanın” (sır yazılmaz). `/admin/backup/list` → `tools.supported`.
+- Panel: şifre alanı + tools ipucu. Canlı prod restore **denenmedi**.
+
+Kontrol: `npm run verify:v5-adim7` — yerel throwaway DB’de dry-run + gerçek restore + bozuk dump rollback.
+
+**Ortam notu:** Bu agent VM’de `pg_dump`/`psql` var. Render’da yoksa butonlar 503 verir; Yasin Supabase yedeklerini kullanmalı.
+
+V5’te bu tur yalnız Adım 7. Kalan adım: 6.
+
 ## Cursor V5 — Adım 6 (/api/health sade, SITE_URL tek kaynak)
 
 - Public `/api/health` → yalnız `{ ok: true }` / 503 `{ ok: false }` (err.message yok).

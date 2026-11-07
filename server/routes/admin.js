@@ -4,7 +4,7 @@ const fs = require('fs');
 const multer = require('multer');
 const { db } = require('../db');
 const { authRequired, requireRole } = require('../middleware/auth');
-const { createUser, findUserByEmail, sanitizeUser, passwordPolicyError } = require('../auth');
+const { createUser, findUserByEmail, findUserById, comparePassword, sanitizeUser, passwordPolicyError } = require('../auth');
 const { passwordLangFromRequest } = require('../lib/password-policy');
 const { clear: clearCache } = require('../lib/cache');
 const { computeUserRiskScore, computeUserRiskReasons, checkPermission, PANEL_ROLES, ASSIGNABLE_ROLES, assertCanManageUser } = require('../middleware/rbac');
@@ -1636,6 +1636,11 @@ router.get('/backup/download', requireRole('admin'), adminToolLimiter, async (re
     return fail(res, 'Yedek bulunamadı', 404);
   }
 
+  const tools = backupSafe.pgToolsStatus();
+  if (!tools.supported) {
+    return fail(res, tools.message || backupSafe.PG_TOOLS_UNSUPPORTED_MSG, 503);
+  }
+
   const encrypt = backupSafe.encryptionConfigured();
   const filename = backupFilename(encrypt);
   const tmpPath = backupSafe.safeTmpPath('.sql');
@@ -1648,7 +1653,7 @@ router.get('/backup/download', requireRole('admin'), adminToolLimiter, async (re
     return sendBackupBuffer(res, buf, filename);
   } catch (err) {
     unlinkQuiet(tmpPath);
-    return fail(res, err.message || 'Yedek indirilemedi (pg_dump). Supabase Dashboard → Database → Backups kullanın.', 500);
+    return fail(res, err.message || backupSafe.PG_TOOLS_UNSUPPORTED_MSG, 503);
   }
 });
 
@@ -1672,10 +1677,17 @@ router.get('/backup/list', requireRole('admin'), adminToolLimiter, async (req, r
       items.push({ name: safe, checksum, sizeBytes: size });
     }
   }
+  const tools = backupSafe.pgToolsStatus();
   return ok(res, {
     items,
     ephemeral: true,
     encryption: backupSafe.encryptionConfigured(),
+    tools: {
+      supported: tools.supported,
+      pgDump: tools.pgDump,
+      psql: tools.psql,
+      message: tools.message,
+    },
   });
 });
 
@@ -1720,6 +1732,24 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
   }
 
   const dryRun = /^(1|true|yes)$/i.test(String(req.body?.dryRun || req.query.dryRun || ''));
+
+  if (backupSafe.encryptionConfigured() && !backupSafe.isEncryptedBackup(req.file.buffer)) {
+    logAdmin(req, 'db.restore_plaintext_rejected', 'database', null, safeName);
+    return fail(res, 'BACKUP_ENCRYPTION_KEY tanımlı; yalnızca şifreli (.sql.enc) yedek kabul edilir', 400);
+  }
+
+  if (!dryRun) {
+    const password = String(req.body?.password || '').trim();
+    if (!password) {
+      return fail(res, 'Gerçek geri yükleme için yönetici şifresi gerekli', 400);
+    }
+    const row = await findUserById(req.user.id);
+    if (!row || !(await comparePassword(password, row.password_hash))) {
+      logAdmin(req, 'db.restore_password_failed', 'database', null, safeName);
+      return fail(res, 'Yönetici şifresi hatalı', 401);
+    }
+  }
+
   let plain;
   try {
     plain = backupSafe.decryptBuffer(req.file.buffer);
@@ -1740,6 +1770,11 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
       bytes: plain.length,
       message: 'Doğrulama tamam (checksum + dump). Uygulanmadı.',
     });
+  }
+
+  const tools = backupSafe.pgToolsStatus();
+  if (!tools.supported) {
+    return fail(res, tools.message || backupSafe.PG_TOOLS_UNSUPPORTED_MSG, 503);
   }
 
   const url = process.env.DATABASE_URL;
