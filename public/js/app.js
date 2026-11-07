@@ -1369,10 +1369,10 @@ function renderTiolaRatingLine(p) {
 function setPlacesCountPending() {
   const countEl = document.getElementById('results-count');
   if (!countEl) return;
-  const n = Number(document.getElementById('resCnt')?.textContent);
-  if (!cardsLoaded || !Number.isFinite(n) || n <= 0) {
-    countEl.setAttribute('aria-busy', 'true');
-  }
+  // Always hide while a fetch is in flight / until a real search-or-filter is active.
+  countEl.setAttribute('aria-busy', 'true');
+  countEl.hidden = true;
+  countEl.setAttribute('aria-hidden', 'true');
 }
 
 function showGridSkeleton() {
@@ -1533,13 +1533,24 @@ function collectExploreFilterState() {
   };
 }
 
+function exploreHasActiveQuery() {
+  if (!window.TL_EXPLORE_QUERY?.hasExploreFilters) return false;
+  return window.TL_EXPLORE_QUERY.hasExploreFilters(collectExploreFilterState());
+}
+
 function updatePlacesFoundCount(total) {
   const n = Number(total);
   const shown = Number.isFinite(n) ? n : 0;
   const el = document.getElementById('resCnt');
   if (el) el.textContent = String(shown);
   const countEl = document.getElementById('results-count');
-  if (countEl && cardsLoaded) countEl.setAttribute('aria-busy', 'false');
+  if (countEl) {
+    // Bare Keşfet browse (no q / real filter): hide "N yer bulundu". Keep sort control.
+    const showCount = cardsLoaded && exploreHasActiveQuery();
+    countEl.setAttribute('aria-busy', showCount ? 'false' : 'true');
+    countEl.hidden = !showCount;
+    countEl.setAttribute('aria-hidden', showCount ? 'false' : 'true');
+  }
   updateClearFiltersVisibility();
 }
 

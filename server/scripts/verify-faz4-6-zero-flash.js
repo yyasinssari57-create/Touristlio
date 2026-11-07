@@ -114,6 +114,7 @@ function makeEl(text) {
   };
 }
 
+const activeFn = extractFunction(app, 'exploreHasActiveQuery');
 if (pendingFn && updateFn && skeletonFn) {
   const nodes = {
     resCnt: makeEl('0'),
@@ -123,13 +124,21 @@ if (pendingFn && updateFn && skeletonFn) {
     pgrid: makeEl(''),
   };
   nodes['results-count'].setAttribute('aria-busy', 'true');
+  nodes['results-count'].hidden = true;
+  // Count is also gated on a real search/filter (see verify:explore-count-hide).
+  // These zero-flash checks stub an active query so load timing stays the focus.
   const sandbox = {
     document: { getElementById: (id) => nodes[id] || null },
-    window: { TL_SKELETON: { fillCards(el) { el.filled = true; } } },
+    window: {
+      TL_SKELETON: { fillCards(el) { el.filled = true; } },
+      TL_EXPLORE_QUERY: { hasExploreFilters: () => true },
+    },
     Number,
+    collectExploreFilterState() { return { q: 'test' }; },
   };
   vm.runInNewContext(`
     let cardsLoaded = false;
+    ${activeFn || 'function exploreHasActiveQuery() { return window.TL_EXPLORE_QUERY.hasExploreFilters({}); }'}
     ${pendingFn}
     ${updateFn}
     ${skeletonFn}
@@ -162,11 +171,17 @@ if (pendingFn && updateFn && skeletonFn) {
   if (nodes['results-count'].attrs['aria-busy'] !== 'true') fail('sıfır sayaç yenilemede gizlenmedi');
   else ok('0 sayaç yeni istekte gizlenir');
 
+  // Pending always re-hides (fetch in flight); count reappears after update with cardsLoaded.
   nodes.resCnt.textContent = '4';
   nodes['results-count'].setAttribute('aria-busy', 'false');
+  nodes['results-count'].hidden = false;
   sandbox.api.pending();
-  if (nodes['results-count'].attrs['aria-busy'] !== 'false') fail('dolu sayaç yenilemede gizlendi');
-  else ok('dolu sayaç yenilemede yerinde kalır');
+  if (nodes['results-count'].attrs['aria-busy'] !== 'true') fail('yenilemede sayaç meşgul olmadı');
+  else ok('yenilemede sayaç tekrar gizlenir');
+  sandbox.api.update(4);
+  if (nodes['results-count'].attrs['aria-busy'] !== 'false' || nodes.resCnt.textContent !== '4') {
+    fail('yenileme sonrası dolu sayaç açılmadı');
+  } else ok('yenileme sonrası dolu sayaç yerinde');
 
   nodes.noRes.style.display = 'block';
   sandbox.api.skeleton();
