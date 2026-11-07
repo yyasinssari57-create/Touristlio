@@ -46,7 +46,7 @@ async function approveTiola(id, moderatorId) {
 
   return await db.prepare(`
 
-    UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
+    UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = NOW()
 
     WHERE id = ? AND status = 'pending'
 
@@ -60,7 +60,7 @@ async function rejectTiola(id, moderatorId) {
 
   return await db.prepare(`
 
-    UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now')
+    UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = NOW()
 
     WHERE id = ? AND status = 'pending'
 
@@ -74,8 +74,8 @@ async function approveBlog(id, moderatorId) {
 
   return await db.prepare(`
 
-    UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
-      updated_at = datetime('now')
+    UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = NOW(),
+      updated_at = NOW()
 
     WHERE id = ? AND status = 'pending'
 
@@ -89,8 +89,8 @@ async function rejectBlog(id, moderatorId) {
 
   return await db.prepare(`
 
-    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-      updated_at = datetime('now')
+    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = NOW(),
+      updated_at = NOW()
 
     WHERE id = ? AND status = 'pending'
 

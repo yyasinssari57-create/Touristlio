@@ -2,6 +2,18 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 10 (küçük temizlikler)
+
+- Kayıtlı yer kartında `p.name` / `p.category` → `escapeHtml`. Tiola feed ve blog grid `e.message` → `escapeHtml`.
+- `/uploads` `decodeURIComponent` hatalı `%` dizisinde **400** (500 yok).
+- Uygulama SQL’inde `datetime('now')` kalktı → doğrudan `NOW()` / `date_trunc` / `INTERVAL` (çeviri katmanına güvenilmiyor).
+- Honeypot ölçümü (kod değişmedi): contact, `/login`, `/register` ve iki Tiola formu ekranda değil (`left:-10000px`) → Manus bulgusu **yanlış alarm**.
+- **Öneri (uygulanmadı, onay ister):** çıkış ve “tüm oturumları kapat” için `users.token_version` veya `sessions_valid_after`; JWT `iat` ile karşılaştır. 30 günlük süre aynı kalsın. Şifre değişince iptal zaten var.
+
+Kontrol: `npm run verify:v5-adim10` → OK.
+
+V5’te bu tur yalnız Adım 10. Kalan adım: 3.
+
 ## Cursor V5 — Adım 9 (sitemap DB hatası + lastmod)
 
 - DB hatasında statik-only 200 yok: last-good bellek cache varsa stale XML; yoksa **503 + Retry-After**.

@@ -133,7 +133,7 @@ router.put('/:id', authRequired, async (req, res) => {
   if (!trip) return res.status(404).json({ error: 'Plan bulunamadı' });
   const b = req.body || {};
   await db.prepare(`
-    UPDATE trip_plans SET name=?, country=?, city=?, start_date=?, end_date=?, travelers=?, trip_type=?, budget=?, transport=?, visibility=?, meta=?, updated_at=datetime('now')
+    UPDATE trip_plans SET name=?, country=?, city=?, start_date=?, end_date=?, travelers=?, trip_type=?, budget=?, transport=?, visibility=?, meta=?, updated_at=NOW()
     WHERE id=?
   `).run(
     b.name || trip.name, b.country ?? trip.country, b.city ?? trip.city,

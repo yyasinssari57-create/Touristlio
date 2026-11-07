@@ -194,7 +194,7 @@ async function replacePlaceImage({ placeId, fromUrl, toUrl, imageCredit }) {
   await db.prepare(`
     UPDATE places
     SET image_url = ?, photos = ?, image_verified = ?, image_verified_at = ?,
-        image_source_url = ?, image_credit = ?, updated_at = datetime('now')
+        image_source_url = ?, image_credit = ?, updated_at = NOW()
     WHERE id = ?
   `).run(
     imageUrl,

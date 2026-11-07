@@ -244,7 +244,7 @@ async function checkDatabase() {
     INSERT INTO blogs (
       user_id, category, title, slug, excerpt, body, status, published_at,
       title_en, excerpt_en, body_en, slug_en
-    ) VALUES (?, 'guide', ?, ?, ?, ?, 'approved', datetime('now'), ?, ?, ?, ?)
+    ) VALUES (?, 'guide', ?, ?, ?, ?, 'approved', NOW(), ?, ?, ?, ?)
   `);
   const only = await insert.run(user.id, trTitle, trSlug, 'Türkçe özet', longTr, null, null, null, null);
   const both = await insert.run(

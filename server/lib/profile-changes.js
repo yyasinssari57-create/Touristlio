@@ -97,7 +97,7 @@ async function approve(id, reviewerId) {
   }
   await db.prepare(`
     UPDATE profile_change_requests
-    SET status = 'approved', reviewed_by = ?, reviewed_at = datetime('now')
+    SET status = 'approved', reviewed_by = ?, reviewed_at = NOW()
     WHERE id = ?
   `).run(reviewerId, id);
   return { ok: true };
@@ -110,7 +110,7 @@ async function reject(id, reviewerId, reason) {
   const rejectionReason = sanitizeText(reason, 500) || 'Reddedildi';
   await db.prepare(`
     UPDATE profile_change_requests
-    SET status = 'rejected', rejection_reason = ?, reviewed_by = ?, reviewed_at = datetime('now')
+    SET status = 'rejected', rejection_reason = ?, reviewed_by = ?, reviewed_at = NOW()
     WHERE id = ?
   `).run(rejectionReason, reviewerId, id);
   return { ok: true, rejectionReason };

@@ -2266,7 +2266,7 @@ async function loadTiolaFeed() {
     if (getActiveMainTab() === 'explore') injectHomeJsonLd(items);
   } catch (e) {
     if (!e.status && window.TL_ERROR_BOUNDARY?.capture('tiolas', e)) return;
-    feed.innerHTML = `<div class="no-res">${e.message}</div>`;
+    feed.innerHTML = `<div class="no-res">${escapeHtml(e.message)}</div>`;
   }
 }
 
@@ -3039,7 +3039,7 @@ async function renderBlog() {
     };
     grid.innerHTML = card(feat, true) + rest.map((b) => card(b, false)).join('');
   } catch (e) {
-    grid.innerHTML = `<div class="no-res">${e.message}</div>`;
+    grid.innerHTML = `<div class="no-res">${escapeHtml(e.message)}</div>`;
   }
 }
 
@@ -3352,8 +3352,8 @@ async function updateProfilePage() {
     se.style.display = 'none';
     sg.innerHTML = saved.places.map((p) => `
       <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
-        <div class="pc-img">${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}<button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, true)}" aria-pressed="true" data-stop data-act="toggleSave" data-el data-arg="${p.id}">❤️</button></div>
-        <div class="pc-body"><div class="pc-name">${p.name}</div></div>
+        <div class="pc-img">${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card', extra: `data-img-fallback data-fallback-cat="${escapeHtml(p.category).replace(/"/g, '&quot;')}" data-fallback-id="${p.id}"` })}<button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, true)}" aria-pressed="true" data-stop data-act="toggleSave" data-el data-arg="${p.id}">❤️</button></div>
+        <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div></div>
       </div>`).join('');
   }
 

@@ -13,7 +13,7 @@ async function up(db) {
   `).all();
 
   const mark = db.prepare(`
-    UPDATE tiolas SET status = 'deleted', moderated_at = datetime('now')
+    UPDATE tiolas SET status = 'deleted', moderated_at = NOW()
     WHERE user_id = ? AND place_id = ? AND id != ?
       AND parent_id IS NULL
       AND stars IS NOT NULL AND stars > 0

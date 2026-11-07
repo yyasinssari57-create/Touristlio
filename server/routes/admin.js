@@ -199,7 +199,7 @@ router.post('/tiolas/:id/approve', checkPermission('admin.moderate'), async (req
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   await db.prepare(`
-    UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
+    UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = NOW()
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
   await refreshPlaceStatsForTiola(id);
@@ -229,7 +229,7 @@ router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req,
   if (row.status !== 'approved') return fail(res, 'Yalnızca yayında olan Tiola kaldırılabilir', 409);
 
   await db.prepare(`
-    UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+    UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = NOW(), rejection_reason = ?
     WHERE id = ? AND status = 'approved'
   `).run(req.user.id, reason, id);
   await refreshPlaceStatsForTiola(id);
@@ -279,7 +279,7 @@ router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req,
   }
 
   await db.prepare(`
-    UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+    UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = NOW(), rejection_reason = ?
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, reason, id);
   await refreshPlaceStatsForTiola(id);
@@ -350,7 +350,7 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
   try {
     if (action === 'approve') {
       const rows = validIds.length ? await db.prepare(`
-        UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = datetime('now')
+        UPDATE tiolas SET status = 'approved', moderated_by = ?, moderated_at = NOW()
         WHERE id = ANY(?::int[]) AND status IN ('pending', 'spam')
         RETURNING id, place_id
       `).all(req.user.id, validIds) : [];
@@ -379,7 +379,7 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
       }
       if (eligible.length) {
         await db.prepare(`
-          UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'), rejection_reason = ?
+          UPDATE tiolas SET status = 'rejected', moderated_by = ?, moderated_at = NOW(), rejection_reason = ?
           WHERE id = ANY(?::int[])
         `).run(req.user.id, cleanReason, eligible.map((r) => r.id));
         processed = eligible.length;
@@ -450,9 +450,9 @@ router.post('/blogs/:id/approve', checkPermission('admin.content'), async (req, 
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
   await db.prepare(`
-    UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
-      published_at = COALESCE(published_at, datetime('now')),
-      updated_at = datetime('now')
+    UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = NOW(),
+      published_at = COALESCE(published_at, NOW()),
+      updated_at = NOW()
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, id);
   logAdmin(req, 'blog.approve', 'blog', id, null);
@@ -480,8 +480,8 @@ router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, r
   if (row.status !== 'approved') return fail(res, 'Yalnızca yayında olan blog kaldırılabilir', 409);
 
   await db.prepare(`
-    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-      rejection_reason = ?, published_at = NULL, updated_at = datetime('now')
+    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = NOW(),
+      rejection_reason = ?, published_at = NULL, updated_at = NOW()
     WHERE id = ? AND status = 'approved'
   `).run(req.user.id, reason, id);
 
@@ -526,8 +526,8 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
   if (!['pending', 'spam'].includes(row.status)) return fail(res, 'Bu blog zaten işlendi', 409);
 
   await db.prepare(`
-    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-      rejection_reason = ?, updated_at = datetime('now')
+    UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = NOW(),
+      rejection_reason = ?, updated_at = NOW()
     WHERE id = ? AND status IN ('pending', 'spam')
   `).run(req.user.id, reason, id);
 
@@ -581,9 +581,9 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
   try {
     if (action === 'approve') {
       const rows = validIds.length ? await db.prepare(`
-        UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = datetime('now'),
-          published_at = COALESCE(published_at, datetime('now')),
-          updated_at = datetime('now')
+        UPDATE blogs SET status = 'approved', moderated_by = ?, moderated_at = NOW(),
+          published_at = COALESCE(published_at, NOW()),
+          updated_at = NOW()
         WHERE id = ANY(?::int[]) AND status IN ('pending', 'spam')
         RETURNING id
       `).all(req.user.id, validIds) : [];
@@ -612,14 +612,14 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
         const eligibleIds = eligible.map((r) => r.id);
         if (action === 'reject') {
           await db.prepare(`
-            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-              rejection_reason = ?, updated_at = datetime('now')
+            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = NOW(),
+              rejection_reason = ?, updated_at = NOW()
             WHERE id = ANY(?::int[])
           `).run(req.user.id, cleanReason, eligibleIds);
         } else {
           await db.prepare(`
-            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = datetime('now'),
-              rejection_reason = ?, published_at = NULL, updated_at = datetime('now')
+            UPDATE blogs SET status = 'rejected', moderated_by = ?, moderated_at = NOW(),
+              rejection_reason = ?, published_at = NULL, updated_at = NOW()
             WHERE id = ANY(?::int[])
           `).run(req.user.id, cleanReason, eligibleIds);
         }
@@ -845,7 +845,7 @@ router.post('/places/:id/photos', checkPermission('admin.places'), upload.array(
   await db.prepare(`
     UPDATE places
     SET photos = ?, image_url = ?, image_verified = ?, image_verified_at = ?, image_source_url = ?,
-        updated_at = datetime('now')
+        updated_at = NOW()
     WHERE id = ?
   `).run(
     JSON.stringify(photos),
@@ -1343,8 +1343,8 @@ router.patch('/places/:id/info', checkPermission('admin.places'), async (req, re
       has_parking = ?,
       info_source_url = ?,
       info_verified_at = NOW(),
-      updated_at = datetime('now'),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), datetime('now'))
+      updated_at = NOW(),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
     WHERE id = ?
   `).run(
     v.climate_info,
@@ -2128,7 +2128,7 @@ router.put('/blogs/:id', checkPermission('admin.content'), async (req, res) => {
       category = ?, title = ?, slug = ?, excerpt = ?, body = ?, image_url = ?,
       place_id = ?, tags = ?, featured = ?, author_name = ?, status = ?, published_at = ?,
       title_en = ?, excerpt_en = ?, body_en = ?, slug_en = ?,
-      updated_at = datetime('now')
+      updated_at = NOW()
     WHERE id = ?
   `).run(
     (category != null ? (blogDb.categorySlugFromUnknown(category) || existing.category) : existing.category),
@@ -2167,8 +2167,8 @@ router.delete('/blogs/:id', checkPermission('admin.content'), async (req, res) =
     return ok(res, { deleted: true, soft: true });
   }
   await db.prepare(`
-    UPDATE blogs SET status = 'deleted', moderated_by = ?, moderated_at = datetime('now'),
-      updated_at = datetime('now')
+    UPDATE blogs SET status = 'deleted', moderated_by = ?, moderated_at = NOW(),
+      updated_at = NOW()
     WHERE id = ?
   `).run(req.user.id, id);
   logAdmin(req, 'blog.delete', 'blog', id, existing.title || null);
@@ -2362,7 +2362,7 @@ router.patch('/reports/:id', checkPermission('admin.moderate'), async (req, res)
 
   const normalized = await reportMod.normalizeReportStatus(status);
   await db.prepare(`
-    UPDATE reports SET status = ?, resolved_by = ?, resolved_at = datetime('now')
+    UPDATE reports SET status = ?, resolved_by = ?, resolved_at = NOW()
     WHERE id = ?
   `).run(normalized === 'reviewed' ? 'reviewed' : normalized, req.user.id, id);
   logAdmin(req, 'report.status_change', 'report', id, status);

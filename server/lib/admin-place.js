@@ -321,7 +321,7 @@ async function insertPlace(body) {
      how_to_get_there, how_to_get_there_en, photos,
      tips, tips_en, tags, search_aliases, categories, lat, lng, popularity, status,
      created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
   `).run(
     id,
     enriched.name,
@@ -445,8 +445,8 @@ async function updatePlace(id, body) {
       history = ?, tips = ?, travel_tips = ?,
       photos = ?, search_aliases = ?, categories = ?, lat = ?, lng = ?, status = ?,
       info_source_url = ?,
-      updated_at = datetime('now'),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), datetime('now'))
+      updated_at = NOW(),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
     WHERE id = ?
   `).run(
     enriched.name,
@@ -488,8 +488,8 @@ async function archivePlace(id) {
   const row = await db.prepare('SELECT id FROM places WHERE id = ?').get(id);
   if (!row) return null;
   await db.prepare(`
-    UPDATE places SET status = 'archived', updated_at = datetime('now'),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), datetime('now'))
+    UPDATE places SET status = 'archived', updated_at = NOW(),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
     WHERE id = ?
   `).run(id);
   return { id, status: 'archived' };

@@ -111,7 +111,7 @@ router.post('/:id/publish', authRequired, async (req, res) => {
   if (!list) return res.status(404).json({ error: 'Liste bulunamadı' });
   const shareToken = list.share_token || crypto.randomBytes(16).toString('hex');
   await db.prepare(`
-    UPDATE travel_lists SET is_public = 1, share_token = ?, updated_at = datetime('now') WHERE id = ?
+    UPDATE travel_lists SET is_public = 1, share_token = ?, updated_at = NOW() WHERE id = ?
   `).run(shareToken, listId);
   const siteUrl = siteBaseUrl();
   res.json({
@@ -154,7 +154,7 @@ router.post('/:id/items', authRequired, async (req, res) => {
   await db.prepare(`
     INSERT OR REPLACE INTO travel_list_items (list_id, place_id, note, sort_order) VALUES (?, ?, ?, ?)
   `).run(list.id, pid, note || null, max + 1);
-  await db.prepare("UPDATE travel_lists SET updated_at = datetime('now') WHERE id = ?").run(list.id);
+  await db.prepare("UPDATE travel_lists SET updated_at = NOW() WHERE id = ?").run(list.id);
   res.json({ ok: true });
 });
 
