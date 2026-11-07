@@ -11,11 +11,11 @@ const { getCityImage, TURKEY_CITY_META } = require('../../lib/city-images');
 const { DISCOVER_GROUPS, FILTER_GROUPS, GROUP_VISIBILITY, matchesFilterGroup } = require('../../lib/place-content');
 const { cacheKey, wrap, clear, PLACES_TTL_MS } = require('../../lib/cache');
 const { getStatsMap, invalidateStatsCache } = require('../../lib/stats-cache');
-const { searchPlacesPage } = require('../../lib/places-search');
+const { searchPlacesPage, shouldMixCategories } = require('../../lib/places-search');
 const { isPublishedPlaceStatus, publishedPlaceSql } = require('../../lib/place-status');
 const { parseListPagination, paginationMeta } = require('../../lib/pagination');
 
-const CACHE_VERSION = 'v4img7';
+const CACHE_VERSION = 'v4img8mix';
 const META_CACHE_TTL = 60 * 1000;
 
 
@@ -218,7 +218,28 @@ function filterPlaces(rows, queryParams, statsMap, options = {}) {
 
 
 
-function sortPlaces(places, sort) {
+function mixPlacesByCategory(places) {
+  const buckets = new Map();
+  for (const place of places) {
+    const key = place.category || '_';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(place);
+  }
+  const queues = [...buckets.values()];
+  const mixed = [];
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
+    for (const queue of queues) {
+      if (!queue.length) continue;
+      mixed.push(queue.shift());
+      progressed = true;
+    }
+  }
+  return mixed;
+}
+
+function sortPlaces(places, sort, options = {}) {
 
   const list = [...places];
 
@@ -237,6 +258,7 @@ function sortPlaces(places, sort) {
   } else if (sort === 'popularity') {
 
     list.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    if (options.mixCategories) return mixPlacesByCategory(list);
 
   } else {
 
@@ -273,7 +295,9 @@ async function listPlaces(queryParams) {
     let places;
     if (inMemoryFallback) {
       const filtered = filterPlaces(rows, queryParams, statsMap, { skipTextSearch: false });
-      places = sortPlaces(filtered.places, sort).slice(offset, offset + limit);
+      places = sortPlaces(filtered.places, sort, {
+        mixCategories: shouldMixCategories({ ...queryParams, sort }),
+      }).slice(offset, offset + limit);
       const meta = paginationMeta({
         total: filtered.places.length,
         page,

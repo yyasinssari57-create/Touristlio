@@ -1402,8 +1402,7 @@ function renderGrid(list, append = false) {
   const pending = !append && !cardsLoaded && !(list && list.length);
   if (pending) {
     showGridSkeleton();
-    const browseHint = document.getElementById('browseHint');
-    if (browseHint) browseHint.style.display = 'block';
+    document.getElementById('browseHint')?.setAttribute('hidden', '');
     renderExplorePagination();
     return;
   }
@@ -1412,8 +1411,8 @@ function renderGrid(list, append = false) {
     else grid.classList.remove('skeleton');
   }
   updatePlacesFoundCount(placesTotal || list.length);
-  const browseHint = document.getElementById('browseHint');
-  if (browseHint) browseHint.style.display = cardsLoaded ? 'none' : 'block';
+  // Default Keşfet browse always loads mixed places into #pgrid; hint is not a gate.
+  document.getElementById('browseHint')?.setAttribute('hidden', '');
   document.getElementById('noRes').style.display = cardsLoaded && !list.length ? 'block' : 'none';
   const hintEl = document.getElementById('osmHint');
   if (hintEl) {
@@ -1503,7 +1502,7 @@ function buildFilterParams() {
   const dis = document.getElementById('disSel')?.value || '';
   return {
     q,
-    category: activeFilterGroup !== 'all' ? '' : activeCat,
+    category: activeFilterGroup !== 'all' ? '' : (activeCat !== 'all' ? activeCat : ''),
     group: activeFilterGroup !== 'all' ? activeFilterGroup : '',
     country: cnt,
     city: cit,
