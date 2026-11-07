@@ -70,7 +70,7 @@ function isLocked(row) {
 }
 
 function siteBase() {
-  return (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+  return require('../../lib/site-url').siteBaseUrl();
 }
 
 /** Strip token/code/key query values before any log line. */

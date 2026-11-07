@@ -2,6 +2,18 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 6 (/api/health sade, SITE_URL tek kaynak)
+
+- Public `/api/health` → yalnız `{ ok: true }` / 503 `{ ok: false }` (err.message yok).
+- Ayrıntı: `/api/admin/health` (panel oturumu gerekir) — storage, smtp, version, siteUrl.
+- `server/lib/site-url.js` tek kaynak: apex → www; production’da boş SITE_URL → `https://www.touristlio.com` + uyarı (localhost yok). csrf, auth e-posta linkleri, config/public, sitemap/seo, admin/mailer bunu kullanır.
+
+Kontrol: `npm run verify:v5-adim6` → OK.
+
+Render: `SITE_URL=https://www.touristlio.com` olsun. Merge → Manual Deploy → Ctrl+Shift+R.
+
+V5’te bu tur yalnız Adım 6. Kalan adım: 7.
+
 ## Cursor V5 — Adım 5 (eksik CSRF mount’ları)
 
 `csrfProtection` eklendi: `/api/settings`, `/api/travel-lists`, `/api/trip-plans`, `/api/reports`, `/api/notifications`. GET/HEAD/OPTIONS atlanır. `/api/analytics` (track) dokunulmadı.

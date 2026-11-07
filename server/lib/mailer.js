@@ -406,7 +406,7 @@ async function sendAdminMessageEmail(email, { userName, subject, body, siteUrl }
     title: safeSubject,
     intro: `Merhaba ${safeName},\n\n${safeBody}`,
     actionLabel: 'Touristlio\'ya git',
-    actionUrl: siteUrl || (process.env.SITE_URL || 'http://localhost:3000'),
+    actionUrl: siteUrl || require('./site-url').siteBaseUrl(),
   });
   return sendMail({
     to: email,

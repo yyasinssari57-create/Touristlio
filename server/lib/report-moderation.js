@@ -1,3 +1,4 @@
+const { siteBaseUrl } = require('./site-url');
 const { db } = require('../db');
 const notifications = require('./notifications');
 const authModel = require('../modules/auth/auth.model');
@@ -90,7 +91,7 @@ async function getTargetContent(targetType, targetId) {
 }
 
 async function notifyContentOwnerRemoved(content, reason) {
-  const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const siteUrl = siteBaseUrl();
   const reportSuffix = ' Şikayet incelemesi sonucunda kaldırıldı.';
 
   if (content.type === 'tiola') {

@@ -2,6 +2,7 @@ const { db } = require('../db');
 const { blogEnSitemapPath } = require('./blog-i18n');
 const { placeEnSitemapPath } = require('./place-i18n');
 const { isPublishedPlaceStatus } = require('./place-status');
+const { siteBaseUrl } = require('./site-url');
 
 function escapeXml(s) {
   return String(s)
@@ -9,18 +10,6 @@ function escapeXml(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function siteBaseUrl() {
-  let base = (process.env.SITE_URL || 'https://www.touristlio.com').replace(/\/$/, '');
-  try {
-    const u = new URL(base.includes('://') ? base : `https://${base}`);
-    if (u.hostname === 'touristlio.com') u.hostname = 'www.touristlio.com';
-    base = `${u.protocol}//${u.host}`;
-  } catch {
-    base = 'https://www.touristlio.com';
-  }
-  return base.replace(/\/$/, '');
 }
 
 /**
