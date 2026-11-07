@@ -419,17 +419,30 @@ async function checkLive(base) {
     fail('reset token was not stored');
     return;
   }
+  const crypto = require('crypto');
+  const { hashAuthToken, isHashedAuthToken } = require('../lib/token-hash');
+  if (!isHashedAuthToken(resetRow.token)) {
+    fail('reset token stored as plaintext');
+    return;
+  }
+  const rawReset = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 3600000).toISOString().slice(0, 19).replace('T', ' ');
+  await db.prepare(`
+    UPDATE password_reset_tokens
+    SET token = ?, expires_at = ?, used = 0
+    WHERE user_id = (SELECT id FROM users WHERE email = ?) AND used = 0
+  `).run(hashAuthToken(rawReset), expires, email);
   await expectReject(await request(`${base}/api/auth/reset-password`, {
-    method: 'POST', headers, body: { token: resetRow.token, password: SHORT },
+    method: 'POST', headers, body: { token: rawReset, password: SHORT },
   }), TR, 'reset 8 characters');
   await expectReject(await request(`${base}/api/auth/reset-password`, {
-    method: 'POST', headers, body: { token: resetRow.token, password: NO_UPPER },
+    method: 'POST', headers, body: { token: rawReset, password: NO_UPPER },
   }), TR, 'reset without uppercase');
   await expectReject(await request(`${base}/api/auth/reset-password`, {
-    method: 'POST', headers: enHeaders, body: { token: resetRow.token, password: NO_DIGIT },
+    method: 'POST', headers: enHeaders, body: { token: rawReset, password: NO_DIGIT },
   }), EN, 'reset English sentence');
   const reset = await request(`${base}/api/auth/reset-password`, {
-    method: 'POST', headers, body: { token: resetRow.token, password: VALID },
+    method: 'POST', headers, body: { token: rawReset, password: VALID },
   });
   if (reset.status !== 200) fail(`valid reset HTTP ${reset.status} ${errMsg(reset.json).slice(0, 160)}`);
   else ok('reset accepts Abcdefg12');

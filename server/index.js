@@ -152,10 +152,11 @@ app.use(maintenanceMiddleware);
 app.use('/api/', apiLimiter);
 app.use('/api/', apiNoStoreHeaders);
 
+const { requestLogPath } = require('./lib/request-log-path');
 app.use(async (req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    logger.info({ method: req.method, url: req.url, status: res.statusCode, ms: Date.now() - start });
+    logger.info({ method: req.method, url: requestLogPath(req), status: res.statusCode, ms: Date.now() - start });
   });
   next();
 });

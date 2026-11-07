@@ -463,19 +463,31 @@ async function checkLive(base) {
     headers: { Origin: origin },
   });
 
+  const crypto = require('crypto');
+  const { hashAuthToken, isHashedAuthToken, verificationExpiresAt } = require('../lib/token-hash');
   const userRow = await db.prepare('SELECT verification_token FROM users WHERE id = ?').get(meUser.id);
   if (!userRow?.verification_token) fail('verification token missing after register');
-  else {
+  else if (!isHashedAuthToken(userRow.verification_token)) {
+    fail('verification token stored as plaintext (expected sha256$ hash)');
+  } else {
+    ok('verification token stored hashed');
+    const rawVerify = crypto.randomBytes(24).toString('hex');
+    await db.prepare(`
+      UPDATE users
+      SET verification_token = ?, verification_token_expires_at = ?, email_verified = 0
+      WHERE id = ?
+    `).run(hashAuthToken(rawVerify), verificationExpiresAt(), meUser.id);
     const verify = await request(`${root}/api/auth/verify-email`, {
       method: 'POST',
       headers: { Origin: origin },
-      body: { token: userRow.verification_token },
+      body: { token: rawVerify },
     });
     if (verify.status !== 200) fail(`verify-email HTTP ${verify.status}`);
     else ok('POST /auth/verify-email → 200');
-    const verified = await db.prepare('SELECT email_verified FROM users WHERE id = ?').get(meUser.id);
+    const verified = await db.prepare('SELECT email_verified, verification_token FROM users WHERE id = ?').get(meUser.id);
     if (!verified?.email_verified) fail('email_verified not set');
-    else ok('email marked verified');
+    else if (verified.verification_token) fail('verification token not cleared after use');
+    else ok('email marked verified (token single-use)');
   }
 
   const forgot = await request(`${root}/api/auth/forgot-password`, {
@@ -491,12 +503,20 @@ async function checkLive(base) {
     ORDER BY id DESC LIMIT 1
   `).get(meUser.id);
   if (!resetRow?.token) fail('reset token not stored');
-  else {
+  else if (!isHashedAuthToken(resetRow.token)) {
+    fail('reset token stored as plaintext (expected sha256$ hash)');
+  } else {
+    ok('reset token stored hashed');
+    const rawReset = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 3600000).toISOString().slice(0, 19).replace('T', ' ');
+    await db.prepare(`
+      UPDATE password_reset_tokens SET token = ?, expires_at = ?, used = 0 WHERE user_id = ? AND used = 0
+    `).run(hashAuthToken(rawReset), expires, meUser.id);
     const newPass = 'ResetPass12345';
     const reset = await request(`${root}/api/auth/reset-password`, {
       method: 'POST',
       headers: { Origin: origin },
-      body: { token: resetRow.token, password: newPass },
+      body: { token: rawReset, password: newPass },
     });
     if (reset.status !== 200) fail(`reset-password HTTP ${reset.status} ${reset.body.slice(0, 180)}`);
     else ok('reset-password → 200');

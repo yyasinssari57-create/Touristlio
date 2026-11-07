@@ -2,6 +2,20 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 4 (token’lar log’a düşmesin, DB’de hash’li olsun)
+
+- İstek logu artık query string yazmıyor (`requestLogPath`). Anti-bot path de aynı.
+- E-posta doğrulama ve şifre sıfırlama token’ları DB’de `sha256$…` olarak saklanır. Linkte ham token kalır.
+- Doğrulama token’ına 24 saat `verification_token_expires_at` eklendi; kullanınca silinir (tek kullanımlık).
+- Migration `020_v5_adim4_token_hash`: sütun + mevcut düz metinleri yerinde hash’ler (süresi dolmuş/kullanılmış sıfırlama satırlarını siler). Önizleme: `npm run migrate:v5-adim4-tokens -- --dry-run`.
+- Geliştirme logundaki doğrulama URL’sinde `token=` `[redacted]`.
+
+Kontrol: `npm run verify:v5-adim4` → `verify-v5-adim4 OK`.
+
+Render: ek env yok. Açılış migration’ı otomatik çalışır. Canlıda önizleme istersen dry-run; yazma boot’ta zaten olur.
+
+V5’te bu tur yalnız Adım 4. Kalan adım: 9.
+
 ## Cursor V5 — Adım 3 (güvenlik açığı olan paketleri güncelle)
 
 Prod `npm audit --omit=dev` önce: 1 critical, 4 high, 5 moderate. Sonra: **0 açık**.
