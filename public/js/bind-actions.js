@@ -140,13 +140,22 @@
 
   function toggleActivePlaceSave(el) {
     const node = el || this;
-    if (global.activePlace && typeof global.toggleSave === 'function') {
-      global.toggleSave(global.activePlace.id, node);
-    }
+    // Prefer app.js override (closure activePlace); fall back to window.activePlace.
+    if (typeof global.toggleSave !== 'function') return;
+    const place = global.activePlace;
+    if (place && place.id != null) global.toggleSave(place.id, node);
+  }
+
+  function toggleActivePlaceVisit(el) {
+    const node = el || this;
+    if (typeof global.toggleVisit !== 'function') return;
+    const place = global.activePlace;
+    if (place && place.id != null) global.toggleVisit(place.id, node);
   }
 
   global.tlToggleOn = tlToggleOn;
   global.tlReload = tlReload;
   global.toggleActivePlaceSave = toggleActivePlaceSave;
+  global.toggleActivePlaceVisit = toggleActivePlaceVisit;
   global.TL_BIND = { lookup: lookup, runAction: runAction };
 })(typeof window !== 'undefined' ? window : globalThis);

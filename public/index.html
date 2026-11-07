@@ -452,6 +452,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   <div class="detail-page">
     <div class="pd-hero">
       <img id="pdImg" src="" alt="Mekân görseli" data-i18n-alt="placePhotoAria" width="1200" height="800" loading="lazy" decoding="async"/>
+      <button type="button" class="pd-visit" id="pdVisitBtn" data-act="toggleActivePlaceVisit" data-el aria-label="Ziyaret ettiklerime ekle" aria-pressed="false">+</button>
       <button type="button" class="pd-save" id="pdSaveBtn" data-act="toggleActivePlaceSave" data-el aria-label="Favorilere ekle" aria-pressed="false">🤍</button>
       <div class="pd-hero-ov">
         <div class="pd-cat" id="pdCat"></div>
@@ -631,7 +632,7 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       </div>
       <div class="ptab-c" id="ptab-visited">
         <div id="visitedGrid" class="pgrid"></div>
-        <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n="emptyVisited">Henüz ziyaret kaydı yok.</p></div>
+        <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p></div>
       </div>
       <div class="ptab-c active" id="ptab-tiolas">
         <div id="profileNotifications" class="profile-notifications" style="display:none" aria-live="polite"></div>

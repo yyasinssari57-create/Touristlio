@@ -102,6 +102,12 @@ let user = JSON.parse(localStorage.getItem('tl_user') || 'null');
 window.user = user;
 let places = [];
 let activePlace = null;
+window.activePlace = null;
+
+function setActivePlace(p) {
+  activePlace = p || null;
+  window.activePlace = activePlace;
+}
 let rating = 0;
 let arcRating = 0;
 let activeCat = 'all';
@@ -118,6 +124,7 @@ let blogSearchQ = '';
 let blogSearchTimer;
 let activeBlogSlug = null;
 let savedIds = new Set();
+let visitedIds = new Set();
 let authMode = 'login';
 let lang = window.TL_I18N
   ? window.TL_I18N.bootLocale()
@@ -1211,6 +1218,7 @@ function clearClientSession() {
   user = null;
   window.user = null;
   savedIds = new Set();
+  visitedIds = new Set();
   window.TL_AUTH?.clearLocalSession();
   try {
     localStorage.removeItem('tl_user');
@@ -1274,6 +1282,7 @@ function setAuth(u) {
     localStorage.removeItem('tl_user');
     localStorage.removeItem('tl_token');
     savedIds = new Set();
+    visitedIds = new Set();
   }
   updateAuthUI();
 }
@@ -1282,13 +1291,18 @@ function updateAuthUI() {
   const btn = document.getElementById('authBtn');
   const joinBtn = document.getElementById('joinBtn');
   if (btn) {
+    // data-act drives clicks (bind-actions); keep it in sync so logged-in
+    // users open Profilim instead of the login overlay.
+    btn.onclick = null;
     if (user) {
       btn.textContent = t('profile');
-      btn.onclick = () => goToMyProfile();
+      btn.setAttribute('data-act', 'goToMyProfile');
+      btn.removeAttribute('data-arg');
       btn.style.display = '';
     } else {
       btn.textContent = t('login');
-      btn.onclick = () => openAuth();
+      btn.setAttribute('data-act', 'openAuth');
+      btn.removeAttribute('data-arg');
       btn.style.display = '';
     }
   }
@@ -1412,6 +1426,7 @@ function renderGrid(list, append = false) {
         ${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
         <div class="pc-badge">${catLabel(p.category)}</div>
         ${p.isLocal ? `<div class="pc-local">${t('localPick')}</div>` : ''}
+        <button type="button" class="pc-visit" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${visitAriaAttr(p.name, visitedIds.has(p.id))}" aria-pressed="${visitedIds.has(p.id) ? 'true' : 'false'}" data-stop data-act="toggleVisit" data-el data-arg="${p.id}">${visitedIds.has(p.id) ? '✓' : '+'}</button>
         <button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, savedIds.has(p.id))}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" data-stop data-act="toggleSave" data-el data-arg="${p.id}">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
       </div>
       <div class="pc-body">
@@ -2767,7 +2782,7 @@ async function openDetail(id, skipRoute) {
   try {
     const data = await api('/places/' + encodeURIComponent(id) + '?lang=' + lang);
     const p = data.place;
-    activePlace = p;
+    setActivePlace(p);
     updateSeoForPlace(p);
     const imgEl = document.getElementById('pdImg');
     if (window.TL_IMG?.applyTo) window.TL_IMG.applyTo(imgEl, placeImg(p), { kind: 'detail', alt: placeImgAlt(p) });
@@ -2823,6 +2838,7 @@ async function openDetail(id, skipRoute) {
     }
     setCanonical(`${location.origin}${placePublicPath(p)}`);
     syncDetailSaveBtn();
+    syncDetailVisitBtn();
     await ensureMapLibs();
     if (window.TL_MAP) window.TL_MAP.renderDetailMap(p, lang);
     const score = formatTiolaScore(p);
@@ -3353,6 +3369,7 @@ async function updateProfilePage() {
 
   try {
     const visited = await api('/travel-lists/visited/all');
+    visitedIds = new Set((visited.places || []).map((p) => p.id));
     const vg = document.getElementById('visitedGrid');
     const ve = document.getElementById('visitedEmpty');
     if (vg) {
@@ -3361,7 +3378,7 @@ async function updateProfilePage() {
         if (ve) ve.style.display = 'none';
         vg.innerHTML = visited.places.map((p) => `
           <div class="pc" tabindex="0" role="link" data-act="openDetail" data-arg="${p.id}">
-            <div class="pc-img">${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card' })}</div>
+            <div class="pc-img">${responsiveImg(placeImg(p), { alt: placeImgAlt(p), kind: 'card', extra: `data-img-fallback data-fallback-cat="${escapeHtml(p.category).replace(/"/g, '&quot;')}" data-fallback-id="${p.id}"` })}<button type="button" class="pc-visit on" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${visitAriaAttr(p.name, true)}" aria-pressed="true" data-stop data-act="toggleVisit" data-el data-arg="${p.id}">✓</button></div>
             <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div class="pc-meta">${p.visitedAt || ''}</div></div>
           </div>`).join('');
       }
@@ -3646,6 +3663,36 @@ async function toggleSave(id, btn) {
   syncDetailSaveBtn();
 }
 
+async function toggleVisit(id, btn) {
+  if (!user) { openAuth(); return; }
+  if (btn?.dataset.tlBusy === '1') return;
+  window.TL_SKELETON?.button(btn, true, { replace: true });
+  try {
+    if (visitedIds.has(id)) {
+      await api('/travel-lists/visited/' + id, { method: 'DELETE' });
+      visitedIds.delete(id);
+      window.TL_TOAST?.info(t('removedFromVisited'));
+    } else {
+      await api('/travel-lists/visited', { method: 'POST', body: { placeId: id } });
+      visitedIds.add(id);
+      window.TL_TOAST?.success(t('addedToVisited'));
+    }
+  } catch { /* toast from api */ }
+  finally {
+    window.TL_SKELETON?.button(btn, false);
+    if (btn) {
+      const on = visitedIds.has(id);
+      btn.textContent = on ? '✓' : '+';
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-label', visitAria(placeNameForSave(id, btn), on));
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+  syncDetailVisitBtn();
+  const pVis = document.getElementById('pVisitedCnt');
+  if (pVis) pVis.textContent = String(visitedIds.size);
+}
+
 function favoriteAria(placeName, saved) {
   const base = saved ? t('unsaveAria') : t('saveAria');
   const name = String(placeName || '').trim();
@@ -3654,6 +3701,16 @@ function favoriteAria(placeName, saved) {
 
 function favoriteAriaAttr(placeName, saved) {
   return escapeHtml(favoriteAria(placeName, saved)).replace(/"/g, '&quot;');
+}
+
+function visitAria(placeName, visited) {
+  const base = visited ? t('unvisitAria') : t('visitAria');
+  const name = String(placeName || '').trim();
+  return name ? `${base}: ${name}` : base;
+}
+
+function visitAriaAttr(placeName, visited) {
+  return escapeHtml(visitAria(placeName, visited)).replace(/"/g, '&quot;');
 }
 
 function placeNameForSave(id, btn) {
@@ -3676,6 +3733,32 @@ function syncDetailSaveBtn() {
   btn.setAttribute('data-place-name', activePlace.name || '');
   btn.setAttribute('aria-label', favoriteAria(activePlace.name, on));
 }
+
+function syncDetailVisitBtn() {
+  const btn = document.getElementById('pdVisitBtn');
+  if (!btn || !activePlace) return;
+  const on = visitedIds.has(activePlace.id);
+  btn.textContent = on ? '✓' : '+';
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.setAttribute('data-place-name', activePlace.name || '');
+  btn.setAttribute('aria-label', visitAria(activePlace.name, on));
+}
+
+/** CSP-safe hero handlers: use closure activePlace (let is not on window). */
+function toggleActivePlaceSave(el) {
+  if (!activePlace) return;
+  toggleSave(activePlace.id, el || document.getElementById('pdSaveBtn'));
+}
+
+function toggleActivePlaceVisit(el) {
+  if (!activePlace) return;
+  toggleVisit(activePlace.id, el || document.getElementById('pdVisitBtn'));
+}
+window.toggleActivePlaceSave = toggleActivePlaceSave;
+window.toggleActivePlaceVisit = toggleActivePlaceVisit;
+window.toggleSave = toggleSave;
+window.toggleVisit = toggleVisit;
 
 function arcRate(n) {
   arcRating = n;
@@ -3805,14 +3888,27 @@ function hideAuthFormError() {
 }
 
 async function reloadSavedIds() {
-  if (!user) { savedIds = new Set(); return; }
+  if (!user) {
+    savedIds = new Set();
+    visitedIds = new Set();
+    syncDetailSaveBtn();
+    syncDetailVisitBtn();
+    return;
+  }
   try {
     const saved = await api('/places/saved/all', { silent: true });
     savedIds = new Set((saved.places || []).map((p) => p.id));
   } catch {
     savedIds = new Set();
   }
+  try {
+    const visited = await api('/travel-lists/visited/all', { silent: true });
+    visitedIds = new Set((visited.places || []).map((p) => p.id));
+  } catch {
+    visitedIds = new Set();
+  }
   syncDetailSaveBtn();
+  syncDetailVisitBtn();
 }
 
 async function doForgotPassword() {

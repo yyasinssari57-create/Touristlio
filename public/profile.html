@@ -92,7 +92,7 @@
     <h3 class="profile-section-title" data-i18n="profileTabVisited">✅ Ziyaret Ettiklerim</h3>
     <div id="visitedCountries" class="badge-row tl-mb-12"></div>
     <div class="pgrid" id="visitedGrid"></div>
-    <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n="emptyVisited">Henüz ziyaret kaydı yok.</p></div>
+    <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p></div>
     </div>
 
     <div class="profile-content-card">
@@ -364,10 +364,17 @@ function renderVisited(places, countries) {
     return;
   }
   if (empty) empty.style.display = 'none';
-  grid.innerHTML = list.map((p) => `<a class="pc" href="${placeHref(p)}">
-    <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" width="400" height="300" loading="lazy" decoding="async" />`}</div>
+  grid.innerHTML = list.map((p) => `<div class="pc" tabindex="0" role="link" data-href="${placeHref(p)}">
+    <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(safeUrl(p.imageUrl), { alt: p.name, kind: 'card' }) : `<img src="${safeUrl(p.imageUrl)}" alt="${escapeHtml(p.name)}" width="400" height="300" loading="lazy" decoding="async" />`}<button type="button" class="pc-visit on" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${escapeHtml(t('unvisitAria') || 'Ziyaret ettiklerimden çıkar')}: ${escapeHtml(p.name)}" aria-pressed="true" data-stop data-act="toggleProfileVisit" data-el data-arg="${p.id}">✓</button></div>
     <div class="pc-body"><div class="pc-name">${escapeHtml(p.name)}</div><div class="pc-meta">${escapeHtml(p.visitedAt || geoLabel(p.country) || '')}</div></div>
-  </a>`).join('');
+  </div>`).join('');
+  grid.querySelectorAll('.pc[data-href]').forEach((card) => {
+    card.addEventListener('click', (ev) => {
+      if (ev.target.closest('button')) return;
+      const href = card.getAttribute('data-href');
+      if (href) location.href = href;
+    });
+  });
 }
 
 function renderProfileSettings(u) {
@@ -592,6 +599,25 @@ async function doLogout(){
   location.href='/login';
 
 }
+
+async function toggleProfileVisit(id, btn) {
+  if (!id) return;
+  window.TL_SKELETON?.button(btn, true, { replace: true });
+  try {
+    await api('/travel-lists/visited/' + id, { method: 'DELETE' });
+    const card = btn && btn.closest && btn.closest('.pc');
+    if (card) card.remove();
+    const grid = document.getElementById('visitedGrid');
+    const empty = document.getElementById('visitedEmpty');
+    const cnt = document.getElementById('pVisitedCnt');
+    const left = grid ? grid.querySelectorAll('.pc').length : 0;
+    if (cnt) cnt.textContent = String(left);
+    if (!left && empty) empty.style.display = 'block';
+    window.TL_TOAST?.info(t('removedFromVisited'));
+  } catch { /* toast from api */ }
+  finally { window.TL_SKELETON?.button(btn, false); }
+}
+window.toggleProfileVisit = toggleProfileVisit;
 
 init();
 
