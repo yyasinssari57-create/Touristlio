@@ -50,11 +50,36 @@ const supabaseStorage = require('../lib/supabase-storage');
 const backupSafe = require('../lib/backup-safe');
 const logger = require('../lib/logger');
 const { refreshPlaceStatsForTiola, recomputePlaceTiolaStatsBatch } = require('../lib/tiola-stats');
+const { siteBaseUrl } = require('../lib/site-url');
 
 const SCRIPT_TIMEOUT_MS = 120000;
 const router = express.Router();
 router.use(authRequired, requireRole(...PANEL_ROLES));
 router.use(adminLimiter);
+
+/** Detailed health for panel ops — public /api/health stays { ok } only. */
+router.get('/health', async (_req, res) => {
+  try {
+    await db.prepare('SELECT 1 AS ok').get();
+    const mailer = require('../lib/mailer');
+    const { getAppVersion } = require('../lib/app-version');
+    res.json({
+      ok: true,
+      service: 'Touristlio',
+      db: 'postgres',
+      storage: supabaseStorage.isEnabled() ? 'supabase' : 'disk',
+      smtp: mailer.isConfigured(),
+      smtpTransport: mailer.smtpStatus().transport || null,
+      smtpLastError: mailer.getLastMailError(),
+      version: getAppVersion(),
+      siteUrl: siteBaseUrl(),
+      ts: new Date().toISOString(),
+    });
+  } catch {
+    res.status(503).json({ ok: false });
+  }
+});
+
 
 async function logAdmin(req, action, targetType, targetId, detail) {
   await auditLog.log({
@@ -219,7 +244,7 @@ router.post('/tiolas/:id/remove', checkPermission('admin.moderate'), async (req,
   });
 
   try {
-    const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const siteUrl = siteBaseUrl();
     await sendTiolaRejectionEmail(row.user_email, {
       userName: row.user_name,
       placeName: placeLabel,
@@ -269,7 +294,7 @@ router.post('/tiolas/:id/reject', checkPermission('admin.moderate'), async (req,
   });
 
   try {
-    const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const siteUrl = siteBaseUrl();
     await sendTiolaRejectionEmail(row.user_email, {
       userName: row.user_name,
       placeName: placeLabel,
@@ -391,7 +416,7 @@ router.post('/tiolas/bulk', checkPermission('admin.moderate'), async (req, res) 
         logger.error({ msg: 'admin tiolas/bulk notification batch failed', err: err.message });
       }
 
-      const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const siteUrl = siteBaseUrl();
       for (const row of eligible) {
         try {
           await sendTiolaRejectionEmail(row.user_email, {
@@ -468,7 +493,7 @@ router.post('/blogs/:id/remove', checkPermission('admin.content'), async (req, r
   });
 
   try {
-    const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const siteUrl = siteBaseUrl();
     await sendBlogRejectionEmail(row.user_email, {
       userName: row.user_name,
       title: row.title,
@@ -513,7 +538,7 @@ router.post('/blogs/:id/reject', checkPermission('admin.content'), async (req, r
   });
 
   try {
-    const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const siteUrl = siteBaseUrl();
     await sendBlogRejectionEmail(row.user_email, {
       userName: row.user_name,
       title: row.title,
@@ -622,7 +647,7 @@ router.post('/blogs/bulk', checkPermission('admin.content'), async (req, res) =>
         logger.error({ msg: 'admin blogs/bulk notification batch failed', err: err.message });
       }
 
-      const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const siteUrl = siteBaseUrl();
       for (const row of eligible) {
         try {
           await sendBlogRejectionEmail(row.user_email, {
@@ -1367,7 +1392,7 @@ router.post('/users/:id/send-message', checkPermission('admin.moderate', 'admin.
   if (!target) return fail(res, 'Kullanıcı bulunamadı', 404);
   if (!assertCanManageUser(req.user, target.role, res, fail)) return;
 
-  const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const siteUrl = siteBaseUrl();
   let emailSent = false;
   try {
     emailSent = await sendAdminMessageEmail(target.email, {

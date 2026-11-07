@@ -217,25 +217,9 @@ app.get('/api/health', async (_req, res) => {
   try {
     const { db } = require('./db');
     await db.prepare('SELECT 1 AS ok').get();
-    res.json({
-      ok: true,
-      service: 'Touristlio',
-      db: 'postgres',
-      storage: require('./lib/supabase-storage').isEnabled() ? 'supabase' : 'disk',
-      smtp: require('./lib/mailer').isConfigured(),
-      smtpTransport: require('./lib/mailer').smtpStatus().transport || null,
-      smtpLastError: require('./lib/mailer').getLastMailError(),
-      version: getAppVersion(),
-      ts: new Date().toISOString(),
-    });
-  } catch (err) {
-    res.status(503).json({
-      ok: false,
-      service: 'Touristlio',
-      db: 'error',
-      error: err.message,
-      ts: new Date().toISOString(),
-    });
+    res.json({ ok: true });
+  } catch {
+    res.status(503).json({ ok: false });
   }
 });
 
@@ -251,10 +235,11 @@ app.get('/api/stats', async (_req, res) => {
 
 app.get('/api/config/public', async (req, res) => {
   const settingsService = require('./modules/settings/settings.service');
+  const { siteBaseUrl } = require('./lib/site-url');
   const csrfToken = issueCsrfCookie(req, res);
   res.json({
     affiliateEnabled: process.env.AFFILIATE_ENABLED === 'true',
-    siteUrl: process.env.SITE_URL || 'http://localhost:3000',
+    siteUrl: siteBaseUrl(),
     csrfToken,
     ...(await settingsService.getPublic()),
     ...publicRecaptchaConfig(),

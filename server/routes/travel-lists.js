@@ -6,6 +6,7 @@ const { mapPlaceRow } = require('../lib/place-map');
 const { parsePositiveInt } = require('../lib/sanitize');
 
 const router = express.Router();
+const { siteBaseUrl } = require('../lib/site-url');
 
 // Claude Master PRD FAZ2-4 (N+1 cleanup): this used to call placeStats(row.id)
 // per row, which re-queries `SELECT tiola_count, tiola_rating FROM places
@@ -112,7 +113,7 @@ router.post('/:id/publish', authRequired, async (req, res) => {
   await db.prepare(`
     UPDATE travel_lists SET is_public = 1, share_token = ?, updated_at = datetime('now') WHERE id = ?
   `).run(shareToken, listId);
-  const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const siteUrl = siteBaseUrl();
   res.json({
     ok: true,
     shareToken,
