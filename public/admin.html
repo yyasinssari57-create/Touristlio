@@ -160,6 +160,11 @@
             </label>
             <button class="btn bo bsm" type="button" id="btnClearPlaceFilter" style="display:none" data-act="clearPlaceQualityFilter">Filtreyi temizle</button>
           </div>
+          <div id="placeBulkBar" class="adm-bulk-bar" style="display:none" aria-live="polite">
+            <span id="placeBulkCount">0 seçili</span>
+            <button class="btn-no bsm" type="button" data-act="bulkArchivePlaces">Toplu arşivle</button>
+            <button class="btn bo bsm" type="button" data-act="clearPlaceSelection">Seçimi temizle</button>
+          </div>
           <div id="placesTableWrap" aria-live="polite"></div>
         </div>
       </section>
@@ -1162,6 +1167,8 @@ let currentUser = null;
 let categoryOptions = [];
 let placesDebounce = null;
 let placeQualityFilter = null;
+let placeSelected = new Set();
+let placesCurrentItems = [];
 let editExistingPhotos = [];
 let editPlaceStatus = 'published';
 let pendingNewPlaceId = null;
@@ -3598,6 +3605,62 @@ async function importPlacesFile(input) {
   } catch (e) { showErr(e.message); input.value = ''; }
 }
 
+function updatePlaceBulkBar() {
+  const bar = document.getElementById('placeBulkBar');
+  const countEl = document.getElementById('placeBulkCount');
+  if (!bar) return;
+  bar.style.display = placeSelected.size ? 'flex' : 'none';
+  if (countEl) countEl.textContent = `${placeSelected.size} seçili`;
+}
+
+function togglePlaceSelect(id, el) {
+  if (el && el.checked) placeSelected.add(id);
+  else placeSelected.delete(id);
+  updatePlaceBulkBar();
+}
+
+function togglePlaceSelectAll(el) {
+  const checked = !!(el && el.checked);
+  placeSelected.clear();
+  if (checked) placesCurrentItems.forEach((p) => placeSelected.add(p.id));
+  document.querySelectorAll('.place-select-check').forEach((c) => { c.checked = checked; });
+  updatePlaceBulkBar();
+}
+
+function clearPlaceSelection() {
+  placeSelected.clear();
+  document.querySelectorAll('.place-select-check').forEach((c) => { c.checked = false; });
+  const all = document.getElementById('placeSelectAll');
+  if (all) all.checked = false;
+  updatePlaceBulkBar();
+}
+
+function bulkArchivePlaces() {
+  const ids = [...placeSelected];
+  if (!ids.length) return showErr('Önce yer seçin');
+  openModal('Toplu arşivle', `
+    <p><strong>${ids.length}</strong> yer siteden kaldırılacak (arşivlenecek).</p>
+    <p style="font-size:.8rem;color:var(--t2)">Kayıtlar kalıcı silinmez. İsterseniz sonra tekrar yayınlayabilirsiniz.</p>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Arşivle', primary: true, onClick: () => submitBulkArchivePlaces() },
+    ]
+  );
+}
+
+async function submitBulkArchivePlaces() {
+  const ids = [...placeSelected];
+  if (!ids.length) return;
+  try {
+    const data = await api('/admin/places/bulk', { method: 'POST', body: { ids, action: 'archive' } });
+    closeModal();
+    showToast(`${data.processed || 0} arşivlendi${data.errors?.length ? `, ${data.errors.length} hata` : ''}`);
+    clearPlaceSelection();
+    await loadPlacesList();
+    await refresh();
+  } catch (e) { showErr(e.message); }
+}
+
 async function loadPlacesList() {
   const wrap = document.getElementById('placesTableWrap');
   if (!wrap) return;
@@ -3612,13 +3675,21 @@ async function loadPlacesList() {
     if (placeQualityFilter) qs.set('issue', placeQualityFilter);
     const data = await api('/admin/places?' + qs);
     const rows = data.places || [];
+    placesCurrentItems = rows;
+    placeSelected.clear();
+    updatePlaceBulkBar();
     if (!rows.length) {
       wrap.innerHTML = '<p style="color:var(--t3)">Kayıtlı yer bulunamadı.</p>';
       return;
     }
-    wrap.innerHTML = `<table class="admin-table" aria-label="Yer listesi">
-      <thead><tr><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>Durum</th><th>İşlem</th></tr></thead>
+    wrap.innerHTML = `
+      <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <input type="checkbox" id="placeSelectAll" data-act="togglePlaceSelectAll" data-el aria-label="Tümünü seç"/> Tümünü seç
+      </label>
+      <table class="admin-table" aria-label="Yer listesi">
+      <thead><tr><th scope="col"><span class="sr-only">Seç</span></th><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>Durum</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((p) => `<tr>
+        <td><input type="checkbox" class="place-select-check adm-mod-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-el aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
         <td>${p.id}</td>
         <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}</td>
         <td>${escapeHtml(p.city)}</td>

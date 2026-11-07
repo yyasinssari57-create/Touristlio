@@ -758,6 +758,61 @@ router.post('/places/import', checkPermission('admin.places'), placesImportUploa
   }
 });
 
+/**
+ * Bulk place actions. Archive only for now (soft status=archived), matching
+ * DELETE /places/:id. Batched UPDATE + auditLog.logBatch — same shape as
+ * /tiolas/bulk and /blogs/bulk (no per-item DB round-trips).
+ */
+router.post('/places/bulk', checkPermission('admin.places'), async (req, res) => {
+  const { ids, action } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return fail(res, 'ID listesi gerekli');
+  if (action !== 'archive') return fail(res, 'Geçersiz işlem');
+  if (ids.length > 200) return fail(res, 'En fazla 200 yer seçilebilir');
+
+  const errors = [];
+  const validIds = [];
+  for (const rawId of ids) {
+    const id = Number(rawId);
+    if (!Number.isFinite(id) || id <= 0) errors.push({ id: rawId, error: 'Geçersiz ID' });
+    else validIds.push(id);
+  }
+
+  let processed = 0;
+  let eligible = [];
+  try {
+    eligible = validIds.length ? await adminPlace.archivePlaces(validIds) : [];
+    const okIds = new Set(eligible.map((r) => r.id));
+    for (const id of validIds) {
+      if (!okIds.has(id)) errors.push({ id, error: 'Yer bulunamadı' });
+    }
+    processed = eligible.length;
+  } catch (err) {
+    for (const id of validIds) {
+      errors.push({ id, error: err.message || 'Hata' });
+    }
+    return ok(res, { processed: 0, errors });
+  }
+
+  if (eligible.length) {
+    clearCache('places-list');
+    clearCache('search');
+    try {
+      await auditLog.logBatch(eligible.map((row) => ({
+        adminId: req.user.id,
+        adminName: req.user.name,
+        action: 'place.archive',
+        targetType: 'place',
+        targetId: row.id,
+        detail: row.name || 'bulk',
+      })));
+    } catch (err) {
+      logger.error({ msg: 'admin places/bulk audit batch failed', err: err.message });
+    }
+  }
+
+  return ok(res, { processed, errors, archived: true, deleted: false });
+});
+
 router.get('/places/:id', checkPermission('admin.places'), async (req, res) => {
   const id = parsePositiveInt(req.params.id, res);
   if (!id) return;
