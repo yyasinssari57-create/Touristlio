@@ -1142,10 +1142,10 @@ function renderDetailWidgets(data) {
   if (wBox && data.weather) {
     const w = data.weather;
     if (w.failed && !w.adminOverride) {
-      wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
+      wBox.innerHTML = `<div class="ac-title">${t('weatherTitle')}</div>
         <div class="weather-row"><span>${escapeHtml(t('weatherUnavailable'))}</span></div>`;
     } else {
-      wBox.innerHTML = `<div class="ac-title">🌤️ ${t('weatherTitle')}</div>
+      wBox.innerHTML = `<div class="ac-title">${t('weatherTitle')}</div>
       <div class="weather-row"><span>${escapeHtml(w.label || '—')}</span><strong>${w.tempC != null ? w.tempC + '°C' : '—'}</strong></div>
       ${w.fallback ? `<small class="weather-fallback">${t('weatherEstimate')}</small>` : ''}`;
     }
@@ -1154,7 +1154,7 @@ function renderDetailWidgets(data) {
   if (lBox && data.localInfo) {
     const li = data.localInfo;
     const tz = data.weather?.timezone || li.timezone || '';
-    lBox.innerHTML = `<div class="ac-title">🕐 ${t('localInfoTitle')}</div>
+    lBox.innerHTML = `<div class="ac-title">${t('localInfoTitle')}</div>
       <div class="ic-row"><span class="ic-lbl">${t('localTime')}</span><span class="ic-val" id="pdLocalClock">${escapeHtml(formatLiveLocalTime(tz))}</span></div>
       <div class="ic-row"><span class="ic-lbl">${t('localCurrency')}</span><span class="ic-val">${li.currency?.code || '—'} ${li.currency?.symbol || ''}</span></div>
       ${li.entryTryEstimate ? `<div class="ic-row"><span class="ic-lbl">${t('entryTry')}</span><span class="ic-val">~${li.entryTryEstimate} ₺</span></div>` : ''}`;
@@ -1171,7 +1171,7 @@ function renderDetailWidgets(data) {
       && hotel.note === 'admin'
       && hotel.avgPriceTry != null
       && Number(hotel.avgPriceTry) > 0;
-    liveBox.innerHTML = `<div class="ac-title">💰 ${t('liveBudgetTitle')}</div>
+    liveBox.innerHTML = `<div class="ac-title">${t('liveBudgetTitle')}</div>
       <div class="ic-row"><span class="ic-lbl">${t('budgetLow')}</span><span class="ic-val">~${b.low || '—'} ₺</span></div>
       <div class="ic-row"><span class="ic-lbl">${t('budgetMid')}</span><span class="ic-val">~${b.mid || '—'} ₺</span></div>
       ${showHotel ? `<div class="ic-row"><span class="ic-lbl">${t('hotelAvg')}</span><span class="ic-val">~${hotel.avgPriceTry} ₺</span></div>` : ''}

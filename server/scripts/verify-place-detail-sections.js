@@ -75,7 +75,7 @@ else ok('yer tutucu (—) bölüm açmaz');
 const hotelOn = applyInfoBoxUpdates({}, { hotelAvg: '2200' });
 if (hotelOn.hotel?.avgPriceTry !== 2200 || hotelOn.hotel?.note !== 'admin' || hotelOn.hotel?.scope !== 'district') {
   fail(`otel admin kaydı: ${JSON.stringify(hotelOn.hotel)}`);
-} else ok('ilçe otel ortalaması admin notu ile saklanır');
+} else ok('bölge otel ortalaması admin notu ile saklanır');
 
 const hotelOff = applyInfoBoxUpdates(hotelOn, { hotelAvg: '' });
 if (hotelOff.hotel?.avgPriceTry) fail('boş otel değeri silinmeli');
@@ -93,14 +93,20 @@ for (const id of ['edThingsToDo', 'edCultureFood', 'edTravelTips', 'edBestMonths
     fail(`admin formda yok: ${id}`);
   }
 }
-if (!adminHtml.includes('İlçe otel ortalaması')) fail('otel etiketi ilçe değil');
+if (!adminHtml.includes('Bölge otel ortalaması')) fail('otel etiketi bölge değil');
+if (adminHtml.includes('İlçe otel ortalaması') || /hotelAvg:\s*'İlçe/.test(i18nJs)) {
+  fail('ziyaretçi/admin kopyasında «ilçe otel» kaldı; «bölge» kullanılmalı');
+}
+if (!i18nJs.includes("hotelAvg: 'Bölge otel ort.'") || !i18nJs.includes("hotelAvg: 'Area hotel avg.'")) {
+  fail('i18n hotelAvg etiketi Bölge/Area olmalı');
+}
 if (!adminHtml.includes('renderBestMonthChecks') || !adminHtml.includes('readBestMonths')) {
   fail('ay çoklu seçim yardımcıları yok');
 }
 if (!adminHtml.includes('thingsToDo:') || !adminHtml.includes('bestMonths:') || !adminHtml.includes('cultureFood:')) {
   fail('Kaydet gövdesinde bölüm alanları yok');
 }
-if (failed === 0) ok('admin form bölüm alanları + ay seçimi + ilçe otel');
+if (failed === 0) ok('admin form bölüm alanları + ay seçimi + bölge otel');
 
 if (!placeJs.includes('best_months') || !placeJs.includes('things_to_do = ?') || !placeJs.includes('culture_food = ?')) {
   fail('updatePlace bölüm sütunlarını yazmıyor');
@@ -131,6 +137,29 @@ for (const key of headingKeys) {
 if (/pdOverviewBlock[\s\S]{0,80}📍|pdThingsBlock[\s\S]{0,80}✅|pdCultureBlock[\s\S]{0,80}🍽️|pdTipsBlock[\s\S]{0,80}💡|pdBestTimeBlock[\s\S]{0,80}📅/.test(indexHtml)) {
   fail('index.html bölüm başlıklarında emoji kaldı');
 } else ok('yer detay bölüm başlıklarında emoji yok');
+
+const filterKeys = [
+  'tabFilter', 'tabDiscover', 'tabMap', 'tabTiolas', 'tabCategories',
+  'filterTitle', 'entryFree', 'entryPaid', 'filterLocalPicks',
+  'weatherOutdoor', 'weatherIndoor', 'weatherWinter', 'weatherSunrise', 'weatherNight',
+  'accessWheel', 'accessFamily', 'accessPet', 'accessParking', 'filterShow',
+];
+for (const key of filterKeys) {
+  const re = new RegExp(`${key}:\\s*'([^']*)'`, 'g');
+  let m;
+  while ((m = re.exec(i18nJs))) {
+    if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(m[1])) {
+      fail(`i18n ${key} hâlâ emoji: ${m[1]}`);
+    }
+  }
+}
+if (/et-filter[^>]*>[^<]*[⚙️🎛️]|filter-tab-title[^>]*>[^<]*🎛️|data-i18n="entryFree">[^<]*🆓|data-score="3">[^<]*⭐/.test(indexHtml)) {
+  fail('keşfet/gelişmiş filtre HTML etiketlerinde emoji kaldı');
+}
+if (/adm-side-card-title">[🌤️🕐💰📋]/.test(adminHtml) || /ac-title">[🌤️🕐💰]/.test(appJs)) {
+  fail('admin/ziyaretçi yan panel başlıklarında emoji kaldı');
+}
+if (failed === 0) ok('gelişmiş filtre ve yan panel etiketlerinde emoji yok');
 
 const inline = adminHtml.split('<script>').pop().split('</script>')[0];
 try {
