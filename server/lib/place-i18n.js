@@ -1,5 +1,6 @@
 /**
  * V4 Adım 3 + Adım 8 — English place copy.
+ * V5 Adım 11 — isIndexablePlace (imageVerified + quality bar).
  *
  * Adım 8 asks whether name_en and description_en are both filled.
  * This schema has no name_en column. The place name is a proper noun
@@ -13,7 +14,12 @@
  * Incomplete English copy: the visitor still sees the Turkish fallback,
  * but /en/places/:slug is noindex, stays out of the EN sitemap, and
  * does not get an hreflang="en" alternate.
+ *
+ * Unverified image (Adım 11): visitor still sees the page; robots noindex
+ * and the URL stays out of the sitemap until imageVerified=true.
  */
+
+const { meetsIndexablePlaceBase } = require('./place-indexable');
 
 function filled(value) {
   return String(value == null ? '' : value).trim();
@@ -56,6 +62,7 @@ function placeHasEnglishCopy(row) {
 }
 
 function placeEnSitemapPath(row) {
+  if (!meetsIndexablePlaceBase(row)) return null;
   if (!placeEnTranslationComplete(row)) return null;
   const slug = filled(row?.slug);
   if (!slug) return null;
@@ -63,17 +70,33 @@ function placeEnSitemapPath(row) {
 }
 
 /**
+ * V5 Adım 11 — single indexability decision for sitemap, server robots,
+ * and (mirrored) client robots.
+ * Conditions: published + valid coords + enough TR blurb + imageVerified.
+ * For lang=en, English translation must also be complete (V4 Adım 8).
+ */
+function isIndexablePlace(row, lang) {
+  if (!meetsIndexablePlaceBase(row)) return false;
+  if (String(lang || 'tr').toLowerCase() === 'en' && !placeEnTranslationComplete(row)) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Indexing for one place page.
- * Turkish URL stays indexable. English URL is noindex until the
- * translation is complete, and then it is the hreflang "en" target.
+ * Page stays open to visitors. noindex when isIndexablePlace is false.
+ * English hreflang only when the EN URL itself would be indexable.
  */
 function placePageIndexing(row, lang) {
   const slug = filled(row?.slug);
   const trPath = slug ? `/places/${encodeURIComponent(slug)}` : null;
   const complete = placeEnTranslationComplete(row);
-  const enPath = complete && trPath ? `/en${trPath}` : null;
-  const noindex = lang === 'en' && !complete;
-  return { complete, trPath, enPath, noindex };
+  const baseOk = meetsIndexablePlaceBase(row);
+  const enPath = complete && baseOk && trPath ? `/en${trPath}` : null;
+  const resolvedLang = String(lang || 'tr').toLowerCase() === 'en' ? 'en' : 'tr';
+  const noindex = !isIndexablePlace(row, resolvedLang);
+  return { complete, trPath, enPath, noindex, indexable: !noindex };
 }
 
 /**
@@ -94,6 +117,7 @@ module.exports = {
   placeEnTranslationComplete,
   placeHasEnglishCopy,
   placeEnSitemapPath,
+  isIndexablePlace,
   placePageIndexing,
   PLACE_EN_MISSING_SQL,
 };

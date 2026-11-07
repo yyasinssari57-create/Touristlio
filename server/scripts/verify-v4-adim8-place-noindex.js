@@ -31,8 +31,20 @@ const {
 } = require('../lib/place-i18n');
 const { buildSeoHead, generateMeta } = require('../lib/seo');
 
-const thin = { slug: 'sadece-turkce', description_en: '  ', overview_en: '' };
-const ready = { slug: 'hagia-sophia', description_en: 'A real English description.', overview_en: '' };
+const indexableBase = {
+  status: 'published',
+  lat: 41.0086,
+  lng: 28.9802,
+  description: 'A'.repeat(60),
+  image_verified: true,
+};
+const thin = { slug: 'sadece-turkce', description_en: '  ', overview_en: '', ...indexableBase };
+const ready = {
+  slug: 'hagia-sophia',
+  description_en: 'A real English description.',
+  overview_en: '',
+  ...indexableBase,
+};
 if (placeEnTranslationComplete(thin) || placeHasEnglishCopy(thin) || placeEnSitemapPath(thin)) {
   fail('whitespace English copy was treated as complete');
 } else ok('empty English copy is incomplete and has no EN sitemap path');
@@ -47,6 +59,7 @@ const namedGap = {
   slug: 'ayasofya-istanbul',
   description_en: '',
   overview_en: '   ',
+  ...indexableBase,
 };
 if (placeEnTranslationComplete(namedGap)) fail('a named place with no English text was complete');
 else ok('name alone does not complete the translation');
@@ -56,6 +69,7 @@ const namedReady = {
   slug: 'ayasofya-istanbul',
   description_en: 'Hagia Sophia is a landmark.',
   overview_en: '',
+  ...indexableBase,
 };
 if (!placeEnTranslationComplete(namedReady)) fail('name + description_en was incomplete');
 else ok('stored name plus description_en is complete (no name_en column)');
@@ -129,7 +143,10 @@ else if (!PLACE_EN_MISSING_SQL.includes('description_en') || !PLACE_EN_MISSING_S
 } else ok('admin filter SQL uses description_en and overview_en');
 
 const indexJs = read('server/index.js');
-if (!indexJs.includes('placePageIndexing') || !indexJs.includes('noindex: indexing.noindex')) {
+if (!indexJs.includes('placePageIndexing')) {
+  fail('place route does not pass noindex from placePageIndexing');
+} else if (!/noindex:\s*indexing\.noindex/.test(indexJs)
+  && !/noindex:\s*indexing\.noindex\s*\|\|/.test(indexJs)) {
   fail('place route does not pass noindex from placePageIndexing');
 } else ok('place route sets noindex from the translation check');
 
@@ -159,12 +176,20 @@ if (client.placeHasEnglishCopy({ name: 'Ayasofya', descriptionEn: '', overviewEn
 } else if (client.placeHasEnglishCopy({ name: 'Ayasofya', nameEn: '', descriptionEn: 'English text' })) {
   fail('client accepted an empty nameEn');
 } else ok('client completeness matches the server rule');
+const clientBase = {
+  name: 'Ayasofya',
+  lat: 41.0086,
+  lng: 28.9802,
+  description: 'A'.repeat(60),
+  imageVerified: true,
+  status: 'published',
+};
 client.setLang('en');
-client.applyPlaceRobots({ name: 'Ayasofya', descriptionEn: '' });
+client.applyPlaceRobots({ ...clientBase, descriptionEn: '' });
 client.setLang('tr');
-client.applyPlaceRobots({ name: 'Ayasofya', descriptionEn: '' });
+client.applyPlaceRobots({ ...clientBase, descriptionEn: '' });
 client.setLang('en');
-client.applyPlaceRobots({ name: 'Ayasofya', descriptionEn: 'English text' });
+client.applyPlaceRobots({ ...clientBase, descriptionEn: 'English text' });
 const robots = client.metas.map((row) => row[1]);
 if (robots[0] !== 'noindex, nofollow' || robots[1] !== 'index,follow' || robots[2] !== 'index,follow') {
   fail(`client robots ${robots.join(' | ')}`);
@@ -256,8 +281,8 @@ async function checkDatabase() {
     await db.prepare(`
       INSERT INTO places (
         id, name, slug, country, city, category, status,
-        description, description_en, overview_en, lat, lng
-      ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, '', '', ?, ?)
+        description, description_en, overview_en, lat, lng, image_verified
+      ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, '', '', ?, ?, TRUE)
     `).run(
       placeId,
       'V4 Adım 8 Deneme',
@@ -281,7 +306,13 @@ async function checkDatabase() {
       SELECT slug FROM places
       WHERE slug IS NOT NULL AND btrim(slug) <> ''
         AND COALESCE(NULLIF(TRIM(status), ''), 'published') = 'published'
+        AND image_verified IS TRUE
         AND btrim(COALESCE(description_en, '')) <> ''
+        AND GREATEST(
+          char_length(btrim(COALESCE(overview, ''))),
+          char_length(btrim(COALESCE(description, '')))
+        ) > 50
+        AND lat IS NOT NULL AND lng IS NOT NULL AND lat <> 0 AND lng <> 0
         AND slug <> ?
       ORDER BY id
       LIMIT 1

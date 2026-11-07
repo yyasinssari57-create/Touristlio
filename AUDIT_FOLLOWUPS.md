@@ -2,6 +2,18 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 11 (görseli doğrulanmamış yer → noindex)
+
+Yasin “geç” dedi → önerilen EVET uygulandı: `imageVerified=true` olana kadar yer sayfası ziyaretçiye açık, Google’a `noindex` + sitemap dışı.
+
+- Tek kapı: `isIndexablePlace(row, lang)` (`server/lib/place-i18n.js` + `place-indexable.js`). Koşul: yayında + geçerli koordinat + yeterli TR açıklama (>50) + `imageVerified`. EN için ayrıca çeviri tamam.
+- Sitemap SQL: `image_verified IS TRUE`. Server place route + client `applyPlaceRobots` aynı kapı.
+- Önce/sonra (yerel test DB): kalite barını geçen yer URL ~945 → `imageVerified` ile **0** (doğrulama geldikçe otomatik açılır).
+
+Kontrol: `npm run verify:v5-adim11` → OK.
+
+V5’te bu tur yalnız Adım 11. Kalan adım: 2 (Adım 12 onay ister; Adım 13 verify).
+
 ## Cursor V5 — Adım 10 (küçük temizlikler)
 
 - Kayıtlı yer kartında `p.name` / `p.category` → `escapeHtml`. Tiola feed ve blog grid `e.message` → `escapeHtml`.

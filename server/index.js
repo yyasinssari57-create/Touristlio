@@ -337,18 +337,21 @@ app.get('/places/:slug', async (req, res) => {
   const place = mapPlaceRow(row, await placeStats(row.id));
   const tiolas = await loadApprovedTiolasForPlace(place.id);
   const { generateMeta } = require('./lib/seo');
-  const { placePageIndexing } = require('./lib/place-i18n');
+  const { placePageIndexing, isIndexablePlace } = require('./lib/place-i18n');
   const { isPlaceholderImage } = require('./lib/place-image');
   const meta = generateMeta('place', { place }, lang);
   const shareImage = [meta.ogImage, place.imageUrl].find((url) => url && !isPlaceholderImage(url)) || null;
   const slug = String(row.slug || req.params.slug || '').trim();
-  const indexing = placePageIndexing({ ...row, slug }, lang);
+  const placeRow = { ...row, slug };
+  const indexing = placePageIndexing(placeRow, lang);
+  // V5 Adım 11: placePageIndexing.noindex === !isIndexablePlace (shared gate).
+  const indexable = isIndexablePlace(placeRow, lang);
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: meta.title,
     description: meta.description,
     image: shareImage,
     ogType: 'place',
-    noindex: indexing.noindex,
+    noindex: indexing.noindex || !indexable,
     alternates: { tr: indexing.trPath, en: indexing.enPath },
     jsonLd: jsonLdForPlace(place, tiolas, lang),
   });

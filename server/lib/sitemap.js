@@ -1,8 +1,18 @@
 const { db } = require('../db');
 const { blogEnSitemapPath } = require('./blog-i18n');
-const { placeEnSitemapPath } = require('./place-i18n');
+const { placeEnSitemapPath, isIndexablePlace } = require('./place-i18n');
 const { isPublishedPlaceStatus } = require('./place-status');
+const {
+  PLACE_DESCRIPTION_MIN_CHARS,
+  turkishPlaceBlurbLength,
+  isQualityPlaceDescription,
+  isValidPlaceCoord,
+  meetsIndexablePlaceBase,
+} = require('./place-indexable');
 const { siteBaseUrl } = require('./site-url');
+
+/** Alias kept for older verify scripts (same rule as isValidPlaceCoord). */
+const isValidSitemapCoord = isValidPlaceCoord;
 
 function escapeXml(s) {
   return String(s)
@@ -44,7 +54,6 @@ function recordLastmod(...values) {
  * No fixed snapshot fallback on dynamic rows (V5 Adım 9). Static pages keep
  * CONTENT_SNAPSHOT_DATE. DB errors must not return a static-only 200.
  */
-const PLACE_DESCRIPTION_MIN_CHARS = 50;
 const BLOG_BODY_MIN_CHARS = 200;
 const SITEMAP_PLACE_LIMIT = 10000;
 const CONTENT_SNAPSHOT_DATE = '2026-11-01';
@@ -53,37 +62,18 @@ const SITEMAP_RETRY_AFTER_SEC = 120;
 /** Last successful full sitemap XML (memory only). */
 let lastGoodSitemapXml = null;
 
-/** Longer of the Turkish blurbs. English columns do not satisfy description_tr. */
-function turkishPlaceBlurbLength(row) {
-  const overview = String(row?.overview ?? '').trim().length;
-  const description = String(row?.description ?? '').trim().length;
-  return Math.max(overview, description);
-}
-
-function isQualityPlaceDescription(row) {
-  return turkishPlaceBlurbLength(row) > PLACE_DESCRIPTION_MIN_CHARS;
-}
-
 function isQualityBlogBody(row) {
   return String(row?.body ?? '').trim().length > BLOG_BODY_MIN_CHARS;
 }
 
-/** Audit: lat/lng present, finite, in range, and not 0. (0,0 is Null Island.) */
-function isValidSitemapCoord(lat, lng) {
-  const la = Number(lat);
-  const ln = Number(lng);
-  if (!Number.isFinite(la) || !Number.isFinite(ln)) return false;
-  if (la === 0 || ln === 0) return false;
-  if (Math.abs(la) > 90 || Math.abs(ln) > 180) return false;
-  return true;
-}
-
+/**
+ * V5 Adım 11 — TR place URL only when isIndexablePlace(row, 'tr').
+ * Uses the shared gate (published + coords + TR blurb + imageVerified).
+ */
 function placeSitemapPath(row) {
   const slug = String(row?.slug || '').trim();
   if (!slug) return null;
-  if (!isPublishedPlaceStatus(row.status)) return null;
-  if (!isValidSitemapCoord(row.lat, row.lng)) return null;
-  if (!isQualityPlaceDescription(row)) return null;
+  if (!isIndexablePlace(row, 'tr')) return null;
   return `/places/${encodeURIComponent(slug)}`;
 }
 
@@ -169,12 +159,14 @@ function withEnglishAlternates(urls, base, opts = {}) {
 async function loadPlaceUrls(base) {
   const rows = await db.prepare(`
     SELECT slug, lat, lng, status, overview, description,
-           description_en, overview_en, updated_at, created_at
+           description_en, overview_en, image_verified,
+           updated_at, created_at
     FROM places
     WHERE COALESCE(NULLIF(TRIM(status), ''), 'published') = 'published'
       AND slug IS NOT NULL AND TRIM(slug) <> ''
       AND lat IS NOT NULL AND lng IS NOT NULL
       AND lat <> 0 AND lng <> 0
+      AND image_verified IS TRUE
       AND GREATEST(
         char_length(btrim(COALESCE(overview, ''))),
         char_length(btrim(COALESCE(description, '')))
@@ -302,11 +294,14 @@ module.exports = {
   isoDate,
   recordLastmod,
   isValidSitemapCoord,
+  isValidPlaceCoord,
   isPublishedPlaceStatus,
   isQualityPlaceDescription,
   isQualityBlogBody,
   turkishPlaceBlurbLength,
   placeSitemapPath,
+  meetsIndexablePlaceBase,
+  isIndexablePlace,
   PLACE_DESCRIPTION_MIN_CHARS,
   BLOG_BODY_MIN_CHARS,
   SITEMAP_PLACE_LIMIT,

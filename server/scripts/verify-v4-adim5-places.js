@@ -193,6 +193,7 @@ const sitemapRow = {
   lng: 28.97,
   description: 'y'.repeat(80),
   overview: 'y'.repeat(80),
+  image_verified: true,
 };
 if (placeSitemapPath({ ...sitemapRow, status: 'draft' })) {
   fail('taslak site haritasına girdi');
