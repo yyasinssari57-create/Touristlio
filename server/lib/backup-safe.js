@@ -7,11 +7,44 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { spawnSync } = require('child_process');
 
 const SAFE_NAME_RE = /^touristlio[-_][A-Za-z0-9._-]+\.(sql|sql\.enc|sha256)$/i;
 const ENC_MAGIC = Buffer.from('TL1');
 const GCM_IV_LEN = 12;
 const GCM_TAG_LEN = 16;
+
+/** User-facing copy when Render (or any host) lacks client tools. No secrets. */
+const PG_TOOLS_UNSUPPORTED_MSG = 'Bu ortamda veritabanı yedek/geri yükleme desteklenmiyor (pg_dump/psql yok). Supabase Dashboard → Database → Backups kullanın.';
+
+let cachedPgTools = null;
+
+function commandAvailable(cmd) {
+  try {
+    const result = spawnSync(cmd, ['--version'], {
+      encoding: 'utf8',
+      timeout: 5000,
+      env: { PATH: process.env.PATH || '' },
+    });
+    return !result.error && result.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Detect pg_dump + psql without printing versions into API responses by default. */
+function pgToolsStatus({ refresh = false } = {}) {
+  if (!refresh && cachedPgTools) return { ...cachedPgTools };
+  const pgDump = commandAvailable('pg_dump');
+  const psql = commandAvailable('psql');
+  cachedPgTools = {
+    pgDump,
+    psql,
+    supported: pgDump && psql,
+    message: (pgDump && psql) ? null : PG_TOOLS_UNSUPPORTED_MSG,
+  };
+  return { ...cachedPgTools };
+}
 
 function backupsDir() {
   const raw = process.env.BACKUP_DIR || path.join(__dirname, '..', '..', 'backups');
@@ -97,19 +130,33 @@ function isEncryptedBackup(buf) {
 }
 
 function decryptBuffer(buf) {
-  if (!isEncryptedBackup(buf)) return Buffer.from(buf);
+  // When encryption is configured, plaintext .sql must not be treated as valid.
+  if (!isEncryptedBackup(buf)) {
+    if (encryptionConfigured()) {
+      const err = new Error('BACKUP_ENCRYPTION_KEY tanımlı; yalnızca şifreli (.sql.enc) yedek kabul edilir');
+      err.status = 400;
+      throw err;
+    }
+    return Buffer.from(buf);
+  }
   const key = encryptionKey();
   if (!key) {
     const err = new Error('BACKUP_ENCRYPTION_KEY tanımlı değil; şifreli yedek açılamaz');
     err.status = 400;
     throw err;
   }
-  const iv = buf.subarray(ENC_MAGIC.length, ENC_MAGIC.length + GCM_IV_LEN);
-  const tag = buf.subarray(ENC_MAGIC.length + GCM_IV_LEN, ENC_MAGIC.length + GCM_IV_LEN + GCM_TAG_LEN);
-  const data = buf.subarray(ENC_MAGIC.length + GCM_IV_LEN + GCM_TAG_LEN);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(data), decipher.final()]);
+  try {
+    const iv = buf.subarray(ENC_MAGIC.length, ENC_MAGIC.length + GCM_IV_LEN);
+    const tag = buf.subarray(ENC_MAGIC.length + GCM_IV_LEN, ENC_MAGIC.length + GCM_IV_LEN + GCM_TAG_LEN);
+    const data = buf.subarray(ENC_MAGIC.length + GCM_IV_LEN + GCM_TAG_LEN);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(data), decipher.final()]);
+  } catch {
+    const err = new Error('Şifreli yedek açılamadı (GCM doğrulaması başarısız)');
+    err.status = 400;
+    throw err;
+  }
 }
 
 function looksLikePgDump(buf) {
@@ -129,8 +176,10 @@ function safeTmpPath(suffix) {
 
 module.exports = {
   SAFE_NAME_RE,
+  PG_TOOLS_UNSUPPORTED_MSG,
   backupsDir,
   encryptionConfigured,
+  pgToolsStatus,
   safeBackupBasename,
   resolveBackupFile,
   sha256Buffer,

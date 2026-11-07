@@ -62,9 +62,10 @@
         <div id="dbBackupSection" data-role="admin" class="admin-card" style="margin-top:12px;display:none">
           <h2 class="adm-h2" style="margin-top:0">Veritabanı yedeği</h2>
           <p class="adm-field-hint">Her indirme tarihli yeni bir <code>.sql</code> (SHA-256 checksum başlığıyla) oluşturur. Render diski kalıcı değildir; dosyayı Drive veya benzeri güvenli bir yerde saklayın.</p>
-          <p class="adm-field-hint">Geri yükleme checksum eşleşmesi ister. Önce “yalnızca doğrula” ile deneyin. Şifreleme yalnızca <code>BACKUP_ENCRYPTION_KEY</code> tanımlıysa açılır. İçerik yöneticileri normal iş akışında geri yükleme yapmaz; uygulama <strong>tüm site verisini</strong> değiştirir.</p>
+          <p class="adm-field-hint">Geri yükleme checksum eşleşmesi ister. Önce “yalnızca doğrula” ile deneyin. Şifreleme yalnızca <code>BACKUP_ENCRYPTION_KEY</code> tanımlıysa açılır (o zaman yalnız <code>.sql.enc</code>). Gerçek geri yükleme yönetici şifresi ister. İçerik yöneticileri normal iş akışında geri yükleme yapmaz; uygulama <strong>tüm site verisini</strong> değiştirir.</p>
+          <p id="dbBackupToolsHint" class="adm-field-hint" style="display:none" role="status"></p>
           <div class="admin-form" style="margin-top:12px">
-            <button class="btn bp bsm" type="button" data-act="downloadDbBackup">Tam yedek indir (.sql)</button>
+            <button class="btn bp bsm" type="button" data-act="downloadDbBackup" id="dbBackupDownloadBtn">Tam yedek indir (.sql)</button>
             <label class="btn bo bsm adm-photo-btn" style="margin:0">
               Yedek dosyası seç
               <input type="file" id="dbRestoreFile" class="adm-photo-input" accept=".sql,.enc,application/sql,application/octet-stream" aria-label="Veritabanı yedeği seç"/>
@@ -73,6 +74,7 @@
               <input type="checkbox" id="dbRestoreDryRun" checked/>
               Yalnızca doğrula (uygulama)
             </label>
+            <input class="ain" type="password" id="dbRestorePassword" autocomplete="current-password" placeholder="Gerçek geri yükleme için yönetici şifresi" aria-label="Yönetici şifresi (geri yükleme)"/>
             <button class="btn bo bsm" type="button" data-act="restoreDbBackup">Yedekten geri yükle</button>
           </div>
         </div>
@@ -3318,6 +3320,7 @@ function applyAdminRbac(user) {
     const contentBtn = document.querySelector('[data-section="content"]');
     if (contentBtn && contentBtn.style.display !== 'none') showAdminSection('content', contentBtn);
   }
+  if (role === 'admin') refreshDbBackupToolsHint().catch(() => {});
 }
 
 async function adminLogin() {
@@ -3468,6 +3471,28 @@ async function sha256HexFile(file) {
   return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+async function refreshDbBackupToolsHint() {
+  const hint = document.getElementById('dbBackupToolsHint');
+  const btn = document.getElementById('dbBackupDownloadBtn');
+  if (!hint || currentUser?.role !== 'admin') return;
+  try {
+    const data = await api('/admin/backup/list');
+    const tools = data.tools || {};
+    if (tools.supported === false) {
+      hint.style.display = '';
+      hint.textContent = tools.message
+        || 'Bu ortamda yedek/geri yükleme desteklenmiyor. Supabase Dashboard → Database → Backups kullanın.';
+      if (btn) btn.disabled = true;
+    } else {
+      hint.style.display = 'none';
+      hint.textContent = '';
+      if (btn) btn.disabled = false;
+    }
+  } catch {
+    /* ignore — panel yine açılır */
+  }
+}
+
 async function downloadDbBackup() {
   if (currentUser?.role !== 'admin') {
     showErr('Tam veritabanı yedeği yalnızca yönetici hesabıyla indirilebilir.');
@@ -3506,11 +3531,17 @@ async function restoreDbBackup() {
     return;
   }
   if (!/touristlio[-_][\w.-]+\.(sql|sql\.enc)$/i.test(file.name) || file.name.includes('..')) {
-    showErr('Dosya adı touristlio-*.sql olmalı; yol karakteri olamaz.');
+    showErr('Dosya adı touristlio-*.sql veya .sql.enc olmalı; yol karakteri olamaz.');
     return;
   }
   const dryRun = !!document.getElementById('dbRestoreDryRun')?.checked;
+  const passwordInput = document.getElementById('dbRestorePassword');
+  const password = String(passwordInput?.value || '');
   if (!dryRun) {
+    if (!password) {
+      showErr('Gerçek geri yükleme için yönetici şifrenizi yazın.');
+      return;
+    }
     const okRestore = confirm(
       'Seçilen yedek tüm site verisini (kullanıcılar, yerler, içerik) değiştirir. Önce “yalnızca doğrula” önerilir. Devam edilsin mi?'
     );
@@ -3522,12 +3553,15 @@ async function restoreDbBackup() {
     fd.append('file', file);
     fd.append('checksum', checksum);
     fd.append('dryRun', dryRun ? '1' : '0');
+    if (!dryRun) fd.append('password', password);
     const data = await api('/admin/backup/restore', { method: 'POST', body: fd });
     input.value = '';
+    if (passwordInput) passwordInput.value = '';
     showToast(data.message || (dryRun ? 'Doğrulama tamam' : 'Geri yükleme tamamlandı'));
   } catch (e) {
     showErr(e.message);
     input.value = '';
+    if (passwordInput) passwordInput.value = '';
   }
 }
 
