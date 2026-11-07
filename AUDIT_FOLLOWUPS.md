@@ -2,6 +2,23 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 3 (güvenlik açığı olan paketleri güncelle)
+
+Prod `npm audit --omit=dev` önce: 1 critical, 4 high, 5 moderate. Sonra: **0 açık**.
+
+- `npm audit fix` (--force yok): proxy-addr, body-parser, multer, sharp, qs (kısmen) düzeldi.
+- Express 4.22.2; multer 2.5.0; sharp 0.35.5.
+- nodemailer 7 → **10.3.1** (API: `createTransport` aynı; gönderim kodu değişmedi).
+- file-type 16 → **21.3.4** (ESM-only; `image-mime.js` dinamik `import('file-type')` + `fileTypeFromBuffer`). 22.x Node ≥22 ister; engines `>=20.18 <23` bozulmasın diye 21.3.4 seçildi (advisory aralığı 13.0.0–21.3.0 dışı).
+- node-cron 3 → **4.6.0** (`schedule` / `validate` / `stop` smoke OK; canlı veri + blog ifadeleri geçerli).
+- `overrides.qs = 6.17.1` (Express 4 altındaki qs orta açığı).
+
+Kontrol: `npm run verify:v5-adim3` → `verify-v5-adim3 OK`. Ayrıca `verify:faz2-2`, `verify:admin-image-upload`, `verify:images` geçti. `verify:smtp` bu ortamda SMTP env yok diye atlandı; nodemailer API smoke doğrulandı. `npm ci --omit=dev` temiz, audit 0.
+
+Render: ek env yok. Manual Deploy sonrası giriş, görsel yükleme ve mail dene.
+
+V5’te bu tur yalnız Adım 3. Kalan adım: 10.
+
 ## Cursor V5 — Adım 2 (JWT gizli anahtarı güvenli olsun)
 
 Oturum anahtarı artık yalnız ortam değişkeninden gelir. Veritabanına yazılmaz, oradan okunmaz.
