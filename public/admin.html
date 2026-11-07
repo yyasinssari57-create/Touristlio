@@ -3723,17 +3723,45 @@ function updatePlaceBulkBar() {
   if (countEl) countEl.textContent = `${placeSelected.size} seçili`;
 }
 
-function togglePlaceSelect(id, el) {
-  if (el && el.checked) placeSelected.add(id);
-  else placeSelected.delete(id);
+function placeIdFromEl(el) {
+  if (!el) return null;
+  const raw = el.getAttribute('data-place-id') || el.getAttribute('data-arg');
+  const id = Number(raw);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+function resolveChecked(arg, fallbackEl) {
+  if (typeof arg === 'boolean') return arg;
+  const node = (arg && arg.tagName) ? arg : fallbackEl;
+  return !!(node && node.checked);
+}
+
+function togglePlaceSelect(id, checkedOrEl) {
+  const node = (checkedOrEl && checkedOrEl.tagName) ? checkedOrEl : (this && this.tagName ? this : null);
+  const pid = Number(id) || placeIdFromEl(node);
+  if (!pid) return;
+  const checked = resolveChecked(checkedOrEl, node);
+  if (checked) placeSelected.add(pid);
+  else placeSelected.delete(pid);
+  const all = document.getElementById('placeSelectAll');
+  if (all) {
+    const boxes = document.querySelectorAll('.place-select-check');
+    all.checked = boxes.length > 0 && [...boxes].every((c) => c.checked);
+  }
   updatePlaceBulkBar();
 }
 
-function togglePlaceSelectAll(el) {
-  const checked = !!(el && el.checked);
+function togglePlaceSelectAll(checkedOrEl) {
+  const node = (checkedOrEl && checkedOrEl.tagName) ? checkedOrEl : (this && this.tagName ? this : null);
+  const checked = resolveChecked(checkedOrEl, node);
   placeSelected.clear();
-  if (checked) placesCurrentItems.forEach((p) => placeSelected.add(p.id));
+  if (checked) placesCurrentItems.forEach((p) => {
+    const pid = Number(p.id);
+    if (Number.isFinite(pid) && pid > 0) placeSelected.add(pid);
+  });
   document.querySelectorAll('.place-select-check').forEach((c) => { c.checked = checked; });
+  const all = document.getElementById('placeSelectAll');
+  if (all && node !== all) all.checked = checked;
   updatePlaceBulkBar();
 }
 
@@ -3745,8 +3773,23 @@ function clearPlaceSelection() {
   updatePlaceBulkBar();
 }
 
+/** Direct change listeners after innerHTML — safety net if data-act args mis-resolve. */
+function wirePlaceSelection(wrap) {
+  if (!wrap) return;
+  wrap.querySelectorAll('.place-select-check').forEach((c) => {
+    if (c.dataset.wired === '1') return;
+    c.dataset.wired = '1';
+    c.addEventListener('change', () => togglePlaceSelect(placeIdFromEl(c), c));
+  });
+  const all = wrap.querySelector('#placeSelectAll');
+  if (all && all.dataset.wired !== '1') {
+    all.dataset.wired = '1';
+    all.addEventListener('change', () => togglePlaceSelectAll(all));
+  }
+}
+
 function bulkArchivePlaces() {
-  const ids = [...placeSelected];
+  const ids = [...placeSelected].map(Number).filter((n) => n > 0);
   if (!ids.length) return showErr('Önce yer seçin');
   openModal('Toplu arşivle', `
     <p><strong>${ids.length}</strong> yer siteden kaldırılacak (arşivlenecek).</p>
@@ -3759,7 +3802,7 @@ function bulkArchivePlaces() {
 }
 
 async function submitBulkArchivePlaces() {
-  const ids = [...placeSelected];
+  const ids = [...placeSelected].map(Number).filter((n) => n > 0);
   if (!ids.length) return;
   try {
     const data = await api('/admin/places/bulk', { method: 'POST', body: { ids, action: 'archive' } });
@@ -3794,12 +3837,12 @@ async function loadPlacesList() {
     }
     wrap.innerHTML = `
       <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <input type="checkbox" id="placeSelectAll" data-act="togglePlaceSelectAll" data-el aria-label="Tümünü seç"/> Tümünü seç
+        <input type="checkbox" id="placeSelectAll" data-act="togglePlaceSelectAll" data-arg="this.checked" aria-label="Tümünü seç"/> Tümünü seç
       </label>
       <table class="admin-table" aria-label="Yer listesi">
       <thead><tr><th scope="col"><span class="sr-only">Seç</span></th><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>Durum</th><th>İşlem</th></tr></thead>
       <tbody>${rows.map((p) => `<tr>
-        <td><input type="checkbox" class="place-select-check adm-mod-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-el aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
+        <td><input type="checkbox" class="place-select-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-arg2="this.checked" data-place-id="${p.id}" aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
         <td>${p.id}</td>
         <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}</td>
         <td>${escapeHtml(p.city)}</td>
@@ -3812,6 +3855,7 @@ async function loadPlacesList() {
         </td>
       </tr>`).join('')}</tbody></table>
       <p style="font-size:.72rem;color:var(--t3);margin-top:8px">Toplam: ${data.total || rows.length}${enFilter === 'missing' ? ' · Filtre: EN çeviri eksik' : ''}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
+    wirePlaceSelection(wrap);
     loadPlacesQualityBar();
   } catch (e) {
     wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;

@@ -87,9 +87,63 @@ for (const n of uiNeedles) {
 }
 if (!uiMissing) ok('admin.html multi-select + toplu arşiv UI');
 
+
 if (!pkg.includes('verify:admin-bulk-archive')) {
   fail('package.json verify:admin-bulk-archive script eksik');
 } else ok('npm run verify:admin-bulk-archive');
+
+const bindJs = read('public/js/bind-actions.js');
+if (!bindJs.includes("s === 'this.checked'") && !bindJs.includes('s === "this.checked"')) {
+  fail("bind-actions this.checked / $checked çözümlemiyor");
+} else ok('bind-actions this.checked çözümler');
+
+if (!adminHtml.includes('wirePlaceSelection')) {
+  fail('wirePlaceSelection yok — liste render sonrası seçim bağlanmıyor');
+} else ok('wirePlaceSelection yer listesine bağlı');
+
+if (!adminHtml.includes('data-place-id=') || !adminHtml.includes("data-arg2=\"this.checked\"")) {
+  fail('yer checkbox data-place-id + data-arg2=this.checked kullanmalı');
+} else ok('yer checkbox checked arg + place-id');
+
+if (/place-select-check adm-mod-check/.test(adminHtml)) {
+  fail('yer checkbox adm-mod-check paylaşmamalı (moderasyon select-all karışır)');
+} else ok('yer checkbox ayrı sınıf (adm-mod-check yok)');
+
+// Runtime (no DOM lib): coerce path for this.checked must return real booleans.
+(function runtimeCheckedArgs() {
+  const m = bindJs.match(/function coerce\(s, el\)[\s\S]*?\n  \}/);
+  if (!m) { fail('coerce(s, el) imzası yok'); return; }
+  // eslint-disable-next-line no-new-func
+  const coerce = new Function('return (' + m[0] + ')')();
+  const elOn = { checked: true };
+  const elOff = { checked: false };
+  if (coerce('this.checked', elOn) !== true) fail('coerce this.checked (true) yanlış');
+  else if (coerce('this.checked', elOff) !== false) fail('coerce this.checked (false) yanlış');
+  else if (coerce('$checked', elOn) !== true) fail('coerce $checked yanlış');
+  else ok('coerce this.checked / $checked boolean');
+
+  const resolveMatch = bindJs.match(/function resolveArgs\(el, ev\)[\s\S]*?\n  \}/);
+  if (!resolveMatch) { fail('resolveArgs yok'); return; }
+  // Minimal el shim for resolveArgs
+  function makeEl(attrs, checked) {
+    return {
+      checked: !!checked,
+      value: '',
+      getAttribute(k) { return Object.prototype.hasOwnProperty.call(attrs, k) ? attrs[k] : null; },
+      hasAttribute(k) { return Object.prototype.hasOwnProperty.call(attrs, k); },
+    };
+  }
+  // eslint-disable-next-line no-new-func
+  const resolveArgs = new Function('coerce', 'return (' + resolveMatch[0] + ')')(coerce);
+  const argsOn = resolveArgs(makeEl({ 'data-arg': '11', 'data-arg2': 'this.checked' }, true), null);
+  const argsOff = resolveArgs(makeEl({ 'data-arg': '11', 'data-arg2': 'this.checked' }, false), null);
+  const allOn = resolveArgs(makeEl({ 'data-arg': 'this.checked' }, true), null);
+  const allOff = resolveArgs(makeEl({ 'data-arg': 'this.checked' }, false), null);
+  if (!(argsOn[0] === 11 && argsOn[1] === true)) fail('resolveArgs check: ' + JSON.stringify(argsOn));
+  else if (!(argsOff[0] === 11 && argsOff[1] === false)) fail('resolveArgs uncheck: ' + JSON.stringify(argsOff));
+  else if (!(allOn[0] === true && allOff[0] === false)) fail('resolveArgs select-all: ' + JSON.stringify([allOn, allOff]));
+  else ok('resolveArgs checkbox checked boolean uçtan uca');
+})();
 
 if (failed) {
   console.error(`\nFAILED: ${failed}`);

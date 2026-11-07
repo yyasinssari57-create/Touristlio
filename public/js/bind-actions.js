@@ -12,11 +12,14 @@
     }, global);
   }
 
-  function coerce(s) {
+  function coerce(s, el) {
     if (s === 'true') return true;
     if (s === 'false') return false;
     if (s === 'null') return null;
     if (s === '') return '';
+    // CSP migration leftover: onchange="fn(this.checked)" became data-arg="this.checked"
+    if (s === 'this.checked' || s === '$checked') return !!(el && el.checked);
+    if (s === 'this.value' || s === '$value') return el ? el.value : '';
     if (/^-?\d+$/.test(s)) return Number(s);
     if (/^-?\d+\.\d+$/.test(s)) return Number(s);
     return s;
@@ -30,7 +33,9 @@
         return parsed.map(function (v) {
           if (v === '$el') return el;
           if (v === '$value') return el.value;
+          if (v === '$checked') return !!(el && el.checked);
           if (v === '$event') return ev;
+          if (v === 'this.checked') return !!(el && el.checked);
           return v;
         });
       } catch {
@@ -42,9 +47,9 @@
     const a2 = el.getAttribute('data-arg2');
     const a3 = el.getAttribute('data-arg3');
     if (el.hasAttribute('data-el-first')) args.push(el);
-    if (a1 !== null) args.push(coerce(a1));
-    if (a2 !== null) args.push(coerce(a2));
-    if (a3 !== null) args.push(coerce(a3));
+    if (a1 !== null) args.push(coerce(a1, el));
+    if (a2 !== null) args.push(coerce(a2, el));
+    if (a3 !== null) args.push(coerce(a3, el));
     if (el.hasAttribute('data-el') && !el.hasAttribute('data-el-first')) args.push(el);
     if (el.hasAttribute('data-value')) args.push(el.value);
     if (el.hasAttribute('data-event')) args.push(ev);
