@@ -128,6 +128,7 @@
     "verify:admin-image-picker": "node server/scripts/verify-admin-image-picker.js",
     "verify:admin-bulk-archive": "node server/scripts/verify-admin-bulk-archive.js",
     "verify:admin-bulk-trash": "node server/scripts/verify-admin-bulk-trash.js",
+    "verify:admin-places-pagination": "node server/scripts/verify-admin-places-pagination.js",
     "verify:avatar-crop": "node server/scripts/verify-avatar-crop-visibility.js",
     "places:run-all": "node server/scripts/run-all.js",
     "sitemap": "node server/scripts/generate-sitemap.js",
