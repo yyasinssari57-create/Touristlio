@@ -166,9 +166,6 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
         <button type="button" class="btn bo bsm" id="mapLocateBtn" data-i18n="mapLocate">📍 Konumum</button>
         <button type="button" class="btn bo bsm filter-sheet-open" id="filterSheetOpenMap" hidden aria-haspopup="dialog" aria-expanded="false" aria-controls="filterSheet" data-i18n="filterSheetOpen">Filtrele</button>
       </div>
-      <div class="map-filter-bar" id="mapFilterBar">
-        <div class="explore-filter-strip" id="mapFilterStrip" role="toolbar" aria-label="Harita filtreleri"></div>
-      </div>
       <div class="map-wrap">
         <div id="exploreMapFull" class="map-full" role="region" aria-label="Destinasyon haritası"></div>
       </div>
@@ -178,9 +175,6 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   <!-- DISCOVER TAB -->
   <div class="explore-section active" id="es-discover" aria-hidden="false">
     <div class="discover-wrap">
-      <div class="discover-filter-bar" id="discoverFilterBar">
-        <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
-      </div>
       <div class="results-bar">
         <h3 id="results-count" aria-live="polite" aria-busy="true"><span id="resCnt">0</span> <span data-i18n="placesFound">yer bulundu</span></h3>
         <div class="results-bar-actions">
@@ -787,6 +781,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </footer>
 </main>
 
+<!-- Kategori çipleri yalnız mobil filtre çekmecesinde; Keşfet sayfa şeridi yok -->
+<div id="exploreFilterChipHost" hidden>
+  <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
+  <div class="explore-filter-strip" id="mapFilterStrip" role="toolbar" aria-label="Harita filtreleri"></div>
+</div>
 <div class="filter-sheet-backdrop" id="filterSheetBackdrop" hidden aria-hidden="true"></div>
 <div class="filter-sheet" id="filterSheet" role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle" hidden aria-hidden="true">
   <div class="filter-sheet-handle" aria-hidden="true"></div>
