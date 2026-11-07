@@ -28,6 +28,7 @@ const blogDb = require('../lib/blog-db');
 const { blogEnFields } = require('../lib/blog-i18n');
 const settingsService = require('../modules/settings/settings.service');
 const adminPlace = require('../lib/admin-place');
+const { SQL_TOUCH_CREATED_AT } = require('../lib/place-trash');
 const placesService = require('../modules/places/places.service');
 const { ok, fail } = require('../lib/apiResponse');
 const { mapReport } = require('./reports');
@@ -803,16 +804,24 @@ router.post('/places/bulk', checkPermission('admin.places'), async (req, res) =>
       eligible = validIds.length ? await adminPlace.permanentlyDeletePlaces(validIds) : [];
       auditAction = 'place.purge';
     }
-    const okIds = new Set(eligible.map((r) => r.id));
+    const okIds = new Set(eligible.map((r) => Number(r.id)));
     for (const id of validIds) {
       if (!okIds.has(id)) errors.push({ id, error: 'Yer bulunamadı veya işlem uygulanamadı' });
     }
     processed = eligible.length;
   } catch (err) {
+    const reason = err && err.message ? String(err.message) : 'Hata';
+    logger.error({ msg: 'admin places/bulk failed', action, err: reason });
+    // One shared failure (e.g. missing deleted_at / bad SQL) — do not invent 78 unique causes.
     for (const id of validIds) {
-      errors.push({ id, error: err.message || 'Hata' });
+      errors.push({ id, error: reason });
     }
-    return ok(res, { processed: 0, errors });
+    return ok(res, {
+      processed: 0,
+      errors,
+      firstError: reason,
+      action,
+    });
   }
 
   if (eligible.length) {
@@ -835,6 +844,7 @@ router.post('/places/bulk', checkPermission('admin.places'), async (req, res) =>
   return ok(res, {
     processed,
     errors,
+    firstError: errors[0]?.error || null,
     action,
     archived: action === 'archive',
     trashed: action === 'trash' || action === 'delete',
@@ -1462,7 +1472,7 @@ router.patch('/places/:id/info', checkPermission('admin.places'), async (req, re
       info_source_url = ?,
       info_verified_at = NOW(),
       updated_at = NOW(),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+      ${SQL_TOUCH_CREATED_AT}
     WHERE id = ?
   `).run(
     v.climate_info,

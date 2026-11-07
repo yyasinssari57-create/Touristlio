@@ -14,6 +14,7 @@ const {
 } = require('./best-months');
 const {
   TRASH_RETENTION_DAYS,
+  SQL_TOUCH_CREATED_AT,
   notDeletedPlaceSql,
   normalizeIds,
 } = require('./place-trash');
@@ -530,7 +531,7 @@ async function updatePlace(id, body) {
       photos = ?, search_aliases = ?, categories = ?, lat = ?, lng = ?, status = ?,
       info_source_url = ?,
       updated_at = NOW(),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+      ${SQL_TOUCH_CREATED_AT}
     WHERE id = ?
   `).run(
     enriched.name,
@@ -577,7 +578,7 @@ async function archivePlace(id) {
   if (!row) return null;
   await db.prepare(`
     UPDATE places SET status = 'archived', updated_at = NOW(),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+      ${SQL_TOUCH_CREATED_AT}
     WHERE id = ? AND ${notDeletedPlaceSql('deleted_at')}
   `).run(id);
   return { id, status: 'archived' };
@@ -589,7 +590,7 @@ async function archivePlaces(ids) {
   if (!validIds.length) return [];
   return db.prepare(`
     UPDATE places SET status = 'archived', updated_at = NOW(),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+      ${SQL_TOUCH_CREATED_AT}
     WHERE id = ANY(?::int[]) AND ${notDeletedPlaceSql('deleted_at')}
     RETURNING id, name
   `).all(validIds);
@@ -611,7 +612,7 @@ async function softDeletePlace(id) {
   const updated = await db.prepare(`
     UPDATE places
     SET deleted_at = NOW(), status = 'archived', updated_at = NOW(),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+      ${SQL_TOUCH_CREATED_AT}
     WHERE id = ?
     RETURNING id, name, deleted_at
   `).get(id);
@@ -631,7 +632,7 @@ async function softDeletePlaces(ids) {
   return db.prepare(`
     UPDATE places
     SET deleted_at = NOW(), status = 'archived', updated_at = NOW(),
-      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+      ${SQL_TOUCH_CREATED_AT}
     WHERE id = ANY(?::int[]) AND ${notDeletedPlaceSql('deleted_at')}
     RETURNING id, name, deleted_at
   `).all(validIds);
