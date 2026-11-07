@@ -12,6 +12,11 @@ const {
   normalizeBestMonths,
   bestTimeFromMonths,
 } = require('./best-months');
+const {
+  TRASH_RETENTION_DAYS,
+  notDeletedPlaceSql,
+  normalizeIds,
+} = require('./place-trash');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
@@ -189,6 +194,10 @@ function mapAdminPlace(row) {
     imageVerifiedAt: row.image_verified_at instanceof Date
       ? row.image_verified_at.toISOString()
       : (row.image_verified_at || null),
+    deletedAt: row.deleted_at instanceof Date
+      ? row.deleted_at.toISOString()
+      : (row.deleted_at || null),
+    inTrash: !!row.deleted_at,
     enTranslationMissing: !placeEnTranslationComplete(row),
   };
 }
@@ -202,15 +211,20 @@ const ISSUE_FILTERS = {
 };
 
 async function listAdminPlaces({
-  q, limit = 100, offset = 0, status, issue, enTranslation, includeArchived = false,
+  q, limit = 100, offset = 0, status, issue, enTranslation, includeArchived = false, trash = false,
 } = {}) {
   let where = '1=1';
   const params = [];
-  if (status && VALID_STATUS.has(status)) {
-    where += " AND COALESCE(status, 'published') = ?";
-    params.push(status);
-  } else if (!includeArchived) {
-    where += " AND COALESCE(status, 'published') != 'archived'";
+  if (trash === true || status === 'trash') {
+    where += ` AND NOT (${notDeletedPlaceSql('deleted_at')})`;
+  } else {
+    where += ` AND ${notDeletedPlaceSql('deleted_at')}`;
+    if (status && VALID_STATUS.has(status)) {
+      where += " AND COALESCE(status, 'published') = ?";
+      params.push(status);
+    } else if (!includeArchived) {
+      where += " AND COALESCE(status, 'published') != 'archived'";
+    }
   }
   if (issue && ISSUE_FILTERS[issue]) {
     where += ` AND (${ISSUE_FILTERS[issue]})`;
@@ -225,7 +239,10 @@ async function listAdminPlaces({
   }
   const lim = Math.min(Math.max(limit, 1), 500);
   const off = Math.max(offset, 0);
-  const rows = await db.prepare(`SELECT * FROM places WHERE ${where} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...params, lim, off);
+  const order = (trash === true || status === 'trash')
+    ? 'deleted_at DESC NULLS LAST, id DESC'
+    : 'id DESC';
+  const rows = await db.prepare(`SELECT * FROM places WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, lim, off);
   const total = (await db.prepare(`SELECT COUNT(*) AS c FROM places WHERE ${where}`).get(...params)).c;
   return { places: rows.map(mapAdminPlace), total };
 }
@@ -556,27 +573,78 @@ async function updatePlace(id, body) {
 }
 
 async function archivePlace(id) {
-  const row = await db.prepare('SELECT id FROM places WHERE id = ?').get(id);
+  const row = await db.prepare(`SELECT id FROM places WHERE id = ? AND ${notDeletedPlaceSql('deleted_at')}`).get(id);
   if (!row) return null;
   await db.prepare(`
     UPDATE places SET status = 'archived', updated_at = NOW(),
       created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
-    WHERE id = ?
+    WHERE id = ? AND ${notDeletedPlaceSql('deleted_at')}
   `).run(id);
   return { id, status: 'archived' };
 }
 
 /** Soft-archive many places in one UPDATE (admin bulk). Already-archived rows stay archived. */
 async function archivePlaces(ids) {
-  const validIds = [...new Set((ids || [])
-    .map((id) => Number(id))
-    .filter((id) => Number.isFinite(id) && id > 0))];
+  const validIds = normalizeIds(ids);
   if (!validIds.length) return [];
   return db.prepare(`
     UPDATE places SET status = 'archived', updated_at = NOW(),
       created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
-    WHERE id = ANY(?::int[])
+    WHERE id = ANY(?::int[]) AND ${notDeletedPlaceSql('deleted_at')}
     RETURNING id, name
+  `).all(validIds);
+}
+
+async function softDeletePlace(id) {
+  const row = await db.prepare('SELECT id, name, status, deleted_at FROM places WHERE id = ?').get(id);
+  if (!row) return null;
+  if (row.deleted_at) {
+    return {
+      id: row.id,
+      name: row.name,
+      status: 'archived',
+      deletedAt: row.deleted_at instanceof Date ? row.deleted_at.toISOString() : row.deleted_at,
+      trashed: true,
+      alreadyInTrash: true,
+    };
+  }
+  const updated = await db.prepare(`
+    UPDATE places
+    SET deleted_at = NOW(), status = 'archived', updated_at = NOW(),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+    WHERE id = ?
+    RETURNING id, name, deleted_at
+  `).get(id);
+  return {
+    id: updated.id,
+    name: updated.name,
+    status: 'archived',
+    deletedAt: updated.deleted_at instanceof Date ? updated.deleted_at.toISOString() : updated.deleted_at,
+    trashed: true,
+    alreadyInTrash: false,
+  };
+}
+
+async function softDeletePlaces(ids) {
+  const validIds = normalizeIds(ids);
+  if (!validIds.length) return [];
+  return db.prepare(`
+    UPDATE places
+    SET deleted_at = NOW(), status = 'archived', updated_at = NOW(),
+      created_at = COALESCE(NULLIF(btrim(created_at), ''), NOW())
+    WHERE id = ANY(?::int[]) AND ${notDeletedPlaceSql('deleted_at')}
+    RETURNING id, name, deleted_at
+  `).all(validIds);
+}
+
+async function restorePlaces(ids) {
+  const validIds = normalizeIds(ids);
+  if (!validIds.length) return [];
+  return db.prepare(`
+    UPDATE places
+    SET deleted_at = NULL, status = 'draft', updated_at = NOW()
+    WHERE id = ANY(?::int[]) AND deleted_at IS NOT NULL
+    RETURNING id, name, status
   `).all(validIds);
 }
 
@@ -584,7 +652,7 @@ async function countPlaceTiolas(id) {
   return (await db.prepare('SELECT COUNT(*) AS c FROM tiolas WHERE place_id = ?').get(id)).c;
 }
 
-/** Hard delete — not used by admin HTTP. Panel DELETE archives via archivePlace. */
+/** Hard delete — trash purge / permanent delete only. */
 async function deletePlace(id) {
   const row = await db.prepare('SELECT id, name FROM places WHERE id = ?').get(id);
   if (!row) return null;
@@ -610,6 +678,37 @@ async function deletePlace(id) {
   };
 }
 
+async function permanentlyDeletePlaces(ids) {
+  const validIds = normalizeIds(ids);
+  const results = [];
+  for (const id of validIds) {
+    const row = await db.prepare('SELECT id FROM places WHERE id = ? AND deleted_at IS NOT NULL').get(id);
+    if (!row) continue;
+    const deleted = await deletePlace(id);
+    if (deleted) results.push(deleted);
+  }
+  return results;
+}
+
+async function purgeExpiredTrash({ days = TRASH_RETENTION_DAYS } = {}) {
+  const retention = Number.isFinite(Number(days)) && Number(days) > 0
+    ? Math.floor(Number(days))
+    : TRASH_RETENTION_DAYS;
+  const due = await db.prepare(`
+    SELECT id, name FROM places
+    WHERE deleted_at IS NOT NULL
+      AND deleted_at < NOW() - INTERVAL '${retention} days'
+    ORDER BY deleted_at ASC
+    LIMIT 200
+  `).all();
+  const purged = [];
+  for (const row of due) {
+    const deleted = await deletePlace(row.id);
+    if (deleted) purged.push({ id: deleted.id, name: deleted.name });
+  }
+  return purged;
+}
+
 module.exports = {
   listAdminPlaces,
   getAdminPlace,
@@ -617,10 +716,17 @@ module.exports = {
   updatePlace,
   archivePlace,
   archivePlaces,
+  softDeletePlace,
+  softDeletePlaces,
+  restorePlaces,
+  permanentlyDeletePlaces,
+  purgeExpiredTrash,
   deletePlace,
   countPlaceTiolas,
   mapAdminPlace,
   parseOptionalCoord,
   VALID_STATUS,
   ISSUE_FILTERS,
+  TRASH_RETENTION_DAYS,
 };
+

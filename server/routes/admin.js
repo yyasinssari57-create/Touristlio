@@ -705,13 +705,19 @@ router.get('/places', checkPermission('admin.places'), async (req, res) => {
     const limit = Number(req.query.limit) || 100;
     const offset = Number(req.query.offset) || 0;
     const issue = req.query.issue || null;
+    const status = req.query.status || null;
+    const trash = req.query.trash === '1' || status === 'trash';
     const data = await adminPlace.listAdminPlaces({
       q, limit, offset, issue,
-      status: req.query.status || null,
+      status: trash ? 'trash' : status,
+      trash,
       enTranslation: req.query.en === 'missing' ? 'missing' : null,
-      includeArchived: req.query.all === '1' || req.query.status === 'archived',
+      includeArchived: req.query.all === '1' || status === 'archived',
     });
-    return ok(res, data);
+    return ok(res, {
+      ...data,
+      trashRetentionDays: adminPlace.TRASH_RETENTION_DAYS,
+    });
   } catch (err) {
     return fail(res, err.message || 'Yerler getirilemedi', 500);
   }
@@ -759,14 +765,17 @@ router.post('/places/import', checkPermission('admin.places'), placesImportUploa
 });
 
 /**
- * Bulk place actions. Archive only for now (soft status=archived), matching
- * DELETE /places/:id. Batched UPDATE + auditLog.logBatch — same shape as
- * /tiolas/bulk and /blogs/bulk (no per-item DB round-trips).
+ * Bulk place actions:
+ * - archive → status=archived (not trash)
+ * - trash / delete → soft-delete (deleted_at); purged after 15 days
+ * - restore → clear deleted_at (draft)
+ * - purge → hard-delete rows already in trash
  */
 router.post('/places/bulk', checkPermission('admin.places'), async (req, res) => {
   const { ids, action } = req.body || {};
   if (!Array.isArray(ids) || !ids.length) return fail(res, 'ID listesi gerekli');
-  if (action !== 'archive') return fail(res, 'Geçersiz işlem');
+  const allowed = new Set(['archive', 'trash', 'delete', 'restore', 'purge']);
+  if (!allowed.has(action)) return fail(res, 'Geçersiz işlem');
   if (ids.length > 200) return fail(res, 'En fazla 200 yer seçilebilir');
 
   const errors = [];
@@ -779,11 +788,24 @@ router.post('/places/bulk', checkPermission('admin.places'), async (req, res) =>
 
   let processed = 0;
   let eligible = [];
+  let auditAction = 'place.archive';
   try {
-    eligible = validIds.length ? await adminPlace.archivePlaces(validIds) : [];
+    if (action === 'archive') {
+      eligible = validIds.length ? await adminPlace.archivePlaces(validIds) : [];
+      auditAction = 'place.archive';
+    } else if (action === 'trash' || action === 'delete') {
+      eligible = validIds.length ? await adminPlace.softDeletePlaces(validIds) : [];
+      auditAction = 'place.trash';
+    } else if (action === 'restore') {
+      eligible = validIds.length ? await adminPlace.restorePlaces(validIds) : [];
+      auditAction = 'place.restore';
+    } else if (action === 'purge') {
+      eligible = validIds.length ? await adminPlace.permanentlyDeletePlaces(validIds) : [];
+      auditAction = 'place.purge';
+    }
     const okIds = new Set(eligible.map((r) => r.id));
     for (const id of validIds) {
-      if (!okIds.has(id)) errors.push({ id, error: 'Yer bulunamadı' });
+      if (!okIds.has(id)) errors.push({ id, error: 'Yer bulunamadı veya işlem uygulanamadı' });
     }
     processed = eligible.length;
   } catch (err) {
@@ -800,7 +822,7 @@ router.post('/places/bulk', checkPermission('admin.places'), async (req, res) =>
       await auditLog.logBatch(eligible.map((row) => ({
         adminId: req.user.id,
         adminName: req.user.name,
-        action: 'place.archive',
+        action: auditAction,
         targetType: 'place',
         targetId: row.id,
         detail: row.name || 'bulk',
@@ -810,7 +832,46 @@ router.post('/places/bulk', checkPermission('admin.places'), async (req, res) =>
     }
   }
 
-  return ok(res, { processed, errors, archived: true, deleted: false });
+  return ok(res, {
+    processed,
+    errors,
+    action,
+    archived: action === 'archive',
+    trashed: action === 'trash' || action === 'delete',
+    restored: action === 'restore',
+    purged: action === 'purge',
+    deleted: action === 'purge',
+  });
+});
+
+/** Run 15-day trash purge now (also scheduled via cron). */
+router.post('/places/trash/purge-expired', checkPermission('admin.places'), async (req, res) => {
+  try {
+    const purged = await adminPlace.purgeExpiredTrash();
+    if (purged.length) {
+      clearCache('places-list');
+      clearCache('search');
+      try {
+        await auditLog.logBatch(purged.map((row) => ({
+          adminId: req.user.id,
+          adminName: req.user.name,
+          action: 'place.purge',
+          targetType: 'place',
+          targetId: row.id,
+          detail: `${row.name || ''} (expired trash)`,
+        })));
+      } catch (err) {
+        logger.error({ msg: 'admin trash purge audit failed', err: err.message });
+      }
+    }
+    return ok(res, {
+      processed: purged.length,
+      purged,
+      retentionDays: adminPlace.TRASH_RETENTION_DAYS,
+    });
+  } catch (err) {
+    return fail(res, err.message || 'Çöp temizliği başarısız', 500);
+  }
 });
 
 router.get('/places/:id', checkPermission('admin.places'), async (req, res) => {
@@ -853,15 +914,17 @@ router.delete('/places/:id', checkPermission('admin.places'), async (req, res) =
   if (!id) return;
   const preview = await adminPlace.getAdminPlace(id);
   if (!preview) return fail(res, 'Yer bulunamadı', 404);
-  if (preview.status === 'archived') {
-    logAdmin(req, 'place.archive', 'place', id, preview.name || null);
-    return ok(res, { id, status: 'archived', archived: true, deleted: false });
-  }
-  const result = await adminPlace.archivePlace(id);
-  logAdmin(req, 'place.archive', 'place', id, preview.name || null);
+  const result = await adminPlace.softDeletePlace(id);
+  logAdmin(req, 'place.trash', 'place', id, preview.name || null);
   clearCache('places-list');
   clearCache('search');
-  return ok(res, { ...result, archived: true, deleted: false });
+  return ok(res, {
+    ...result,
+    archived: true,
+    trashed: true,
+    deleted: false,
+    retentionDays: adminPlace.TRASH_RETENTION_DAYS,
+  });
 });
 
 function isExternalPhotoUrl(url) {

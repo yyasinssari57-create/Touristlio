@@ -37,15 +37,16 @@ if (!adminJs.includes("checkPermission('admin.places')") || !adminJs.slice(bulkI
   fail('/places/bulk admin.places izni istemiyor');
 } else ok('/places/bulk admin.places ile korunuyor');
 
-if (!adminJs.includes("action !== 'archive'") && !adminJs.includes('action !== "archive"')) {
-  fail('/places/bulk yalnızca archive aksiyonunu kabul etmeli');
-} else ok('bulk action = archive');
+// Bulk also supports trash/restore/purge; archive must remain.
+if (!adminJs.includes("'archive'") || !(adminJs.includes('archivePlaces') || adminJs.includes("action === 'archive'"))) {
+  fail('/places/bulk archive aksiyonunu kaybetmiş');
+} else ok('bulk action archive hâlâ var');
 
 if (!adminJs.includes('adminPlace.archivePlaces') && !adminJs.includes('archivePlaces(validIds)')) {
   fail('/places/bulk archivePlaces çağırmıyor');
 } else ok('bulk archivePlaces kullanıyor');
 
-if (!adminJs.includes('auditLog.logBatch') || !adminJs.slice(bulkIdx, getIdIdx).includes("action: 'place.archive'")) {
+if (!adminJs.includes('auditLog.logBatch') || !adminJs.slice(bulkIdx, getIdIdx).includes("'place.archive'")) {
   fail('/places/bulk place.archive audit logBatch yazmıyor');
 } else ok('bulk place.archive auditLog.logBatch');
 
@@ -74,7 +75,7 @@ const uiNeedles = [
   'clearPlaceSelection',
   'placeSelected',
   '/admin/places/bulk',
-  "action: 'archive'",
+  "submitBulkPlaceAction('archive')",
   'Toplu arşivle',
   'place-select-check',
 ];
