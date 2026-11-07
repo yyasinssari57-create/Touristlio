@@ -114,6 +114,23 @@ async function findBlogRow(db, slug, lang = 'tr') {
   return (await db.prepare(`${select} WHERE b.slug = ?`).get(clean)) || null;
 }
 
+/** Approved blogs with a complete EN translation (title/excerpt/body/slug_en). */
+async function countPublishedEnBlogs(db) {
+  if (!db) return 0;
+  const row = await db.prepare(`
+    SELECT COUNT(*)::int AS n
+    FROM blogs b
+    WHERE b.status = 'approved'
+      AND b.slug IS NOT NULL AND btrim(b.slug) <> ''
+      ${blogEnReadySql('b')}
+  `).get();
+  return Number(row?.n || 0);
+}
+
+async function hasPublishedEnBlogs(db) {
+  return (await countPublishedEnBlogs(db)) > 0;
+}
+
 module.exports = {
   UNTRANSLATED_NOTE,
   EN_UNTRANSLATED_TITLE,
@@ -128,4 +145,6 @@ module.exports = {
   untranslatedNoteHtml,
   injectUntranslatedNote,
   findBlogRow,
+  countPublishedEnBlogs,
+  hasPublishedEnBlogs,
 };

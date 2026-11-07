@@ -333,11 +333,26 @@ app.get('/places/:slug', async (req, res) => {
 
 app.get('/blog', async (req, res) => {
   const lang = req.tlLang === 'en' ? 'en' : 'tr';
+  const { db } = require('./db');
+  const { hasPublishedEnBlogs } = require('./lib/blog-i18n');
+  let enReady = false;
+  try {
+    enReady = await hasPublishedEnBlogs(db);
+  } catch {
+    enReady = false;
+  }
+  const emptyEnIndex = lang === 'en' && !enReady;
   return sendPublicHtml(res, PUBLIC_DIR, 'index.html', {
     title: lang === 'en' ? 'Travel Stories — Touristlio' : 'Seyahat Hikayeleri — Touristlio',
     description: lang === 'en'
       ? 'Travel guides, hidden gems and cultural stories from local writers on Touristlio.'
       : 'Yerel yazarlardan gezi rehberleri, gizli köşeler ve kültürel keşifler.',
+    noindex: emptyEnIndex,
+    robots: emptyEnIndex ? 'noindex,follow' : undefined,
+    alternates: {
+      tr: '/blog',
+      en: enReady ? '/en/blog' : null,
+    },
   });
 });
 
