@@ -81,12 +81,16 @@ const place = {
   lat: 41.01,
   lng: 29.01,
   description: fifty,
+  image_verified: true,
 };
 if (placeSitemapPath(place)) fail('thin published place must stay out of the sitemap');
 else ok('thin place has no sitemap path');
 if (placeSitemapPath({ ...place, overview: fiftyOne }) !== '/places/ince-yer') {
   fail('long overview should produce a place path');
 } else ok('long overview place path');
+if (placeSitemapPath({ ...place, overview: fiftyOne, image_verified: false })) {
+  fail('unverified image must stay out of the sitemap');
+} else ok('unverified image has no sitemap path');
 
 const src = read('server/lib/sitemap.js');
 const sqlSrc = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');

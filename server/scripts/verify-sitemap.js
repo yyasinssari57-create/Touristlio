@@ -66,6 +66,7 @@ const goodPlace = {
   lat: 41.0086,
   lng: 28.9802,
   description: longBlurb,
+  image_verified: true,
 };
 if (placeSitemapPath(goodPlace) !== '/places/ayasofya-istanbul') fail('published slug path');
 else ok('published slug → /places/{slug}');
@@ -95,6 +96,8 @@ else ok('places SQL excludes lat/lng 0');
 if (!src.includes('COALESCE(overview,') || !src.includes('PLACE_DESCRIPTION_MIN_CHARS')) {
   fail('places SQL must require a Turkish blurb longer than 50');
 } else ok('places SQL requires blurb longer than 50');
+if (!/image_verified\s+IS\s+TRUE/i.test(src)) fail('places SQL must require image_verified IS TRUE');
+else ok('places SQL requires image_verified IS TRUE');
 if (!src.includes('LIMIT ${SITEMAP_PLACE_LIMIT}')) fail('places SQL must cap at 10000');
 else ok('places SQL caps at 10000');
 if (!src.includes("status = 'approved'")) fail('blogs must filter status = approved');
@@ -189,7 +192,7 @@ async function checkDatabase() {
 
     const { placeHasEnglishCopy } = require('../lib/place-i18n');
     const places = await db.prepare(
-      'SELECT id, slug, lat, lng, status, overview, description, description_en, overview_en FROM places',
+      'SELECT id, slug, lat, lng, status, overview, description, description_en, overview_en, image_verified FROM places',
     ).all();
     const qualityPlaces = places
       .map((row) => ({ row, pathName: placeSitemapPath(row) }))

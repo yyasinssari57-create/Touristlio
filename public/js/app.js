@@ -698,11 +698,49 @@ function placeHasEnglishCopy(p) {
   return nameOk && (description.length > 0 || overview.length > 0);
 }
 
+/** Keep in sync with server/lib/place-indexable.js PLACE_DESCRIPTION_MIN_CHARS. */
+const PLACE_DESCRIPTION_MIN_CHARS = 50;
+
+function placeTurkishBlurbLength(p) {
+  const overview = String(p?.overview ?? '').trim().length;
+  const description = String(p?.description ?? '').trim().length;
+  return Math.max(overview, description);
+}
+
+function placeHasValidCoord(p) {
+  const la = Number(p?.lat);
+  const ln = Number(p?.lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return false;
+  if (la === 0 || ln === 0) return false;
+  if (Math.abs(la) > 90 || Math.abs(ln) > 180) return false;
+  return true;
+}
+
+function placeImageVerifiedFlag(p) {
+  const flag = p?.imageVerified ?? p?.image_verified;
+  return flag === true || flag === 1 || flag === '1' || flag === 'true';
+}
+
+/**
+ * V5 Adım 11 — mirror of server isIndexablePlace(row, lang).
+ * published + coords + TR blurb + imageVerified; EN also needs translation.
+ */
+function isIndexablePlace(p, pageLang) {
+  if (!p) return false;
+  const status = String(p.status == null || p.status === '' ? 'published' : p.status).trim().toLowerCase();
+  if (status !== 'published') return false;
+  if (!placeHasValidCoord(p)) return false;
+  if (placeTurkishBlurbLength(p) <= PLACE_DESCRIPTION_MIN_CHARS) return false;
+  if (!placeImageVerifiedFlag(p)) return false;
+  if (String(pageLang || 'tr').toLowerCase() === 'en' && !placeHasEnglishCopy(p)) return false;
+  return true;
+}
+
 function applyPlaceRobots(p) {
-  const block = lang === 'en' && p && !placeHasEnglishCopy(p);
+  const indexable = isIndexablePlace(p, lang);
   setMetaContent(
     'meta[name="robots"]',
-    block ? 'noindex, nofollow' : 'index,follow',
+    indexable ? 'index,follow' : 'noindex, nofollow',
     { name: 'robots' },
   );
 }
@@ -711,7 +749,8 @@ function applyPlaceHreflang(p) {
   const slug = p?.slug || p?.id;
   if (!slug) return;
   const trPath = `/places/${encodeURIComponent(slug)}`;
-  const enPath = placeHasEnglishCopy(p) ? `/en${trPath}` : null;
+  // Advertise EN only when that URL itself would be indexable.
+  const enPath = isIndexablePlace(p, 'en') ? `/en${trPath}` : null;
   setHreflangAlternates(trPath, enPath);
 }
 
