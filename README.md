@@ -125,7 +125,7 @@ touristlio/
 5. Veritabanı ve seed: `npm run seed` (ilk kurulum).
 6. Başlat: `npm run start:prod` (veya process manager ile `NODE_ENV=production npm start`).
 
-Sunucu production modunda zayıf `JWT_SECRET` ile **başlamaz**. SMTP yapılandırılmamışsa ve `REQUIRE_EMAIL_VERIFICATION=true` ise uyarı loglanır.
+Sunucu production modunda eksik, kısa veya zayıf `JWT_SECRET` ile **başlamaz** ve anahtar üretmez. Anahtar veritabanına yazılmaz. SMTP yapılandırılmamışsa ve `REQUIRE_EMAIL_VERIFICATION=true` ise uyarı loglanır.
 
 ### Render (önerilen)
 

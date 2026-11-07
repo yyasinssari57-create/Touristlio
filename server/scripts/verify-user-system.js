@@ -397,7 +397,11 @@ async function checkLive(base) {
     fail(`GET /auth/me logged-in failed ${me.status}`);
   } else ok('GET /auth/me with cookie → user');
 
-  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    fail('JWT_SECRET yok; süresi dolmuş token aynı anahtarla imzalanamadı');
+    return;
+  }
   const expired = jwt.sign(
     { id: meUser.id, email: meUser.email, role: meUser.role, name: meUser.name },
     secret,

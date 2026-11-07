@@ -2,6 +2,28 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 2 (JWT gizli anahtarı güvenli olsun)
+
+Oturum anahtarı artık yalnız ortam değişkeninden gelir. Veritabanına yazılmaz, oradan okunmaz.
+
+- Eski sabit yedek koddan silindi. `auth.js` ve hız sınırı aynı `getJwtSecret()` fonksiyonunu kullanır.
+- Üretimde `JWT_SECRET` yoksa, 32 karakterden kısaysa veya bilinen zayıf bir örneksse sunucu açılmaz. Otomatik anahtar üretilmez.
+- Geliştirmede anahtar yoksa veya zayıfsa o süreç için rastgele geçici anahtar üretilir. Diske veya veritabanına yazılmaz. Süreç kapanınca kaybolur.
+- Eski `site_settings` satırı (`auth_jwt_secret_fallback`) kullanılmaz. Silmek için öneri: `server/migrations/proposed/v5-adim2-jwt-secret-fallback.sql`. Bu dosya açılışta çalışmaz. Onaysız silme yok.
+
+Kontrol: `npm run verify:v5-adim2` — çıktı `verify-v5-adim2 OK`.
+
+- Üretimde anahtar yok, kısa, zayıf veya eski sabit yedek: `index` ve `start-prod` başlamaz.
+- Güçlü anahtarla sunucu açılır. Giriş, çıkış ve yeniden giriş çalışır.
+- Hız sınırı, girişle aynı anahtarı panel oturumu sayar. Veritabanındaki eski sır sayılmaz ve yerinde kalır.
+- Depoda eski sabit yedek araması sonuç vermez.
+
+Yasin, Render → Environment: `JWT_SECRET` dolu, en az 32 karakter ve tahmin edilemez olsun. `npm run generate:jwt-secret` yeni değer üretir. Boşsa bu yayın sunucuyu açmaz. Eski oturumlar veritabanındaki yedekten geliyorsa herkes bir kez yeniden giriş yapar. Anahtar zaten Render’da duruyorsa mevcut oturumlar sürer.
+
+Önerilen temizlik (çalıştırılmadı): yedek aldıktan sonra `DELETE FROM site_settings WHERE key = 'auth_jwt_secret_fallback';`
+
+V5’te bu tur yalnız Adım 2. Kalan adım: 11.
+
 ## Cursor V5 — Adım 1 (admin şifresi açılışta sıfırlanmasın)
 
 Panelden değişen admin şifresi, bir sonraki açılışta geri geliyordu. Artık gelmez.
@@ -2148,6 +2170,8 @@ doğrulanamadığı için **kesin KANIT değil, ama kod + davranış kanıtıyla
 sandbox'ta bire bir simüle edilip doğrulandı (aşağıya bakın).
 
 ### Düzeltme 1 — JWT secret artık restart'larda kalıcı (asıl düzeltme)
+
+**V5 Adım 2 bunu kaldırdı.** Anahtar veritabanına yazılmaz. Üretimde `JWT_SECRET` yoksa sunucu açılmaz. Aşağısı o günkü kayıttır.
 
 `server/lib/jwt-secret-store.js` eklendi: üretilen secret artık mevcut `site_settings` tablosuna
 yazılıyor; `server/index.js`'teki `boot()` → `reconcileJwtSecret()` DB hazır olduğunda önce bu

@@ -1,5 +1,6 @@
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
+const { getJwtSecret } = require('../auth');
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -146,7 +147,7 @@ function panelClaims(req) {
   let claims = null;
   if (token) {
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-change-me');
+      const payload = jwt.verify(token, getJwtSecret());
       if (payload && payload.id != null && PANEL_ROLES.has(payload.role)) {
         claims = { id: payload.id, role: payload.role };
       }

@@ -1,0 +1,8 @@
+-- V5 Adım 2 — ONAYSIZ ÇALIŞTIRMAYIN.
+-- Bu dosya sunucu açılışına bağlı değildir. server/lib/migrations.js bunu okumaz.
+-- Eski otomatik JWT yedeği site_settings içinde duruyor olabilir.
+-- Uygulama bu satırı artık okumaz ve yazmaz.
+-- Önce bakın (veri silmez):
+--   SELECT key, length(value) FROM site_settings WHERE key = 'auth_jwt_secret_fallback';
+-- Yedek alındıktan ve Yasin onayladıktan sonra:
+--   DELETE FROM site_settings WHERE key = 'auth_jwt_secret_fallback';
