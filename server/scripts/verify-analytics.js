@@ -165,6 +165,27 @@ if (!/ON CONFLICT\s*\(\s*session_id\s*\)/i.test(upsertSql)) {
   fail(`upsert NOW() kayboldu: ${upsertSql.slice(0, 220)}`);
 } else ok('session upsert SQL keeps NOW() + Postgres ON CONFLICT');
 
+if (!/last_seen_at::timestamptz/.test(visitor) || !/ended_at::timestamptz/.test(visitor)) {
+  fail('visitorDashboard must cast TEXT last_seen_at/ended_at before NOW()-INTERVAL');
+} else ok('onlineNow casts TEXT timestamps before NOW()-INTERVAL');
+
+const analyticsSvc = fs.readFileSync(path.join(ROOT, 'server/modules/analytics/analytics.service.js'), 'utf8');
+if (!/created_at::timestamptz\s*>=\s*NOW\(\)\s*-\s*INTERVAL\s*'30 days'/.test(analyticsSvc)) {
+  fail('timeseries must cast TEXT created_at before NOW()-INTERVAL');
+} else ok('content timeseries casts TEXT created_at before NOW()-INTERVAL');
+
+const dayParamSql = convertDialect(`SELECT date('now', '-' || ? || ' days') AS day`);
+const dayLitSql = convertDialect(`SELECT date('now', '-6 days') AS day`);
+if (!/\(CURRENT_DATE\s*-\s*CAST\(\?\s+AS\s+integer\)\)::text/i.test(dayParamSql)) {
+  fail(`date('now', ? days) dialect must emit YYYY-MM-DD text: ${dayParamSql}`);
+} else ok("date('now', ? days) → CURRENT_DATE - n ::text");
+if (!/\(CURRENT_DATE\s*-\s*6\)::text/i.test(dayLitSql)) {
+  fail(`date('now', '-6 days') dialect must emit YYYY-MM-DD text: ${dayLitSql}`);
+} else ok("date('now', '-N days') → CURRENT_DATE - N ::text");
+if (/\b00:00:00\b/.test(dayParamSql) || /\bINTERVAL\s+'1 day'\s*\)::text/i.test(dayParamSql)) {
+  fail('day dialect still emits timestamp-style text that breaks chart key match');
+} else ok('day dialect avoids YYYY-MM-DD 00:00:00 chart key mismatch');
+
 const indexHtml = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
 if (indexHtml.includes('googletagmanager.com') || indexHtml.includes('gtag(')) {
   fail('index.html embeds GA without consent');
@@ -456,6 +477,25 @@ async function checkSessionUpsertRace() {
     else ok('parallel session upsert keeps one row');
   } catch (err) {
     fail(`parallel session upsert: ${err.message}`);
+  }
+
+  try {
+    const visitorService = require('../modules/analytics/visitor.service');
+    const analyticsService = require('../modules/analytics/analytics.service');
+    const dash = await visitorService.visitorDashboard();
+    if (!dash || typeof dash.onlineNow !== 'number' && typeof dash.onlineNow !== 'string') {
+      fail('visitorDashboard missing onlineNow');
+    } else ok('visitorDashboard runs against TEXT timestamp columns');
+    const days = dash.timeseries?.days || [];
+    if (!days.length || days.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(String(d)))) {
+      fail(`visitor timeseries days must be YYYY-MM-DD, got ${JSON.stringify(days.slice(0, 3))}`);
+    } else ok('visitor timeseries day keys are YYYY-MM-DD');
+    const ts = await analyticsService.timeseries();
+    if (!ts?.days?.length || ts.days.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(String(d)))) {
+      fail(`content timeseries days must be YYYY-MM-DD, got ${JSON.stringify((ts.days || []).slice(0, 3))}`);
+    } else ok('content timeseries day keys are YYYY-MM-DD');
+  } catch (err) {
+    fail(`admin analytics dashboard: ${err.message}`);
   } finally {
     try {
       await db.prepare('DELETE FROM analytics_events WHERE session_id = ?').run(sid);

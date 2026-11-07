@@ -161,10 +161,11 @@ function formatDuration(sec) {
 async function visitorDashboard() {
   if (!(await analyticsTablesReady())) return emptyVisitorDashboard();
 
+  // Columns are TEXT (UTC strings); cast before comparing to timestamptz (Adım 10 NOW() regression).
   const onlineNow = (await db.prepare(`
     SELECT COUNT(*) AS c FROM analytics_sessions
-    WHERE last_seen_at >= NOW() - INTERVAL '5 minutes'
-      AND (ended_at IS NULL OR ended_at >= NOW() - INTERVAL '5 minutes')
+    WHERE last_seen_at::timestamptz >= NOW() - INTERVAL '5 minutes'
+      AND (ended_at IS NULL OR ended_at::timestamptz >= NOW() - INTERVAL '5 minutes')
   `).get()).c;
 
   const todayPageViews = (await db.prepare(`

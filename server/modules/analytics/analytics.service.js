@@ -74,22 +74,23 @@ async function timeseries() {
     days.push(row.day);
   }
 
+  // created_at is TEXT; cast before NOW()-INTERVAL (bare timestamptz compare 500s on Postgres).
   const usersByDay = await db.prepare(`
     SELECT date(created_at) AS day, COUNT(*) AS c
     FROM users
-    WHERE created_at >= NOW() - INTERVAL '30 days'
+    WHERE created_at::timestamptz >= NOW() - INTERVAL '30 days'
     GROUP BY date(created_at)
   `).all();
   const tiolasByDay = await db.prepare(`
     SELECT date(created_at) AS day, COUNT(*) AS c
     FROM tiolas
-    WHERE created_at >= NOW() - INTERVAL '30 days' AND parent_id IS NULL
+    WHERE created_at::timestamptz >= NOW() - INTERVAL '30 days' AND parent_id IS NULL
     GROUP BY date(created_at)
   `).all();
   const blogsByDay = await db.prepare(`
     SELECT date(created_at) AS day, COUNT(*) AS c
     FROM blogs
-    WHERE created_at >= NOW() - INTERVAL '30 days'
+    WHERE created_at::timestamptz >= NOW() - INTERVAL '30 days'
     GROUP BY date(created_at)
   `).all();
 
