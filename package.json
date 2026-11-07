@@ -36,6 +36,7 @@
     "verify:v4-adim1": "node server/scripts/verify-v4-adim1-locale.js",
     "verify:v5-adim1": "node server/scripts/verify-v5-adim1-admin-seed.js",
     "verify:v5-adim2": "node server/scripts/verify-v5-adim2-jwt.js",
+    "verify:v5-adim3": "node server/scripts/verify-v5-adim3-deps.js",
     "verify:v4-adim2": "node server/scripts/verify-v4-adim2-blog-i18n.js",
     "verify:v4-adim3": "node server/scripts/verify-v4-adim3-sitemap.js",
     "audit:places-quality": "node server/scripts/audit-places-quality.js",
@@ -126,21 +127,24 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^4.21.2",
+    "express": "^4.22.2",
     "express-rate-limit": "^7.5.0",
     "express-validator": "^7.2.1",
-    "file-type": "^16.5.4",
+    "file-type": "^21.3.4",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.1",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^7.0.11",
+    "multer": "^2.5.0",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.3.1",
     "pg": "^8.16.3",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "redis": "^4.7.1",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "tz-lookup": "^6.1.25",
     "web-vitals": "^4.2.4"
+  },
+  "overrides": {
+    "qs": "6.17.1"
   }
 }

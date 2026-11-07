@@ -1,12 +1,21 @@
 const fs = require('fs');
-const FileType = require('file-type');
 
 const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+/** file-type@21+ is ESM-only; load once via dynamic import (CJS-safe). */
+let fileTypeFromBufferPromise;
+function loadFileTypeFromBuffer() {
+  if (!fileTypeFromBufferPromise) {
+    fileTypeFromBufferPromise = import('file-type').then((m) => m.fileTypeFromBuffer);
+  }
+  return fileTypeFromBufferPromise;
+}
 
 async function detectImageMimeFromBuffer(buf) {
   if (!buf || !buf.length) return null;
   const slice = Buffer.isBuffer(buf) ? buf.subarray(0, 4100) : Buffer.from(buf).subarray(0, 4100);
-  const detected = await FileType.fromBuffer(slice);
+  const fileTypeFromBuffer = await loadFileTypeFromBuffer();
+  const detected = await fileTypeFromBuffer(slice);
   return detected?.mime || null;
 }
 
@@ -15,7 +24,8 @@ async function detectImageMime(filePath) {
   try {
     const buf = Buffer.alloc(4100);
     const bytesRead = fs.readSync(fd, buf, 0, 4100, 0);
-    const detected = await FileType.fromBuffer(buf.subarray(0, bytesRead));
+    const fileTypeFromBuffer = await loadFileTypeFromBuffer();
+    const detected = await fileTypeFromBuffer(buf.subarray(0, bytesRead));
     return detected?.mime || null;
   } finally {
     fs.closeSync(fd);
