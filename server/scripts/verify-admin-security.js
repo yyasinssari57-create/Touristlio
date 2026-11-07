@@ -77,9 +77,11 @@ if (!failedLogFn || /password\s*:/.test(failedLogFn[0])) {
   fail('failed-login log must not include password');
 } else ok('failed-login log does not include password');
 
-if (!adminJs.includes("router.delete('/places/:id'") || !adminJs.includes('archivePlace') || /adminPlace\.deletePlace\(/.test(adminJs)) {
-  fail('DELETE /places/:id must archive (soft), not hard-delete');
-} else ok('place DELETE archives (status=archived)');
+if (!adminJs.includes("router.delete('/places/:id'")
+  || !(adminJs.includes('softDeletePlace') || adminJs.includes('archivePlace'))
+  || /adminPlace\.deletePlace\(/.test(adminJs)) {
+  fail('DELETE /places/:id must soft-delete/trash (not hard-deletePlace)');
+} else ok('place DELETE soft-deletes (trash/archive), not hard-delete');
 
 if (!adminJs.includes("router.delete('/blogs/:id'") || !adminJs.includes("status = 'deleted'") || /DELETE FROM blogs/.test(adminJs)) {
   fail('DELETE /blogs/:id must set status=deleted, not DELETE FROM');
@@ -103,7 +105,8 @@ const auditLib = read('server/lib/auditLog.js');
 if (!auditLib.includes('INSERT INTO admin_audit_log')) {
   fail('admin_audit_log insert missing');
 } else ok('admin_audit_log writes (maps audit admin_logs)');
-if (!adminJs.includes('async function logAdmin') || !adminJs.includes("logAdmin(req, 'place.archive'")) {
+if (!adminJs.includes('async function logAdmin')
+  || !(adminJs.includes("logAdmin(req, 'place.archive'") || adminJs.includes("logAdmin(req, 'place.trash'"))) {
   fail('admin mutations must write audit log');
 } else ok('admin mutations call logAdmin');
 for (const action of ['tools.cache_clear', 'tools.sitemap', 'place.info_boxes', 'settings.blog_page']) {
@@ -129,12 +132,14 @@ if (!authSvc.includes("'E-posta veya şifre hatalı'") || authSvc.includes('Güv
   fail('wrong password must stay a normal login error');
 } else ok('wrong password is E-posta veya şifre hatalı, not güvenlik');
 
-if (adminHtml.includes('Kalıcı sil') || adminHtml.includes('Tiola yorumunu kalıcı olarak')) {
-  fail('admin UI still promises permanent place delete');
-} else ok('admin UI copy is archive / deactivate');
-if (!adminHtml.includes('Yeri arşivle') || !adminHtml.includes("'Arşivle'")) {
-  fail('place modal must say archive');
-} else ok('place modal archives instead of hard delete');
+if (adminHtml.includes('Tiola yorumunu kalıcı olarak')) {
+  fail('admin UI still promises permanent tiola delete');
+} else if (!adminHtml.includes('Çöp kutusu') || !adminHtml.includes('çöp kutusuna')) {
+  fail('admin place delete should go through trash/çöp');
+} else ok('admin place delete uses trash (purge only from çöp)');
+if (!adminHtml.includes('Emin misiniz?') || !adminHtml.includes('Çöpe taşı')) {
+  fail('place delete modal must confirm trash move');
+} else ok('place modal soft-deletes to trash with confirm');
 
 const pkg = JSON.parse(read('package.json'));
 if (pkg.scripts['verify:admin-security'] !== 'node server/scripts/verify-admin-security.js') {

@@ -526,6 +526,23 @@ async function startBackgroundJobs() {
         .then((n) => { if (n) logger.info({ msg: 'Scheduled blogs published', count: n }); })
         .catch((err) => logger.warn({ msg: 'Blog scheduler cron failed', err: err.message }));
     });
+    cron.schedule('15 3 * * *', () => {
+      Promise.resolve()
+        .then(() => {
+          const adminPlace = require('./lib/admin-place');
+          return adminPlace.purgeExpiredTrash();
+        })
+        .then((purged) => {
+          if (purged && purged.length) {
+            logger.info({ msg: 'Place trash purge', count: purged.length });
+            try {
+              clearCache('places-list');
+              clearCache('search');
+            } catch { /* ignore */ }
+          }
+        })
+        .catch((err) => logger.warn({ msg: 'Place trash purge failed', err: err.message }));
+    });
   } catch (err) {
     logger.warn({ msg: 'Background cron jobs disabled', err: err.message });
   }

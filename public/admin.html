@@ -142,10 +142,11 @@
             <input class="ain" id="placeSearch" placeholder="Ad, şehir veya ülke ara…" data-act="debounceLoadPlaces"/>
             <label class="sr-only" for="placeStatusFilter">Yayın durumu</label>
             <select class="ain" id="placeStatusFilter" aria-label="Yayın durumu" data-act="loadPlacesList">
-              <option value="">Tümü (arşiv hariç)</option>
+              <option value="">Tümü (arşiv / çöp hariç)</option>
               <option value="published">Yayında</option>
               <option value="draft">Taslak</option>
               <option value="archived">Arşiv</option>
+              <option value="trash">Çöp kutusu</option>
             </select>
             <label class="sr-only" for="placeEnFilter">İngilizce çeviri</label>
             <select class="ain" id="placeEnFilter" aria-label="İngilizce çeviri" data-act="loadPlacesList">
@@ -162,9 +163,15 @@
           </div>
           <div id="placeBulkBar" class="adm-bulk-bar" style="display:none" aria-live="polite">
             <span id="placeBulkCount">0 seçili</span>
-            <button class="btn-no bsm" type="button" data-act="bulkArchivePlaces">Toplu arşivle</button>
+            <button class="btn-no bsm" type="button" id="placeBulkArchiveBtn" data-act="bulkArchivePlaces">Toplu arşivle</button>
+            <button class="btn-no bsm" type="button" id="placeBulkTrashBtn" data-act="bulkTrashPlaces">Toplu sil (çöp)</button>
+            <button class="btn bp bsm" type="button" id="placeBulkRestoreBtn" data-act="bulkRestorePlaces" style="display:none">Geri yükle</button>
+            <button class="btn-no bsm" type="button" id="placeBulkPurgeBtn" data-act="bulkPurgePlaces" style="display:none">Kalıcı sil</button>
             <button class="btn bo bsm" type="button" data-act="clearPlaceSelection">Seçimi temizle</button>
           </div>
+          <p id="placeTrashHint" class="adm-cat-hint" style="display:none" aria-live="polite">
+            Çöp kutusundaki yerler 15 gün sonra otomatik kalıcı silinir. İsterseniz geri yükleyin veya hemen kalıcı silin.
+          </p>
           <div id="placesTableWrap" aria-live="polite"></div>
         </div>
       </section>
@@ -1464,7 +1471,8 @@ const SETTING_FIELDS = [
   { key: 'seo_description', label: 'SEO açıklama', type: 'textarea' },
 ];
 
-const STATUS_LABELS = { published: 'Yayında', draft: 'Taslak', archived: 'Arşiv' };
+const STATUS_LABELS = { published: 'Yayında', draft: 'Taslak', archived: 'Arşiv', trash: 'Çöp' };
+const PLACE_TRASH_DAYS = 15;
 const BLOG_STATUS_LABELS = { approved: 'Yayında', draft: 'Taslak', pending: 'Onay bekliyor', rejected: 'Reddedildi', spam: 'Spam' };
 const BLOG_PAGE_FIELDS = [
   { key: 'heroTitleTr', label: 'Başlık (TR)' },
@@ -3715,53 +3723,49 @@ async function importPlacesFile(input) {
   } catch (e) { showErr(e.message); input.value = ''; }
 }
 
+function isPlacesTrashView() {
+  return (document.getElementById('placeStatusFilter')?.value || '') === 'trash';
+}
+
 function updatePlaceBulkBar() {
   const bar = document.getElementById('placeBulkBar');
   const countEl = document.getElementById('placeBulkCount');
   if (!bar) return;
   bar.style.display = placeSelected.size ? 'flex' : 'none';
   if (countEl) countEl.textContent = `${placeSelected.size} seçili`;
+  const trash = isPlacesTrashView();
+  const archiveBtn = document.getElementById('placeBulkArchiveBtn');
+  const trashBtn = document.getElementById('placeBulkTrashBtn');
+  const restoreBtn = document.getElementById('placeBulkRestoreBtn');
+  const purgeBtn = document.getElementById('placeBulkPurgeBtn');
+  if (archiveBtn) archiveBtn.style.display = trash ? 'none' : '';
+  if (trashBtn) trashBtn.style.display = trash ? 'none' : '';
+  if (restoreBtn) restoreBtn.style.display = trash ? '' : 'none';
+  if (purgeBtn) purgeBtn.style.display = trash ? '' : 'none';
 }
 
 function placeIdFromEl(el) {
-  if (!el) return null;
-  const raw = el.getAttribute('data-place-id') || el.getAttribute('data-arg');
+  const raw = el?.getAttribute?.('data-place-id') || el?.getAttribute?.('data-arg');
   const id = Number(raw);
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
-function resolveChecked(arg, fallbackEl) {
-  if (typeof arg === 'boolean') return arg;
-  const node = (arg && arg.tagName) ? arg : fallbackEl;
-  return !!(node && node.checked);
-}
-
-function togglePlaceSelect(id, checkedOrEl) {
-  const node = (checkedOrEl && checkedOrEl.tagName) ? checkedOrEl : (this && this.tagName ? this : null);
+function togglePlaceSelect(id, el) {
+  const node = el && el.tagName ? el : (typeof this !== 'undefined' && this?.tagName ? this : null);
   const pid = Number(id) || placeIdFromEl(node);
   if (!pid) return;
-  const checked = resolveChecked(checkedOrEl, node);
+  const checked = !!(node && 'checked' in node ? node.checked : false);
   if (checked) placeSelected.add(pid);
   else placeSelected.delete(pid);
-  const all = document.getElementById('placeSelectAll');
-  if (all) {
-    const boxes = document.querySelectorAll('.place-select-check');
-    all.checked = boxes.length > 0 && [...boxes].every((c) => c.checked);
-  }
   updatePlaceBulkBar();
 }
 
-function togglePlaceSelectAll(checkedOrEl) {
-  const node = (checkedOrEl && checkedOrEl.tagName) ? checkedOrEl : (this && this.tagName ? this : null);
-  const checked = resolveChecked(checkedOrEl, node);
+function togglePlaceSelectAll(el) {
+  const node = el && el.tagName ? el : (typeof this !== 'undefined' && this?.tagName ? this : null);
+  const checked = !!(node && node.checked);
   placeSelected.clear();
-  if (checked) placesCurrentItems.forEach((p) => {
-    const pid = Number(p.id);
-    if (Number.isFinite(pid) && pid > 0) placeSelected.add(pid);
-  });
+  if (checked) placesCurrentItems.forEach((p) => placeSelected.add(Number(p.id)));
   document.querySelectorAll('.place-select-check').forEach((c) => { c.checked = checked; });
-  const all = document.getElementById('placeSelectAll');
-  if (all && node !== all) all.checked = checked;
   updatePlaceBulkBar();
 }
 
@@ -3773,7 +3777,7 @@ function clearPlaceSelection() {
   updatePlaceBulkBar();
 }
 
-/** Direct change listeners after innerHTML — safety net if data-act args mis-resolve. */
+/** Re-bind after innerHTML — data-act + direct listeners (safety net for re-render). */
 function wirePlaceSelection(wrap) {
   if (!wrap) return;
   wrap.querySelectorAll('.place-select-check').forEach((c) => {
@@ -3781,7 +3785,7 @@ function wirePlaceSelection(wrap) {
     c.dataset.wired = '1';
     c.addEventListener('change', () => togglePlaceSelect(placeIdFromEl(c), c));
   });
-  const all = wrap.querySelector('#placeSelectAll');
+  const all = wrap.querySelector('#placeSelectAll') || document.getElementById('placeSelectAll');
   if (all && all.dataset.wired !== '1') {
     all.dataset.wired = '1';
     all.addEventListener('change', () => togglePlaceSelectAll(all));
@@ -3791,37 +3795,88 @@ function wirePlaceSelection(wrap) {
 function bulkArchivePlaces() {
   const ids = [...placeSelected].map(Number).filter((n) => n > 0);
   if (!ids.length) return showErr('Önce yer seçin');
-  openModal('Toplu arşivle', `
-    <p><strong>${ids.length}</strong> yer siteden kaldırılacak (arşivlenecek).</p>
-    <p style="font-size:.8rem;color:var(--t2)">Kayıtlar kalıcı silinmez. İsterseniz sonra tekrar yayınlayabilirsiniz.</p>`,
+  openModal('Emin misiniz?', `
+    <p><strong>${ids.length}</strong> yer arşivlenecek (siteden kalkar).</p>
+    <p style="font-size:.8rem;color:var(--t2)">Çöp kutusuna gitmez. İsterseniz sonra tekrar yayınlayabilirsiniz.</p>`,
     [
       { label: 'İptal', onClick: closeModal },
-      { label: 'Arşivle', primary: true, onClick: () => submitBulkArchivePlaces() },
+      { label: 'Arşivle', primary: true, onClick: () => submitBulkPlaceAction('archive') },
     ]
   );
 }
 
-async function submitBulkArchivePlaces() {
+function bulkTrashPlaces() {
+  const ids = [...placeSelected].map(Number).filter((n) => n > 0);
+  if (!ids.length) return showErr('Önce yer seçin');
+  openModal('Emin misiniz?', `
+    <p><strong>${ids.length}</strong> yer çöp kutusuna taşınacak.</p>
+    <p style="font-size:.8rem;color:var(--t2)">${PLACE_TRASH_DAYS} gün sonra otomatik kalıcı silinir. Bu süre içinde geri yükleyebilirsiniz.</p>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Çöpe taşı', primary: true, onClick: () => submitBulkPlaceAction('trash') },
+    ]
+  );
+}
+
+function bulkRestorePlaces() {
+  const ids = [...placeSelected].map(Number).filter((n) => n > 0);
+  if (!ids.length) return showErr('Önce yer seçin');
+  openModal('Emin misiniz?', `
+    <p><strong>${ids.length}</strong> yer çöp kutusundan geri yüklenecek (taslak).</p>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Geri yükle', primary: true, onClick: () => submitBulkPlaceAction('restore') },
+    ]
+  );
+}
+
+function bulkPurgePlaces() {
+  const ids = [...placeSelected].map(Number).filter((n) => n > 0);
+  if (!ids.length) return showErr('Önce yer seçin');
+  openModal('Emin misiniz?', `
+    <p><strong>${ids.length}</strong> yer <em>kalıcı</em> silinecek. Bu işlem geri alınamaz.</p>`,
+    [
+      { label: 'İptal', onClick: closeModal },
+      { label: 'Kalıcı sil', primary: true, onClick: () => submitBulkPlaceAction('purge') },
+    ]
+  );
+}
+
+async function submitBulkPlaceAction(action) {
   const ids = [...placeSelected].map(Number).filter((n) => n > 0);
   if (!ids.length) return;
   try {
-    const data = await api('/admin/places/bulk', { method: 'POST', body: { ids, action: 'archive' } });
+    const data = await api('/admin/places/bulk', { method: 'POST', body: { ids, action } });
     closeModal();
-    showToast(`${data.processed || 0} arşivlendi${data.errors?.length ? `, ${data.errors.length} hata` : ''}`);
+    const labels = {
+      archive: 'arşivlendi',
+      trash: 'çöpe taşındı',
+      delete: 'çöpe taşındı',
+      restore: 'geri yüklendi',
+      purge: 'kalıcı silindi',
+    };
+    showToast(`${data.processed || 0} ${labels[action] || 'işlendi'}${data.errors?.length ? `, ${data.errors.length} hata` : ''}`);
     clearPlaceSelection();
     await loadPlacesList();
     await refresh();
   } catch (e) { showErr(e.message); }
 }
 
+async function submitBulkArchivePlaces() {
+  return submitBulkPlaceAction('archive');
+}
+
 async function loadPlacesList() {
   const wrap = document.getElementById('placesTableWrap');
   if (!wrap) return;
   wrap.innerHTML = '<p style="color:var(--t3)">Yükleniyor…</p>';
+  const trashHint = document.getElementById('placeTrashHint');
   try {
     const q = document.getElementById('placeSearch')?.value || '';
     const status = document.getElementById('placeStatusFilter')?.value || '';
     const enFilter = document.getElementById('placeEnFilter')?.value || '';
+    const inTrash = status === 'trash';
+    if (trashHint) trashHint.style.display = inTrash ? '' : 'none';
     const qs = new URLSearchParams({ q, limit: (status || enFilter) ? '200' : '80' });
     if (status) qs.set('status', status);
     if (enFilter === 'missing') qs.set('en', 'missing');
@@ -3832,31 +3887,41 @@ async function loadPlacesList() {
     placeSelected.clear();
     updatePlaceBulkBar();
     if (!rows.length) {
-      wrap.innerHTML = '<p style="color:var(--t3)">Kayıtlı yer bulunamadı.</p>';
+      wrap.innerHTML = `<p style="color:var(--t3)">${inTrash ? 'Çöp kutusu boş.' : 'Kayıtlı yer bulunamadı.'}</p>`;
       return;
     }
     wrap.innerHTML = `
       <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <input type="checkbox" id="placeSelectAll" data-act="togglePlaceSelectAll" data-arg="this.checked" aria-label="Tümünü seç"/> Tümünü seç
+        <input type="checkbox" id="placeSelectAll" data-act="togglePlaceSelectAll" data-el data-on="change" aria-label="Tümünü seç"/> Tümünü seç
       </label>
       <table class="admin-table" aria-label="Yer listesi">
       <thead><tr><th scope="col"><span class="sr-only">Seç</span></th><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>Durum</th><th>İşlem</th></tr></thead>
-      <tbody>${rows.map((p) => `<tr>
-        <td><input type="checkbox" class="place-select-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-arg2="this.checked" data-place-id="${p.id}" aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
+      <tbody>${rows.map((p) => {
+        const statusLabel = p.inTrash || p.deletedAt
+          ? 'Çöp'
+          : (STATUS_LABELS[p.status] || p.status || 'Yayında');
+        const deletedNote = p.deletedAt
+          ? ` <span class="adm-user-badge warn" title="Çöpe alınma">${escapeHtml(String(p.deletedAt).slice(0, 10))}</span>`
+          : '';
+        const actions = inTrash
+          ? `<button class="btn bp bsm" type="button" data-act="restorePlaceOne" data-arg="${p.id}">Geri yükle</button>
+             <button class="btn-no" type="button" data-act="purgePlaceOne" data-arg="${p.id}">Kalıcı sil</button>`
+          : `<button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" data-act="openPlaceEdit" data-arg="${p.id}">Düzenle</button>
+             <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" data-act="confirmDeletePlace" data-arg="${p.id}">Sil</button>`;
+        return `<tr>
+        <td><input type="checkbox" class="place-select-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-place-id="${p.id}" data-el data-on="change" aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
         <td>${p.id}</td>
-        <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}</td>
+        <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}${deletedNote}</td>
         <td>${escapeHtml(p.city)}</td>
         <td>${escapeHtml(p.country)}</td>
         <td>${escapeHtml(displayLabel(p.category))}</td>
-        <td>${escapeHtml(STATUS_LABELS[p.status] || p.status || 'Yayında')}</td>
-        <td class="admin-actions">
-          <button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" data-act="openPlaceEdit" data-arg="${p.id}">Düzenle</button>
-          <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" data-act="confirmDeletePlace" data-arg="${p.id}">Sil</button>
-        </td>
-      </tr>`).join('')}</tbody></table>
-      <p style="font-size:.72rem;color:var(--t3);margin-top:8px">Toplam: ${data.total || rows.length}${enFilter === 'missing' ? ' · Filtre: EN çeviri eksik' : ''}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
+        <td>${escapeHtml(statusLabel)}</td>
+        <td class="admin-actions">${actions}</td>
+      </tr>`;
+      }).join('')}</tbody></table>
+      <p style="font-size:.72rem;color:var(--t3);margin-top:8px">Toplam: ${data.total || rows.length}${inTrash ? ` · ${PLACE_TRASH_DAYS} gün sonra otomatik silinir` : ''}${enFilter === 'missing' ? ' · Filtre: EN çeviri eksik' : ''}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
     wirePlaceSelection(wrap);
-    loadPlacesQualityBar();
+    if (!inTrash) loadPlacesQualityBar();
   } catch (e) {
     wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
   }
@@ -4300,15 +4365,15 @@ async function confirmDeletePlace(id) {
     const data = await api('/admin/places/' + id);
     const p = data.place;
     const tiolaNote = p.tiolaCount
-      ? `<p>Bu yerde ${p.tiolaCount} Tiola var. Yorumlar silinmez; yer siteden kalkar.</p>`
+      ? `<p>Bu yerde ${p.tiolaCount} Tiola var. Yorumlar silinmez; yer çöp kutusuna gider.</p>`
       : '';
-    openModal('Yeri arşivle', `
-      <p><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.city)}, ${escapeHtml(p.country)}) siteden kaldırılacak.</p>
+    openModal('Emin misiniz?', `
+      <p><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.city)}, ${escapeHtml(p.country)}) çöp kutusuna taşınacak.</p>
       ${tiolaNote}
-      <p style="font-size:.8rem;color:var(--t2)">Kayıt kalıcı silinmez. İsterseniz sonra tekrar yayınlayabilirsiniz.</p>`,
+      <p style="font-size:.8rem;color:var(--t2)">${PLACE_TRASH_DAYS} gün sonra otomatik kalıcı silinir. Bu süre içinde geri yükleyebilirsiniz.</p>`,
       [
         { label: 'İptal', onClick: closeModal },
-        { label: 'Arşivle', primary: true, onClick: () => deletePlace(id) },
+        { label: 'Çöpe taşı', primary: true, onClick: () => deletePlace(id) },
       ]
     );
   } catch (e) { showErr(e.message); }
@@ -4318,9 +4383,22 @@ async function deletePlace(id) {
   try {
     await api('/admin/places/' + id, { method: 'DELETE' });
     closeModal();
+    showToast('Çöp kutusuna taşındı');
     await loadPlacesList();
     await refresh();
   } catch (e) { showErr(e.message); }
+}
+
+function restorePlaceOne(id) {
+  placeSelected.clear();
+  placeSelected.add(Number(id));
+  bulkRestorePlaces();
+}
+
+function purgePlaceOne(id) {
+  placeSelected.clear();
+  placeSelected.add(Number(id));
+  bulkPurgePlaces();
 }
 
 async function addPlace() {
@@ -5756,6 +5834,18 @@ document.getElementById('adminPanel')?.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
   if (e.target.matches('input, select')) e.preventDefault();
 });
+
+window.togglePlaceSelect = togglePlaceSelect;
+window.togglePlaceSelectAll = togglePlaceSelectAll;
+window.clearPlaceSelection = clearPlaceSelection;
+window.bulkArchivePlaces = bulkArchivePlaces;
+window.bulkTrashPlaces = bulkTrashPlaces;
+window.bulkRestorePlaces = bulkRestorePlaces;
+window.bulkPurgePlaces = bulkPurgePlaces;
+window.confirmDeletePlace = confirmDeletePlace;
+window.restorePlaceOne = restorePlaceOne;
+window.purgePlaceOne = purgePlaceOne;
+window.loadPlacesList = loadPlacesList;
 
 syncAdminSectionVisibility();
 restoreAdminSession().catch(() => showLoginScreen());
