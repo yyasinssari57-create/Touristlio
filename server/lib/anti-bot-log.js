@@ -3,6 +3,7 @@
  * Does not write exploits or payloads — only defensive signals.
  */
 const logger = require('./logger');
+const { requestLogPath } = require('./request-log-path');
 
 function clientIp(req) {
   return req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || null;
@@ -26,7 +27,7 @@ function logAbnormal({ kind, req, userId, extra } = {}) {
     kind: String(kind || 'unknown'),
     userId: userId != null ? Number(userId) || userId : (req?.user?.id || null),
     ip: req ? clientIp(req) : null,
-    path: req ? (req.originalUrl || req.path || '') : null,
+    path: req ? requestLogPath(req) : null,
     method: req ? req.method : null,
     ua: req ? userAgent(req) : null,
     ...(extra && typeof extra === 'object' ? extra : {}),

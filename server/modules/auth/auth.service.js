@@ -73,6 +73,14 @@ function siteBase() {
   return (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
 }
 
+/** Strip token/code/key query values before any log line. */
+function redactUrlSecrets(url) {
+  return String(url || '').replace(
+    /([?&](?:token|code|key)=)[^&]*/gi,
+    '$1[redacted]',
+  );
+}
+
 function isLocalDevEmail(email) {
   return String(email || '').toLowerCase().endsWith('@touristlio.local');
 }
@@ -105,7 +113,11 @@ async function register(req) {
         reason: smtp.reason,
       });
       if (process.env.NODE_ENV !== 'production') {
-        logger.info({ msg: 'Dev verification URL (SMTP off)', email: user.email, verifyUrl });
+        logger.info({
+          msg: 'Dev verification URL (SMTP off)',
+          email: user.email,
+          verifyUrl: redactUrlSecrets(verifyUrl),
+        });
       }
     }
   } catch (e) {

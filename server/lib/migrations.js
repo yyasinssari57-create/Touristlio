@@ -16,6 +16,7 @@ const USER_COLUMNS = [
   ['failed_login_count', 'INTEGER DEFAULT 0'],
   ['locked_until', 'TEXT'],
   ['verification_token', 'TEXT'],
+  ['verification_token_expires_at', 'TEXT'],
   ['risk_score', 'INTEGER DEFAULT 0'],
   ['is_blocked', 'INTEGER DEFAULT 0'],
   ['avatar_url', 'TEXT'],
