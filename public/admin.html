@@ -3750,22 +3750,38 @@ function placeIdFromEl(el) {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
-function togglePlaceSelect(id, el) {
-  const node = el && el.tagName ? el : (typeof this !== 'undefined' && this?.tagName ? this : null);
+function resolveChecked(arg, fallbackEl) {
+  if (typeof arg === 'boolean') return arg;
+  const node = (arg && arg.tagName) ? arg : fallbackEl;
+  return !!(node && node.checked);
+}
+
+function togglePlaceSelect(id, checkedOrEl) {
+  const node = (checkedOrEl && checkedOrEl.tagName) ? checkedOrEl : (this && this.tagName ? this : null);
   const pid = Number(id) || placeIdFromEl(node);
   if (!pid) return;
-  const checked = !!(node && 'checked' in node ? node.checked : false);
+  const checked = resolveChecked(checkedOrEl, node);
   if (checked) placeSelected.add(pid);
   else placeSelected.delete(pid);
+  const all = document.getElementById('placeSelectAll');
+  if (all) {
+    const boxes = document.querySelectorAll('.place-select-check');
+    all.checked = boxes.length > 0 && [...boxes].every((c) => c.checked);
+  }
   updatePlaceBulkBar();
 }
 
-function togglePlaceSelectAll(el) {
-  const node = el && el.tagName ? el : (typeof this !== 'undefined' && this?.tagName ? this : null);
-  const checked = !!(node && node.checked);
+function togglePlaceSelectAll(checkedOrEl) {
+  const node = (checkedOrEl && checkedOrEl.tagName) ? checkedOrEl : (this && this.tagName ? this : null);
+  const checked = resolveChecked(checkedOrEl, node);
   placeSelected.clear();
-  if (checked) placesCurrentItems.forEach((p) => placeSelected.add(Number(p.id)));
+  if (checked) placesCurrentItems.forEach((p) => {
+    const pid = Number(p.id);
+    if (Number.isFinite(pid) && pid > 0) placeSelected.add(pid);
+  });
   document.querySelectorAll('.place-select-check').forEach((c) => { c.checked = checked; });
+  const all = document.getElementById('placeSelectAll');
+  if (all && node !== all) all.checked = checked;
   updatePlaceBulkBar();
 }
 
@@ -3892,7 +3908,7 @@ async function loadPlacesList() {
     }
     wrap.innerHTML = `
       <label style="font-size:.78rem;display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <input type="checkbox" id="placeSelectAll" data-act="togglePlaceSelectAll" data-el data-on="change" aria-label="Tümünü seç"/> Tümünü seç
+        <input type="checkbox" id="placeSelectAll" data-act="togglePlaceSelectAll" data-arg="this.checked" aria-label="Tümünü seç"/> Tümünü seç
       </label>
       <table class="admin-table" aria-label="Yer listesi">
       <thead><tr><th scope="col"><span class="sr-only">Seç</span></th><th>ID</th><th>Ad</th><th>Şehir</th><th>Ülke</th><th>Kategori</th><th>Durum</th><th>İşlem</th></tr></thead>
@@ -3909,7 +3925,7 @@ async function loadPlacesList() {
           : `<button class="btn-edit" type="button" aria-label="Yer ${escapeHtml(p.name)} düzenle" data-act="openPlaceEdit" data-arg="${p.id}">Düzenle</button>
              <button class="btn-no" type="button" aria-label="Yer ${escapeHtml(p.name)} sil" data-act="confirmDeletePlace" data-arg="${p.id}">Sil</button>`;
         return `<tr>
-        <td><input type="checkbox" class="place-select-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-place-id="${p.id}" data-el data-on="change" aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
+        <td><input type="checkbox" class="place-select-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-arg2="this.checked" data-place-id="${p.id}" aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
         <td>${p.id}</td>
         <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}${deletedNote}</td>
         <td>${escapeHtml(p.city)}</td>
