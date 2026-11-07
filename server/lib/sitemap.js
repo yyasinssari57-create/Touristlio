@@ -121,7 +121,13 @@ function englishAlternateLoc(loc, base) {
   return path === '/' ? `${root}/en/` : `${root}/en${path}`;
 }
 
-function withEnglishAlternates(urls, base) {
+/**
+ * @param {object} [opts]
+ * @param {boolean} [opts.includeEnBlogIndex=true] — when false, /blog does not
+ *   spawn /en/blog in the sitemap (no published EN translations yet).
+ */
+function withEnglishAlternates(urls, base, opts = {}) {
+  const includeEnBlogIndex = opts.includeEnBlogIndex !== false;
   const kept = [];
   const extra = [];
   const root = String(base || '').replace(/\/$/, '');
@@ -142,6 +148,7 @@ function withEnglishAlternates(urls, base) {
     }
     if (isBlogDetailPath(path) || isPlaceDetailPath(path)) continue;
     if (path === '/en' || path.startsWith('/en/')) continue;
+    if (path === '/blog' && !includeEnBlogIndex) continue;
     const enLoc = englishAlternateLoc(u.loc, base);
     if (!enLoc) continue;
     extra.push({
@@ -241,9 +248,17 @@ ${urls.map((u) => `  <url>
 
 async function buildSitemapXml() {
   const base = siteBaseUrl();
+  const { hasPublishedEnBlogs } = require('./blog-i18n');
+  let includeEnBlogIndex = true;
+  try {
+    includeEnBlogIndex = await hasPublishedEnBlogs(db);
+  } catch {
+    includeEnBlogIndex = false;
+  }
   const urls = withEnglishAlternates(
     [...staticUrls(base), ...(await loadPlaceUrls(base)), ...(await loadBlogUrls(base))],
     base,
+    { includeEnBlogIndex },
   );
   return renderUrlSet(urls);
 }

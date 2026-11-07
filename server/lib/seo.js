@@ -308,7 +308,7 @@ function ogTypeFor(pathname, explicit) {
   return 'website';
 }
 
-function buildSeoHead({ pathname, lang, title, description, image, noindex, ogType, alternates, canonicalPath }) {
+function buildSeoHead({ pathname, lang, title, description, image, noindex, robots: robotsOverride, ogType, alternates, canonicalPath }) {
   const resolvedLang = lang || langFromPath(pathname);
   const defaults = pageDefaults(pathname, resolvedLang);
   const pageTitle = title || defaults.title;
@@ -317,17 +317,21 @@ function buildSeoHead({ pathname, lang, title, description, image, noindex, ogTy
   const canonical = canonicalPath
     ? absoluteFromSite(canonicalPath)
     : canonicalFor(pathname, resolvedLang);
-  const robots = noindex ? 'noindex, nofollow' : 'index,follow';
+  const robots = robotsOverride
+    || (noindex ? 'noindex, nofollow' : 'index,follow');
   const locale = resolvedLang === 'en' ? 'en_US' : 'tr_TR';
   const type = ogTypeFor(pathname, ogType);
   const gsc = googleSiteVerification();
+  // When noindex but robots is noindex,follow (empty EN blog index), still omit
+  // EN hreflang via alternates.en=null; keep TR/x-default when not fully noindex.
+  const skipHreflang = noindex && !/^noindex\s*,\s*follow$/i.test(String(robots));
   return [
     `<title>${escapeAttr(pageTitle)}</title>`,
     `<meta name="description" content="${escapeAttr(pageDesc)}"/>`,
     `<meta name="robots" content="${robots}"/>`,
     gsc ? `<meta name="google-site-verification" content="${escapeAttr(gsc)}"/>` : '',
     `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
-    noindex ? '' : hreflangLinks(pathname, alternates),
+    skipHreflang ? '' : hreflangLinks(pathname, alternates),
     `<meta property="og:type" content="${escapeAttr(type)}"/>`,
     `<meta property="og:site_name" content="Touristlio"/>`,
     `<meta property="og:locale" content="${locale}"/>`,

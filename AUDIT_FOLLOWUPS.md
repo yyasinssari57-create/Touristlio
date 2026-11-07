@@ -2,6 +2,14 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V5 — Adım 8 (/en/blog boşken indexlenmesin)
+
+Çevrilmiş + onaylı EN blog yoksa: `/en/blog` → `noindex,follow`; sitemap’te `/en/blog` yok; TR `/blog` → `/en/blog` hreflang yok. En az 1 tam çeviri (title/excerpt/body/slug_en) yayınlanınca otomatik normale döner. Çeviri içeriği üretilmedi.
+
+Kontrol: `npm run verify:v5-adim8` → OK.
+
+V5’te bu tur yalnız Adım 8. Kalan adım: 5.
+
 ## Cursor V5 — Adım 7 (yedek/geri yükleme sertleştirme)
 
 - `BACKUP_ENCRYPTION_KEY` tanımlıysa restore yalnız şifreli `.sql.enc` (GCM etiketli) kabul eder; düz `.sql` 400.

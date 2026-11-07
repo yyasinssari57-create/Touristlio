@@ -169,9 +169,18 @@ async function checkDatabase() {
     } else ok('/gezilecek-yerler and /en/gezilecek-yerler in sitemap');
     if (locSet.has('/search') || locSet.has('/en/search')) fail('sitemap still lists /search');
     else ok('/search is not in the sitemap');
-    if (!locSet.has('/en/') || !locSet.has('/en/blog')) {
-      fail('sitemap missing EN home or blog index');
-    } else ok('EN home and blog index in sitemap');
+    if (!locSet.has('/en/')) {
+      fail('sitemap missing EN home');
+    } else ok('EN home in sitemap');
+    {
+      const { hasPublishedEnBlogs } = require('../lib/blog-i18n');
+      const enBlogReady = await hasPublishedEnBlogs(db);
+      if (enBlogReady && !locSet.has('/en/blog')) {
+        fail('EN blogs exist but sitemap missing /en/blog');
+      } else if (!enBlogReady && locSet.has('/en/blog')) {
+        fail('no EN blogs but sitemap still lists /en/blog');
+      } else ok(enBlogReady ? 'EN blog index in sitemap (translated posts exist)' : 'EN blog index omitted (no translated posts)');
+    }
     if (!locSet.has('/en/legal/about.html') || !locSet.has('/en/legal/contact.html')) {
       fail('sitemap missing EN legal pages');
     } else ok('EN legal pages in sitemap');

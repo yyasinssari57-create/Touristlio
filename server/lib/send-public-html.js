@@ -22,7 +22,7 @@ const HTML_PAGE_ROUTES = {
   '/reset-password': 'reset-password.html',
   '/search': 'search.html',
   '/explore': 'index.html',
-  '/blog': 'index.html',
+  // /blog is app.get('/blog') in index.js (V5 Adım 8 empty-EN noindex).
   '/gezilecek-yerler': 'index.html',
   '/404': '404.html',
   '/legal/about.html': 'legal/about.html',
