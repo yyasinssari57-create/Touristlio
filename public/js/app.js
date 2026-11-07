@@ -1166,10 +1166,15 @@ function renderDetailWidgets(data) {
   if (liveBox && data.liveData) {
     const ld = data.liveData;
     const b = ld.budget || {};
+    const hotel = ld.hotel;
+    const showHotel = hotel
+      && hotel.note === 'admin'
+      && hotel.avgPriceTry != null
+      && Number(hotel.avgPriceTry) > 0;
     liveBox.innerHTML = `<div class="ac-title">💰 ${t('liveBudgetTitle')}</div>
       <div class="ic-row"><span class="ic-lbl">${t('budgetLow')}</span><span class="ic-val">~${b.low || '—'} ₺</span></div>
       <div class="ic-row"><span class="ic-lbl">${t('budgetMid')}</span><span class="ic-val">~${b.mid || '—'} ₺</span></div>
-      <div class="ic-row"><span class="ic-lbl">${t('hotelAvg')}</span><span class="ic-val">~${ld.hotel?.avgPriceTry || '—'} ₺</span></div>
+      ${showHotel ? `<div class="ic-row"><span class="ic-lbl">${t('hotelAvg')}</span><span class="ic-val">~${hotel.avgPriceTry} ₺</span></div>` : ''}
       ${ld.fallback ? `<small class="weather-fallback">${t('liveEstimate')}</small>` : ''}`;
   }
 }
@@ -2855,7 +2860,9 @@ async function openDetail(id, skipRoute) {
     document.getElementById('icCity').textContent = geoLabel(p.city);
     document.getElementById('icCat').textContent = p.categoryDisplay || catLabel(p.category);
     document.getElementById('icEntry').textContent = placeField(p, 'entryFee') || '—';
-    document.getElementById('icBest').textContent = placeField(p, 'bestTime') || '—';
+    document.getElementById('icBest').textContent = (sections && sections.texts.bestTime)
+      || placeField(p, 'bestTime')
+      || '—';
     await renderRevList();
     updateRevForm();
     showMainTab('detail', !!skipRoute);

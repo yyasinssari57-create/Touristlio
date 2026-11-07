@@ -216,9 +216,18 @@ function applyInfoBoxUpdates(existingPayload, body) {
 
   if (hotelAvg !== undefined) {
     const hotel = hotelAvg === '' || hotelAvg === null ? null : toNum(hotelAvg);
-    if (hotel) payload.hotel = { ...(payload.hotel || {}), avgPriceTry: hotel, note: 'admin' };
-    else if (payload.hotel) {
+    if (hotel) {
+      // İlçe (district) otel ortalaması — yalnız yönetici girerse ziyaretçide gösterilir.
+      payload.hotel = {
+        ...(payload.hotel || {}),
+        avgPriceTry: hotel,
+        note: 'admin',
+        scope: 'district',
+      };
+    } else if (payload.hotel) {
       delete payload.hotel.avgPriceTry;
+      delete payload.hotel.note;
+      delete payload.hotel.scope;
       if (!Object.keys(payload.hotel).length) delete payload.hotel;
     }
   }

@@ -95,7 +95,8 @@ const ICONIC_EN = {
   },
 };
 
-function enrichContentFields(p, id) {
+function enrichContentFields(p, id, opts = {}) {
+  const fill = opts.fillPlaceholders !== false;
   const i = id % 4;
   const iconic = ICONIC_EN[p.name];
   const desc = p.description || '';
@@ -106,15 +107,25 @@ function enrichContentFields(p, id) {
   if (iconic?.overviewEn) overviewEn = iconic.overviewEn;
   let historyEn = (p.historyEn && p.historyEn.length >= 80) ? p.historyEn : '';
   if (iconic?.historyEn) historyEn = iconic.historyEn;
-  else if (!historyEn) historyEn = `${p.name} belongs to the wider story of ${p.city} and ${p.country} — local guides often add context beyond signage.`;
-  const thingsToDo = p.thingsToDo?.length ? p.thingsToDo : THINGS_TR.slice(0, 3).map((fn) => fn(p.name, p.city));
-  const thingsToDoEn = p.thingsToDoEn?.length ? p.thingsToDoEn : THINGS_EN.slice(0, 3).map((fn) => fn(p.name, p.city));
-  const cultureFood = p.cultureFood || CULTURE_TR[i % CULTURE_TR.length](p.name, p.country);
-  const cultureFoodEn = p.cultureFoodEn || CULTURE_EN[i % CULTURE_EN.length](p.name, p.country);
+  else if (!historyEn && fill) {
+    historyEn = `${p.name} belongs to the wider story of ${p.city} and ${p.country} — local guides often add context beyond signage.`;
+  }
+  const thingsToDo = p.thingsToDo?.length
+    ? p.thingsToDo
+    : (fill ? THINGS_TR.slice(0, 3).map((fn) => fn(p.name, p.city)) : (Array.isArray(p.thingsToDo) ? p.thingsToDo : []));
+  const thingsToDoEn = p.thingsToDoEn?.length
+    ? p.thingsToDoEn
+    : (fill ? THINGS_EN.slice(0, 3).map((fn) => fn(p.name, p.city)) : (Array.isArray(p.thingsToDoEn) ? p.thingsToDoEn : []));
+  const cultureFood = p.cultureFood
+    || (fill ? CULTURE_TR[i % CULTURE_TR.length](p.name, p.country) : '');
+  const cultureFoodEn = p.cultureFoodEn
+    || (fill ? CULTURE_EN[i % CULTURE_EN.length](p.name, p.country) : '');
   const travelTips = p.travelTips || p.tips || '';
   const travelTipsEn = p.travelTipsEn || p.tipsEn || p.tips || '';
-  const howToGetThere = p.howToGetThere || `${trLabel(p.city)} merkezinden toplu taşıma veya taksi ile ${trDative(p.name)} ulaşılabilir.`;
-  const howToGetThereEn = p.howToGetThereEn || `Reach ${p.name} from ${p.city} center by public transit or taxi.`;
+  const howToGetThere = p.howToGetThere
+    || (fill ? `${trLabel(p.city)} merkezinden toplu taşıma veya taksi ile ${trDative(p.name)} ulaşılabilir.` : '');
+  const howToGetThereEn = p.howToGetThereEn
+    || (fill ? `Reach ${p.name} from ${p.city} center by public transit or taxi.` : '');
   const photos = Array.isArray(p.photos) && p.photos.length ? p.photos : (p.imageUrl ? [p.imageUrl] : []);
   const [lat, lng] = p.lat != null && p.lng != null
     ? [p.lat, p.lng]

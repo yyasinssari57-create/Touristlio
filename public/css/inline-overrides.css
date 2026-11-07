@@ -457,6 +457,24 @@ body.admin-body:not(.admin-session) {
   margin: 0 0 6px;
   line-height: 1.4;
 }
+.adm-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 4px;
+}
+.adm-month-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .78rem;
+  color: var(--t1);
+  cursor: pointer;
+  user-select: none;
+}
+.adm-month-chip input {
+  margin: 0;
+}
 .adm-photo-title {
   font-size: .82rem;
   font-weight: 700;
