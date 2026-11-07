@@ -737,7 +737,7 @@
       <section id="adm-guide" class="adm-section" hidden role="tabpanel" aria-label="Kılavuz">
         <div class="adm-guide-wrap">
           <h2 class="adm-h2">Moderatör Kılavuzu</h2>
-          <p class="adm-guide-intro">Bu kılavuz, Touristlio admin panelindeki tüm bölümleri ve günlük moderasyon iş akışlarını açıklar. Yeni moderatörler için başlangıç noktası olarak tasarlanmıştır; deneyimli ekip üyeleri de hızlı referans olarak kullanabilir.</p>
+          <p class="adm-guide-intro">Bu kılavuz, Touristlio admin panelindeki tüm bölümleri ve günlük iş akışlarını açıklar. Yeni ekip üyeleri için başlangıç noktasıdır; deneyimli moderatörler hızlı referans olarak kullanabilir. Aşağıdaki adımlar panelde gerçekten bulunan sekmeler ve form alanlarıyla uyumludur.</p>
 
           <div class="admin-card adm-guide-toc">
             <p class="adm-guide-toc-title">İçindekiler</p>
@@ -745,17 +745,20 @@
               <li><a href="#guide-roller">Roller ve yetkiler</a></li>
               <li><a href="#guide-panel-nav">Panel navigasyonu</a></li>
               <li><a href="#guide-ozet">Özet (Dashboard)</a></li>
-              <li><a href="#guide-depolama">Kalıcı depolama uyarısı</a></li>
+              <li><a href="#guide-depolama">Depolama ve yedek</a></li>
               <li><a href="#guide-yerler">Gezilecek Yerler</a></li>
+              <li><a href="#guide-yer-duzenle">Yer düzenleme (detay bölümleri)</a></li>
               <li><a href="#guide-sehirler">Şehirler</a></li>
               <li><a href="#guide-kategoriler">Kategoriler</a></li>
               <li><a href="#guide-moderasyon">Moderasyon</a></li>
               <li><a href="#guide-sikayetler">Şikayetler</a></li>
+              <li><a href="#guide-iletisim">İletişim kutusu</a></li>
               <li><a href="#guide-kullanicilar">Kullanıcılar</a></li>
               <li><a href="#guide-kayit-dogrulama">Kayıt ve e-posta doğrulama</a></li>
               <li><a href="#guide-icerik">İçerik (Blog)</a></li>
               <li><a href="#guide-analitik">Canlı ziyaretçi analitiği</a></li>
               <li><a href="#guide-medya">Medya</a></li>
+              <li><a href="#guide-gorunum">Görünüm (Hero)</a></li>
               <li><a href="#guide-ayarlar">Ayarlar</a></li>
               <li><a href="#guide-roller-panel">Roller</a></li>
               <li><a href="#guide-audit">İşlem geçmişi</a></li>
@@ -772,41 +775,40 @@
                 <strong>Yönetici (admin)</strong>
                 <ul>
                   <li>Tüm sekmelere tam erişim</li>
-                  <li>Kullanıcı yönetimi, engelleme, rol atama</li>
-                  <li>Site ayarları, bakım modu, yasaklı kelimeler</li>
-                  <li>Rol tanımları ve Audit Log</li>
+                  <li>Kullanıcı yönetimi, engelleme ve <em>rol atama</em> (rol değişikliği yalnızca yönetici)</li>
+                  <li>Görünüm (hero), site ayarları, bakım modu, yasaklı kelimeler</li>
+                  <li>Rol tanımları, Audit Log ve veritabanı yedeği</li>
                 </ul>
               </div>
               <div class="adm-guide-role-card">
                 <strong>Moderatör</strong>
                 <ul>
-                  <li>Özet, Analitik, Medya</li>
+                  <li>Özet, İletişim, Analitik, Medya</li>
                   <li>Gezilecek Yerler, Şehirler, Kategoriler</li>
-                  <li>Moderasyon, Şikayetler, İçerik (blog)</li>
-                  <li>Kullanıcılar, Ayarlar, Roller ve Audit Log <em>yok</em></li>
+                  <li>Moderasyon, Şikayetler, İçerik (blog), Kullanıcılar</li>
+                  <li>Engelleme, uyarı e-postası, profil fotoğrafı kaldırma yapabilir</li>
+                  <li>Görünüm, Ayarlar, Roller, Audit Log ve rol atama <em>yok</em></li>
                 </ul>
               </div>
               <div class="adm-guide-role-card">
                 <strong>Editör</strong>
                 <ul>
-                  <li>Özet ve İçerik (blog) sekmeleri</li>
-                  <li>Blog yazıları, kategoriler, sayfa metinleri</li>
-                  <li>Moderasyon ve kullanıcı işlemleri <em>yok</em></li>
+                  <li>Özet, Analitik ve İçerik (blog) sekmeleri</li>
+                  <li>Blog yazıları, blog kategorileri, sayfa metinleri</li>
+                  <li>Moderasyon, yer yönetimi ve kullanıcı işlemleri <em>yok</em></li>
                 </ul>
               </div>
               <div class="adm-guide-role-card">
                 <strong>İçerik Yöneticisi (staff)</strong>
                 <ul>
-                  <li>Moderatör + editör yetkilerinin tek rolde birleşimi</li>
-                  <li>Özet, Analitik, İçerik, Moderasyon, Şikayetler</li>
-                  <li>Gezilecek Yerler, Şehirler, Kategoriler, Medya</li>
+                  <li>Moderatör ile aynı varsayılan yetkiler (yer + moderasyon + kullanıcı + içerik)</li>
                   <li>Tiola onayı, blog düzenleme ve yer yönetimini aynı kişi yapabilir</li>
-                  <li>Kullanıcılar, Ayarlar, Roller ve Audit Log <em>yok</em></li>
+                  <li>Görünüm, Ayarlar, Roller, Audit Log ve rol atama <em>yok</em></li>
                   <li>Yönetici hesapları üzerinde işlem yapamaz</li>
                 </ul>
               </div>
             </div>
-            <p>İçerik yöneticisi atamak için yönetici <strong>Kullanıcılar → Profili gör → Rol</strong> menüsünden <code>İçerik Yöneticisi</code> seçer. Yeni panel hesabı oluşturmak için moderatör formu kullanılır; ardından rol staff olarak güncellenir.</p>
+            <p>İçerik yöneticisi atamak için yönetici <strong>Kullanıcılar → Profili gör → Rol</strong> menüsünden <code>İçerik Yöneticisi</code> seçer. Yeni panel hesabı oluşturmak için <strong>Moderatörler</strong> altındaki formu kullanın; ardından yönetici rolü staff olarak günceller.</p>
             <p class="adm-guide-tip">Üst çubukta adınızın yanında rolünüz görünür (ör. <code>İçerik Yöneticisi</code>). Bir sekme görünmüyorsa yetkiniz yoktur; yöneticinizden izin isteyin.</p>
           </div>
 
@@ -814,8 +816,9 @@
             <h3>Panel navigasyonu</h3>
             <p>Admin paneldeyken üst çubuktaki <strong>Touristlio Admin</strong> yazısı ve ortadaki logo <code>/admin</code> adresine gider — ana siteye (<code>/</code>) değil. Böylece moderasyon sırasında yanlışlıkla public siteye çıkmazsınız.</p>
             <ul class="adm-guide-list">
-              <li>Logo ve marka bağlantıları <code>admin-nav-stay</code> sınıfıyla panelde kalır</li>
+              <li>Logo ve marka bağlantıları panelde kalır (<code>admin-nav-stay</code>)</li>
               <li>Çıkış yaptıktan sonra veya yeni sekmede <code>/</code> ana siteyi açabilirsiniz</li>
+              <li>Sekme sırası kabaca: Özet → Yerler → Şehirler → Kategoriler → Moderasyon → Şikayetler → İletişim → Kullanıcılar → İçerik → Analitik → Medya → (yönetici) Görünüm / Ayarlar / Roller / İşlem geçmişi → Kılavuz</li>
               <li>Kılavuz sekmesi tüm panel rolleri için görünür; günlük referans olarak kullanın</li>
             </ul>
           </div>
@@ -828,38 +831,85 @@
               <li><strong>Bekleyen Tiola</strong> — onay bekleyen topluluk yorumları</li>
               <li><strong>Spam Tiola</strong> — yasaklı kelime veya otomatik filtreyle işaretlenenler</li>
               <li><strong>Bekleyen Blog</strong> — kullanıcıların gönderdiği onay bekleyen yazılar</li>
+              <li><strong>İletişim</strong> — sitedeki iletişim formundan gelen mesaj sayısı</li>
               <li><strong>Kullanıcı</strong> — kayıtlı üye sayısı</li>
             </ul>
-            <p>Günlük rutininizde önce bu kartlara bakarak öncelik sıranızı belirleyin: bekleyen Tiola ve blog sayıları yüksekse Moderasyon ve İçerik sekmelerine geçin.</p>
-            <p>Özet ekranının üstünde kırmızı bir uyarı görürseniz kalıcı depolama yoktur — ayrıntılar için <a href="#guide-depolama">Kalıcı depolama uyarısı</a> bölümüne bakın.</p>
+            <p>Günlük rutininizde önce bu kartlara bakarak öncelik sıranızı belirleyin: bekleyen Tiola / blog yüksekse Moderasyon ve İçerik’e; iletişim sayısı arttıysa İletişim sekmesine geçin.</p>
+            <p>Yönetici hesabında Özet’in altında <strong>Veritabanı yedeği</strong> paneli de görünür (indirme / doğrulama / geri yükleme). Ayrıntılar için <a href="#guide-depolama">Depolama ve yedek</a> bölümüne bakın.</p>
+            <p>Özet ekranının üstünde kırmızı bir uyarı görürseniz kalıcı depolama yoktur — yine aynı bölüme bakın.</p>
           </div>
 
           <div id="guide-depolama" class="admin-card adm-guide-block">
-            <h3>Kalıcı depolama uyarısı</h3>
-            <p>Render <strong>ücretsiz planda</strong> SQLite veritabanı her redeploy veya yeniden başlatmada sıfırlanır. Özet sekmesinde şu banner görünürse veriler kalıcı değildir:</p>
-            <p class="adm-guide-tip"><strong>Kalıcı depolama yok.</strong> Kayıtlı kullanıcılar, Tiola'lar, bloglar ve yüklenen medya redeploy sonrası kaybolabilir.</p>
+            <h3>Depolama ve yedek</h3>
+            <p>Üretim ortamı genelde <strong>Postgres (ör. Supabase)</strong> ve kalıcı nesne depolama ile çalışır. Özet’te kırmızı banner yalnızca sunucu geçici (ephemeral) depolama algıladığında çıkar:</p>
+            <p class="adm-guide-tip"><strong>Kalıcı depolama yok.</strong> Bu uyarı görünürse kayıtlı kullanıcılar, Tiola’lar, bloglar ve yüklenen medya redeploy sonrası kaybolabilir.</p>
             <ul class="adm-guide-list">
-              <li>Banner yalnızca geçici (ephemeral) depolama algılandığında gösterilir</li>
-              <li>Kalıcılık için Render Starter plan + disk mount veya harici veritabanı gerekir</li>
-              <li>Üretimde <code>STORAGE_PERSISTENT=true</code> ve disk mount ayarlanmalıdır (bkz. DEPLOY.md)</li>
-              <li>Yerel geliştirmede (<code>localhost</code>) veriler proje klasöründeki <code>data/</code> dizininde kalır; bu uyarı genelde görünmez</li>
+              <li>Banner yoksa veri kalıcı kabul edilir; «hesabım silindi» şikayetlerini önce içerik / engel kontrolüyle ele alın</li>
+              <li>Geçici diskte SQLite kullanılıyorsa kalıcılık için disk mount, <code>STORAGE_PERSISTENT=true</code> veya harici veritabanı gerekir (bkz. DEPLOY.md)</li>
+              <li>Yerel geliştirmede veriler genelde proje <code>data/</code> dizininde kalır; uyarı çoğu zaman görünmez</li>
             </ul>
-            <p>Moderatör olarak kullanıcılara «hesabınız silindi» şikayetleri gelirse önce sunucunun yeniden başlatılıp başlatılmadığını yöneticiye sorun — ücretsiz planda bu beklenen bir durumdur.</p>
+            <p><strong>Veritabanı yedeği</strong> (yalnızca yönetici, Özet sekmesi):</p>
+            <ul class="adm-guide-list">
+              <li><strong>Tam yedek indir (.sql)</strong> — tarihli yedek; SHA-256 checksum başlığı içerir. Dosyayı Drive vb. güvenli yere koyun</li>
+              <li><strong>Yalnızca doğrula</strong> — geri yüklemeden önce checksum ve uyumluluğu test eder (varsayılan işaretli)</li>
+              <li><strong>Gerçek geri yükleme</strong> — yönetici şifresi ister; <em>tüm site verisini</em> değiştirir. İçerik yöneticileri bu işi yapmaz</li>
+              <li>Ortam Postgres/Supabase ise panel yedek araçları kapalı olabilir; ipucu satırı Supabase Dashboard → Database → Backups yönlendirir</li>
+            </ul>
           </div>
 
           <div id="guide-yerler" class="admin-card adm-guide-block">
             <h3>Gezilecek Yerler</h3>
-            <p>Sitedeki destinasyon kartlarını (müzeler, parklar, simge yapılar vb.) buradan ekler ve düzenlersiniz.</p>
+            <p>Sitedeki destinasyon kartlarını (müzeler, parklar, simge yapılar vb.) buradan ekler, listeler ve arşivlersiniz. Detay sayfası bölümleri için <a href="#guide-yer-duzenle">Yer düzenleme</a> bölümüne bakın.</p>
+            <p><strong>Yeni yer formu (üst kart):</strong></p>
             <ul class="adm-guide-list">
-              <li><strong>Yeni yer ekle</strong> — ad, ülke, şehir, kategori kodu (slug), yayın durumu, koordinatlar, açıklama (TR/EN) ve fotoğraflar</li>
+              <li><strong>Zorunlu çekirdek</strong> — ad, ülke, şehir, kategori kodu (slug)</li>
+              <li><strong>İlçe / bölge</strong> — isteğe bağlı; boşsa şehir değeri kullanılır. Bütçe kartındaki «ilçe otel ortalaması» ile birlikte düşünün</li>
+              <li><strong>Konum metni, arama aliasları</strong> — alias’lar virgülle (ör. <code>Ayasofya, Hagia Sophia</code>)</li>
               <li><strong>Kategori kodu</strong> — Türkçe ad değil; <code>museum</code>, <code>historical</code> gibi teknik kodlar. Keşfet filtreleriyle eşleşir</li>
               <li><strong>Yayın durumu</strong> — Yayında, Taslak veya Arşiv</li>
-              <li><strong>Fotoğraflar</strong> — 16:9 kırpma; yüklenen görseller tercih edilir. Unsplash/harici URL'ler turuncu etiketle işaretlenir</li>
-              <li><strong>Yer listesi</strong> — arama, JSON/CSV dışa aktarma ve içe aktarma</li>
-              <li><strong>EN çeviri eksik</strong> — İngilizce açıklama yoksa listede etiket görünür. O mekânın İngilizce sayfası Google’a kapalıdır; ziyaretçi Türkçe metni görmeye devam eder</li>
-              <li><strong>Kalite çubuğu</strong> — koordinat, fotoğraf, FAQ veya açıklama eksik yerleri filtrelemenizi sağlar</li>
+              <li><strong>Kaynak URL</strong> — yayın kapısı için kritik; resmi kaynak veya doğrulanmış referans</li>
+              <li><strong>Koordinatlar</strong> — enlem −90…90, boylam −180…180; canlı saat/hava ve harita için gerekir</li>
+              <li><strong>Kapak görseli + «Bu görsel bu mekâna ait»</strong> — görsel doğrulama kutusu. Dosya yüklendiğinde doğrulanmış sayılır; harici URL kullanıyorsanız kutuyu bilerek işaretleyin</li>
+              <li><strong>Fotoğrafçı / kaynak adresi</strong> — Unsplash veya harici görseller için kredi alanları</li>
+              <li><strong>Fotoğraflar</strong> — 16:9 kırpma; en fazla 10 görsel · JPEG/PNG/WebP · dosya başına max 12 MB. Unsplash/harici URL’ler turuncu etiketle işaretlenir</li>
+              <li><strong>Açıklama TR / EN</strong> — İngilizce zorunlu değil. EN boşsa sayfa açılır, ziyaretçi Türkçe metni görür; İngilizce sürüm Google’a kapalıdır</li>
             </ul>
-            <p>Listedeki bir yere <strong>Düzenle</strong> ile mevcut kaydı güncelleyebilir veya silebilirsiniz.</p>
+            <p><strong>Yayın kalite kapısı:</strong> «Yayında» seçmek için ad, Türkçe açıklama, koordinat, kategori, <em>doğrulanmış görsel</em> ve kaynak URL (veya doğrulama tarihi) dolu olmalıdır. Kapı başarısız olursa kayıt taslakta kalır; formu düzeltip yeniden kaydedin. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
+            <p><strong>Yer listesi:</strong></p>
+            <ul class="adm-guide-list">
+              <li>Ad / şehir / ülke araması; durum filtresi (Tümü arşiv hariç, Yayında, Taslak, Arşiv); EN çeviri eksik filtresi</li>
+              <li>JSON/CSV dışa aktarma ve içe aktarma</li>
+              <li><strong>Kalite çubuğu</strong> — koordinat eksik, fotoğraf eksik, görsel doğrulanmamış, FAQ eksik, kısa açıklama filtreleri</li>
+              <li><strong>Toplu arşivle</strong> — satır kutucuklarıyla seçim → alt çubuktan arşiv. Kayıtlar kalıcı silinmez; sonra tekrar yayınlanabilir</li>
+              <li><strong>Düzenle / Sil</strong> — silme de arşiv benzeri güvenli akıştır (kalıcı silme değildir)</li>
+            </ul>
+          </div>
+
+          <div id="guide-yer-duzenle" class="admin-card adm-guide-block">
+            <h3>Yer düzenleme (detay bölümleri)</h3>
+            <p>Listeden <strong>Düzenle</strong> açıldığında modal, yeni yer formundan daha geniştir. Alttaki <strong>Kaydet</strong> yer bilgilerini yazar; bilgi kutucukları için ayrıca <strong>Bilgileri Kaydet</strong> vardır.</p>
+            <p><strong>Detay sayfası bölümleri</strong> (ziyaretçi mekân sayfasında):</p>
+            <ul class="adm-guide-list">
+              <li><strong>Yapılacaklar (TR)</strong> — her satır bir madde. Doluysa listelenir</li>
+              <li><strong>Kültür ve Gastronomi (TR)</strong> — boş bırakılırsa bölüm ziyaretçi sayfasında <em>gizlenir</em> (koşullu)</li>
+              <li><strong>Ziyaretçi tavsiyeleri (TR)</strong> — boşsa gizlenir</li>
+              <li><strong>En iyi zaman (aylar)</strong> — Ocak–Aralık çoklu seçim. Seçim yoksa «En iyi zaman» bölümü gizlenir; seçilen aylar yan panel Bilgiler kartına da yansır</li>
+              <li><strong>Sayfa özeti / açıklama (TR + EN)</strong> — sitede görünen özet budur. Özeti ellemezseniz ve açıklamayı değiştirirseniz özet açıklamadan yenilenebilir</li>
+            </ul>
+            <p><strong>Yan panel kartları</strong> (destinasyon sayfası sağ kolon):</p>
+            <ul class="adm-guide-list">
+              <li><strong>Hava durumu</strong> — elle yazılmaz; enlem/boylamdan canlı gelir</li>
+              <li><strong>Yerel bilgi</strong> — yerel saat otomatik; para birimi kodu/sembolü buradan (ör. TRY / ₺)</li>
+              <li><strong>Günlük bütçe tahmini</strong> — ekonomik ve orta (₺/gün) + <strong>ilçe otel ortalaması (₺/gece)</strong>. Otel ortalaması boşsa ziyaretçide gösterilmez</li>
+              <li><strong>Bilgiler</strong> — isteğe bağlı kategori gösterim metni ve giriş ücreti kısayolu</li>
+            </ul>
+            <p><strong>Bilgi kutucukları</strong> (ayrı kutular; boş olanlar sitede yok):</p>
+            <ul class="adm-guide-list">
+              <li>İklim/hava metni (canlı hava durumundan bağımsız), para birimi, bütçe seviyesi/miktarı, ziyaret süresi</li>
+              <li>Giriş ücreti, ücretsiz işareti, engelli erişimi, aile dostu, evcil hayvan, otopark</li>
+              <li>Kaynak URL — yayın kapısı ve doğrulama için kullanılır</li>
+            </ul>
+            <p class="adm-guide-tip">Görsel doğrulama: yüklenen dosyalar güvenilir kabul edilir. Harici URL’de «Bu görsel bu mekâna ait» kutusunu yalnızca gerçekten o mekâna ait olduğundan eminseniz işaretleyin. Kalite çubuğundaki «Görsel doğrulanmamış» filtresi bu alanı tarar.</p>
           </div>
 
           <div id="guide-sehirler" class="admin-card adm-guide-block">
@@ -908,25 +958,37 @@
               <li><strong>İçeriği kaldır</strong> — hedef içeriği siteden kaldırır (profil şikayetlerinde kullanılmaz)</li>
               <li><strong>Göz ardı et</strong> — şikayeti geçersiz sayar; içerik yerinde kalır</li>
             </ul>
-            <p class="adm-guide-tip">Profil şikayetleri için kullanıcı engelleme işlemi <strong>Kullanıcılar</strong> sekmesinden yapılır (yalnızca yöneticiler).</p>
+            <p class="adm-guide-tip">Profil şikayetlerinde <strong>Profil fotoğrafını kaldır</strong>, uyarı e-postası veya engelleme <strong>Kullanıcılar</strong> sekmesinden (veya şikayet detayındaki kullanıcı bağlantısından) yapılır. Yönetici hesapları engellenemez. Rol değiştirmek yalnızca yöneticidedir.</p>
+          </div>
+
+          <div id="guide-iletisim" class="admin-card adm-guide-block">
+            <h3>İletişim kutusu</h3>
+            <p>Sitedeki iletişim formundan gelen mesajlar burada listelenir (<code>admin.dashboard</code> yetkisi). SMTP yapılandırılmamış olsa bile mesajlar veritabanına yazılır.</p>
+            <ul class="adm-guide-list">
+              <li>Konu, gönderen adı, e-posta (mailto bağlantısı), tarih ve mesaj gövdesi görünür</li>
+              <li>Sayfalama ile eski mesajlara ulaşılır</li>
+              <li>Özet kartındaki <strong>İletişim</strong> sayısı bu kutuyu takip etmek için hızlı göstergedir</li>
+            </ul>
+            <p class="adm-guide-tip">Yanıt için kullanıcının e-posta adresine kendi istemcinizden yazın; panel şu an otomatik yanıt göndermez.</p>
           </div>
 
           <div id="guide-kullanicilar" class="admin-card adm-guide-block">
             <h3>Kullanıcılar</h3>
-            <p><em>Yalnızca yönetici (admin) rolü.</em> Üye hesaplarını görüntüleme, engelleme ve moderatör oluşturma.</p>
+            <p>Üye hesaplarını görüntüleme, engelleme ve moderatör oluşturma. Varsayılan olarak <strong>yönetici, moderatör ve içerik yöneticisi</strong> bu sekmeyi görür (editör görmez).</p>
             <ul class="adm-guide-list">
               <li><strong>Tüm kullanıcılar</strong> — kayıtlı üyelerin listesi; profil detayına gitme</li>
               <li><strong>Engellenenler</strong> — giriş yapamayan hesaplar</li>
-              <li><strong>Moderatörler</strong> — mevcut moderatör listesi ve yeni moderatör hesabı oluşturma formu</li>
-              <li><strong>Profil bekleyenleri</strong> — avatar, emoji veya profil fotoğrafı değişiklik talepleri</li>
+              <li><strong>Moderatörler</strong> — mevcut moderatör listesi ve yeni moderatör hesabı oluşturma formu (<code>/admin</code> girişi için e-posta + geçici şifre)</li>
+              <li><strong>Eski profil talepleri</strong> — profil değişiklikleri artık anında uygulanır; burada yalnızca geçmiş onay kuyruğundan kalan kayıtlar görünür. Uygunsuz avatar için Şikayetler veya kullanıcı profilini kullanın</li>
             </ul>
             <p><strong>Profil detay paneli</strong> (Profili gör):</p>
             <ul class="adm-guide-list">
               <li>Genel, Tiolalar, Bloglar, Şikayetler, Moderasyon ve Risk sekmeleri</li>
-              <li>Rol değiştirme (üye → editör → moderatör → içerik yöneticisi)</li>
-              <li>Kullanıcıya e-posta/bildirim gönderme</li>
-              <li>Engelle / engeli kaldır (yönetici hesapları engellenemez)</li>
-              <li>E-posta doğrulama durumu rozeti (doğrulandı / doğrulanmadı)</li>
+              <li>E-posta doğrulama rozeti, risk skoru, Tiola/blog/beğeni özetleri</li>
+              <li><strong>Rol değiştirme</strong> — yalnızca yönetici (üye → editör → moderatör → içerik yöneticisi). Yönetici hesaplarının rolü değiştirilemez</li>
+              <li>Kullanıcıya uyarı e-postası / bildirim (SMTP yoksa yalnız bildirim kaydı)</li>
+              <li>Profil fotoğrafını kaldır, görünen adı düzenle</li>
+              <li>Engelle / engeli kaldır (kendinizi veya yönetici hesaplarını engelleyemezsiniz)</li>
             </ul>
           </div>
 
@@ -941,8 +1003,8 @@
             <ul class="adm-guide-list">
               <li>Profil → <strong>Ayarlar</strong> → <strong>Doğrulama e-postası gönder</strong> butonunu denemesini önerin</li>
               <li>E-posta adresinin doğru yazıldığını kontrol edin</li>
-              <li>Sorun sürerse yöneticiden SMTP / <code>REQUIRE_EMAIL_VERIFICATION</code> ayarını kontrol etmesini isteyin</li>
-              <li>Yönetici, kullanıcı profilinde <strong>E-posta doğrulandı</strong> rozetini görebilir</li>
+              <li>Sorun sürerse yöneticiden SMTP / Brevo / <code>REQUIRE_EMAIL_VERIFICATION</code> ayarını kontrol etmesini isteyin</li>
+              <li>Kullanıcılar sekmesinde <strong>E-posta doğrulandı / doğrulanmadı</strong> rozetini görebilirsiniz</li>
             </ul>
             <p class="adm-guide-tip">Blog gönderisi onay beklerken yazarın e-postası doğrulanmamışsa, onay öncesi doğrulama tamamlamasını isteyebilirsiniz.</p>
           </div>
@@ -954,17 +1016,17 @@
             <ul class="adm-guide-list">
               <li><strong>Sayfa ayarları</strong> — blog hero başlığı, alt metin, arama kutusu ve boş liste mesajları (TR/EN)</li>
               <li><strong>Kategoriler</strong> — blog filtre çipleri (ör. Rehberler, Yemek); slug + Türkçe/İngilizce ad</li>
-              <li><strong>Tüm yazılar</strong> — yeni yazı ekleme, arama, durum/kategori filtresi, düzenleme</li>
+              <li><strong>Tüm yazılar</strong> — yeni yazı ekleme (TR/EN alanlar, yayın tarihi), arama, durum/kategori filtresi, düzenleme</li>
               <li><strong>Bekleyenler</strong> — kullanıcı gönderileri; onayla, reddet, toplu işlem</li>
               <li><strong>Yayında</strong> — yayındaki yazılar; arama, toplu kaldırma</li>
               <li><strong>Zamanlanmış</strong> — gelecek tarihli yayınlar; süre gelince otomatik yayına alınır</li>
             </ul>
-            <p>Yazı durumları: Yayında, Taslak, Onay bekliyor, Reddedildi, Spam. Öne çıkan yazılar ana sayfada vurgulanır.</p>
+            <p>Yazı durumları: Yayında, Taslak, Onay bekliyor, Reddedildi, Spam. Öne çıkan yazılar ana sayfada vurgulanır. İngilizce blog alanları boş bırakılabilir; site diline göre görünürlük/SEO politikası uygulanır.</p>
           </div>
 
           <div id="guide-analitik" class="admin-card adm-guide-block">
             <h3>Canlı ziyaretçi analitiği</h3>
-            <p><strong>Analitik</strong> sekmesi canlı ziyaretçi ve içerik metriklerini gösterir (<code>admin.analytics</code> yetkisi gerekir). Ana sitede <code>analytics.js</code> sayfa görüntüleme, sekme tıklaması, oturum süresi ve Core Web Vitals izler; <strong>yalnızca çerez onayından sonra</strong> (<code>tl_cookie_ok=1</code>). GA4, <code>GA_MEASUREMENT_ID</code> varsa aynı onay kapısından sonra yüklenir. Kimlik bu panele yazılmaz; Render <strong>Environment</strong> veya sunucu <code>.env</code> dosyasına yapıştırılır. Boşsa Google script’i hiç inmez.</p>
+            <p><strong>Analitik</strong> sekmesi canlı ziyaretçi ve içerik metriklerini gösterir (<code>admin.analytics</code> yetkisi; yönetici, moderatör, editör ve staff varsayılanında vardır). Ana sitede <code>analytics.js</code> sayfa görüntüleme, sekme tıklaması, oturum süresi ve Core Web Vitals izler; <strong>yalnızca çerez onayından sonra</strong> (<code>tl_cookie_ok=1</code>). GA4, <code>GA_MEASUREMENT_ID</code> varsa aynı onay kapısından sonra yüklenir. Kimlik bu panele yazılmaz; sunucu ortam değişkenine yapıştırılır. Boşsa Google script’i hiç inmez.</p>
             <p><strong>Canlı rozet</strong> — sekme açıkken üstte «Şu an çevrimiçi» sayısı ve son güncelleme saati görünür. Veriler <strong>30 saniyede bir</strong> otomatik yenilenir; sekmeden çıkınca yenileme durur.</p>
             <ul class="adm-guide-list">
               <li><strong>Şu an çevrimiçi</strong> — son 5 dakikada aktif oturum sayısı</li>
@@ -979,7 +1041,7 @@
             <ul class="adm-guide-list">
               <li>Kullanıcı, yer, onaylı Tiola ve bekleyen blog sayıları</li>
               <li>Son 30 gün içerik grafiği, en çok Tiola alan yerler, en aktif kullanıcılar</li>
-              <li>İçerik kalitesi skoru — koordinat/fotoğraf/FAQ eksik yerler için hızlı filtre</li>
+              <li>İçerik kalitesi — koordinat / fotoğraf / doğrulanmamış görsel / FAQ / kısa açıklama için hızlı filtre (Gezilecek Yerler kalite çubuğuyla aynı mantık)</li>
             </ul>
             <p class="adm-guide-tip">Yerel geliştirmede (<code>localhost:3000</code>) kendi oturumunuz da çevrimiçi sayısına dahil olur; test ederken bunu göz önünde bulundurun.</p>
           </div>
@@ -988,9 +1050,20 @@
             <h3>Medya</h3>
             <p>Yüklenen dosyalar ve mekânlarda kayıtlı harici adresler burada durur. Hangi mekânda kullanıldığı yazılır; görseli o mekân için değiştirebilirsiniz.</p>
             <ul class="adm-guide-list">
-              <li>Dosya adı ve yer ID ile arama/filtreleme</li>
-              <li>Her görselin URL'sini kopyalayıp formlarda kullanabilirsiniz</li>
-              <li>Gereksiz görselleri silerek depolama alanı yönetimi</li>
+              <li>Dosya adı, adres veya mekân adı ile arama; yer ID filtresi</li>
+              <li>Kaynak filtresi: <strong>Tümü</strong>, <strong>Yüklenen dosyalar</strong>, <strong>Harici adresler</strong></li>
+              <li>Her görselin URL’sini kopyalayıp formlarda kullanabilirsiniz</li>
+              <li>Gereksiz görselleri silerek depolama alanı yönetimi (silme kalıcıdır)</li>
+            </ul>
+          </div>
+
+          <div id="guide-gorunum" class="admin-card adm-guide-block">
+            <h3>Görünüm (Hero)</h3>
+            <p><em>Yalnızca yönetici (veya <code>admin.settings</code> yetkisi).</em> Ana sayfa arka plan (hero) görselini buradan güncellersiniz.</p>
+            <ul class="adm-guide-list">
+              <li>JPEG, PNG veya WebP seçin; dosya seçilince otomatik kaydedilir</li>
+              <li>iPhone’da HEIC değil JPEG/PNG kullanın (Kamera → En Uyumlu)</li>
+              <li>Kayıt sonrası ana sayfada hemen görünür</li>
             </ul>
           </div>
 
@@ -998,7 +1071,7 @@
             <h3>Ayarlar</h3>
             <p><em>Yalnızca yönetici (admin) rolü.</em> Site genelindeki yapılandırmalar.</p>
             <ul class="adm-guide-list">
-              <li><strong>Site durumu</strong> — bakım modu açıkken site (giriş ve admin hariç) 503 döner; bakım mesajı düzenlenebilir</li>
+              <li><strong>Site durumu</strong> — bakım modu açıkken site API’leri (giriş ve admin hariç) 503 döner; bakım mesajı düzenlenebilir</li>
               <li><strong>Yasaklı kelimeler</strong> — bu kelimeleri içeren Tiola ve blog gönderileri otomatik spam işaretlenir</li>
               <li><strong>Site ayarları</strong> — site adı, slogan, logo, tema rengi, harita varsayılanları, blog/keşfet özellik açma-kapama, SEO alanları</li>
             </ul>
@@ -1006,8 +1079,8 @@
 
           <div id="guide-roller-panel" class="admin-card adm-guide-block">
             <h3>Roller</h3>
-            <p><em>Yalnızca yönetici (admin) rolü.</em> Sistemdeki rollerin (yönetici, moderatör, editör, üye) ve her role atanmış yetki listesinin salt okunur görünümü.</p>
-            <p>Özel yetki atamaları kullanıcı profilinden yapılır; bu panel yalnızca referans amaçlıdır.</p>
+            <p><em>Yalnızca yönetici (admin) rolü.</em> Sistemdeki rollerin (yönetici, moderatör, editör, içerik yöneticisi, üye) ve her role atanmış yetki listesinin salt okunur görünümü.</p>
+            <p>Rol ataması kullanıcı profilinden yapılır; bu panel yalnızca referans amaçlıdır.</p>
           </div>
 
           <div id="guide-audit" class="admin-card adm-guide-block">
@@ -1015,7 +1088,8 @@
             <p><em>Yalnızca yönetici (admin) rolü.</em> Moderatör ve içerik yöneticilerinin panelde yaptığı işlemlerin denetim kaydı.</p>
             <ul class="adm-guide-list">
               <li>Tiola/blog onay, red ve kaldırma işlemleri</li>
-              <li>Yer, şehir ve kategori ekleme/güncelleme/silme</li>
+              <li>Yer ekleme/güncelleme/silme/arşiv, yer görseli ve bilgi kutuları</li>
+              <li>Şehir ve kategori değişiklikleri</li>
               <li>Kullanıcı engelleme, rol değişikliği, profil moderasyonu</li>
               <li>Şikayet çözümleme (göz ardı / içerik kaldır)</li>
               <li>Blog oluşturma/düzenleme, medya silme</li>
@@ -1052,46 +1126,79 @@
                 <li><strong>Şikayetler</strong> → <strong>Bekleyen</strong> listesini açın</li>
                 <li><strong>İncele</strong> ile şikayet detayını ve içerik önizlemesini görün</li>
                 <li>İçerik kurallara aykırıysa <strong>İçeriği kaldır</strong>; haksız şikayetse <strong>Göz ardı et</strong></li>
-                <li>Profil şikayetlerinde kullanıcıyı <strong>Kullanıcılar</strong> sekmesinden engelleyin (yönetici)</li>
+                <li>Profil şikayetlerinde kullanıcı profilinden fotoğraf kaldırın, uyarın veya engelleyin</li>
               </ol>
             </div>
 
             <div class="adm-guide-workflow">
-              <p class="adm-guide-workflow-title">Kullanıcı engelleme (yönetici)</p>
+              <p class="adm-guide-workflow-title">Kullanıcı engelleme</p>
               <ol class="adm-guide-steps">
                 <li><strong>Kullanıcılar</strong> → ilgili kullanıcıda <strong>Profili gör</strong></li>
                 <li>Risk sekmesinde şikayet ve spam geçmişini kontrol edin</li>
-                <li><strong>Engelle</strong> butonuna tıklayın ve onaylayın — kullanıcı giriş yapamaz, oturumu sonlanır</li>
-                <li>Gerekirse <strong>Kullanıcıya e-posta gönder</strong> ile bilgilendirme yapın</li>
+                <li><strong>Kullanıcıyı engelle</strong> — giriş yapamaz, oturumu sonlanır</li>
+                <li>Gerekirse <strong>Kullanıcıya uyarı e-postası gönder</strong> ile bilgilendirin</li>
+                <li>Rol değişikliği gerekiyorsa işlemi yöneticiye bırakın</li>
               </ol>
             </div>
 
             <div class="adm-guide-workflow">
-              <p class="adm-guide-workflow-title">Yeni yer ekleme</p>
+              <p class="adm-guide-workflow-title">Yeni yer ekleme ve yayınlama</p>
               <ol class="adm-guide-steps">
-                <li><strong>Gezilecek Yerler</strong> → formu doldurun (ad, ülke, şehir, kategori kodu zorunlu)</li>
-                <li>Koordinat ve en az bir fotoğraf ekleyin (kalite için önerilir)</li>
-                <li>Yayın durumunu seçin → <strong>Yeri kaydet</strong></li>
-                <li>Listede görünüp görünmediğini ve Keşfet filtrelerinde çıktığını doğrulayın</li>
+                <li><strong>Gezilecek Yerler</strong> → ad, ülke, şehir, kategori kodunu doldurun</li>
+                <li>Koordinat, Türkçe açıklama, kaynak URL ve en az bir görsel ekleyin</li>
+                <li>Görseli yükleyin veya harici URL’de «Bu görsel bu mekâna ait» kutusunu işaretleyin</li>
+                <li>Yayın durumunu <strong>Yayında</strong> seçip <strong>Yeri kaydet</strong> — kapı eksikse taslakta kalır</li>
+                <li>Listede ve Keşfet filtrelerinde göründüğünü doğrulayın</li>
               </ol>
             </div>
 
             <div class="adm-guide-workflow">
-              <p class="adm-guide-workflow-title">Uygunsuz profil fotoğrafı (şikayet)</p>
+              <p class="adm-guide-workflow-title">Detay bölümlerini doldurma</p>
+              <ol class="adm-guide-steps">
+                <li>Yer listesinde <strong>Düzenle</strong> açın</li>
+                <li>Yapılacaklar’a satır satır maddeler yazın</li>
+                <li>Kültür &amp; Gastronomi ve Ziyaretçi tavsiyeleri’ni yalnızca içerik varsa doldurun (boşsa sitede gizlenir)</li>
+                <li>En iyi ayları işaretleyin; bütçe ve ilçe otel ortalamasını yan panelden girin</li>
+                <li>Bilgi kutucuklarını doldurup <strong>Bilgileri Kaydet</strong>, ardından modal <strong>Kaydet</strong></li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Toplu arşiv</p>
+              <ol class="adm-guide-steps">
+                <li><strong>Gezilecek Yerler</strong> listesinde arşivlenecek satırları işaretleyin</li>
+                <li>Alttaki çubukta seçim sayısını kontrol edin</li>
+                <li><strong>Toplu arşivle</strong> → onaylayın (kalıcı silme değildir)</li>
+                <li>Geri almak için durum filtresinden <strong>Arşiv</strong> → ilgili yeri düzenleyip Yayında/Taslak yapın</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Görsel doğrulama temizliği</p>
+              <ol class="adm-guide-steps">
+                <li>Kalite çubuğundan veya Analitik kalite bölümünden <strong>Görsel doğrulanmamış</strong> filtreleyin</li>
+                <li>Her kayıtta görselin mekâna ait olduğunu kontrol edin</li>
+                <li>Mümkünse dosya yükleyin; harici URL’de kutuyu işaretleyin ve kaynak adresini girin</li>
+                <li>Kaydedip yayında kalmasını sağlayın</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Uygunsuz profil fotoğrafı</p>
               <ol class="adm-guide-steps">
                 <li><strong>Şikayetler</strong> → profil şikayetini açın veya <strong>Kullanıcılar</strong> → ilgili kullanıcı profili</li>
-                <li><strong>Profil fotoğrafını kaldır</strong> ile uygunsuz görseli silin; gerekirse kullanıcıya uyarı e-postası gönderin</li>
-                <li>Tekrarlayan ihlallerde <strong>Engelle</strong>; görünen ad değiştirmek için <strong>Adı düzenle</strong></li>
+                <li><strong>Profil fotoğrafını kaldır</strong>; gerekirse uyarı e-postası gönderin</li>
+                <li>Tekrarlayan ihlallerde <strong>Engelle</strong>; görünen ad için <strong>Adı düzenle</strong></li>
               </ol>
             </div>
 
             <div class="adm-guide-workflow">
-              <p class="adm-guide-workflow-title">E-posta doğrulama desteği (moderatör)</p>
+              <p class="adm-guide-workflow-title">E-posta doğrulama desteği</p>
               <ol class="adm-guide-steps">
-                <li>Kullanıcı «kayıt oldum ama mail gelmedi» derse önce spam/gereksiz klasörünü kontrol etmesini söyleyin</li>
+                <li>Kullanıcı «mail gelmedi» derse önce spam/gereksiz klasörünü kontrol etmesini söyleyin</li>
                 <li>Profil → Ayarlar → <strong>Doğrulama e-postası gönder</strong> ile yeniden göndermesini önerin</li>
-                <li>Yönetici ise kullanıcı profilinde <strong>E-posta doğrulanmadı</strong> rozetini kontrol edebilir</li>
-                <li>Sorun devam ederse SMTP ayarlarını yöneticiye bildirin</li>
+                <li>Kullanıcılar profilinde doğrulama rozetini kontrol edin</li>
+                <li>Sorun devam ederse SMTP/Brevo ayarlarını yöneticiye bildirin</li>
               </ol>
             </div>
           </div>
@@ -1099,13 +1206,16 @@
           <div id="guide-ipuclari" class="admin-card adm-guide-block">
             <h3>İpuçları ve en iyi uygulamalar</h3>
             <ul class="adm-guide-list">
-              <li>Her gün <strong>Özet</strong> kartlarına ve <strong>Analitik</strong> canlı ziyaretçi sayısına bakarak iş yükünüzü planlayın</li>
-              <li>Özet'teki kırmızı depolama uyarısını görmezden gelmeyin — ücretsiz Render'da veri kaybı normaldir</li>
-              <li>Panelde kalırken logoya tıklamak sizi ana siteye götürmez; bilerek <code>/admin</code>'de tutar</li>
+              <li>Her gün <strong>Özet</strong> kartlarına (Tiola, blog, iletişim) ve <strong>Analitik</strong> canlı ziyaretçi sayısına bakarak iş yükünüzü planlayın</li>
+              <li>Özet’teki kırmızı depolama uyarısı görünürse yöneticiye bildirin — kalıcı DB yoksa veri kaybı riski vardır</li>
+              <li>Panelde kalırken logoya tıklamak sizi ana siteye götürmez; bilerek <code>/admin</code>’de tutar</li>
+              <li>Yayına almadan önce yayın kapısını (açıklama, koordinat, doğrulanmış görsel, kaynak URL) kontrol edin</li>
+              <li>Boş kültür/gastro, tavsiye veya ay seçimi bırakmak bölümü gizler — bilerek kullanın, rastgele şablon metin doldurmayın</li>
+              <li>İlçe otel ortalamasını yalnızca güvenilir veriniz varsa girin; boş bırakmak kartı gizler</li>
               <li>Red kararlarında kısa ve net bir neden yazın; kullanıcılar bunu görebilir</li>
-              <li>Yer ve kategori eklerken <strong>slug</strong> ile <strong>Türkçe ad</strong> ayrımına dikkat edin — karışıklık filtre hatalarına yol açar</li>
-              <li>Görselleri mümkünse yükleyin; harici/Unsplash URL'leri bakım riski taşır</li>
-              <li>Toplu işlemlerde seçimi kontrol edin; geri alma her zaman mümkün olmayabilir</li>
+              <li>Yer ve kategori eklerken <strong>slug</strong> ile <strong>Türkçe ad</strong> ayrımına dikkat edin</li>
+              <li>Görselleri mümkünse yükleyin; harici/Unsplash URL’leri bakım riski taşır</li>
+              <li>Toplu arşiv / toplu Tiola işlemlerinde seçimi iki kez kontrol edin</li>
               <li>Şüpheli durumlarda önce şikayet geçmişine ve kullanıcı risk skoruna bakın</li>
               <li>Teknik sorun veya yetki talebi için yöneticinize başvurun</li>
             </ul>
