@@ -30,7 +30,10 @@ if (!url) {
   process.exit(1);
 }
 
-const r = spawnSync('pg_dump', [url, '-f', plainPath], { stdio: 'inherit' });
+const r = spawnSync('pg_dump', [url, '-f', plainPath], {
+  stdio: 'inherit',
+  env: backupSafe.pgSpawnEnv(),
+});
 if (r.status !== 0) {
   console.error('pg_dump failed — install postgresql-client or run dump from Supabase dashboard.');
   process.exit(r.status || 1);

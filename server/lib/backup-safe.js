@@ -37,13 +37,36 @@ function pgToolsStatus({ refresh = false } = {}) {
   if (!refresh && cachedPgTools) return { ...cachedPgTools };
   const pgDump = commandAvailable('pg_dump');
   const psql = commandAvailable('psql');
+  let message = null;
+  if (!pgDump && !psql) message = PG_TOOLS_UNSUPPORTED_MSG;
+  else if (!pgDump) message = 'Bu ortamda pg_dump yok; yedek indirme çalışmaz. Supabase Dashboard → Database → Backups kullanın.';
+  else if (!psql) message = 'Bu ortamda psql yok; gerçek geri yükleme çalışmaz. Önce “yalnızca doğrula” kullanın veya Supabase Backups’a bakın.';
   cachedPgTools = {
     pgDump,
     psql,
     supported: pgDump && psql,
-    message: (pgDump && psql) ? null : PG_TOOLS_UNSUPPORTED_MSG,
+    canDownload: pgDump,
+    canRestore: pgDump && psql,
+    message,
   };
   return { ...cachedPgTools };
+}
+
+/**
+ * Env for libpq clients (pg_dump / psql). Node's pg pool sets SSL in JS;
+ * pg_dump needs PGSSLMODE (or sslmode in the URL) for Supabase.
+ */
+function pgSpawnEnv(extra = {}) {
+  const env = { ...process.env, PATH: process.env.PATH || '', ...extra };
+  const url = String(process.env.DATABASE_URL || '');
+  const urlHasSslmode = /[?&]sslmode=/i.test(url);
+  const needsSsl = /supabase\.(co|com)/i.test(url)
+    || process.env.PGSSL === 'true'
+    || /sslmode=require/i.test(url);
+  if (needsSsl && !urlHasSslmode && !env.PGSSLMODE) {
+    env.PGSSLMODE = 'require';
+  }
+  return env;
 }
 
 function backupsDir() {
@@ -180,6 +203,7 @@ module.exports = {
   backupsDir,
   encryptionConfigured,
   pgToolsStatus,
+  pgSpawnEnv,
   safeBackupBasename,
   resolveBackupFile,
   sha256Buffer,

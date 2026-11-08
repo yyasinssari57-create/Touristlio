@@ -1717,11 +1717,26 @@ function writePgDump(destPath) {
     encoding: 'utf8',
     timeout: SCRIPT_TIMEOUT_MS,
     maxBuffer: 32 * 1024 * 1024,
+    env: backupSafe.pgSpawnEnv(),
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    if (result.error.code === 'ENOENT') {
+      throw new Error(backupSafe.PG_TOOLS_UNSUPPORTED_MSG);
+    }
+    throw result.error;
+  }
   if (result.status !== 0) {
     throw new Error((result.stderr || 'pg_dump başarısız').slice(0, 500));
   }
+}
+
+function runPsqlFile(url, sqlPath) {
+  return spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', sqlPath], {
+    encoding: 'utf8',
+    timeout: SCRIPT_TIMEOUT_MS,
+    maxBuffer: 32 * 1024 * 1024,
+    env: backupSafe.pgSpawnEnv(),
+  });
 }
 
 function unlinkQuiet(filePath) {
@@ -1770,7 +1785,8 @@ router.get('/backup/download', requireRole('admin'), adminToolLimiter, async (re
   }
 
   const tools = backupSafe.pgToolsStatus();
-  if (!tools.supported) {
+  // Download only needs pg_dump (restore dry-run needs neither; apply needs both).
+  if (!tools.canDownload) {
     return fail(res, tools.message || backupSafe.PG_TOOLS_UNSUPPORTED_MSG, 503);
   }
 
@@ -1817,6 +1833,8 @@ router.get('/backup/list', requireRole('admin'), adminToolLimiter, async (req, r
     encryption: backupSafe.encryptionConfigured(),
     tools: {
       supported: tools.supported,
+      canDownload: tools.canDownload,
+      canRestore: tools.canRestore,
       pgDump: tools.pgDump,
       psql: tools.psql,
       message: tools.message,
@@ -1906,7 +1924,7 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
   }
 
   const tools = backupSafe.pgToolsStatus();
-  if (!tools.supported) {
+  if (!tools.canRestore) {
     return fail(res, tools.message || backupSafe.PG_TOOLS_UNSUPPORTED_MSG, 503);
   }
 
@@ -1929,13 +1947,12 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
     // One transaction: a later error undoes earlier statements. A plain
     // psql -f commits each statement, so a failed dump used to leave writes
     // behind when the snapshot replay could not drop existing tables.
-    const result = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', tmpPath], {
-      encoding: 'utf8',
-      timeout: SCRIPT_TIMEOUT_MS,
-      maxBuffer: 32 * 1024 * 1024,
-    });
+    const result = runPsqlFile(url, tmpPath);
     unlinkQuiet(tmpPath);
-    if (result.error) throw result.error;
+    if (result.error) {
+      if (result.error.code === 'ENOENT') throw new Error(backupSafe.PG_TOOLS_UNSUPPORTED_MSG);
+      throw result.error;
+    }
     if (result.status !== 0) {
       const applyErr = new Error((result.stderr || result.stdout || 'psql başarısız').slice(0, 500));
       applyErr.transactionAborted = true;
@@ -1956,11 +1973,7 @@ router.post('/backup/restore', requireRole('admin'), adminToolLimiter, restoreUp
     let rolledBack = Boolean(err.transactionAborted);
     try {
       if (fs.existsSync(snapshotPath)) {
-        const rb = spawnSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', snapshotPath], {
-          encoding: 'utf8',
-          timeout: SCRIPT_TIMEOUT_MS,
-          maxBuffer: 32 * 1024 * 1024,
-        });
+        const rb = runPsqlFile(url, snapshotPath);
         if (!rb.error && rb.status === 0) rolledBack = true;
         else if (!rolledBack) {
           logger.warn({ msg: 'Restore snapshot replay failed', err: (rb.stderr || rb.error?.message || '').slice(0, 300) });
