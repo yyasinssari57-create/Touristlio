@@ -1207,9 +1207,9 @@ body.admin-body:not(.admin-session) {
 .prof-meta {
   font-size: .78rem;
   color: rgba(255,255,255,.72);
-  margin-bottom: 16px;
+  margin-bottom: 0;
   line-height: 1.4;
-  word-break: break-all;
+  word-break: normal;
 }
 .prof-stats-grid {
   display: grid;
@@ -2332,33 +2332,128 @@ body.admin-body:not(.admin-session) {
 .profile-wrap .prof-badges {
   margin: 0 0 18px;
 }
-#page-profile .ptabs {
+/* Adım 5: sade başlık + rol rozeti */
+.prof-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 6px;
+}
+.prof-name-row .prof-name {
+  margin-bottom: 0;
+}
+.prof-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #0b3a5c;
+  background: rgba(147, 216, 248, .92);
+  border: 1px solid rgba(255, 255, 255, .35);
+}
+.prof-role-badge[data-role="admin"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+/* Adım 5: kaydırmasız sakin istatistik satırı */
+.prof-stats-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 0 0 20px;
+  padding: 14px 10px;
+  background: var(--w);
+  border: 1.5px solid var(--l2);
+  border-radius: var(--r2);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, .04);
+  overflow: hidden;
+}
+.prof-stats-row .prof-stat {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  padding: 2px 4px;
+}
+.prof-stats-row .psi-n {
+  display: block;
+  font-family: var(--fd);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.1;
+}
+.prof-stats-row .psi-l {
+  display: block;
+  margin-top: 4px;
+  font-size: .68rem;
+  letter-spacing: .02em;
+  color: var(--t3);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-pending-block {
+  margin: 22px 0 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--l2);
+}
+#page-profile .ptabs,
+.profile-wrap .ptabs {
   gap: 4px;
   padding: 4px;
   margin-bottom: 22px;
   border-radius: 14px;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow-x: hidden;
+  flex-wrap: nowrap;
 }
-#page-profile .ptab {
-  padding: 9px 14px;
-  font-size: .78rem;
+#page-profile .ptab,
+.profile-wrap .ptab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 9px 8px;
+  font-size: .74rem;
   font-weight: 600;
   letter-spacing: .01em;
   line-height: 1.2;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border-radius: 10px;
 }
 #page-profile #ptab-tiolas.active,
 #page-profile #ptab-visited.active,
 #page-profile #ptab-saved.active,
+#page-profile #ptab-blogs.active,
 #page-profile #ptab-pending.active,
-#page-profile #ptab-revs.active {
+#page-profile #ptab-revs.active,
+.profile-wrap #ptab-tiolas.active,
+.profile-wrap #ptab-visited.active,
+.profile-wrap #ptab-saved.active,
+.profile-wrap #ptab-blogs.active {
   background: var(--w);
   border: 1.5px solid var(--l2);
   border-radius: var(--r2);
   padding: 22px;
   box-shadow: 0 8px 28px rgba(15, 23, 42, .04);
+}
+#page-profile #ptab-settings.active,
+.profile-wrap #ptab-settings.active {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+#writeTiolaCard,
+#writeBlogCard {
+  margin-top: 22px;
 }
 #page-profile .write-card,
 .profile-wrap .write-card {
@@ -2412,8 +2507,20 @@ body.admin-body:not(.admin-session) {
 }
 
 @media (max-width: 640px) {
-  .prof-stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .prof-stats-row {
+    padding: 12px 6px;
+    gap: 2px;
+  }
+  .prof-stats-row .psi-n {
+    font-size: 1.05rem;
+  }
+  .prof-stats-row .psi-l {
+    font-size: .62rem;
+  }
+  #page-profile .ptab,
+  .profile-wrap .ptab {
+    padding: 8px 4px;
+    font-size: .68rem;
   }
   .prof-hd {
     padding: 22px 18px;
@@ -2436,8 +2543,13 @@ body.admin-body:not(.admin-session) {
   #page-profile #ptab-tiolas.active,
   #page-profile #ptab-visited.active,
   #page-profile #ptab-saved.active,
+  #page-profile #ptab-blogs.active,
   #page-profile #ptab-pending.active,
-  #page-profile #ptab-revs.active {
+  #page-profile #ptab-revs.active,
+  .profile-wrap #ptab-tiolas.active,
+  .profile-wrap #ptab-visited.active,
+  .profile-wrap #ptab-saved.active,
+  .profile-wrap #ptab-blogs.active {
     padding: 18px 14px;
   }
   #page-profile .ptab {

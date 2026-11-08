@@ -584,83 +584,61 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
       <div class="prof-hd">
         <div class="prof-av" id="profAv">M</div>
         <div class="prof-hd-info">
-          <div class="prof-name" data-i18n="profileMember">Üye</div>
-          <div class="prof-meta" id="profMeta"></div>
-          <div class="prof-stats-grid">
-            <div class="prof-stat-card">
-              <span class="psi-n" id="pRevCnt">0</span>
-              <span class="psi-l" data-i18n="profileStatReviews">Tiola</span>
-            </div>
-            <div class="prof-stat-card">
-              <span class="psi-n" id="pLikeCnt">0</span>
-              <span class="psi-l" data-i18n="profileStatLikes">Beğeni</span>
-            </div>
-            <div class="prof-stat-card">
-              <span class="psi-n" id="pSavedCnt">0</span>
-              <span class="psi-l" data-i18n="profileStatSaved">Kaydedilen</span>
-            </div>
-            <div class="prof-stat-card">
-              <span class="psi-n" id="pCntCnt">0</span>
-              <span class="psi-l" data-i18n="profileStatCountries">Ülke</span>
-            </div>
-            <div class="prof-stat-card">
-              <span class="psi-n" id="pVisitedCnt">0</span>
-              <span class="psi-l" data-i18n="profileStatVisited">Ziyaret</span>
-            </div>
+          <div class="prof-name-row">
+            <div class="prof-name" data-i18n="profileMember">Üye</div>
+            <span class="prof-role-badge" id="profRoleBadge" hidden></span>
           </div>
+          <div class="prof-meta" id="profMeta"></div>
+        </div>
+      </div>
+      <div class="prof-stats-row" id="profStatsRow" aria-label="Profil istatistikleri">
+        <div class="prof-stat">
+          <span class="psi-n" id="pRevCnt">0</span>
+          <span class="psi-l" data-i18n="profileStatReviews">Tiola</span>
+        </div>
+        <div class="prof-stat">
+          <span class="psi-n" id="pBlogCnt">0</span>
+          <span class="psi-l" data-i18n="profileStatBlog">Blog</span>
+        </div>
+        <div class="prof-stat">
+          <span class="psi-n" id="pVisitedCnt">0</span>
+          <span class="psi-l" data-i18n="profileStatVisited">Ziyaret</span>
+        </div>
+        <div class="prof-stat">
+          <span class="psi-n" id="pSavedCnt">0</span>
+          <span class="psi-l" data-i18n="profileStatSaved">Kaydedilen</span>
         </div>
       </div>
       <div class="prof-badges" id="profBadges" aria-label="Rozetler"></div>
-      <div class="prof-activity-bar" id="profActivityBar" style="display:none" aria-live="polite"></div>
       <div class="ptabs" role="tablist" aria-label="Profil sekmeleri">
         <button type="button" class="ptab on" role="tab" aria-selected="true" data-ptab="tiolas" data-act="showPTab" data-el data-arg="tiolas" data-i18n="profileTabTiolas">Tiola'larım</button>
-        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="visited" data-act="showPTab" data-el data-arg="visited" data-i18n="profileTabVisited">Ziyaret Ettiklerim</button>
-        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="blogs" data-act="showPTab" data-el data-arg="blogs" data-i18n="profileTabBlogs">Blog yaz</button>
-        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="pending" data-act="showPTab" data-el data-arg="pending" data-i18n="profileTabPending">Bekleyenler</button>
         <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="saved" data-act="showPTab" data-el data-arg="saved" data-i18n="profileTabSaved">Kaydedilenler</button>
-        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="write" data-act="showPTab" data-el data-arg="write" data-i18n="profileTabWrite">Tiola Yaz</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="visited" data-act="showPTab" data-el data-arg="visited" data-i18n="profileTabVisited">Ziyaret edilenler</button>
+        <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="blogs" data-act="showPTab" data-el data-arg="blogs" data-i18n="profileTabBlogs">Bloglarım</button>
         <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="settings" data-act="showPTab" data-el data-arg="settings" data-i18n="profileTabSettings">Ayarlar</button>
       </div>
       <div class="ptab-c" id="ptab-visited">
         <div id="visitedGrid" class="pgrid"></div>
-        <div class="empty-state" id="visitedEmpty"><p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p></div>
+        <div class="empty-state" id="visitedEmpty">
+          <p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p>
+          <a href="/" class="btn bp bsm tl-mt-12" data-prevent data-act="showMainTab" data-arg="explore" data-i18n="explore">Keşfet</a>
+        </div>
       </div>
       <div class="ptab-c active" id="ptab-tiolas">
         <div id="profileNotifications" class="profile-notifications" style="display:none" aria-live="polite"></div>
         <div class="profile-tiola-title" data-i18n-html="profileMyTiolas">Tiola <em class="em-accent">larım</em></div>
         <div class="profile-tiola-sub" data-i18n="profileMyTiolasSub">Yazdığın onaylı ve bekleyen Tiola'lar</div>
         <div class="pgrid" id="myTiolaList"></div>
-        <div class="empty-state" id="tiolaListEmpty"><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.<br>Bir yere yorum yazdığında burada görünür.</p></div>
-      </div>
-      <div class="ptab-c" id="ptab-blogs">
-        <div class="write-card">
-          <div class="write-card-title" data-i18n="profileWriteBlogTitle">Blog yaz</div>
-          <p id="blogVerifyNotice" class="blog-verify-notice" hidden></p>
-          <p class="profile-tiola-sub" data-i18n="profileWriteBlogSub">Uzun rehber yazınız; onay sonrası ana sayfadaki Blog bölümünde yayınlanır.</p>
-          <label class="sr-only" for="blogTitle" data-i18n="blogTitlePh">Blog başlığı</label>
-          <input class="w-sel" id="blogTitle" data-i18n-placeholder="blogTitlePh" placeholder="Blog başlığı"/>
-          <label class="sr-only" for="blogCat" data-i18n="searchCatAria">Kategori</label>
-          <select class="w-sel" id="blogCat" aria-label="Blog kategorisi"></select>
-          <label class="sr-only" for="blogBody" data-i18n="blogBodyPh">Uzun rehber yazınız...</label>
-          <textarea class="rft blog-body" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..."></textarea>
-          <button class="btn bp bsm" id="blogSendBtn" type="button" data-act="submitBlog" data-i18n="submitBlog">Blog Gönder</button>
+        <div class="empty-state" id="tiolaListEmpty">
+          <p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.<br>Bir yere yorum yazdığında burada görünür.</p>
+          <button type="button" class="btn bp bsm tl-mt-12" data-act="focusWriteTiola" data-i18n="writeTiola">Tiola yaz</button>
         </div>
-      </div>
-      <div class="ptab-c" id="ptab-pending">
-        <div id="myPendingList"></div>
-        <div class="empty-state" id="pendingEmpty"><p data-i18n="emptyPending">Onay bekleyen içerik yok.</p></div>
-      </div>
-      <div class="ptab-c" id="ptab-revs" style="display:none">
-        <div id="myRevList"></div>
-        <div class="empty-state" id="revEmpty"><p data-i18n="emptyReviews">Henüz yorum yazmadınız.</p></div>
-      </div>
-      <div class="ptab-c" id="ptab-saved">
-        <div class="pgrid" id="savedGrid"></div>
-        <div class="empty-state" id="savedEmpty"><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.<br>Kartlardaki 🤍 ikonuna tıklayın.</p>
-        <a href="/" class="btn bo bsm tl-mt-12" data-prevent data-act="showMainTab" data-arg="explore" data-i18n="explore">Keşfet</a></div>
-      </div>
-      <div class="ptab-c" id="ptab-write">
-        <div class="write-card">
+        <div class="profile-pending-block" id="profilePendingBlock">
+          <h3 class="profile-section-title" data-i18n="profileTabPending">Bekleyenler</h3>
+          <div id="myPendingList"></div>
+          <div class="empty-state" id="pendingEmpty"><p data-i18n="emptyPending">Onay bekleyen içerik yok.</p></div>
+        </div>
+        <div class="write-card" id="writeTiolaCard">
           <div class="write-card-title" data-i18n="writeNew">Yeni Tiola</div>
           <div id="writeTiolaForm">
             <label class="sr-only" for="arcPlace" data-i18n="placeOptional">Mekân (isteğe bağlı)</label>
@@ -694,6 +672,40 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
             </div>
           </div>
         </div>
+      </div>
+      <div class="ptab-c" id="ptab-blogs">
+        <div class="pgrid" id="myBlogList"></div>
+        <div class="empty-state" id="blogListEmpty">
+          <p data-i18n="emptyBlog">Henüz blog yazmadınız.</p>
+          <button type="button" class="btn bp bsm tl-mt-12" data-act="focusWriteBlog" data-i18n="profileWriteBlogTitle">Blog yaz</button>
+        </div>
+        <div class="write-card" id="writeBlogCard">
+          <div class="write-card-title" data-i18n="profileWriteBlogTitle">Blog yaz</div>
+          <p id="blogVerifyNotice" class="blog-verify-notice" hidden></p>
+          <p class="profile-tiola-sub" data-i18n="profileWriteBlogSub">Uzun rehber yazınız; onay sonrası ana sayfadaki Blog bölümünde yayınlanır.</p>
+          <label class="sr-only" for="blogTitle" data-i18n="blogTitlePh">Blog başlığı</label>
+          <input class="w-sel" id="blogTitle" data-i18n-placeholder="blogTitlePh" placeholder="Blog başlığı"/>
+          <label class="sr-only" for="blogCat" data-i18n="searchCatAria">Kategori</label>
+          <select class="w-sel" id="blogCat" aria-label="Blog kategorisi"></select>
+          <label class="sr-only" for="blogBody" data-i18n="blogBodyPh">Uzun rehber yazınız...</label>
+          <textarea class="rft blog-body" id="blogBody" data-i18n-placeholder="blogBodyPh" placeholder="Uzun rehber yazınız..."></textarea>
+          <button class="btn bp bsm" id="blogSendBtn" type="button" data-act="submitBlog" data-i18n="submitBlog">Blog Gönder</button>
+        </div>
+      </div>
+      <div class="ptab-c" id="ptab-pending" hidden aria-hidden="true">
+        <!-- legacy alias panel; content lives under Tiolalarım -->
+      </div>
+      <div class="ptab-c" id="ptab-revs" style="display:none">
+        <div id="myRevList"></div>
+        <div class="empty-state" id="revEmpty"><p data-i18n="emptyReviews">Henüz yorum yazmadınız.</p></div>
+      </div>
+      <div class="ptab-c" id="ptab-saved">
+        <div class="pgrid" id="savedGrid"></div>
+        <div class="empty-state" id="savedEmpty"><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.<br>Kartlardaki 🤍 ikonuna tıklayın.</p>
+        <a href="/" class="btn bp bsm tl-mt-12" data-prevent data-act="showMainTab" data-arg="explore" data-i18n="explore">Keşfet</a></div>
+      </div>
+      <div class="ptab-c" id="ptab-write" hidden aria-hidden="true">
+        <!-- legacy alias; write form lives under Tiolalarım -->
       </div>
       <div class="ptab-c" id="ptab-settings">
         <div class="profile-settings-card">

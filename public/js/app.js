@@ -2071,8 +2071,9 @@ function getActiveExploreTab() {
 }
 
 function getActiveProfileTab() {
-  const active = document.querySelector('#pContent .ptab-c.active');
-  return active?.id?.replace('ptab-', '') || 'tiolas';
+  const active = document.querySelector('#pContent > .ptab-c.active');
+  const raw = active?.id?.replace('ptab-', '') || 'tiolas';
+  return resolveProfileTab(raw);
 }
 
 function getActiveDetailTab() {
@@ -3344,18 +3345,56 @@ function closeBlogDetail(skipRoute) {
   if (!skipRoute) writeRouteToUrl({ main: 'blog', blogCat: blogCat !== 'all' ? blogCat : undefined }, true);
 }
 
+const PROFILE_TAB_ALIAS = { write: 'tiolas', pending: 'tiolas' };
+const PROFILE_TABS = new Set(['tiolas', 'saved', 'visited', 'blogs', 'settings']);
+
+function resolveProfileTab(name) {
+  const raw = String(name || 'tiolas');
+  const mapped = PROFILE_TAB_ALIAS[raw] || raw;
+  return PROFILE_TABS.has(mapped) ? mapped : 'tiolas';
+}
+
 function showPTab(name, el, skipRoute) {
+  const tab = resolveProfileTab(name);
   document.querySelectorAll('#pContent > .ptabs .ptab').forEach((t) => {
-    t.classList.remove('on');
-    t.setAttribute('aria-selected', 'false');
+    const on = t.getAttribute('data-ptab') === tab;
+    t.classList.toggle('on', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
   });
-  el.classList.add('on');
-  el.setAttribute('aria-selected', 'true');
-  document.querySelectorAll('.ptab-c').forEach((t) => t.classList.remove('active'));
-  document.getElementById('ptab-' + name).classList.add('active');
-  if (name === 'blogs') loadBlogPage().catch(() => {});
+  const targetBtn = document.querySelector(`#pContent > .ptabs .ptab[data-ptab="${tab}"]`);
+  if (targetBtn) {
+    targetBtn.classList.add('on');
+    targetBtn.setAttribute('aria-selected', 'true');
+  } else if (el && el.classList) {
+    el.classList.add('on');
+    el.setAttribute('aria-selected', 'true');
+  }
+  document.querySelectorAll('#pContent > .ptab-c').forEach((t) => t.classList.remove('active'));
+  const panel = document.getElementById('ptab-' + tab);
+  if (panel) panel.classList.add('active');
+  if (tab === 'blogs') loadBlogPage().catch(() => {});
+  if (name === 'write') focusWriteTiola();
   if (!skipRoute) syncRoute(true);
 }
+
+function focusWriteTiola() {
+  const tabBtn = document.querySelector('#pContent > .ptabs .ptab[data-ptab="tiolas"]');
+  if (tabBtn) showPTab('tiolas', tabBtn, true);
+  const card = document.getElementById('writeTiolaCard') || document.getElementById('writeTiolaForm');
+  if (card?.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('arcTxt')?.focus?.();
+}
+
+function focusWriteBlog() {
+  const tabBtn = document.querySelector('#pContent > .ptabs .ptab[data-ptab="blogs"]');
+  if (tabBtn) showPTab('blogs', tabBtn, true);
+  const card = document.getElementById('writeBlogCard');
+  if (card?.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('blogTitle')?.focus?.();
+}
+
+window.focusWriteTiola = focusWriteTiola;
+window.focusWriteBlog = focusWriteBlog;
 
 async function updateProfilePage() {
   const loginNotice = document.getElementById('pLoginNotice');
@@ -3424,31 +3463,23 @@ async function updateProfilePage() {
 
   savedIds = new Set(saved.places.map((p) => p.id));
   const topLevelTiolas = myTiolas.tiolas.filter((t) => !t.parentId);
-  const approvedT = topLevelTiolas.filter((t) => t.status === 'approved');
   const pending = [...myTiolas.tiolas.filter((t) => t.status === 'pending'), ...myBlogs.blogs.filter((b) => b.status === 'pending')];
 
   document.getElementById('pRevCnt').textContent = topLevelTiolas.length;
-  const pLike = document.getElementById('pLikeCnt');
   try {
     const prof = await api('/profiles/' + user.id + '?lang=' + encodeURIComponent(lang));
-    if (pLike) pLike.textContent = prof.profile?.likeCount ?? 0;
     renderOwnBadges(prof.profile);
   } catch {
-    if (pLike) pLike.textContent = '0';
     renderOwnBadges({ badges: [] });
   }
   document.getElementById('pSavedCnt').textContent = savedIds.size;
-  document.getElementById('pCntCnt').textContent = visitedStats.countriesVisited || new Set(approvedT.map((t) => t.countryTag || t.placeId)).size;
   const pVis = document.getElementById('pVisitedCnt');
   if (pVis) pVis.textContent = visitedStats.totalVisited || 0;
+  const pBlog = document.getElementById('pBlogCnt');
+  if (pBlog) pBlog.textContent = String((myBlogs.blogs || []).length);
 
-  renderProfileActivitySummary({
-    tiolas: topLevelTiolas.length,
-    saved: savedIds.size,
-    visited: visitedStats.totalVisited || 0,
-    pending: pending.length,
-    countries: visitedStats.countriesVisited || 0,
-  });
+  renderProfileActivitySummary();
+  renderMyBlogList(myBlogs.blogs || []);
 
   try {
     const visited = await api('/travel-lists/visited/all');
@@ -3477,27 +3508,34 @@ async function updateProfilePage() {
 
   const pl = document.getElementById('myPendingList');
   const pe = document.getElementById('pendingEmpty');
-  if (!pending.length) { pl.innerHTML = ''; pe.style.display = 'block'; }
-  else {
-    pe.style.display = 'none';
-    pl.innerHTML = pending.map((item) => {
-      const isBlog = !!item.title;
-      const contentType = isBlog ? 'blog' : 'tiola';
-      const label = item.title || item.text?.slice(0, 40) || 'Tiola';
-      const menuBtn = window.TL_REPORTS?.menuButton(contentType, item.id, label, user?.id) || '';
-      const rejectNote = item.status === 'rejected' && item.rejectionReason
-        ? `<div class="tiola-reject-reason"><strong>${t('rejectionReason')}:</strong> ${escapeHtml(item.rejectionReason)}</div>` : '';
-      return `
-      <div class="my-rev-item" data-content-type="${contentType}" data-content-id="${item.id}">
-        <div>
-          <div class="my-rev-label">${escapeHtml(label)}</div>
-          <span class="status-${item.status || 'pending'}">${statusLabel(item.status || 'pending')}</span>
-          ${rejectNote}
-          <div class="my-rev-note">${isBlog ? t('pendingBlog') : t('pendingTiola')}</div>
-        </div>
-        ${menuBtn}
-      </div>`;
-    }).join('');
+  const pendingBlock = document.getElementById('profilePendingBlock');
+  if (pl) {
+    if (!pending.length) {
+      pl.innerHTML = '';
+      if (pe) pe.style.display = 'block';
+      if (pendingBlock) pendingBlock.style.display = 'none';
+    } else {
+      if (pe) pe.style.display = 'none';
+      if (pendingBlock) pendingBlock.style.display = '';
+      pl.innerHTML = pending.map((item) => {
+        const isBlog = !!item.title;
+        const contentType = isBlog ? 'blog' : 'tiola';
+        const label = item.title || item.text?.slice(0, 40) || 'Tiola';
+        const menuBtn = window.TL_REPORTS?.menuButton(contentType, item.id, label, user?.id) || '';
+        const rejectNote = item.status === 'rejected' && item.rejectionReason
+          ? `<div class="tiola-reject-reason"><strong>${t('rejectionReason')}:</strong> ${escapeHtml(item.rejectionReason)}</div>` : '';
+        return `
+        <div class="my-rev-item" data-content-type="${contentType}" data-content-id="${item.id}">
+          <div>
+            <div class="my-rev-label">${escapeHtml(label)}</div>
+            <span class="status-${item.status || 'pending'}">${statusLabel(item.status || 'pending')}</span>
+            ${rejectNote}
+            <div class="my-rev-note">${isBlog ? t('pendingBlog') : t('pendingTiola')}</div>
+          </div>
+          ${menuBtn}
+        </div>`;
+      }).join('');
+    }
   }
 
   const sg = document.getElementById('savedGrid');
@@ -3519,11 +3557,28 @@ async function updateProfilePage() {
   loadBlogPage().catch(() => {});
 }
 
+function roleLabel(role) {
+  const r = String(role || 'member').toLowerCase();
+  if (r === 'admin') return t('roleAdmin') || 'Yönetici';
+  if (r === 'editor') return t('roleEditor') || 'Editör';
+  return t('roleMember') || t('profileMember') || 'Üye';
+}
+
 function renderProfileMeta(u) {
   const meta = document.getElementById('profMeta');
-  if (!meta || !u) return;
-  const verified = u.emailVerified ? t('settingsEmailVerified') : t('settingsEmailPending');
-  meta.textContent = u.email ? `${u.email} · ${verified}` : '';
+  const badge = document.getElementById('profRoleBadge');
+  if (!u) return;
+  if (meta) {
+    const since = u.createdAt ? formatDate(u.createdAt) : '';
+    meta.textContent = since
+      ? `${t('memberSince') || 'Üyelik'}: ${since}`
+      : '';
+  }
+  if (badge) {
+    badge.textContent = roleLabel(u.role);
+    badge.hidden = false;
+    badge.dataset.role = String(u.role || 'member').toLowerCase();
+  }
 }
 
 function updateBlogWriteNotice(u) {
@@ -3534,22 +3589,33 @@ function updateBlogWriteNotice(u) {
   notice.hidden = !needsVerify;
 }
 
-function renderProfileActivitySummary({ tiolas = 0, saved = 0, visited = 0, pending = 0, countries = 0 }) {
+function renderProfileActivitySummary() {
+  /* Adım 5: sakin tek satır istatistikler (#profStatsRow) yeterli; eski activity bar kaldırıldı. */
   const bar = document.getElementById('profActivityBar');
-  if (!bar) return;
-  if (!tiolas && !saved && !visited && !pending) {
+  if (bar) {
     bar.style.display = 'none';
     bar.innerHTML = '';
+  }
+}
+
+function renderMyBlogList(blogs) {
+  const list = document.getElementById('myBlogList');
+  const empty = document.getElementById('blogListEmpty');
+  if (!list) return;
+  const items = Array.isArray(blogs) ? blogs : [];
+  if (!items.length) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
     return;
   }
-  bar.style.display = 'flex';
-  const items = [];
-  if (tiolas) items.push(`<div class="prof-activity-item"><strong>${tiolas}</strong><span>${t('profileStatReviews')}</span></div>`);
-  if (saved) items.push(`<div class="prof-activity-item"><strong>${saved}</strong><span>${t('profileStatSaved')}</span></div>`);
-  if (visited) items.push(`<div class="prof-activity-item"><strong>${visited}</strong><span>${t('profileStatVisited')}</span></div>`);
-  if (pending) items.push(`<div class="prof-activity-item prof-activity-pending"><strong>${pending}</strong><span>${t('profileActivityPending')}</span></div>`);
-  if (countries && !visited) items.push(`<div class="prof-activity-item"><strong>${countries}</strong><span>${t('profileStatCountries')}</span></div>`);
-  bar.innerHTML = items.join('');
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = items.map((b) => {
+    const title = escapeHtml(b.title || 'Blog');
+    const status = `<span class="status-${escapeHtml(b.status || 'pending')}">${statusLabel(b.status || 'pending')}</span>`;
+    const rejectNote = b.status === 'rejected' && b.rejectionReason
+      ? `<div class="tiola-reject-reason"><strong>${t('rejectionReason')}:</strong> ${escapeHtml(b.rejectionReason)}</div>` : '';
+    return `<div class="my-rev-item"><div><div class="my-rev-label">${title}</div>${status}${rejectNote}</div></div>`;
+  }).join('');
 }
 
 function renderProfileNotifications(items) {
@@ -4446,8 +4512,10 @@ async function applyRouteFromUrl(opts = {}) {
     if (route.main === 'profile') {
       await updateProfilePage();
       if (!viewingProfileUserId && route.profileTab) {
-        const el = document.querySelector(`.ptab[data-ptab="${route.profileTab}"]`);
-        if (el) showPTab(route.profileTab, el, true);
+        const tab = resolveProfileTab(route.profileTab);
+        const el = document.querySelector(`#pContent > .ptabs .ptab[data-ptab="${tab}"]`);
+        if (el) showPTab(tab, el, true);
+        if (route.profileTab === 'write') focusWriteTiola();
       }
     }
   } finally {

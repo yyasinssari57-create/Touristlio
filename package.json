@@ -52,6 +52,7 @@
     "verify:v6-adim2": "node server/scripts/verify-v6-adim2-playwright.js",
     "verify:v6-adim3": "node server/scripts/verify-v6-adim3-catstrip.js",
     "verify:v6-adim4": "node server/scripts/verify-v6-adim4-emoji.js",
+    "verify:v6-adim5": "node server/scripts/verify-v6-adim5-profile.js",
     "verify:v6": "node server/scripts/verify-v6.js",
     "migrate:v5-adim4-tokens": "node server/scripts/migrate-v5-adim4-token-hash.js",
     "verify:v4-adim2": "node server/scripts/verify-v4-adim2-blog-i18n.js",
