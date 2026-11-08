@@ -90,9 +90,7 @@ router.get('/meta', async (_req, res) => {
   }
   categories = categories.map((c) => ({
     slug: c.slug,
-    label: lang === 'en'
-      ? (c.icon ? `${c.icon} ${c.nameEn || c.slug}` : (c.nameEn || c.slug))
-      : (c.icon ? `${c.icon} ${c.nameTr}` : c.nameTr),
+    label: lang === 'en' ? (c.nameEn || c.slug) : c.nameTr,
     nameTr: c.nameTr,
     nameEn: c.nameEn,
     icon: c.icon,

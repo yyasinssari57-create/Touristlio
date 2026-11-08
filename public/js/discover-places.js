@@ -225,10 +225,9 @@ window.TL_DISCOVER = (function () {
     }
     strip.innerHTML = discoverCats.map((c) => {
       const id = c.id || c.slug;
-      const icon = c.icon ? `${c.icon} ` : '';
       return `
       <button type="button" class="discover-cat-chip${activeCategory === id ? ' on' : ''}" data-cat="${id}">
-        ${icon}${catLabel(id)}
+        ${catLabel(id)}
       </button>`;
     }).join('');
     strip.querySelectorAll('.discover-cat-chip').forEach((chip) => {

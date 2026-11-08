@@ -94,12 +94,12 @@ window.TL_I18N = (function () {
       login: 'Giriş Yap', join: 'Katıl', explore: 'Keşfet', discoverPlaces: 'Gezilecek Yerler', blog: 'Blog', profile: 'Profilim', admin: 'Admin',
       discoverPlacesTitle: 'Gezilecek Yerler', discoverPlacesSub: 'Şehir seçin — ardından kategori ve harita ile keşfedin.',
       discoverGlobalTitle: 'Tüm gezilecek yerler', discoverGlobalSub: 'Türkiye geneli · kategori veya şehir filtreleyin',
-      discoverPickCity: '🏙️ Şehirler', discoverClearCity: '← Tüm yerler', discoverEmpty: 'Bu filtrede yer bulunamadı.',
-      heroPill: '🌍 Dünyanın en kişisel seyahat rehberi',
+      discoverPickCity: 'Şehirler', discoverClearCity: '← Tüm yerler', discoverEmpty: 'Bu filtrede yer bulunamadı.',
+      heroPill: 'Dünyanın en kişisel seyahat rehberi',
       heroTitle: 'Sadece Ziyaret Etme.', heroTitleEm: 'Hisset.',
       heroSub: 'Gizli yerel köşelerden ikonik yapılara — gerçek gezginler tarafından derlendi.',
       searchPh: 'İstanbul, Eiffel Kulesi, Tokyo, Machu Picchu...',
-      searchBtn: '🔍 Keşfet',
+      searchBtn: 'Keşfet',
       tabDiscover: 'Destinasyonlar', tabFilter: 'Gelişmiş Filtrele', tabTiolas: "Tiola'lar", tabCategories: 'Kategoriler',
       placesFound: 'yer bulundu', noResults: 'Sonuç bulunamadı. Farklı filtreler deneyin.',
       mapExploreBtn: 'Haritada keşfet',
@@ -112,7 +112,7 @@ window.TL_I18N = (function () {
       detailOverview: 'Genel Bakış', detailThings: 'Yapılacaklar', detailCulture: 'Kültür & Gastronomi',
       authSub: 'Seyahatini yıldızla, kaydet ve paylaş', authTabLogin: 'Giriş Yap', authTabReg: 'Kayıt Ol',
       authNote: 'Misafirler okuyabilir · Tiola yazmak için üye olun',
-      authSecure: '🔒 Güvenli şifreleme ile korunuyor · KVKK & GDPR uyumlu',
+      authSecure: 'Güvenli şifreleme ile korunuyor · KVKK & GDPR uyumlu',
       authOr: '— veya —',
       authEmail: 'E-posta', authPass: 'Şifre', authName: 'Ad Soyad',
       get authPassMin() { return passwordCopy('tr', 'label'); },
@@ -161,17 +161,17 @@ window.TL_I18N = (function () {
       placesCount: 'yer', placesCountZero: '0 yer',
       blogTitle: 'Seyahat', blogTitleEm: 'Hikayeleri',
       blogSub: 'Yerel yazarlardan özenle seçilmiş gezi rehberleri, gizli köşeler ve kültürel keşifler.',
-      blogCatAll: 'Tümü', blogCatGuide: '🗺️ Rehberler', blogCatHidden: '💎 Gizli Köşeler',
-      blogCatFood: '🍜 Yemek', blogCatNature: '🌿 Doğa', blogCatCulture: '🎭 Kültür',
+      blogCatAll: 'Tümü', blogCatGuide: 'Rehberler', blogCatHidden: 'Gizli Köşeler',
+      blogCatFood: 'Yemek', blogCatNature: 'Doğa', blogCatCulture: 'Kültür',
       blogEmpty: 'Henüz blog yok.', blogSearchPh: 'Blog ara…', blogFeaturedLbl: 'Öne çıkan', viewPlace: 'Mekânı gör',
       blogBack: '← Tüm yazılar',
       detailAbout: 'Hakkında', detailHistory: 'Tarihçe & Kültürel Önemi',
       detailTips: 'Ziyaretçi Tavsiyeleri', detailTags: 'Etiketler',
-      detailTiolas: "✨ Tiola'lar", antiFraud: '🛡️ Sahte oy koruması',
+      detailTiolas: "Tiola'lar", antiFraud: 'Sahte oy koruması',
       yourRating: 'Yıldızınız', category: 'Kategori', selectCat: 'Seçin...',
       starOptional: '1. Yıldız (isteğe bağlı)', tiolaPlaceholder: 'Deneyimini yaz (Tiola)...',
       photoOptional: '3. Fotoğraf (isteğe bağlı)',
-      notLoggedIn: 'Giriş yapmadınız', writeTiola: '✨ Tiola yaz',
+      notLoggedIn: 'Giriş yapmadınız', writeTiola: 'Tiola yaz',
       loginToTiola: 'Giriş yap', loginToTiolaNote: '— Tiola yazmak için üye olun',
       tiolaFormLocked: 'Tiola yazmak için giriş yapın. Misafirler yorumları okuyabilir.',
       tiolaModeration: 'Tiola onay sonrası yayınlanır',
@@ -205,7 +205,7 @@ window.TL_I18N = (function () {
       writeNew: 'Yeni Tiola',
       placeOptional: 'Mekân (isteğe bağlı)', cityTagPh: 'Şehir etiketi (genel Tiola için, isteğe bağlı)',
       memberRating: 'Yıldızınız', memberCategory: 'Kategori (Üyeler)',
-      shareExperience: 'Deneyiminizi paylaşın...', oneRatingPer: '🛡️ Kişi başı bir yıldız',
+      shareExperience: 'Deneyiminizi paylaşın...', oneRatingPer: 'Kişi başı bir yıldız',
       blogTitlePh: 'Blog başlığı', blogBodyPh: 'Uzun rehber yazınız...', submitBlog: 'Blog Gönder',
       blogCatGuideOpt: 'Rehber', blogCatHiddenOpt: 'Gizli Köşe', blogCatFoodOpt: 'Yemek',
       blogCatNatureOpt: 'Doğa', blogCatCultureOpt: 'Kültür',
@@ -273,7 +273,7 @@ window.TL_I18N = (function () {
       profileStatCountries: 'Ülke',
       noAccount: 'Hesabınız yok mu?', hasAccount: 'Zaten hesabınız var mı?',
       footerAbout: 'Hakkımızda', footerContact: 'İletişim', footerPrivacy: 'Gizlilik',
-      faqTitle: '❓ Sık Sorulan Sorular',
+      faqTitle: 'Sık Sorulan Sorular',
       similarTitle: 'Benzer Yerler', nearbyEmpty: 'Yakında yer bulunamadı.', similarEmpty: 'Benzer yer bulunamadı.',
       weatherTitle: 'Hava Durumu', weatherEstimate: 'Tahmini veri', weatherUnavailable: 'veri alınamadı', localInfoTitle: 'Yerel Bilgi',
       infoClimate: 'İklim', infoCurrency: 'Yerel para birimi', infoBudget: 'Ortalama bütçe',
@@ -390,12 +390,12 @@ window.TL_I18N = (function () {
       login: 'Log in', join: 'Join', explore: 'Explore', discoverPlaces: 'Places to visit', blog: 'Blog', profile: 'My profile', admin: 'Admin',
       discoverPlacesTitle: 'Places to visit', discoverPlacesSub: 'Pick a city — then filter by category; map stays in sync.',
       discoverGlobalTitle: 'All places to visit', discoverGlobalSub: 'Across Turkey · filter by category or city',
-      discoverPickCity: '🏙️ Cities', discoverClearCity: '← All places', discoverEmpty: 'No places match this filter.',
-      heroPill: "🌍 The world's most personal travel guide",
+      discoverPickCity: 'Cities', discoverClearCity: '← All places', discoverEmpty: 'No places match this filter.',
+      heroPill: "The world's most personal travel guide",
       heroTitle: "Don't just visit.", heroTitleEm: 'Feel it.',
       heroSub: 'From hidden local gems to iconic landmarks — curated by real travelers.',
       searchPh: 'Istanbul, Eiffel Tower, Tokyo, Machu Picchu...',
-      searchBtn: '🔍 Explore',
+      searchBtn: 'Explore',
       tabDiscover: 'Destinations', tabFilter: 'Advanced filters', tabTiolas: 'Tiolas', tabCategories: 'Categories',
       placesFound: 'places found', noResults: 'No results. Try different filters.',
       mapExploreBtn: 'Explore on map',
@@ -408,7 +408,7 @@ window.TL_I18N = (function () {
       detailOverview: 'Overview', detailThings: 'Things to do', detailCulture: 'Culture & food',
       authSub: 'Star, save and share your trips', authTabLogin: 'Log in', authTabReg: 'Sign up',
       authNote: 'Guests can browse · Sign up to write a Tiola',
-      authSecure: '🔒 Protected with secure encryption · GDPR compliant',
+      authSecure: 'Protected with secure encryption · GDPR compliant',
       authOr: '— or —',
       authEmail: 'Email', authPass: 'Password', authName: 'Full name',
       get authPassMin() { return passwordCopy('en', 'label'); },
@@ -457,17 +457,17 @@ window.TL_I18N = (function () {
       placesCount: 'places', placesCountZero: '0 places',
       blogTitle: 'Travel', blogTitleEm: 'Stories',
       blogSub: 'Curated guides, hidden gems and cultural discoveries from local writers.',
-      blogCatAll: 'All', blogCatGuide: '🗺️ Guides', blogCatHidden: '💎 Hidden gems',
-      blogCatFood: '🍜 Food', blogCatNature: '🌿 Nature', blogCatCulture: '🎭 Culture',
+      blogCatAll: 'All', blogCatGuide: 'Guides', blogCatHidden: 'Hidden gems',
+      blogCatFood: 'Food', blogCatNature: 'Nature', blogCatCulture: 'Culture',
       blogEmpty: 'No blog posts yet.', blogSearchPh: 'Search blog…', blogFeaturedLbl: 'Featured', viewPlace: 'View place',
       blogBack: '← All stories',
       detailAbout: 'About', detailHistory: 'History & cultural significance',
       detailTips: 'Visitor tips', detailTags: 'Tags',
-      detailTiolas: '✨ Tiolas', antiFraud: '🛡️ Anti-fraud protection',
+      detailTiolas: 'Tiolas', antiFraud: 'Anti-fraud protection',
       yourRating: 'Your stars', category: 'Category', selectCat: 'Select...',
       starOptional: '1. Stars (optional)', tiolaPlaceholder: 'Write your experience (Tiola)...',
       photoOptional: '3. Photo (optional)',
-      notLoggedIn: 'Not logged in', writeTiola: '✨ Write a Tiola',
+      notLoggedIn: 'Not logged in', writeTiola: 'Write a Tiola',
       loginToTiola: 'Log in', loginToTiolaNote: '— sign up to write a Tiola',
       tiolaFormLocked: 'Log in to write a Tiola. Guests can still read community reviews.',
       tiolaModeration: 'Tiolas are published after review',
@@ -501,7 +501,7 @@ window.TL_I18N = (function () {
       writeNew: 'New Tiola',
       placeOptional: 'Place (optional)', cityTagPh: 'City tag (for general Tiola, optional)',
       memberRating: 'Your stars', memberCategory: 'Category (members)',
-      shareExperience: 'Share your experience...', oneRatingPer: '🛡️ One star per person',
+      shareExperience: 'Share your experience...', oneRatingPer: 'One star per person',
       blogTitlePh: 'Blog title', blogBodyPh: 'Write your long-form guide...', submitBlog: 'Submit blog',
       blogCatGuideOpt: 'Guide', blogCatHiddenOpt: 'Hidden gem', blogCatFoodOpt: 'Food',
       blogCatNatureOpt: 'Nature', blogCatCultureOpt: 'Culture',
@@ -569,7 +569,7 @@ window.TL_I18N = (function () {
       profileStatCountries: 'Countries',
       noAccount: "Don't have an account?", hasAccount: 'Already have an account?',
       footerAbout: 'About', footerContact: 'Contact', footerPrivacy: 'Privacy',
-      faqTitle: '❓ FAQ',
+      faqTitle: 'FAQ',
       similarTitle: 'Similar places', nearbyEmpty: 'No nearby places.', similarEmpty: 'No similar places.',
       weatherTitle: 'Weather', weatherEstimate: 'Estimated data', weatherUnavailable: 'data unavailable', localInfoTitle: 'Local info',
       infoClimate: 'Climate', infoCurrency: 'Local currency', infoBudget: 'Average budget',
@@ -755,15 +755,13 @@ window.TL_I18N = (function () {
   function geoName(lang, raw) {
     const src = String(raw == null ? '' : raw);
     if (!src) return '';
-    const flagMatch = src.match(FLAG_RE);
-    const flag = flagMatch ? flagMatch[0] : '';
     const key = stripFlag(src);
     if (!key) return src;
     if (lang !== 'en') {
       const mapped = CONTINENT_TR[key] || COUNTRY_TR[key] || CITY_TR[key];
-      if (mapped) return flag ? `${mapped} ${flag}` : mapped;
+      if (mapped) return mapped;
     }
-    return src;
+    return key;
   }
 
   function geoText(lang, raw) {
@@ -791,8 +789,7 @@ window.TL_I18N = (function () {
   function catLabel(lang, cat) {
     const meta = window.TL_CATEGORY_META?.categories?.find((c) => c.slug === cat);
     if (meta) {
-      const name = lang === 'en' ? meta.nameEn : meta.nameTr;
-      return `${meta.icon ? `${meta.icon} ` : ''}${name}`;
+      return lang === 'en' ? meta.nameEn : meta.nameTr;
     }
     return t(lang, CAT_KEYS[cat] || cat);
   }

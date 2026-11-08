@@ -34,10 +34,10 @@
     <label class="sr-only" for="searchCat" data-i18n="searchCatAria">Kategori</label>
     <select id="searchCat" aria-label="Kategori">
       <option value="all" data-i18n="all">Tümü</option>
-      <option value="landmark" data-i18n="catLandmark">🏛️ Tarihi Yerler</option>
-      <option value="museum" data-i18n="catMuseum">🏺 Müzeler</option>
-      <option value="nature" data-i18n="catNature">⛰️ Doğa</option>
-      <option value="restaurant" data-i18n="catRestaurant">🍽️ Restoranlar</option>
+      <option value="landmark" data-i18n="catLandmark">Tarihi Yerler</option>
+      <option value="museum" data-i18n="catMuseum">Müzeler</option>
+      <option value="nature" data-i18n="catNature">Doğa</option>
+      <option value="restaurant" data-i18n="catRestaurant">Restoranlar</option>
     </select>
     <label class="sr-only" for="searchSort" data-i18n="sortAria">Sıralama</label>
     <select id="searchSort" aria-label="Sıralama">
@@ -45,7 +45,7 @@
       <option value="rating" data-i18n="sortTiola">En Yüksek Tiola</option>
       <option value="az" data-i18n="sortAz">A → Z</option>
     </select>
-    <button type="submit" class="btn bp" id="searchSubmit" data-i18n="searchBtn">🔍 Keşfet</button>
+    <button type="submit" class="btn bp" id="searchSubmit" data-i18n="searchBtn">Keşfet</button>
     <button type="button" class="btn bo" id="searchClear" data-i18n="filterClear">Filtreler Temizle</button>
   </form>
   <p class="search-meta" id="results-count" aria-live="polite" aria-busy="true"></p>
@@ -198,7 +198,7 @@ async function runSearch(resetPage) {
       return `
       <a class="pc" href="/places/${encodeURIComponent(pl.slug || pl.id)}">
         <div class="pc-img">${window.TL_IMG?.tag ? window.TL_IMG.tag(pl.imageUrl, { alt: pl.name, kind: 'card' }) : `<img src="${pl.imageUrl}" alt="${pl.name}" width="400" height="300" loading="lazy"/>`}</div>
-        <div class="pc-body"><div class="pc-loc">📍 ${geoText(pl.location)}</div><div class="pc-name">${pl.name}</div>${scoreHtml}</div>
+        <div class="pc-body"><div class="pc-loc">${geoText(pl.location)}</div><div class="pc-name">${pl.name}</div>${scoreHtml}</div>
       </a>`;
     }).join('');
     grid.innerHTML = html || `<div class="no-res">${t('noResults')}<br><a href="/explore#explore/map" class="btn bo bsm tl-mt-12">${t('mapExploreBtn')}</a></div>`;
