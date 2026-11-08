@@ -17,49 +17,112 @@ function estimateBudget(place) {
   };
 }
 
+function toPositiveInt(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+}
+
+async function lookupCityHotelAvg(place) {
+  if (!place) return null;
+  const city = String(place.city || '').trim();
+  const country = String(place.country || '').trim();
+  if (!city || !country) return null;
+  const row = await db.prepare(`
+    SELECT hotel_avg_try FROM cities
+    WHERE TRIM(name) = ? AND TRIM(country) = ? AND COALESCE(is_active, 1) = 1
+    LIMIT 1
+  `).get(city, country);
+  const avg = toPositiveInt(row?.hotel_avg_try);
+  if (!avg) return null;
+  return {
+    avgPriceTry: avg,
+    note: 'admin',
+    scope: 'city',
+    source: 'city',
+  };
+}
+
+/**
+ * Live payload for place detail.
+ * Budget: admin values preferred; otherwise estimated + estimated flag (never as "real").
+ * Hotel: place-level district override OR city average only — never invent a price.
+ */
 async function getLiveData(placeId, placeRow, mapPlace) {
   const row = await db.prepare('SELECT * FROM place_live_data WHERE place_id = ?').get(placeId);
   const place = placeRow ? await Promise.resolve(mapPlace(placeRow)) : null;
   const estimated = estimateBudget(place || {});
+  const cityHotel = await lookupCityHotelAvg(place || placeRow || {});
+
+  let extra = {};
+  if (row) {
+    try { extra = JSON.parse(row.payload || '{}'); } catch { /* ignore */ }
+  }
+  const extraSafe = { ...extra };
+  // Eski yönetici hava/saat metni canlı verinin yerine geçmez.
+  delete extraSafe.weather;
+  if (extraSafe.localInfo) {
+    const li = { ...extraSafe.localInfo };
+    delete li.localTime;
+    if (Object.keys(li).length) extraSafe.localInfo = li;
+    else delete extraSafe.localInfo;
+  }
+
+  const adminBudget = extra.budget && typeof extra.budget === 'object' ? extra.budget : null;
+  const hasAdminBudget = !!(adminBudget && (toPositiveInt(adminBudget.low) || toPositiveInt(adminBudget.mid) || toPositiveInt(adminBudget.high)));
+  const budget = hasAdminBudget
+    ? {
+        ...estimated.dailyBudgetTry,
+        ...adminBudget,
+        estimated: false,
+        note: 'admin',
+      }
+    : {
+        ...estimated.dailyBudgetTry,
+        estimated: true,
+        note: 'estimated',
+      };
+
+  let hotel = null;
+  const adminHotel = extra.hotel && typeof extra.hotel === 'object' ? extra.hotel : null;
+  const adminHotelAvg = toPositiveInt(adminHotel?.avgPriceTry);
+  if (adminHotelAvg && (adminHotel.note === 'admin' || adminHotel.scope === 'district' || adminHotel.scope === 'city')) {
+    hotel = {
+      avgPriceTry: adminHotelAvg,
+      note: 'admin',
+      scope: adminHotel.scope === 'city' ? 'city' : 'district',
+      source: 'place',
+    };
+  } else if (cityHotel) {
+    hotel = cityHotel;
+  }
 
   if (row) {
-    let extra = {};
-    try { extra = JSON.parse(row.payload || '{}'); } catch { /* ignore */ }
-    const extraSafe = { ...extra };
-    // Eski yönetici hava/saat metni canlı verinin yerine geçmez.
-    delete extraSafe.weather;
-    if (extraSafe.localInfo) {
-      const li = { ...extraSafe.localInfo };
-      delete li.localTime;
-      if (Object.keys(li).length) extraSafe.localInfo = li;
-      else delete extraSafe.localInfo;
-    }
     return {
       placeId,
-      budget: extra.budget
-        ? { ...estimated.dailyBudgetTry, ...extra.budget }
-        : estimated.dailyBudgetTry,
-      hotel: extra.hotel
-        ? { avgPriceTry: estimated.hotelRangeTry.mid, note: 'estimated', ...extra.hotel }
-        : { avgPriceTry: estimated.hotelRangeTry.mid, note: 'estimated' },
+      budget,
+      hotel,
       crowd: extra.crowd || row.crowd_level || 'moderate',
       updatedAt: row.updated_at,
-      source: row.source || 'cache',
-      fallback: false,
+      source: hasAdminBudget || hotel ? (row.source || 'cache') : (row.source === 'admin' ? 'admin' : 'estimated'),
+      fallback: !hasAdminBudget,
+      estimated: !hasAdminBudget,
       ...extraSafe,
+      budget,
+      hotel,
     };
   }
 
   return {
     placeId,
-    budget: estimated.dailyBudgetTry,
-    hotel: { avgPriceTry: estimated.hotelRangeTry.mid, rangeTry: estimated.hotelRangeTry, note: 'estimated' },
+    budget,
+    hotel,
     meal: estimated.mealRangeTry,
     entryTry: estimated.entryTry,
     crowd: 'moderate',
     updatedAt: new Date().toISOString(),
     source: 'estimated',
     fallback: true,
+    estimated: true,
   };
 }
 
@@ -217,7 +280,7 @@ function applyInfoBoxUpdates(existingPayload, body) {
   if (hotelAvg !== undefined) {
     const hotel = hotelAvg === '' || hotelAvg === null ? null : toNum(hotelAvg);
     if (hotel) {
-      // Bölge otel ortalaması (veri ilçe düzeyinde; etiket «bölge») — yalnız yönetici girerse gösterilir.
+      // Yer düzeyinde bölge/ilçe override — şehir ortalaması cities.hotel_avg_try'den gelir.
       payload.hotel = {
         ...(payload.hotel || {}),
         avgPriceTry: hotel,
@@ -254,7 +317,8 @@ async function refreshAllPlaces() {
   let n = 0;
   for (const r of rows) {
     const est = estimateBudget({ entryFee: r.entry_fee, category: r.category, country: r.country });
-    upsertLiveData(r.id, { budget: est.dailyBudgetTry, hotel: { avgPriceTry: est.hotelRangeTry.mid }, crowd: 'moderate', source: 'cron' });
+    // Otel tahmini DB'ye yazılmaz — yalnız admin/şehir değeri gösterilir.
+    upsertLiveData(r.id, { budget: est.dailyBudgetTry, crowd: 'moderate', source: 'cron' });
     n++;
   }
   return n;
@@ -272,4 +336,5 @@ module.exports = {
   mergeInfoPanel,
   buildInfoBoxesResponse,
   applyInfoBoxUpdates,
+  lookupCityHotelAvg,
 };

@@ -167,6 +167,8 @@ function mapAdminPlace(row) {
     entryFee: row.entry_fee || '',
     bestTime: row.best_time || '',
     bestTimeEn: row.best_time_en || '',
+    bestTimeNote: row.best_time || '',
+    bestTimeNoteEn: row.best_time_en || '',
     bestMonths: parseBestMonths(row.best_months),
     thingsToDo: parseJsonList(row.things_to_do),
     thingsToDoEn: parseJsonList(row.things_to_do_en),

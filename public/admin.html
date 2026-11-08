@@ -186,6 +186,9 @@
           <input class="ain" id="ctCountry" placeholder="Ülke *" aria-label="Ülke"/>
           <input class="ain" id="ctNameEn" placeholder="İngilizce ad" aria-label="İngilizce ad"/>
           <input class="ain" id="ctSlug" placeholder="Slug (opsiyonel)" aria-label="Slug"/>
+          <label class="adm-label-sm full" for="ctHotelAvg">Konaklama (şehir ortalaması, ₺/gece)</label>
+          <input class="ain full" id="ctHotelAvg" type="number" min="0" placeholder="Boşsa yer sayfasında gizlenir" aria-label="Şehir otel ortalaması"/>
+          <p class="adm-field-hint">Bu şehirdeki yerlerin bütçe kartında «Konaklama (şehir ortalaması)» olarak görünür. Boş bırakılırsa satır gizlenir.</p>
           <label class="adm-label-sm full" for="ctImage">Kapak görseli URL</label>
           <input class="ain full" id="ctImage" placeholder="Görsel URL (opsiyonel)" aria-label="Şehir kapak görseli URL"/>
           <p class="adm-field-hint" id="ctImageHint">Kapak görseli yok — URL girin veya aşağıdan görsel yükleyip kırpın.</p>
@@ -871,7 +874,7 @@
             <p><strong>Yeni yer formu (üst kart):</strong></p>
             <ul class="adm-guide-list">
               <li><strong>Zorunlu çekirdek</strong> — ad, ülke, şehir, kategori kodu (slug)</li>
-              <li><strong>İlçe / bölge</strong> — isteğe bağlı; boşsa şehir değeri kullanılır. Bütçe kartındaki «ilçe otel ortalaması» ile birlikte düşünün</li>
+              <li><strong>İlçe / bölge</strong> — isteğe bağlı; boşsa şehir değeri kullanılır. Konaklama ortalaması asıl olarak <a href="#guide-sehirler">Şehirler</a> formundan girilir</li>
               <li><strong>Konum metni, arama aliasları</strong> — alias’lar virgülle (ör. <code>Ayasofya, Hagia Sophia</code>)</li>
               <li><strong>Kategori kodu</strong> — Türkçe ad değil; <code>museum</code>, <code>historical</code> gibi teknik kodlar. Keşfet filtreleriyle eşleşir</li>
               <li><strong>Yayın durumu</strong> — Yayında, Taslak veya Arşiv</li>
@@ -901,14 +904,14 @@
               <li><strong>Yapılacaklar (TR)</strong> — her satır bir madde. Doluysa listelenir</li>
               <li><strong>Kültür ve Gastronomi (TR)</strong> — boş bırakılırsa bölüm ziyaretçi sayfasında <em>gizlenir</em> (koşullu)</li>
               <li><strong>Ziyaretçi tavsiyeleri (TR)</strong> — boşsa gizlenir</li>
-              <li><strong>En iyi zaman (aylar)</strong> — Ocak–Aralık çoklu seçim. Seçim yoksa «En iyi zaman» bölümü gizlenir; seçilen aylar yan panel Bilgiler kartına da yansır</li>
+              <li><strong>En iyi zaman (aylar)</strong> — Ocak–Aralık çoklu seçim. Ardışık aylar sitede «Nisan – Ekim» gibi aralık gösterilir. İsteğe bağlı 1 cümlelik kısa not eklenebilir. Gün/mevsim girişi yok; seçim yoksa bölüm gizlenir</li>
               <li><strong>Sayfa özeti / açıklama (TR + EN)</strong> — sitede görünen özet budur. Özeti ellemezseniz ve açıklamayı değiştirirseniz özet açıklamadan yenilenebilir</li>
             </ul>
             <p><strong>Yan panel kartları</strong> (destinasyon sayfası sağ kolon):</p>
             <ul class="adm-guide-list">
               <li><strong>Hava durumu</strong> — elle yazılmaz; enlem/boylamdan canlı gelir</li>
               <li><strong>Yerel bilgi</strong> — yerel saat otomatik; para birimi kodu/sembolü buradan (ör. TRY / ₺)</li>
-              <li><strong>Günlük bütçe tahmini</strong> — ekonomik ve orta (₺/gün) + <strong>ilçe otel ortalaması (₺/gece)</strong>. Otel ortalaması boşsa ziyaretçide gösterilmez</li>
+              <li><strong>Günlük bütçe tahmini</strong> — ekonomik ve orta (₺/gün). Boşsa sitede «tahmini» etiketiyle otomatik rakam çıkar. <strong>Konaklama (şehir ortalaması)</strong> Şehirler formundan; yerdeki «bölge otel» alanı yalnızca override. İkisi de boşsa otel satırı gizlenir</li>
               <li><strong>Bilgiler</strong> — isteğe bağlı kategori gösterim metni ve giriş ücreti kısayolu</li>
             </ul>
             <p><strong>Bilgi kutucukları</strong> (ayrı kutular; boş olanlar sitede yok):</p>
@@ -922,9 +925,10 @@
 
           <div id="guide-sehirler" class="admin-card adm-guide-block">
             <h3>Şehirler</h3>
-            <p>Şehir sayfalarını ve keşif kartlarını yönetir. Her şehir için ad, ülke, İngilizce ad, slug ve kapak görseli tanımlanır.</p>
+            <p>Şehir sayfalarını ve keşif kartlarını yönetir. Her şehir için ad, ülke, İngilizce ad, slug, kapak görseli ve isteğe bağlı konaklama ortalaması tanımlanır.</p>
             <ul class="adm-guide-list">
               <li>Slug boş bırakılırsa sistem otomatik üretir</li>
+              <li><strong>Konaklama (şehir ortalaması, ₺/gece)</strong> — bu şehirdeki yerlerin bütçe kartında «Konaklama (şehir ortalaması)» olarak görünür. Boşsa satır gizlenir; otomatik tahmini otel fiyatı gösterilmez</li>
               <li>Kapak görseli URL ile veya dosya yükleyerek (16:9 kırpma) eklenebilir</li>
               <li>Şehir listesinden düzenleme ve silme yapılabilir</li>
             </ul>
@@ -1166,7 +1170,7 @@
                 <li>Yer listesinde <strong>Düzenle</strong> açın</li>
                 <li>Yapılacaklar’a satır satır maddeler yazın</li>
                 <li>Kültür &amp; Gastronomi ve Ziyaretçi tavsiyeleri’ni yalnızca içerik varsa doldurun (boşsa sitede gizlenir)</li>
-                <li>En iyi ayları işaretleyin; bütçe ve ilçe otel ortalamasını yan panelden girin</li>
+                <li>En iyi ayları işaretleyin (aralık «Nisan – Ekim»); konaklamayı Şehirler formundan, bütçeyi yan panelden girin</li>
                 <li>Bilgi kutucuklarını doldurup <strong>Bilgileri Kaydet</strong>, ardından modal <strong>Kaydet</strong></li>
               </ol>
             </div>
@@ -1219,7 +1223,7 @@
               <li>Panelde kalırken logoya tıklamak sizi ana siteye götürmez; bilerek <code>/admin</code>’de tutar</li>
               <li>Yayına almadan önce yayın kapısını (açıklama, koordinat, doğrulanmış görsel, kaynak URL) kontrol edin</li>
               <li>Boş kültür/gastro, tavsiye veya ay seçimi bırakmak bölümü gizler — bilerek kullanın, rastgele şablon metin doldurmayın</li>
-              <li>İlçe otel ortalamasını yalnızca güvenilir veriniz varsa girin; boş bırakmak kartı gizler</li>
+              <li>Şehir otel ortalamasını Şehirler formundan girin; yerdeki bölge override yalnızca güvenilir veriniz varsa. Boş bırakmak satırı gizler</li>
               <li>Red kararlarında kısa ve net bir neden yazın; kullanıcılar bunu görebilir</li>
               <li>Yer ve kategori eklerken <strong>slug</strong> ile <strong>Türkçe ad</strong> ayrımına dikkat edin</li>
               <li>Görselleri mümkünse yükleyin; harici/Unsplash URL’leri bakım riski taşır</li>
@@ -4095,8 +4099,10 @@ async function openPlaceEdit(id) {
         </div>
         <div class="full">
           <span class="adm-label-sm" id="edBestMonthsLbl">En iyi zaman (aylar)</span>
-          <p class="adm-field-hint">Birden fazla ay seçilebilir. Seçim yoksa bölüm gizlenir.</p>
+          <p class="adm-field-hint">Birden fazla ay seçilebilir; ardışık aylar sitede «Nisan – Ekim» gibi aralık olur. Gün/mevsim girişi yok. Seçim yoksa bölüm gizlenir.</p>
           <div class="adm-months" id="edBestMonths" role="group" aria-labelledby="edBestMonthsLbl">${renderBestMonthChecks(p.bestMonths)}</div>
+          <label class="adm-label-sm" for="edBestTimeNote" style="margin-top:8px">Kısa not (isteğe bağlı, 1 cümle)</label>
+          <input class="ain full" id="edBestTimeNote" maxlength="160" value="${escapeHtml(p.bestTimeNote || '')}" placeholder="Örn. Sabah erken gidin" aria-label="En iyi zaman kısa not"/>
         </div>
 
         <p class="adm-photo-title full" style="margin-top:8px">Yan panel kartları (destinasyon sayfası)</p>
@@ -4118,13 +4124,13 @@ async function openPlaceEdit(id) {
 
         <div class="adm-side-card">
           <p class="adm-side-card-title">Günlük Bütçe Tahmini</p>
-          <p class="adm-side-card-hint">Ekonomik, orta ve bölge otel ortalaması (₺). Otel ortalaması boşsa ziyaretçide gösterilmez.</p>
+          <p class="adm-side-card-hint">Ekonomik/orta (₺/gün). Boş bırakılırsa sitede «tahmini» etiketiyle otomatik rakam görünür. Konaklama asıl olarak <strong>Şehirler</strong> formundan girilir; buradaki alan yalnızca ilçe/bölge override’ıdır.</p>
           <label class="adm-label-sm" for="edBudgetLow">Ekonomik (₺/gün)</label>
           <input class="ain" id="edBudgetLow" type="number" min="0" value="${ib.budgetLow || ''}" placeholder="350" aria-label="Ekonomik bütçe"/>
           <label class="adm-label-sm" for="edBudgetMid">Orta (₺/gün)</label>
           <input class="ain" id="edBudgetMid" type="number" min="0" value="${ib.budgetMid || ''}" placeholder="900" aria-label="Orta bütçe"/>
-          <label class="adm-label-sm full" for="edHotelAvg">Bölge otel ortalaması (₺/gece)</label>
-          <input class="ain full" id="edHotelAvg" type="number" min="0" value="${ib.hotelAvg || ''}" placeholder="Boşsa gizlenir" aria-label="Bölge otel ortalaması"/>
+          <label class="adm-label-sm full" for="edHotelAvg">Bölge otel ortalaması — override (₺/gece)</label>
+          <input class="ain full" id="edHotelAvg" type="number" min="0" value="${ib.hotelAvg || ''}" placeholder="Boşsa şehir ortalaması kullanılır" aria-label="Bölge otel ortalaması"/>
         </div>
 
         <div class="adm-side-card">
@@ -4238,7 +4244,24 @@ function readBestMonths() {
 }
 
 function formatBestMonthsTr(months) {
-  return (months || []).map((m) => BEST_MONTH_NAMES_TR[m - 1]).filter(Boolean).join(', ');
+  const list = (months || []).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 12)
+    .filter((n, i, a) => a.indexOf(n) === i).sort((a, b) => a - b);
+  if (!list.length) return '';
+  const parts = [];
+  let start = list[0];
+  let prev = list[0];
+  const push = () => {
+    const a = BEST_MONTH_NAMES_TR[start - 1];
+    const b = BEST_MONTH_NAMES_TR[prev - 1];
+    parts.push(start === prev ? a : `${a} – ${b}`);
+  };
+  for (let i = 1; i < list.length; i++) {
+    if (list[i] === prev + 1) { prev = list[i]; continue; }
+    push();
+    start = prev = list[i];
+  }
+  push();
+  return parts.join(', ');
 }
 
 function readThingsLines(id) {
@@ -4249,10 +4272,12 @@ function readThingsLines(id) {
 }
 
 function placeInfoPatchBody() {
-  const best = formatBestMonthsTr(readBestMonths());
+  const monthsLabel = formatBestMonthsTr(readBestMonths());
+  const note = (document.getElementById('edBestTimeNote')?.value || '').trim().slice(0, 160);
   const fee = document.getElementById('infoEntryFee')?.value || '';
   return {
-    best,
+    best: monthsLabel,
+    note,
     fee,
     body: {
       climate_info: document.getElementById('infoClimate')?.value || '',
@@ -4260,7 +4285,7 @@ function placeInfoPatchBody() {
       budget_level: document.getElementById('infoBudgetLevel')?.value || null,
       budget_amount: document.getElementById('infoBudgetAmount')?.value || '',
       visit_duration: document.getElementById('infoVisitDuration')?.value || '',
-      best_time: best,
+      best_time: note,
       entry_fee: fee,
       is_free: !!document.getElementById('infoIsFree')?.checked,
       wheelchair_accessible: infoTriFromSelect('infoWheelchair'),
@@ -4293,7 +4318,7 @@ async function savePlaceInfo(id) {
     });
     await api('/admin/places/' + id, {
       method: 'PUT',
-      body: { bestMonths: months, bestTime: info.best },
+      body: { bestMonths: months, bestTime: info.note || '' },
     });
     const oldFee = document.getElementById('edEntryFee');
     if (oldFee) oldFee.value = fee;
@@ -4347,7 +4372,7 @@ async function savePlaceEdit(id) {
       overviewEn: document.getElementById('edOverviewEn').value,
       searchAliases: aliases,
       entryFee: info.fee,
-      bestTime: info.best,
+      bestTime: info.note || '',
       bestMonths: readBestMonths(),
       thingsToDo: readThingsLines('edThingsToDo'),
       cultureFood: document.getElementById('edCultureFood')?.value || '',
@@ -4386,7 +4411,7 @@ async function savePlaceEdit(id) {
         infoCity: document.getElementById('edCity')?.value,
         infoCategoryLabel: document.getElementById('edCategoryLabel')?.value,
         infoEntryFee: document.getElementById('edEntryFee')?.value ?? info.fee,
-        infoBestTime: info.best,
+        infoBestTime: info.best || info.note || '',
       },
     });
     await api('/admin/places/' + id + '/info', {
@@ -4551,9 +4576,10 @@ async function addCity() {
         nameEn: document.getElementById('ctNameEn').value,
         slug: document.getElementById('ctSlug').value,
         imageUrl: document.getElementById('ctImage').value,
+        hotelAvgTry: document.getElementById('ctHotelAvg').value,
       },
     });
-    ['ctName','ctCountry','ctNameEn','ctSlug','ctImage'].forEach((id) => { document.getElementById(id).value = ''; });
+    ['ctName','ctCountry','ctNameEn','ctSlug','ctImage','ctHotelAvg'].forEach((id) => { document.getElementById(id).value = ''; });
     updateImageUrlHint('ctImage', 'ctImageHint', 'ctImagePreview');
     updatePhotoBtnLabel('ctImageFile', 'ctImageBtnLabel');
     await loadCitiesList();
@@ -4572,6 +4598,9 @@ async function openCityEdit(id) {
         <input class="ain" id="edCtCountry" value="${escapeHtml(c.country)}" aria-label="Ülke"/>
         <input class="ain" id="edCtNameEn" value="${escapeHtml(c.nameEn)}" aria-label="İngilizce ad"/>
         <input class="ain" id="edCtSlug" value="${escapeHtml(c.slug)}" aria-label="Slug"/>
+        <label class="adm-label-sm full" for="edCtHotelAvg">Konaklama (şehir ortalaması, ₺/gece)</label>
+        <input class="ain full" id="edCtHotelAvg" type="number" min="0" value="${c.hotelAvgTry || ''}" placeholder="Boşsa yer sayfasında gizlenir" aria-label="Şehir otel ortalaması"/>
+        <p class="adm-field-hint">Bu şehirdeki destinasyonlarda «Konaklama (şehir ortalaması)» satırı olarak görünür.</p>
         <label class="adm-label-sm full" for="edCtImage">Kapak görseli URL</label>
         <input class="ain full" id="edCtImage" value="${escapeHtml(c.imageUrl || '')}" aria-label="Şehir kapak görseli URL"/>
         <p class="adm-field-hint" id="edCtImageHint">${imageSourceBadge(c.imageUrl)} Görseli değiştirmek için URL düzenleyin veya yeni görsel yükleyin.</p>
@@ -4613,6 +4642,7 @@ async function saveCityEdit(id) {
         nameEn: document.getElementById('edCtNameEn').value,
         slug: document.getElementById('edCtSlug').value,
         imageUrl: document.getElementById('edCtImage').value,
+        hotelAvgTry: document.getElementById('edCtHotelAvg').value,
         isActive: document.getElementById('edCtActive').checked,
       },
     });

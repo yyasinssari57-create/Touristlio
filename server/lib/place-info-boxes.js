@@ -1,7 +1,7 @@
 /** Static place info boxes (admin-edited). Separate from live weather. */
 
 const { sanitizeText } = require('./sanitize');
-const { formatBestMonths, normalizeBestMonths } = require('./best-months');
+const { formatBestTimeDisplay, normalizeBestMonths } = require('./best-months');
 
 const BUDGET_LEVELS = new Set(['low', 'medium', 'high']);
 const BUDGET_LABEL_KEYS = {
@@ -66,8 +66,10 @@ function buildPlaceInfoBoxes(place, lang = 'tr') {
   if (duration) boxes.push({ key: 'visitDuration', labelKey: 'infoVisitDuration', text: duration });
 
   const months = normalizeBestMonths(p.bestMonths);
-  const bestFromMonths = months.length ? formatBestMonths(months, lang === 'en' ? 'en' : 'tr') : '';
-  const best = bestFromMonths || localizedText(p, lang, 'bestTime', 'bestTimeEn');
+  const note = localizedText(p, lang, 'bestTimeNote', 'bestTimeNoteEn')
+    || localizedText(p, lang, 'bestTime', 'bestTimeEn');
+  const best = formatBestTimeDisplay(months, lang === 'en' ? 'en' : 'tr', note)
+    || localizedText(p, lang, 'bestTime', 'bestTimeEn');
   if (best) boxes.push({ key: 'bestTime', labelKey: 'infoBestTimeBox', text: best });
 
   const fee = localizedText(p, lang, 'entryFee', 'entryFeeEn');

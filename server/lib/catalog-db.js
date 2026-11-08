@@ -103,11 +103,20 @@ async function listCities({ includeInactive = false } = {}) {
     slug: r.slug,
     country: r.country,
     imageUrl: r.image_url || '',
+    hotelAvgTry: r.hotel_avg_try != null && Number(r.hotel_avg_try) > 0 ? Number(r.hotel_avg_try) : null,
     sortOrder: r.sort_order,
     isActive: !!r.is_active,
     placeCount: countMap.get(`${r.country}|${r.name}`) || 0,
     createdAt: r.created_at,
   }));
+}
+
+function parseHotelAvgTry(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n);
 }
 
 async function createCity(body) {
@@ -119,11 +128,14 @@ async function createCity(body) {
   const nameEn = sanitizeName(body.nameEn || body.name_en || name, 120);
   const sortOrder = Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0;
   const imageUrl = sanitizeText(body.imageUrl || body.image_url || '', 500) || getCityImage(slug);
+  const hotelAvgTry = parseHotelAvgTry(
+    body.hotelAvgTry !== undefined ? body.hotelAvgTry : body.hotel_avg_try
+  );
   try {
     const result = await db.prepare(`
-      INSERT INTO cities (name, name_en, slug, country, sort_order, is_active, image_url)
-      VALUES (?, ?, ?, ?, ?, 1, ?)
-    `).run(name, nameEn, slug, country, sortOrder, imageUrl);
+      INSERT INTO cities (name, name_en, slug, country, sort_order, is_active, image_url, hotel_avg_try)
+      VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+    `).run(name, nameEn, slug, country, sortOrder, imageUrl, hotelAvgTry ?? null);
     return await getCityById(result.lastInsertRowid);
   } catch (err) {
     throw new Error(mapDbError(err, 'Şehir eklenemedi'));
@@ -145,6 +157,7 @@ async function getCityById(id) {
     slug: row.slug,
     country: row.country,
     imageUrl: row.image_url || '',
+    hotelAvgTry: row.hotel_avg_try != null && Number(row.hotel_avg_try) > 0 ? Number(row.hotel_avg_try) : null,
     sortOrder: row.sort_order,
     isActive: !!row.is_active,
     placeCount,
@@ -167,14 +180,17 @@ async function updateCity(id, body) {
   const imageUrl = body.imageUrl != null || body.image_url != null
     ? (sanitizeText(body.imageUrl || body.image_url || '', 500) || null)
     : existing.image_url;
+  const hotelAvgTry = (body.hotelAvgTry !== undefined || body.hotel_avg_try !== undefined)
+    ? parseHotelAvgTry(body.hotelAvgTry !== undefined ? body.hotelAvgTry : body.hotel_avg_try)
+    : (existing.hotel_avg_try != null && Number(existing.hotel_avg_try) > 0 ? Number(existing.hotel_avg_try) : null);
 
   if (!name || !country) throw new Error('Şehir adı ve ülke zorunlu');
 
   const renameCity = name !== existing.name || country !== existing.country;
   await db.prepare(`
-    UPDATE cities SET name = ?, name_en = ?, slug = ?, country = ?, sort_order = ?, is_active = ?, image_url = ?
+    UPDATE cities SET name = ?, name_en = ?, slug = ?, country = ?, sort_order = ?, is_active = ?, image_url = ?, hotel_avg_try = ?
     WHERE id = ?
-  `).run(name, nameEn, slug || slugify(name), country, sortOrder, isActive, imageUrl, id);
+  `).run(name, nameEn, slug || slugify(name), country, sortOrder, isActive, imageUrl, hotelAvgTry, id);
 
   if (renameCity) {
     await db.prepare(`

@@ -46,8 +46,15 @@ function mapPlaceRow(row, stats) {
     entryFee: row.entry_fee,
     entryFeeEn: row.entry_fee_en,
     bestMonths,
-    bestTime: bestMonths.length ? formatBestMonths(bestMonths, 'tr') : row.best_time,
-    bestTimeEn: bestMonths.length ? formatBestMonths(bestMonths, 'en') : row.best_time_en,
+    // best_time / best_time_en = isteğe bağlı kısa not (ay aralığı best_months'tan üretilir)
+    bestTimeNote: row.best_time || '',
+    bestTimeNoteEn: row.best_time_en || '',
+    bestTime: bestMonths.length
+      ? formatBestMonths(bestMonths, 'tr')
+      : (row.best_time || ''),
+    bestTimeEn: bestMonths.length
+      ? formatBestMonths(bestMonths, 'en')
+      : (row.best_time_en || ''),
     description: row.description,
     descriptionEn: row.description_en,
     overview: row.overview || row.description,
