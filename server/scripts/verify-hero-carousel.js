@@ -40,14 +40,22 @@ if (html.includes('class="hc"')
   fail('hero overlay content missing or moved');
 }
 
-const cityPills = html.match(/<button\b[^>]*class="hpl"[^>]*>/g) || [];
-const istanbulPill = cityPills.find((btn) => btn.includes('data-arg="İstanbul"'));
-if (cityPills.length >= 1
-  && cityPills.every((btn) => btn.includes('data-act="quickSearch"') && /data-arg="[^"]+"/.test(btn))
-  && istanbulPill) {
-  ok('city pills use data-act + data-arg');
+// V6 Adım 7: static .hpl removed — filled from /places/cities (placeCount ≥ 1).
+if (/id="heroCityPills"/.test(html) && /class="hpills"/.test(html)) {
+  ok('hero city pills host (#heroCityPills) present');
 } else {
-  fail('city pills missing data-act quickSearch / data-arg');
+  fail('hero city pills host (#heroCityPills) missing');
+}
+const staticHpl = html.match(/<button\b[^>]*class="hpl"[^>]*>/g) || [];
+if (staticHpl.length === 0) ok('no hardcoded .hpl buttons in HTML');
+else fail(`hardcoded .hpl still in HTML (${staticHpl.length})`);
+const appJs = read('public/js/app.js');
+if (appJs.includes('function loadHeroCityPills')
+  && appJs.includes('function renderHeroCityPills')
+  && appJs.includes("data-act=\"quickSearch\"")) {
+  ok('app.js fills .hpl via quickSearch from cities API');
+} else {
+  fail('loadHeroCityPills / renderHeroCityPills / quickSearch wiring missing');
 }
 
 if (html.includes('/js/hero-carousel.js')) ok('hero-carousel.js is loaded');
