@@ -596,10 +596,20 @@ function categoryCountLabel(n) {
   return safe ? `${safe} ${t('placesCount')}` : t('placesCountZero');
 }
 
+/** V6 Adım 7: public categories tab — only published placeCount ≥ 1. */
+function publicCategoriesWithPlaces() {
+  return (categoryMeta?.categories || []).filter((c) => Number(c.placeCount) > 0);
+}
+
 function renderCategoryCards() {
   const grid = document.getElementById('categoryCardsGrid');
   if (!grid || !categoryMeta) return;
-  grid.innerHTML = (categoryMeta.categories || []).map((c) => {
+  const cats = publicCategoriesWithPlaces();
+  if (!cats.length) {
+    grid.innerHTML = `<div class="sd-empty">${escapeHtml(t('noResults'))}</div>`;
+    return;
+  }
+  grid.innerHTML = cats.map((c) => {
     const label = lang === 'en' ? c.nameEn : c.nameTr;
     return `
       <div class="ccard" data-cat="${c.slug}" data-act="setCatAndSwitch" data-arg="${c.slug}">
@@ -610,6 +620,73 @@ function renderCategoryCards() {
         </div>
       </div>`;
   }).join('');
+}
+
+const HERO_CITY_PILL_LIMIT = 8;
+let heroCityPillsCache = null;
+
+function heroCityLabel(c) {
+  if (!c) return '';
+  if (lang === 'en') return c.nameEn || c.name || '';
+  return c.name || c.nameEn || '';
+}
+
+function heroCitySearchArg(c) {
+  // DB city field — matches /places?q=… city text search.
+  return String(c?.name || c?.nameEn || '').trim();
+}
+
+function setHeroCityPillsVisible(show) {
+  const wrap = document.getElementById('heroCityPills');
+  if (!wrap) return;
+  wrap.hidden = !show;
+  wrap.setAttribute('aria-hidden', show ? 'false' : 'true');
+}
+
+function dedupeHeroCities(list) {
+  const byKey = new Map();
+  for (const c of list || []) {
+    const count = Number(c.placeCount) || 0;
+    if (count <= 0 || !heroCitySearchArg(c)) continue;
+    const key = String(c.slug || c.name || c.nameEn || '')
+      .toLowerCase()
+      .replace(/ı/g, 'i')
+      .trim();
+    if (!key) continue;
+    const prev = byKey.get(key);
+    if (!prev || count > Number(prev.placeCount || 0)) byKey.set(key, c);
+  }
+  return [...byKey.values()].sort((a, b) => Number(b.placeCount || 0) - Number(a.placeCount || 0));
+}
+
+function renderHeroCityPills(list) {
+  const wrap = document.getElementById('heroCityPills');
+  if (!wrap) return;
+  const cities = dedupeHeroCities(list).slice(0, HERO_CITY_PILL_LIMIT);
+  if (!cities.length) {
+    wrap.innerHTML = '';
+    setHeroCityPillsVisible(false);
+    return;
+  }
+  wrap.innerHTML = cities.map((c) => {
+    const label = heroCityLabel(c);
+    const arg = heroCitySearchArg(c);
+    return `<button type="button" class="hpl" data-act="quickSearch" data-arg="${escapeHtml(arg)}">${escapeHtml(label)}</button>`;
+  }).join('');
+  setHeroCityPillsVisible(true);
+}
+
+async function loadHeroCityPills() {
+  try {
+    if (!heroCityPillsCache) {
+      const data = await api('/places/cities');
+      heroCityPillsCache = Array.isArray(data?.cities) ? data.cities : [];
+    }
+    renderHeroCityPills(heroCityPillsCache);
+  } catch (e) {
+    console.warn('hero city pills', e);
+    setHeroCityPillsVisible(false);
+  }
 }
 
 function isExploreMapTabActive() {
@@ -4410,6 +4487,7 @@ function refreshAfterLang() {
   updateAuthUI();
   renderExploreFilters();
   renderCategoryCards();
+  renderHeroCityPills(heroCityPillsCache || []);
   if (places.length) {
     renderGrid(places);
     updateCategoryCounts();
@@ -4553,6 +4631,7 @@ async function init() {
   updateAuthUI();
   renderGrid([]);
   loadHomepageStats();
+  loadHeroCityPills();
   try {
     await applyRouteFromUrl({ skipFilters: true });
   } catch (e) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * V6 — tek komutla kontrol (şimdilik Adım 1–6).
+ * V6 — tek komutla kontrol (şimdilik Adım 1–7).
  * Adım 8/9/12 kilitleri sonraki adımlarda eklenecek.
  *
  * Usage: npm run verify:v6
@@ -18,6 +18,7 @@ const STEPS = [
   'verify:v6-adim4',
   'verify:v6-adim5',
   'verify:v6-adim6',
+  'verify:v6-adim7',
 ];
 
 function readPackage() {
@@ -30,7 +31,7 @@ function scriptFile(script) {
 }
 
 function main() {
-  console.log('verify-v6 (Adım 1–6)');
+  console.log('verify-v6 (Adım 1–7)');
   const pkg = readPackage();
   const scripts = pkg.scripts || {};
   let failed = 0;
