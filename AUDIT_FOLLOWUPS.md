@@ -2,6 +2,14 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V6 — Adım 1 (istemci sunucu robots’u ezmesin)
+
+Sunucu `noindex` verdiğinde JS artık `index,follow` yazamaz. `captureServerRobots` + `setRobotsSafe`: yalnız index → noindex yönünde değişir; SSR noindex yolu aynı kaldıkça yükseltme yok. Boş `/en/blog` → `noindex,follow` + EN hreflang yok (`publishedEnCount`); çevirisiz EN blog detay noindex; `/explore?q=` noindex; indexlenebilir yer `index,follow`.
+
+Kontrol: `npm run verify:v6-adim1` → OK.
+
+V6’da bu tur yalnız Adım 1. Bitince dur.
+
 ## Cursor V5 — Adım 13 (tek komutla kontrol)
 
 Yasin “geç” dedi → V5’ün son adımı. Görünüm aynı. Yeni düğme yok.

@@ -14,6 +14,7 @@ const {
   blogAuthorName,
   blogEnReadySql,
   findBlogRow,
+  countPublishedEnBlogs,
 } = require('../lib/blog-i18n');
 
 const router = express.Router();
@@ -97,6 +98,12 @@ router.get('/meta', async (_req, res) => {
     icon: c.icon,
     postCount: c.postCount,
   }));
+  let publishedEnCount = 0;
+  try {
+    publishedEnCount = await countPublishedEnBlogs(db);
+  } catch {
+    publishedEnCount = 0;
+  }
   res.json({
     page: {
       heroTitle: lang === 'en' ? page.heroTitleEn : page.heroTitleTr,
@@ -109,6 +116,8 @@ router.get('/meta', async (_req, res) => {
       viewPlace: lang === 'en' ? page.viewPlaceEn : page.viewPlaceTr,
     },
     categories,
+    publishedEnCount,
+    hasPublishedEn: publishedEnCount > 0,
   });
 });
 
