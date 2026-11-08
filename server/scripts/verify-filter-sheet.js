@@ -61,6 +61,15 @@ if (!indexHtml.includes('id="cntSel"') || !indexHtml.includes('id="discoverCatSt
   fail('country select or discover chips missing');
 } else ok('reused country select + discover chips');
 
+// V6 Adım 3: discoverCatStrip sayfa şeridinde değil, gizli host'ta (mobil sheet park)
+const placesBlock = indexHtml.match(/id="page-places"[\s\S]*?(?=<div class="page"|$)/);
+if (placesBlock && /id="discoverCatStrip"/.test(placesBlock[0])) {
+  fail('discoverCatStrip must not sit on Gezilecek Yerler page strip');
+} else if (!indexHtml.includes('id="exploreFilterChipHost"')
+  || !/id="exploreFilterChipHost"[\s\S]*?id="discoverCatStrip"/.test(indexHtml)) {
+  fail('discoverCatStrip must live in exploreFilterChipHost for sheet park');
+} else ok('discoverCatStrip in hidden host (no page strip)');
+
 const cntSelCount = (indexHtml.match(/id="cntSel"/g) || []).length;
 if (cntSelCount !== 1) fail(`duplicate cntSel (${cntSelCount})`);
 else ok('single cntSel (no second filter system)');

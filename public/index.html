@@ -397,7 +397,6 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
               <p class="discover-count-line" aria-busy="true"><span id="discoverPlaceCount">0</span> <span data-i18n="placesFound">yer</span></p>
             </div>
           </header>
-          <div class="discover-cat-strip" id="discoverCatStrip" aria-label="Kategori filtreleri"></div>
           <div class="discover-place-list" id="discoverPlaceList" role="list"></div>
           <div class="load-more-wrap" id="discoverPager" style="display:none">
             <button type="button" class="btn bo" id="discoverLoadMoreBtn" data-i18n="loadMore">Daha Fazla Yükle</button>
@@ -781,10 +780,11 @@ nav.tl-nav{position:fixed;top:0;left:0;right:0;z-index:500}
   </footer>
 </main>
 
-<!-- Kategori çipleri yalnız mobil filtre çekmecesinde; Keşfet sayfa şeridi yok -->
+<!-- Kategori çipleri yalnız mobil filtre çekmecesinde; Keşfet / Gezilecek Yerler sayfa şeridi yok -->
 <div id="exploreFilterChipHost" hidden>
   <div class="explore-filter-strip" id="discoverFilterStrip" role="toolbar" aria-label="Destinasyon filtreleri"></div>
   <div class="explore-filter-strip" id="mapFilterStrip" role="toolbar" aria-label="Harita filtreleri"></div>
+  <div class="discover-cat-strip" id="discoverCatStrip" aria-label="Kategori filtreleri"></div>
 </div>
 <div class="filter-sheet-backdrop" id="filterSheetBackdrop" hidden aria-hidden="true"></div>
 <div class="filter-sheet" id="filterSheet" role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle" hidden aria-hidden="true">

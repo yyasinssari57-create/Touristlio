@@ -711,7 +711,7 @@ footer{background:var(--navy2);color:rgba(255,255,255,.5);padding:26px 40px;disp
 .city-card-body{padding:12px 14px;}
 .city-card-body h3{font-family:var(--fd);font-size:1rem;color:var(--navy);margin-bottom:4px;}
 .city-card-body span{font-size:.72rem;color:var(--t2);}
-.discover-cat-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+/* Gezilecek Yerler sayfa şeridi kaldırıldı (V6 Adım 3); çipler yalnız mobil sheet host'ta */
 .discover-cat-chip{padding:8px 14px;border-radius:100px;border:1.5px solid var(--l2);background:var(--w);font-size:.78rem;cursor:pointer;}
 .discover-cat-chip.on{background:var(--navy);color:#fff;border-color:var(--navy);}
 .discover-place-list{display:flex;flex-direction:column;gap:10px;}
@@ -798,7 +798,7 @@ html.filter-sheet-open,body.filter-sheet-open{overflow:hidden;overscroll-behavio
 .filter-sheet-body .filter-tab-sub{display:none;}
 .filter-sheet-body .filter-actions .btn.bp{display:none;}
 .filter-sheet-body .explore-filter-strip,
-.filter-sheet-body .discover-cat-strip{display:flex;flex-wrap:wrap;overflow:visible;margin-bottom:16px;}
+.filter-sheet-body .discover-cat-strip{display:flex;flex-wrap:wrap;gap:8px;overflow:visible;margin-bottom:16px;}
 @media(prefers-reduced-motion:reduce){
   .filter-sheet{transition:none;}
 }
@@ -814,7 +814,6 @@ html.filter-sheet-open,body.filter-sheet-open{overflow:hidden;overscroll-behavio
   .filter-sheet:not([hidden]){display:flex;}
   .filter-sheet.is-open{transform:translateY(0);}
   .filter-sheet-close{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;}
-  .discover-page .discover-cat-strip{display:none;}
 }
 
 @media (max-width:480px){
