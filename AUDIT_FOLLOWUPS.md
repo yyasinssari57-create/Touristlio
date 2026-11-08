@@ -2,6 +2,28 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V6 — Adım 2 (Playwright/CDP tarayıcı doğrulama)
+
+Ürün kodu **değiştirilmedi**. `#132/#134–135/#140/#142–143` özellikler 390px + 1280px Chrome CDP ile doğrulandı.
+
+Kontrol: `npm run verify:v6-adim2` → OK (rapor: `reports/v6-adim2-playwright.json`, gitignore).
+
+| Madde | Durum | Kanıt |
+|---|---|---|
+| a) Kalp / kaydet | **TAMAM** | Girişsiz → `authOv`; girişli → API + Kaydedilenler DOM; ikinci tık kaldırır |
+| b) Ziyaret ettik | **TAMAM** | API `/travel-lists/visited` + Ziyaret edilenler DOM; ikinci tık kaldırır |
+| c) Profilim / Giriş | **TAMAM** | Girişli `goToMyProfile`, auth kapalı; girişsiz `openAuth` bir kez |
+| d) Toplu arşiv / çöp | **TAMAM** (kısmi) | Seçili sayısı, onay (15g metni), geri yükle OK. **SORUNLU:** satır başı «kalan gün» yok → ADIM 10 |
+| e) Bölüm alanları + boş gizle | **TAMAM** | Admin 12 ay + Yapılacaklar/Kültür/Tavsiye; `placeSectionVisibility` dolu/boş |
+| f) En iyi zaman ayları | **TAMAM** | Kayıt OK; görünüm `Nisan, Mayıs, …, Ekim` (virgül). Aralık «Nisan – Ekim» → ADIM 6 residual |
+| g) `updated_at` / sitemap lastmod | **TAMAM** | DB `updated_at` yenilenir; `recordLastmod` updated_at kullanır |
+
+**Onay bekleyen düzeltme önerileri (uygulanmadı):**
+1. Çöp satırında kalan gün sayacı (ADIM 10).
+2. Ardışık ayları aralık olarak formatla (ADIM 6).
+
+V6’da bu tur yalnız Adım 2. Bitince dur.
+
 ## Cursor V6 — Adım 1 (istemci sunucu robots’u ezmesin)
 
 Sunucu `noindex` verdiğinde JS artık `index,follow` yazamaz. `captureServerRobots` + `setRobotsSafe`: yalnız index → noindex yönünde değişir; SSR noindex yolu aynı kaldıkça yükseltme yok. Boş `/en/blog` → `noindex,follow` + EN hreflang yok (`publishedEnCount`); çevirisiz EN blog detay noindex; `/explore?q=` noindex; indexlenebilir yer `index,follow`.
