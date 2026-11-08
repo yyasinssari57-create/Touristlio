@@ -52,56 +52,78 @@
       <div class="prof-av" id="profAv">?</div>
 
       <div class="prof-hd-info">
-        <div class="prof-name" id="profName">—</div>
-        <div class="prof-meta" id="profMeta"></div>
-        <div class="prof-stats-grid">
-          <div class="prof-stat-card">
-            <span class="psi-n" id="pRevCnt">0</span>
-            <span class="psi-l" data-i18n="profileStatReviews">Tiola</span>
-          </div>
-          <div class="prof-stat-card">
-            <span class="psi-n" id="pSavedCnt">0</span>
-            <span class="psi-l" data-i18n="profileStatSaved">Kaydedilen</span>
-          </div>
-          <div class="prof-stat-card">
-            <span class="psi-n" id="pVisitedCnt">0</span>
-            <span class="psi-l" data-i18n="profileStatVisited">Ziyaret</span>
-          </div>
-          <div class="prof-stat-card">
-            <span class="psi-n" id="pCountriesCnt">0</span>
-            <span class="psi-l" data-i18n="profileStatCountries">Ülke</span>
-          </div>
+        <div class="prof-name-row">
+          <div class="prof-name" id="profName">—</div>
+          <span class="prof-role-badge" id="profRoleBadge" hidden></span>
         </div>
+        <div class="prof-meta" id="profMeta"></div>
       </div>
 
     </div>
 
+    <div class="prof-stats-row" id="profStatsRow" aria-label="Profil istatistikleri">
+      <div class="prof-stat">
+        <span class="psi-n" id="pRevCnt">0</span>
+        <span class="psi-l" data-i18n="profileStatReviews">Tiola</span>
+      </div>
+      <div class="prof-stat">
+        <span class="psi-n" id="pBlogCnt">0</span>
+        <span class="psi-l" data-i18n="profileStatBlog">Blog</span>
+      </div>
+      <div class="prof-stat">
+        <span class="psi-n" id="pVisitedCnt">0</span>
+        <span class="psi-l" data-i18n="profileStatVisited">Ziyaret</span>
+      </div>
+      <div class="prof-stat">
+        <span class="psi-n" id="pSavedCnt">0</span>
+        <span class="psi-l" data-i18n="profileStatSaved">Kaydedilen</span>
+      </div>
+    </div>
+
     <div class="prof-badges" id="profBadges" aria-label="Rozetler"></div>
 
-    <div class="prof-activity-bar" id="profActivityBar" style="display:none" aria-live="polite"></div>
-
-    <div class="profile-content-card">
-    <h3 class="profile-section-title" data-i18n="profileTabTiolas">Tiola'larım</h3>
-    <div class="pgrid" id="myTiolaList"></div>
-    <div class="empty-state" id="tiolaListEmpty"><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.</p></div>
+    <div class="ptabs" role="tablist" aria-label="Profil sekmeleri">
+      <button type="button" class="ptab on" role="tab" aria-selected="true" data-ptab="tiolas" data-act="showPTab" data-el data-arg="tiolas" data-i18n="profileTabTiolas">Tiola'larım</button>
+      <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="saved" data-act="showPTab" data-el data-arg="saved" data-i18n="profileTabSaved">Kaydedilenler</button>
+      <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="visited" data-act="showPTab" data-el data-arg="visited" data-i18n="profileTabVisited">Ziyaret edilenler</button>
+      <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="blogs" data-act="showPTab" data-el data-arg="blogs" data-i18n="profileTabBlogs">Bloglarım</button>
+      <button type="button" class="ptab" role="tab" aria-selected="false" data-ptab="settings" data-act="showPTab" data-el data-arg="settings" data-i18n="profileTabSettings">Ayarlar</button>
     </div>
 
-    <div class="profile-content-card">
-    <h3 class="profile-section-title" data-i18n="profileTabVisited">Ziyaret Ettiklerim</h3>
-    <div id="visitedCountries" class="badge-row tl-mb-12"></div>
-    <div class="pgrid" id="visitedGrid"></div>
-    <div class="empty-state" id="visitedEmpty"><p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p></div>
+    <div class="ptab-c active" id="ptab-tiolas">
+      <div class="pgrid" id="myTiolaList"></div>
+      <div class="empty-state" id="tiolaListEmpty">
+        <p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.</p>
+        <a href="/" class="btn bp bsm tl-mt-12" data-i18n="explore">Keşfet</a>
+      </div>
     </div>
 
-    <div class="profile-content-card">
-    <h3 class="profile-section-title" data-i18n="profileTabSaved">Kaydedilenler</h3>
-
-    <div class="pgrid" id="savedGrid"></div>
-
-    <div class="empty-state" id="savedEmpty"><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.</p>
-    <a href="/" class="btn bo bsm tl-mt-12" data-i18n="explore">Keşfet</a></div>
+    <div class="ptab-c" id="ptab-visited">
+      <div id="visitedCountries" class="badge-row tl-mb-12"></div>
+      <div class="pgrid" id="visitedGrid"></div>
+      <div class="empty-state" id="visitedEmpty">
+        <p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p>
+        <a href="/" class="btn bp bsm tl-mt-12" data-i18n="explore">Keşfet</a>
+      </div>
     </div>
 
+    <div class="ptab-c" id="ptab-saved">
+      <div class="pgrid" id="savedGrid"></div>
+      <div class="empty-state" id="savedEmpty">
+        <p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.</p>
+        <a href="/" class="btn bp bsm tl-mt-12" data-i18n="explore">Keşfet</a>
+      </div>
+    </div>
+
+    <div class="ptab-c" id="ptab-blogs">
+      <div class="pgrid" id="myBlogList"></div>
+      <div class="empty-state" id="blogListEmpty">
+        <p data-i18n="emptyBlog">Henüz blog yazmadınız.</p>
+        <a href="/#profile/blogs" class="btn bp bsm tl-mt-12" data-i18n="profileWriteBlogTitle">Blog yaz</a>
+      </div>
+    </div>
+
+    <div class="ptab-c" id="ptab-settings">
     <div class="profile-settings-card">
 
       <h3 class="profile-settings-title" data-i18n="settingsTitle">Hesap Ayarları</h3>
@@ -165,6 +187,7 @@
         <button type="button" class="btn bo bsm bdanger" data-act="doLogout" data-i18n="settingsLogout">Çıkış Yap</button>
       </div>
 
+    </div>
     </div>
 
   </div>
@@ -277,27 +300,77 @@ async function api(path, opts = {}) {
   return data;
 }
 
-function renderProfileMeta(u) {
-  const meta = document.getElementById('profMeta');
-  if (!meta || !u) return;
-  const verified = u.emailVerified ? t('settingsEmailVerified') : t('settingsEmailPending');
-  meta.textContent = u.email ? `${u.email} · ${verified}` : '';
+function roleLabel(role) {
+  const r = String(role || 'member').toLowerCase();
+  if (r === 'admin') return t('roleAdmin') || 'Yönetici';
+  if (r === 'editor') return t('roleEditor') || 'Editör';
+  return t('roleMember') || t('profileMember') || 'Üye';
 }
 
-function renderProfileActivitySummary({ tiolas = 0, saved = 0, visited = 0, countries = 0 }) {
-  const bar = document.getElementById('profActivityBar');
-  if (!bar) return;
-  if (!tiolas && !saved && !visited && !countries) {
-    bar.style.display = 'none';
-    bar.innerHTML = '';
+function renderProfileMeta(u) {
+  const meta = document.getElementById('profMeta');
+  const badge = document.getElementById('profRoleBadge');
+  if (!u) return;
+  if (meta) {
+    const since = u.createdAt ? formatProfileDate(u.createdAt) : '';
+    meta.textContent = since
+      ? `${t('memberSince') || 'Üyelik'}: ${since}`
+      : '';
+  }
+  if (badge) {
+    badge.textContent = roleLabel(u.role);
+    badge.hidden = false;
+    badge.dataset.role = String(u.role || 'member').toLowerCase();
+  }
+}
+
+function formatProfileDate(iso) {
+  if (!iso) return '';
+  const raw = String(iso).trim();
+  let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  if (!/[zZ]|[+-]\d\d:?\d\d$/.test(normalized)) normalized += 'Z';
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'tr-TR');
+}
+
+function showPTab(name, el) {
+  const alias = { write: 'tiolas', pending: 'tiolas' };
+  const tab = alias[name] || name;
+  document.querySelectorAll('#pContent > .ptabs .ptab').forEach((btn) => {
+    const on = btn.getAttribute('data-ptab') === tab;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('#pContent > .ptab-c').forEach((panel) => {
+    panel.classList.toggle('active', panel.id === 'ptab-' + tab);
+  });
+  if (el && el.getAttribute && el.getAttribute('data-ptab') !== tab) {
+    const target = document.querySelector(`#pContent > .ptabs .ptab[data-ptab="${tab}"]`);
+    if (target) {
+      target.classList.add('on');
+      target.setAttribute('aria-selected', 'true');
+    }
+  }
+}
+window.showPTab = showPTab;
+
+function renderMyBlogs(blogs) {
+  const list = document.getElementById('myBlogList');
+  const empty = document.getElementById('blogListEmpty');
+  if (!list) return;
+  const items = Array.isArray(blogs) ? blogs : [];
+  if (!items.length) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
     return;
   }
-  bar.style.display = 'flex';
-  bar.innerHTML = `
-    <div class="prof-activity-item"><strong>${tiolas}</strong><span>${t('profileStatReviews')}</span></div>
-    <div class="prof-activity-item"><strong>${saved}</strong><span>${t('profileStatSaved')}</span></div>
-    <div class="prof-activity-item"><strong>${visited}</strong><span>${t('profileStatVisited')}</span></div>
-    <div class="prof-activity-item"><strong>${countries}</strong><span>${t('profileStatCountries')}</span></div>`;
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = items.map((b) => {
+    const title = escapeHtml(b.title || 'Blog');
+    const status = b.status ? `<span class="status-${escapeHtml(b.status)}">${escapeHtml(b.status)}</span>` : '';
+    return `<div class="my-rev-item"><div><div class="my-rev-label">${title}</div>${status}</div></div>`;
+  }).join('');
 }
 
 function renderOwnBadges(profile) {
@@ -477,18 +550,19 @@ async function init(){
     document.getElementById('pRevCnt').textContent = dash.tiolaCount ?? tiolas.length;
     document.getElementById('pSavedCnt').textContent = savedPlaces.length;
     document.getElementById('pVisitedCnt').textContent = stats.totalVisited || visitedPlaces.length;
-    document.getElementById('pCountriesCnt').textContent = stats.countriesVisited || (stats.countries || []).length;
+
+    let blogs = [];
+    try {
+      const blogData = await api('/blogs?mine=1');
+      blogs = blogData.blogs || [];
+    } catch { blogs = []; }
+    const blogCnt = document.getElementById('pBlogCnt');
+    if (blogCnt) blogCnt.textContent = String(blogs.length);
 
     renderOwnBadges(dash);
     renderTiolas(tiolas);
     renderVisited(visitedPlaces, stats.countries || []);
-
-    renderProfileActivitySummary({
-      tiolas: dash.tiolaCount ?? tiolas.length,
-      saved: savedPlaces.length,
-      visited: stats.totalVisited || visitedPlaces.length,
-      countries: stats.countriesVisited || (stats.countries || []).length,
-    });
+    renderMyBlogs(blogs);
 
     const sg = document.getElementById('savedGrid');
 
