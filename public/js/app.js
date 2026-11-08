@@ -727,19 +727,38 @@ function ensureAvatarCropLib() {
   return avatarCropLoading;
 }
 
+/** V6 Adım 8 — EN boşsa TR'ye düşme; çağıran satırı gizler. */
 function placeField(p, base) {
   if (!p) return '';
-  if (lang === 'en') {
-    const en = p[`${base}En`];
-    if (en) return en;
-  }
+  if (lang === 'en') return p[`${base}En`] || '';
   return p[base] || '';
 }
 
 function placeListField(p, base) {
   const key = lang === 'en' ? `${base}En` : base;
-  const val = p[key] || p[base];
+  const val = lang === 'en' ? p[key] : (p[key] || p[base]);
   return Array.isArray(val) ? val : [];
+}
+
+/** isFree → i18n Ücretsiz/Free; ücretli → entryFee / entryFeeEn (alan metnine bakılmaz). */
+function entryFeeDisplay(p) {
+  if (!p) return '';
+  if (p.isFree === true) return t('infoFree');
+  return placeField(p, 'entryFee') || '';
+}
+
+function setInfoCardRow(id, value, { hideWhenEmpty = false } = {}) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const row = el.closest('.ic-row');
+  const text = String(value == null ? '' : value).trim();
+  if (hideWhenEmpty && !text) {
+    if (row) row.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  if (row) row.hidden = false;
+  el.textContent = text || '—';
 }
 
 function trUiLabel(value) {
@@ -3019,10 +3038,12 @@ async function openDetail(id, skipRoute) {
     document.getElementById('icCountry').textContent = geoLabel(p.country);
     document.getElementById('icCity').textContent = geoLabel(p.city);
     document.getElementById('icCat').textContent = p.categoryDisplay || catLabel(p.category);
-    document.getElementById('icEntry').textContent = placeField(p, 'entryFee') || '—';
-    document.getElementById('icBest').textContent = (sections && sections.texts.bestTime)
-      || placeField(p, 'bestTime')
-      || '—';
+    setInfoCardRow('icEntry', entryFeeDisplay(p), { hideWhenEmpty: lang === 'en' });
+    setInfoCardRow(
+      'icBest',
+      (sections && sections.texts.bestTime) || placeField(p, 'bestTime') || '',
+      { hideWhenEmpty: lang === 'en' },
+    );
     await renderRevList();
     updateRevForm();
     showMainTab('detail', !!skipRoute);

@@ -77,11 +77,32 @@ if (!byKey.climate || byKey.climate.text !== 'İlkbahar ılık') fail('iklim kut
 else ok('climate_info doluysa kutu var');
 if (byKey.bestTime?.text !== 'April–June') fail(`EN en iyi zaman: ${byKey.bestTime?.text}`);
 else ok('EN dilinde best_time_en kullanılıyor');
-if (byKey.entry?.valueKey !== 'infoFree') fail('ücretsiz işaretli yer Ücretsiz göstermeli');
-else ok('is_free true ise giriş kutusu Ücretsiz');
+if (byKey.entry?.valueKey !== 'infoFree') fail('ücretsiz işaretli yer Ücretsiz/Free göstermeli');
+else ok('is_free true ise giriş kutusu valueKey=infoFree (TR Ücretsiz / EN Free)');
 if (byKey.pets?.valueKey !== 'infoNo') fail('evcil hayvan false Hayır olmalı');
 if (!filled.verifiedAt) fail('dolu kutularda verifiedAt yok');
 else ok('dolu kutularda son güncelleme tarihi var');
+
+const enHide = buildPlaceInfoBoxes({
+  entryFee: 'Ücretsiz',
+  entryFeeEn: '',
+  isFree: false,
+  bestTime: 'Nisan–Haziran',
+  bestTimeEn: '',
+  climateInfo: 'Mild spring',
+}, 'en');
+const enByKey = Object.fromEntries(enHide.boxes.map((b) => [b.key, b]));
+if (enByKey.entry) fail('EN boş entryFeeEn + isFree false iken giriş kutusu TR ile doldurulmamalı');
+else ok('EN boş giriş ücreti satırı gizlenir');
+if (enByKey.bestTime) fail('EN boş bestTimeEn TR ile doldurulmamalı');
+else ok('EN boş en iyi zaman satırı gizlenir');
+if (!enByKey.climate || enByKey.climate.text !== 'Mild spring') fail('tek dilli iklim alanı EN’de kalmalı');
+else ok('iklim (En alanı yok) EN’de gösterilir');
+
+const freeEn = buildPlaceInfoBoxes({ entryFee: 'Ücretsiz', entryFeeEn: '', isFree: true }, 'en');
+if (freeEn.boxes.find((b) => b.key === 'entry')?.valueKey !== 'infoFree') {
+  fail('isFree true iken EN giriş kutusu alan metnine bakmadan Free olmalı');
+} else ok('isFree true → EN infoFree (alan metni yok sayılır)');
 
 const badLevel = normalizePlaceInfoPatch({ budget_level: 'luxury', climate_info: 'x' });
 if (!badLevel.error) fail('geçersiz bütçe seviyesi kabul edildi');

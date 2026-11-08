@@ -93,7 +93,8 @@ function checkForm(name, html) {
   const block = honeypotBlock(html);
   if (!block || !block.includes('name="website"')) problems.push('website .tl-hp içinde değil');
   if (!/<div class="tl-hp"[^>]*aria-hidden="true"/.test(block)) problems.push('kutu aria-hidden değil');
-  if (!/<label>\s*Website\s*<input/i.test(block)) problems.push('Website etiketi gizli kutuda değil');
+  if (/<label>\s*Website\b/i.test(block)) problems.push('görünür Website etiket metni duruyor (V6 Adım 8)');
+  if (!/<label>\s*<input\b[^>]*\bname="website"/i.test(block)) problems.push('website alanı label içinde değil');
   const outside = html.replace(/<div class="tl-hp"[\s\S]*?<\/div>/g, '');
   if (/website/i.test(outside)) problems.push('Website yazısı gizli kutunun dışında');
   if (/display\s*:\s*none|visibility\s*:\s*hidden|type="hidden"/i.test(block)) {

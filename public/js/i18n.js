@@ -391,7 +391,7 @@ window.TL_I18N = (function () {
     en: {
       login: 'Log in', join: 'Join', explore: 'Explore', discoverPlaces: 'Places to visit', blog: 'Blog', profile: 'My profile', admin: 'Admin',
       discoverPlacesTitle: 'Places to visit', discoverPlacesSub: 'Pick a city — then filter by category; map stays in sync.',
-      discoverGlobalTitle: 'All places to visit', discoverGlobalSub: 'Across Turkey · filter by category or city',
+      discoverGlobalTitle: 'All places to visit', discoverGlobalSub: 'Across Türkiye · filter by category or city',
       discoverPickCity: 'Cities', discoverClearCity: '← All places', discoverEmpty: 'No places match this filter.',
       heroPill: "The world's most personal travel guide",
       heroTitle: "Don't just visit.", heroTitleEm: 'Feel it.',
@@ -761,10 +761,13 @@ window.TL_I18N = (function () {
     if (!src) return '';
     const key = stripFlag(src);
     if (!key) return src;
-    if (lang !== 'en') {
-      const mapped = CONTINENT_TR[key] || COUNTRY_TR[key] || CITY_TR[key];
-      if (mapped) return mapped;
+    if (lang === 'en') {
+      // Official English endonym; other proper names stay untranslated (V6 Adım 8).
+      if (key === 'Turkey' || key === 'Türkiye') return 'Türkiye';
+      return key;
     }
+    const mapped = CONTINENT_TR[key] || COUNTRY_TR[key] || CITY_TR[key];
+    if (mapped) return mapped;
     return key;
   }
 
