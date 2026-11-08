@@ -39,8 +39,6 @@
 
   <div id="pLoginNotice">
 
-    <div class="profile-login-icon">🔒</div>
-
     <div class="profile-login-title" data-i18n="profileLoginTitle">Giriş Yapın</div>
 
     <a href="/login" class="btn bp" data-i18n="profileLoginBtn">Giriş Yap / Kayıt Ol</a>
@@ -85,14 +83,14 @@
     <div class="profile-content-card">
     <h3 class="profile-section-title" data-i18n="profileTabTiolas">Tiola'larım</h3>
     <div class="pgrid" id="myTiolaList"></div>
-    <div class="empty-state" id="tiolaListEmpty"><div class="empty-icon">✈️</div><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.</p></div>
+    <div class="empty-state" id="tiolaListEmpty"><p data-i18n-html="emptyTiola">Henüz seyahat günlüğü yok.</p></div>
     </div>
 
     <div class="profile-content-card">
     <h3 class="profile-section-title" data-i18n="profileTabVisited">Ziyaret Ettiklerim</h3>
     <div id="visitedCountries" class="badge-row tl-mb-12"></div>
     <div class="pgrid" id="visitedGrid"></div>
-    <div class="empty-state" id="visitedEmpty"><div class="empty-icon">🗺️</div><p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p></div>
+    <div class="empty-state" id="visitedEmpty"><p data-i18n-html="emptyVisited">Henüz ziyaret kaydı yok.<br>Kartlardaki + ikonuna tıklayın.</p></div>
     </div>
 
     <div class="profile-content-card">
@@ -100,7 +98,7 @@
 
     <div class="pgrid" id="savedGrid"></div>
 
-    <div class="empty-state" id="savedEmpty"><div class="empty-icon">❤️</div><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.</p>
+    <div class="empty-state" id="savedEmpty"><p data-i18n-html="emptySaved">Henüz yer kaydetmediniz.</p>
     <a href="/" class="btn bo bsm tl-mt-12" data-i18n="explore">Keşfet</a></div>
     </div>
 
@@ -314,10 +312,10 @@ function renderOwnBadges(profile) {
   }
   const chips = badges.map((b) => {
     const on = b.earned !== false && (b.earned || earned.some((e) => e.id === b.id));
-    return `<span class="tiola-badge${on ? ' earned' : ' locked'}" title="${escapeHtml(b.name)}">${b.icon || ''} ${escapeHtml(b.name)}</span>`;
+    return `<span class="tiola-badge${on ? ' earned' : ' locked'}" title="${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>`;
   }).join('');
   const nextHtml = next
-    ? `<p class="badge-next">${t('badgeNext')}: ${escapeHtml(next.icon || '')} ${escapeHtml(next.name)} · ${next.remaining} ${t('badgeMoreTiolas')}</p>`
+    ? `<p class="badge-next">${t('badgeNext')}: ${escapeHtml(next.name)} · ${next.remaining} ${t('badgeMoreTiolas')}</p>`
     : '';
   el.innerHTML = `<div class="badge-block"><div class="badge-title">${t('badgesTitle')}</div><div class="badge-row">${chips}</div>${nextHtml}</div>`;
 }

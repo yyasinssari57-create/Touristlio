@@ -19,7 +19,7 @@ window.TL_TOAST = (function () {
     const el = document.createElement('div');
     el.className = `tl-toast tl-toast-${type}`;
     el.setAttribute('role', 'alert');
-    const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+    const icons = { success: '✓', error: '✕', info: 'i', warning: '!' };
     el.innerHTML = `<span class="tl-toast-icon" aria-hidden="true">${icons[type] || icons.info}</span><span class="tl-toast-msg">${escapeHtml(String(message))}</span>`;
     c.appendChild(el);
     requestAnimationFrame(() => el.classList.add('show'));

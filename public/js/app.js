@@ -178,30 +178,30 @@ const CATEGORY_IMAGES = {
 };
 
 const CITYDB = {
-  'Turkey 🇹🇷': { Istanbul: ['Sultanahmet', 'Beyoğlu', 'Karaköy'], Ankara: ['Çankaya'], 'İzmir': ['Selçuk'], Denizli: ['Pamukkale'], Nevşehir: ['Göreme'] },
-  'France 🇫🇷': { Paris: ['Marais', 'Montmartre'], Normandy: ['Mont Saint-Michel'] },
-  'Japan 🇯🇵': { Tokyo: ['Shibuya', 'Asakusa'], Kyoto: ['Fushimi', 'Arashiyama'] },
-  'Italy 🇮🇹': { Rome: ['Centro Storico'], Florence: ['Duomo'], Venice: ['San Marco'] },
-  'Greece 🇬🇷': { Athens: ['Akropolis'], Santorini: ['Oia'] },
-  'Spain 🇪🇸': { Barcelona: ['Eixample'], Granada: ['Albaicín'] },
-  'UK 🇬🇧': { London: ['Westminster'] },
-  'USA 🇺🇸': { 'New York': ['Manhattan'], Arizona: ['South Rim'] },
-  'Portugal 🇵🇹': { Lisbon: ['Alfama'] },
-  'UAE 🇦🇪': { Dubai: ['Downtown'] },
-  'Norway 🇳🇴': { Flåm: ['Aurland'] },
-  'Iceland 🇮🇸': { Reykjavik: ['Þingvellir'] },
-  'South Korea 🇰🇷': { Seoul: ['Jongno'] },
-  'Vietnam 🇻🇳': { 'Ha Long': ['Ha Long Bay'] },
-  'Cambodia 🇰🇭': { 'Siem Reap': ['Angkor'] },
-  'Jordan 🇯🇴': { Petra: ['Siq'] },
-  'Nepal 🇳🇵': { 'Namche Bazaar': ['Khumbu'] },
-  'Peru 🇵🇪': { Cusco: ['Urubamba'] },
-  'Cuba 🇨🇺': { Havana: ['La Habana Vieja'] },
-  'Tanzania 🇹🇿': { Serengeti: ['Northern Serengeti'] },
-  'Egypt 🇪🇬': { Cairo: ['Giza'] },
-  'Brazil 🇧🇷': { 'Rio de Janeiro': ['Cosme Velho'] },
-  'India 🇮🇳': { Agra: ['Taj Ganj'] },
-  'Australia 🇦🇺': { Sydney: ['CBD'] },
+  'Turkey': { Istanbul: ['Sultanahmet', 'Beyoğlu', 'Karaköy'], Ankara: ['Çankaya'], 'İzmir': ['Selçuk'], Denizli: ['Pamukkale'], Nevşehir: ['Göreme'] },
+  'France': { Paris: ['Marais', 'Montmartre'], Normandy: ['Mont Saint-Michel'] },
+  'Japan': { Tokyo: ['Shibuya', 'Asakusa'], Kyoto: ['Fushimi', 'Arashiyama'] },
+  'Italy': { Rome: ['Centro Storico'], Florence: ['Duomo'], Venice: ['San Marco'] },
+  'Greece': { Athens: ['Akropolis'], Santorini: ['Oia'] },
+  'Spain': { Barcelona: ['Eixample'], Granada: ['Albaicín'] },
+  'UK': { London: ['Westminster'] },
+  'USA': { 'New York': ['Manhattan'], Arizona: ['South Rim'] },
+  'Portugal': { Lisbon: ['Alfama'] },
+  'UAE': { Dubai: ['Downtown'] },
+  'Norway': { Flåm: ['Aurland'] },
+  'Iceland': { Reykjavik: ['Þingvellir'] },
+  'South Korea': { Seoul: ['Jongno'] },
+  'Vietnam': { 'Ha Long': ['Ha Long Bay'] },
+  'Cambodia': { 'Siem Reap': ['Angkor'] },
+  'Jordan': { Petra: ['Siq'] },
+  'Nepal': { 'Namche Bazaar': ['Khumbu'] },
+  'Peru': { Cusco: ['Urubamba'] },
+  'Cuba': { Havana: ['La Habana Vieja'] },
+  'Tanzania': { Serengeti: ['Northern Serengeti'] },
+  'Egypt': { Cairo: ['Giza'] },
+  'Brazil': { 'Rio de Janeiro': ['Cosme Velho'] },
+  'India': { Agra: ['Taj Ganj'] },
+  'Australia': { Sydney: ['CBD'] },
 };
 
 function t(key) {
@@ -258,8 +258,7 @@ function appendGeoOption(selectEl, value) {
 function catLabel(cat) {
   const meta = categoryMeta?.categories?.find((c) => c.slug === cat);
   if (meta) {
-    const name = lang === 'en' ? meta.nameEn : meta.nameTr;
-    return `${meta.icon ? `${meta.icon} ` : ''}${name}`;
+    return lang === 'en' ? meta.nameEn : meta.nameTr;
   }
   return window.TL_I18N.catLabel(lang, cat);
 }
@@ -415,10 +414,10 @@ function renderBadgesHtml(profile, opts = {}) {
   }
   const chips = (badges.length ? badges : earned).map((b) => {
     const on = b.earned !== false && (b.earned || earned.some((e) => e.id === b.id));
-    return `<span class="tiola-badge${on ? ' earned' : ' locked'}" title="${escapeHtml(b.name)} (${b.min}+ Tiola)">${b.icon || ''} ${escapeHtml(b.name)}</span>`;
+    return `<span class="tiola-badge${on ? ' earned' : ' locked'}" title="${escapeHtml(b.name)} (${b.min}+ Tiola)">${escapeHtml(b.name)}</span>`;
   }).join('');
   const nextHtml = next && !compact
-    ? `<p class="badge-next">${t('badgeNext')}: ${escapeHtml(next.icon || '')} ${escapeHtml(next.name)} · ${next.remaining} ${t('badgeMoreTiolas')}</p>`
+    ? `<p class="badge-next">${t('badgeNext')}: ${escapeHtml(next.name)} · ${next.remaining} ${t('badgeMoreTiolas')}</p>`
     : '';
   return `<div class="badge-block"><div class="badge-title">${t('badgesTitle')}</div><div class="badge-row">${chips}</div>${nextHtml}</div>`;
 }
@@ -575,9 +574,8 @@ function buildExploreFiltersHtml() {
     const key = navLabelKey(label);
     if ((key && seen.has(key)) || categoryNavFaceDuplicate(c.slug, groups, label, groupLabel)) return;
     if (key) seen.add(key);
-    const icon = c.icon ? `${c.icon} ` : '';
     const on = activeFilterGroup === 'all' && activeCat === c.slug ? ' on' : '';
-    html += `<button type="button" class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" data-act="setExploreFilter" data-el data-arg="cat:${escapeHtml(c.slug)}">${icon}${escapeHtml(label)}</button>`;
+    html += `<button type="button" class="fpill fpill-cat${on}" data-kind="cat" data-filter="${escapeHtml(c.slug)}" data-act="setExploreFilter" data-el data-arg="cat:${escapeHtml(c.slug)}">${escapeHtml(label)}</button>`;
   });
   return html;
 }
@@ -1003,7 +1001,7 @@ function renderFaqAccordion(p) {
   const faq = lang === 'en' ? (p.faqEN || []) : (p.faqTR || []);
   if (!faq.length) { box.style.display = 'none'; return; }
   box.style.display = 'block';
-  box.innerHTML = `<h2 data-i18n="faqTitle">❓ SSS</h2>` + faq.map((item, i) => `
+  box.innerHTML = `<h2 data-i18n="faqTitle">SSS</h2>` + faq.map((item, i) => `
     <div class="faq-item">
       <button type="button" class="faq-q" aria-expanded="false" aria-controls="faq-a-${i}" id="faq-q-${i}" data-act="toggleFaq" data-arg="${i}">${escapeHtml(item.q)}</button>
       <div class="faq-a" id="faq-a-${i}" role="region" aria-labelledby="faq-q-${i}" hidden>${escapeHtml(item.a)}</div>
@@ -1431,7 +1429,7 @@ function renderGrid(list, append = false) {
         <button type="button" class="pc-save" data-place-name="${escapeHtml(p.name).replace(/"/g, '&quot;')}" aria-label="${favoriteAriaAttr(p.name, savedIds.has(p.id))}" aria-pressed="${savedIds.has(p.id) ? 'true' : 'false'}" data-stop data-act="toggleSave" data-el data-arg="${p.id}">${savedIds.has(p.id) ? '❤️' : '🤍'}</button>
       </div>
       <div class="pc-body">
-        <div class="pc-loc">📍 ${escapeHtml(geoText(p.location))}</div>
+        <div class="pc-loc">${escapeHtml(geoText(p.location))}</div>
         <div class="pc-name">${escapeHtml(p.name)}</div>
         <div class="pc-rats">
           ${renderTiolaRatingLine(p)}
@@ -1779,7 +1777,7 @@ function onSearch(val) {
           return `
           <div class="sd-item" tabindex="0" role="option" data-act-mousedown="pickSearch" data-arg="${p.id}" data-act="pickSearch" data-arg="${p.id}">
             ${responsiveImg(placeImg(p), { alt: placeImgAlt(p), className: 'sd-img', kind: 'thumb', extra: `data-img-fallback data-fallback-cat="${p.category}" data-fallback-id="${p.id}"` })}
-            <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">📍 ${escapeHtml(geoText(p.location))}</div>
+            <div><div class="sd-name">${escapeHtml(p.name)}</div><div class="sd-loc">${escapeHtml(geoText(p.location))}</div>
             <div class="sd-rat">${scoreHtml}</div></div>
           </div>`;
         }).join('');
@@ -2425,7 +2423,7 @@ async function loadTiolaFeed() {
 }
 
 function renderTiolaCard(ti) {
-  const place = ti.placeName ? `<strong>${escapeHtml(ti.placeName)}</strong>` : (ti.cityTag ? `📍 ${escapeHtml(ti.cityTag)}` : t('generalTiola'));
+  const place = ti.placeName ? `<strong>${escapeHtml(ti.placeName)}</strong>` : (ti.cityTag ? `${escapeHtml(ti.cityTag)}` : t('generalTiola'));
   const statusBadge = ti.status && ti.status !== 'approved'
     ? `<span class="status-${ti.status}">${statusLabel(ti.status)}</span>` : '';
   const rejectionNote = ti.status === 'rejected' && ti.rejectionReason
@@ -2708,12 +2706,12 @@ function updateCountryList(cont) {
   const cs = document.getElementById('cntSel');
   cs.innerHTML = `<option value="">${t('allCountries')}</option>`;
   const MAP = {
-    Europe: ['France 🇫🇷', 'Italy 🇮🇹', 'Greece 🇬🇷', 'Spain 🇪🇸', 'UK 🇬🇧', 'Portugal 🇵🇹', 'Norway 🇳🇴', 'Iceland 🇮🇸', 'Turkey 🇹🇷'],
-    Asia: ['Japan 🇯🇵', 'Turkey 🇹🇷', 'India 🇮🇳', 'South Korea 🇰🇷', 'Vietnam 🇻🇳', 'Cambodia 🇰🇭', 'Nepal 🇳🇵'],
-    Americas: ['USA 🇺🇸', 'Brazil 🇧🇷', 'Peru 🇵🇪', 'Cuba 🇨🇺'],
-    'Middle East': ['UAE 🇦🇪', 'Jordan 🇯🇴'],
-    Africa: ['Egypt 🇪🇬', 'Tanzania 🇹🇿'],
-    Oceania: ['Australia 🇦🇺'],
+    Europe: ['France', 'Italy', 'Greece', 'Spain', 'UK', 'Portugal', 'Norway', 'Iceland', 'Turkey'],
+    Asia: ['Japan', 'Turkey', 'India', 'South Korea', 'Vietnam', 'Cambodia', 'Nepal'],
+    Americas: ['USA', 'Brazil', 'Peru', 'Cuba'],
+    'Middle East': ['UAE', 'Jordan'],
+    Africa: ['Egypt', 'Tanzania'],
+    Oceania: ['Australia'],
   };
   if (!cont) Object.keys(CITYDB).forEach((c) => appendGeoOption(cs, c));
   else (MAP[cont] || []).forEach((c) => appendGeoOption(cs, c));
@@ -2878,7 +2876,7 @@ async function openDetail(id, skipRoute) {
     renderDetailGallery(p);
     document.getElementById('pdCat').textContent = catLabel(p.category);
     document.getElementById('pdTitle').textContent = p.name;
-    document.getElementById('pdLoc').textContent = '📍 ' + geoText(p.location) + ' · ' + geoLabel(p.country)
+    document.getElementById('pdLoc').textContent = geoText(p.location) + ' · ' + geoLabel(p.country)
       + (p.lat != null && p.lng != null ? ` · ${Number(p.lat).toFixed(4)}, ${Number(p.lng).toFixed(4)}` : '');
     const sections = window.TL_PLACE_SECTIONS
       ? window.TL_PLACE_SECTIONS.placeSectionVisibility(p, lang)
