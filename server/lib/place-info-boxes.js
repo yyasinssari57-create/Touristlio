@@ -28,11 +28,9 @@ function isoOrNull(value) {
   return date.toISOString();
 }
 
+/** EN: only the English field. Empty EN must not fall back to TR (V6 Adım 8). */
 function localizedText(place, lang, base, enKey) {
-  if (lang === 'en') {
-    const en = textOrEmpty(place[enKey]);
-    if (en) return en;
-  }
+  if (lang === 'en') return textOrEmpty(place[enKey]);
   return textOrEmpty(place[base]);
 }
 

@@ -1,7 +1,7 @@
 /**
  * V4 Adım 6 — mekân sayfasında boş bölüm.
  * İçerik yoksa sekme ve başlık gösterilmez. "—" yer tutucu içerik sayılmaz.
- * İngilizce boşsa Türkçe metne düşülür (placeField ile aynı).
+ * V6 Adım 8 — EN boşsa TR metne düşülmez; satır/bölüm gizlenir.
  * noindex bu dosyada yok; sunucu SEO ve app.js yazar.
  */
 (function (root, factory) {
@@ -33,17 +33,16 @@
   }
 
   function field(place, lang, base) {
-    if (lang === 'en') {
-      const en = text(place[`${base}En`]);
-      if (en) return en;
-    }
+    if (lang === 'en') return text(place[`${base}En`]);
     return text(place[base]);
   }
 
   function listField(place, lang, base) {
     const key = lang === 'en' ? `${base}En` : base;
     const primary = asList(place[key]);
-    const vals = primary.length ? primary : asList(place[base]);
+    const vals = lang === 'en'
+      ? primary
+      : (primary.length ? primary : asList(place[base]));
     return vals.map(text).filter(Boolean);
   }
 
@@ -106,8 +105,9 @@
   }
 
   function bestTimeNote(place, language) {
-    const noteKey = language === 'en' ? 'bestTimeNoteEn' : 'bestTimeNote';
-    const direct = text(place[noteKey]) || text(place.bestTimeNote);
+    const direct = language === 'en'
+      ? text(place.bestTimeNoteEn)
+      : text(place.bestTimeNote);
     const monthsText = formatMonthRanges(place.bestMonths, language);
     const candidate = direct || field(place, language, 'bestTime');
     if (!candidate) return '';

@@ -136,9 +136,9 @@ else if (!hidden.overview || !hidden.tipsText || !hidden.howToGet || !hidden.tip
 else if (hidden.bestTime) fail('boş en iyi zaman görünür');
 else ok('boş tarihçe, yapılacaklar, kültür, etiket ve en iyi zaman gizli');
 
-const enFallback = sections.placeSectionVisibility({ history: 'Türkçe tarih', historyEn: '' }, 'en');
-if (!enFallback.history) fail('İngilizce boşken Türkçe tarih gizlendi');
-else ok('İngilizce boşsa Türkçe metin bölümü tutar');
+const enNoFallback = sections.placeSectionVisibility({ history: 'Türkçe tarih', historyEn: '' }, 'en');
+if (enNoFallback.history) fail('EN boş tarihçe TR ile doldurulmamalı (V6 Adım 8)');
+else ok('EN boş bilgi satırı gizlenir (TR fallback yok)');
 
 const thingsNotTips = sections.placeSectionVisibility({ thingsToDo: [], tips: 'İpucu var' }, 'tr');
 if (thingsNotTips.things) fail('boş yapılacaklar ipucundan dolduruldu');

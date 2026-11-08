@@ -123,8 +123,9 @@
   }
 
   function honeypotHtml() {
+    // V6 Adım 8 — no visible "Website" label text (a11y / text extraction).
     return '<div class="tl-hp" aria-hidden="true">'
-      + '<label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" value="" aria-hidden="true"/></label>'
+      + '<label><input type="text" name="website" tabindex="-1" autocomplete="off" value="" aria-hidden="true"/></label>'
       + '</div>';
   }
 
