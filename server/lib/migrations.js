@@ -276,6 +276,7 @@ async function runMigrations(db) {
     await addColumnIfMissing(db, 'reports', 'action_taken', 'TEXT');
     await addColumnIfMissing(db, 'reports', 'content_prev_status', 'TEXT');
     await addColumnIfMissing(db, 'cities', 'image_url', 'TEXT');
+    await addColumnIfMissing(db, 'cities', 'hotel_avg_try', 'INTEGER');
 
     await ensureIndex(db, 'idx_places_status', 'places', 'status');
     await ensureIndex(db, 'idx_places_slug', 'places', 'slug');

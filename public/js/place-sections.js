@@ -69,13 +69,60 @@
     return out;
   }
 
-  function bestTimeText(place, language) {
-    const months = normalizeMonths(place.bestMonths);
-    if (months.length) {
-      const names = language === 'en' ? MONTHS_EN : MONTHS_TR;
-      return months.map((m) => names[m - 1]).filter(Boolean).join(', ');
+  const RANGE_SEP = ' – ';
+
+  function formatMonthRanges(months, language) {
+    const names = language === 'en' ? MONTHS_EN : MONTHS_TR;
+    const normalized = normalizeMonths(months);
+    if (!normalized.length) return '';
+    const parts = [];
+    let start = normalized[0];
+    let prev = normalized[0];
+    const push = () => {
+      const a = names[start - 1];
+      const b = names[prev - 1];
+      parts.push(start === prev ? a : `${a}${RANGE_SEP}${b}`);
+    };
+    for (let i = 1; i < normalized.length; i++) {
+      const m = normalized[i];
+      if (m === prev + 1) {
+        prev = m;
+        continue;
+      }
+      push();
+      start = prev = m;
     }
-    return field(place, language, 'bestTime');
+    push();
+    return parts.join(', ');
+  }
+
+  function looksLikeMonthList(value, language) {
+    const raw = text(value);
+    if (!raw) return false;
+    const names = language === 'en' ? MONTHS_EN : MONTHS_TR;
+    const tokens = raw.split(/[,–\-]| ve | and /i).map((s) => s.trim()).filter(Boolean);
+    if (!tokens.length) return false;
+    return tokens.every((tok) => names.some((n) => n.toLowerCase() === tok.toLowerCase()));
+  }
+
+  function bestTimeNote(place, language) {
+    const noteKey = language === 'en' ? 'bestTimeNoteEn' : 'bestTimeNote';
+    const direct = text(place[noteKey]) || text(place.bestTimeNote);
+    const monthsText = formatMonthRanges(place.bestMonths, language);
+    const candidate = direct || field(place, language, 'bestTime');
+    if (!candidate) return '';
+    if (monthsText && candidate === monthsText) return '';
+    if (monthsText && candidate.replace(/\s+/g, '') === monthsText.replace(/\s+/g, '').replace(/–/g, '-')) return '';
+    if (looksLikeMonthList(candidate, language)) return '';
+    return candidate;
+  }
+
+  function bestTimeText(place, language) {
+    const monthsText = formatMonthRanges(place.bestMonths, language);
+    const note = bestTimeNote(place, language);
+    if (monthsText && note) return `${monthsText}. ${note}`;
+    if (monthsText) return monthsText;
+    return note || field(place, language, 'bestTime');
   }
 
   function placeSectionVisibility(place, lang) {

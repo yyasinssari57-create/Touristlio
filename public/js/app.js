@@ -1165,11 +1165,17 @@ function renderDetailWidgets(data) {
       && hotel.note === 'admin'
       && hotel.avgPriceTry != null
       && Number(hotel.avgPriceTry) > 0;
-    liveBox.innerHTML = `<div class="ac-title">${t('liveBudgetTitle')}</div>
+    const hotelLabel = hotel?.scope === 'city' ? t('hotelAvgCity') : t('hotelAvg');
+    const budgetEstimated = b.estimated === true
+      || b.note === 'estimated'
+      || ld.estimated === true
+      || ld.fallback === true
+      || ld.source === 'estimated';
+    liveBox.innerHTML = `<div class="ac-title">${t('liveBudgetTitle')}${budgetEstimated ? ` <span class="live-est-badge">${t('liveEstimate')}</span>` : ''}</div>
       <div class="ic-row"><span class="ic-lbl">${t('budgetLow')}</span><span class="ic-val">~${b.low || '—'} ₺</span></div>
       <div class="ic-row"><span class="ic-lbl">${t('budgetMid')}</span><span class="ic-val">~${b.mid || '—'} ₺</span></div>
-      ${showHotel ? `<div class="ic-row"><span class="ic-lbl">${t('hotelAvg')}</span><span class="ic-val">~${hotel.avgPriceTry} ₺</span></div>` : ''}
-      ${ld.fallback ? `<small class="weather-fallback">${t('liveEstimate')}</small>` : ''}`;
+      ${showHotel ? `<div class="ic-row"><span class="ic-lbl">${escapeHtml(hotelLabel)}</span><span class="ic-val">~${hotel.avgPriceTry} ₺</span></div>` : ''}
+      ${budgetEstimated ? `<small class="weather-fallback">${t('liveEstimateHint')}</small>` : ''}`;
   }
 }
 

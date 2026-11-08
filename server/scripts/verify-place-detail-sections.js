@@ -31,10 +31,11 @@ const months = normalizeBestMonths([4, 6, 4, 0, 13, '5', 5]);
 if (JSON.stringify(months) !== JSON.stringify([4, 5, 6])) fail(`ay normalize: ${JSON.stringify(months)}`);
 else ok('ay çoklu seçim normalize (1–12, tekil, sıralı)');
 
-if (formatBestMonths([4, 5, 6], 'tr') !== 'Nisan, Mayıs, Haziran') fail('TR ay formatı');
-else if (formatBestMonths([4, 5, 6], 'en') !== 'April, May, June') fail('EN ay formatı');
+if (formatBestMonths([4, 5, 6], 'tr') !== 'Nisan – Haziran') fail(`TR ay aralığı: ${formatBestMonths([4, 5, 6], 'tr')}`);
+else if (formatBestMonths([4, 5, 6], 'en') !== 'April – June') fail(`EN ay aralığı: ${formatBestMonths([4, 5, 6], 'en')}`);
+else if (formatBestMonths([4, 5, 6, 7, 8, 9, 10], 'tr') !== 'Nisan – Ekim') fail('Nisan – Ekim aralığı');
 else if (bestTimeFromMonths([], 'tr') !== '') fail('boş ay metni boş olmalı');
-else ok('ay formatı TR/EN');
+else ok('ay aralık formatı TR/EN');
 
 if (JSON.stringify(parseBestMonths('[3,9]')) !== JSON.stringify([3, 9])) fail('JSON best_months parse');
 else ok('best_months JSON parse');
@@ -48,7 +49,7 @@ const filled = placeSections.placeSectionVisibility({
 }, 'tr');
 if (!filled.things || !filled.culture || !filled.tipsText || !filled.bestTime) {
   fail(`dolu bölümler görünür olmalı: ${JSON.stringify(filled)}`);
-} else if (filled.texts.bestTime !== 'Nisan, Mayıs') {
+} else if (filled.texts.bestTime !== 'Nisan – Mayıs') {
   fail(`en iyi zaman metni: ${filled.texts.bestTime}`);
 } else ok('dolu Yapılacaklar / Kültür / Tavsiye / Aylar görünür');
 
@@ -99,6 +100,13 @@ if (adminHtml.includes('İlçe otel ortalaması') || /hotelAvg:\s*'İlçe/.test(
 }
 if (!i18nJs.includes("hotelAvg: 'Bölge otel ort.'") || !i18nJs.includes("hotelAvg: 'Area hotel avg.'")) {
   fail('i18n hotelAvg etiketi Bölge/Area olmalı');
+}
+if (!i18nJs.includes("hotelAvgCity: 'Konaklama (şehir ortalaması)'")
+  || !i18nJs.includes("hotelAvgCity: 'Lodging (city average)'")) {
+  fail('i18n hotelAvgCity (şehir ortalaması) eksik');
+}
+if (!i18nJs.includes("liveEstimate: 'Tahmini'") || !i18nJs.includes("liveEstimate: 'Estimated'")) {
+  fail('i18n tahmini etiketi eksik');
 }
 if (!adminHtml.includes('renderBestMonthChecks') || !adminHtml.includes('readBestMonths')) {
   fail('ay çoklu seçim yardımcıları yok');
