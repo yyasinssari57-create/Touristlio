@@ -3610,15 +3610,28 @@ async function refreshDbBackupToolsHint() {
   try {
     const data = await api('/admin/backup/list');
     const tools = data.tools || {};
-    if (tools.supported === false) {
+    // Prefer canDownload when API sends it (older responses fall back to pgDump / supported).
+    const downloadOk = Object.prototype.hasOwnProperty.call(tools, 'canDownload')
+      ? !!tools.canDownload
+      : (tools.pgDump != null ? !!tools.pgDump : tools.supported !== false);
+    if (!downloadOk) {
       hint.style.display = '';
       hint.textContent = tools.message
-        || 'Bu ortamda yedek/geri yükleme desteklenmiyor. Supabase Dashboard → Database → Backups kullanın.';
-      if (btn) btn.disabled = true;
+        || 'Bu ortamda yedek indirme desteklenmiyor (pg_dump yok). Supabase Dashboard → Database → Backups kullanın.';
+      // Keep the button clickable — disabled buttons swallow clicks with no toast.
+      if (btn) {
+        btn.dataset.toolsOk = '0';
+        btn.title = hint.textContent;
+        btn.removeAttribute('disabled');
+      }
     } else {
       hint.style.display = 'none';
       hint.textContent = '';
-      if (btn) btn.disabled = false;
+      if (btn) {
+        btn.dataset.toolsOk = '1';
+        btn.removeAttribute('title');
+        btn.removeAttribute('disabled');
+      }
     }
   } catch {
     /* ignore — panel yine açılır */
@@ -3630,6 +3643,14 @@ async function downloadDbBackup() {
     showErr('Tam veritabanı yedeği yalnızca yönetici hesabıyla indirilebilir.');
     return;
   }
+  const btn = document.getElementById('dbBackupDownloadBtn');
+  const hint = document.getElementById('dbBackupToolsHint');
+  if (btn?.dataset.toolsOk === '0') {
+    showErr(hint?.textContent
+      || 'Bu ortamda yedek indirme desteklenmiyor (pg_dump yok). Supabase Dashboard → Database → Backups kullanın.');
+    return;
+  }
+  setBtnLoading(btn, true, 'Yedek hazırlanıyor…');
   try {
     const res = await fetch(API + '/admin/backup/download', { credentials: 'include' });
     if (!res.ok) {
@@ -3641,14 +3662,25 @@ async function downloadDbBackup() {
     const filename = match ? match[1] : 'touristlio-backup.sql';
     const checksum = res.headers.get('X-Checksum-SHA256') || '';
     const blob = await res.blob();
+    if (!blob || blob.size < 16) {
+      throw new Error('Yedek dosyası boş veya eksik geldi');
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
     showToast(checksum ? `Yedek indirildi. SHA-256: ${checksum.slice(0, 12)}…` : 'Veritabanı yedeği indirildi');
   } catch (e) { showErr(e.message); }
+  finally {
+    setBtnLoading(btn, false);
+    refreshDbBackupToolsHint();
+  }
 }
 
 async function restoreDbBackup() {
@@ -5920,6 +5952,9 @@ window.confirmDeletePlace = confirmDeletePlace;
 window.restorePlaceOne = restorePlaceOne;
 window.purgePlaceOne = purgePlaceOne;
 window.loadPlacesList = loadPlacesList;
+window.downloadDbBackup = downloadDbBackup;
+window.restoreDbBackup = restoreDbBackup;
+window.refreshDbBackupToolsHint = refreshDbBackupToolsHint;
 
 syncAdminSectionVisibility();
 restoreAdminSession().catch(() => showLoginScreen());

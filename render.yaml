@@ -10,7 +10,9 @@ services:
     name: touristlio
     runtime: node
     plan: starter
-    buildCommand: npm ci
+    # postgresql-client → pg_dump/psql for admin «Tam yedek indir» / gerçek geri yükleme.
+    # Without it the Node image has no client tools and download returns 503.
+    buildCommand: apt-get update -qq && apt-get install -y -qq postgresql-client && npm ci
     startCommand: npm run start:prod
     healthCheckPath: /api/health
     # Node 22 LTS. Database is Supabase PostgreSQL (DATABASE_URL).
