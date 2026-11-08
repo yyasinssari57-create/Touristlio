@@ -745,11 +745,7 @@ function isIndexablePlace(p, pageLang) {
 
 function applyPlaceRobots(p) {
   const indexable = isIndexablePlace(p, lang);
-  setMetaContent(
-    'meta[name="robots"]',
-    indexable ? 'index,follow' : 'noindex, nofollow',
-    { name: 'robots' },
-  );
+  setRobotsSafe(indexable ? 'index,follow' : 'noindex, nofollow');
 }
 
 function applyPlaceHreflang(p) {
@@ -1941,6 +1937,54 @@ function setMetaContent(selector, content, create) {
   if (el) el.setAttribute('content', content);
 }
 
+/** V6 Adım 1 — capture server <meta name="robots"> once; never clobber noindex → index. */
+let _serverRobotsCaptured = false;
+let _serverRobots = 'index,follow';
+let _serverRobotsPath = '';
+
+function robotsIsNoindex(value) {
+  return /\bnoindex\b/i.test(String(value || ''));
+}
+
+function seoPathKey(pathname) {
+  let p = String(pathname || '/').split('?')[0] || '/';
+  if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+  return p || '/';
+}
+
+function captureServerRobots() {
+  if (_serverRobotsCaptured) return _serverRobots;
+  const el = typeof document !== 'undefined'
+    ? document.querySelector('meta[name="robots"]')
+    : null;
+  _serverRobots = (el && el.getAttribute('content')) || 'index,follow';
+  _serverRobotsPath = seoPathKey(typeof location !== 'undefined' ? location.pathname : '/');
+  _serverRobotsCaptured = true;
+  return _serverRobots;
+}
+
+/**
+ * Set robots safely: always allow index → noindex; never upgrade server noindex
+ * while still on the SSR path that declared it (empty EN blog, search, etc.).
+ */
+function setRobotsSafe(wanted) {
+  captureServerRobots();
+  const next = String(wanted || '').trim() || 'index,follow';
+  if (robotsIsNoindex(next)) {
+    setMetaContent('meta[name="robots"]', next, { name: 'robots' });
+    return next;
+  }
+  if (robotsIsNoindex(_serverRobots) && seoPathKey(location.pathname) === _serverRobotsPath) {
+    setMetaContent('meta[name="robots"]', _serverRobots, { name: 'robots' });
+    return _serverRobots;
+  }
+  setMetaContent('meta[name="robots"]', next, { name: 'robots' });
+  return next;
+}
+
+window.captureServerRobots = captureServerRobots;
+window.setRobotsSafe = setRobotsSafe;
+
 function setHreflangAlternates(trPath, enPath) {
   const origin = publicOrigin();
   const abs = (p) => {
@@ -1973,11 +2017,31 @@ function clearHreflang() {
   document.querySelectorAll('link[rel="alternate"][hreflang]').forEach((el) => el.remove());
 }
 
+function publishedEnBlogCount() {
+  const n = blogMeta?.publishedEnCount;
+  if (n === undefined || n === null || n === '') return null;
+  const num = Number(n);
+  return Number.isFinite(num) ? num : null;
+}
+
 function setBlogListingSeo() {
   setCanonical(blogListPath());
-  setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
   setMetaContent('meta[property="og:type"]', 'website', { property: 'og:type' });
-  setHreflangAlternates('/blog', '/en/blog');
+  const count = publishedEnBlogCount();
+  const enReady = count == null ? null : count > 0;
+  // Empty EN index: noindex,follow and drop EN hreflang (V5 Adım 8 + V6 Adım 1).
+  if (lang === 'en' && enReady === false) {
+    setRobotsSafe('noindex,follow');
+    setHreflangAlternates('/blog', null);
+    return;
+  }
+  if (lang === 'en' && enReady == null && robotsIsNoindex(captureServerRobots())) {
+    setRobotsSafe('noindex,follow');
+    setHreflangAlternates('/blog', null);
+    return;
+  }
+  setRobotsSafe('index,follow');
+  setHreflangAlternates('/blog', enReady === false ? null : '/en/blog');
 }
 
 function setShellHreflang(barePath) {
@@ -2214,11 +2278,11 @@ async function showMainTab(tab, skipRoute) {
   if (tab === 'places') {
     setCanonical(lang === 'en' ? '/en/gezilecek-yerler' : '/gezilecek-yerler');
     setShellHreflang('/gezilecek-yerler');
-    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+    setRobotsSafe('index,follow');
   } else if (tab === 'blog') {
     if (!(skipRoute && activeBlogSlug)) {
       setCanonical(blogListPath());
-      setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+      setRobotsSafe('index,follow');
     }
   } else if (tab === 'detail') {
     applyPlaceRobots(activePlace);
@@ -2229,7 +2293,7 @@ async function showMainTab(tab, skipRoute) {
     setShellHreflang(bare === '/explore' ? '/explore' : '/');
   } else {
     setCanonical(lang === 'en' ? '/en/' : '/');
-    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+    setRobotsSafe('index,follow');
   }
   if (tab !== 'detail') {
     setMetaContent('meta[property="og:type"]', (tab === 'blog' && activeBlogSlug) ? 'article' : 'website', { property: 'og:type' });
@@ -2254,7 +2318,10 @@ async function showMainTab(tab, skipRoute) {
       back.href = blogListPath();
       back.textContent = t('blogBack');
     }
-    tasks.push(loadBlogPage().then(renderBlog));
+    tasks.push(loadBlogPage().then(() => {
+      if (!(skipRoute && activeBlogSlug)) setBlogListingSeo();
+      return renderBlog();
+    }));
   }
   if (window.TL_I18N?.applyShellMeta) {
     if (tab === 'detail' || (tab === 'blog' && activeBlogSlug)) {
@@ -3172,7 +3239,7 @@ async function openBlogDetail(slug, skipRoute) {
       setCanonical(trHref);
       const noticeDesc = 'This story has not been translated into English yet.';
       setMetaContent('meta[name="description"]', noticeDesc, { name: 'description' });
-      setMetaContent('meta[name="robots"]', 'noindex, nofollow', { name: 'robots' });
+      setRobotsSafe('noindex, nofollow');
       setMetaContent('meta[property="og:title"]', document.title, { property: 'og:title' });
       setMetaContent('meta[property="og:description"]', noticeDesc, { property: 'og:description' });
       setMetaContent('meta[property="og:type"]', 'website', { property: 'og:type' });
@@ -3234,7 +3301,7 @@ async function openBlogDetail(slug, skipRoute) {
     setMetaContent('meta[name="twitter:description"]', desc, { name: 'twitter:description' });
     setMetaContent('meta[name="twitter:card"]', 'summary_large_image', { name: 'twitter:card' });
     setJsonLdBlocks([articleJsonLd(b)]);
-    setMetaContent('meta[name="robots"]', 'index,follow', { name: 'robots' });
+    setRobotsSafe('index,follow');
     if (enHref) setHreflangAlternates(trHref, enHref);
     else setHreflangAlternates(trHref, null);
     window.scrollTo(0, 0);
@@ -4288,7 +4355,10 @@ function refreshAfterLang() {
     blogMeta = null;
     blogSearchQ = document.getElementById('blogSearch')?.value?.trim() || '';
     const slug = activeBlogSlug;
-    loadBlogPage().then(renderBlog).then(() => {
+    loadBlogPage().then(() => {
+      if (!slug) setBlogListingSeo();
+      return renderBlog();
+    }).then(() => {
       if (slug) return openBlogDetail(slug, true);
     });
   }
@@ -4399,6 +4469,7 @@ function initHeroSearchAutofill() {
 }
 
 async function init() {
+  captureServerRobots();
   initHeroSearchAutofill();
   initFilterSheet();
   window.TL_I18N.apply(lang);

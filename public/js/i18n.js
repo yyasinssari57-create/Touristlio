@@ -1005,7 +1005,13 @@ window.TL_I18N = (function () {
     const noindex = bare === '/search' || (listing && listingHasParams());
     const canonPath = pathForLang(bare, en ? 'en' : 'tr');
     upsertCanonical(absSeo(canonPath));
-    upsertMeta('name', 'robots', noindex ? 'noindex, nofollow' : 'index,follow');
+    const robotsWanted = noindex ? 'noindex, nofollow' : 'index,follow';
+    // V6 Adım 1: prefer setRobotsSafe so SSR noindex is never upgraded to index.
+    if (typeof window !== 'undefined' && typeof window.setRobotsSafe === 'function') {
+      window.setRobotsSafe(robotsWanted);
+    } else {
+      upsertMeta('name', 'robots', robotsWanted);
+    }
   }
 
   return {
