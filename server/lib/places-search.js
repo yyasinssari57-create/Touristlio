@@ -115,6 +115,19 @@ function orderBySql(sort) {
   return ' ORDER BY COALESCE(p.tiola_rating, 0) DESC, p.id DESC';
 }
 
+/** Default Keşfet browse: mix categories instead of one-category-heavy popularity. */
+function shouldMixCategories(filters = {}) {
+  const sort = filters.sort || 'popularity';
+  if (sort !== 'popularity') return false;
+  if (filters.orderSql) return false;
+  if (filters.q) return false;
+  const category = filters.category;
+  const group = filters.group;
+  if (category && category !== 'all') return false;
+  if (group && group !== 'all') return false;
+  return true;
+}
+
 async function runSelect(sql, params) {
   return await db.prepare(sql).all(...params);
 }
@@ -126,8 +139,19 @@ async function runCount(sql, params) {
 /**
  * Indexed place query with SQL COUNT + LIMIT/OFFSET (ORTA-5 leftover from in-memory slice).
  */
+function mixedPopularitySelectSql(whereSql) {
+  return `SELECT * FROM (
+    SELECT p.*, ROW_NUMBER() OVER (
+      PARTITION BY COALESCE(NULLIF(TRIM(p.category), ''), '_')
+      ORDER BY COALESCE(p.popularity, 0) DESC, p.id DESC
+    ) AS _cat_rank
+    FROM places p${whereSql}
+  ) p ORDER BY p._cat_rank ASC, COALESCE(p.popularity, 0) DESC, p.id DESC`;
+}
+
 async function searchPlacesPage(filters = {}) {
   const built = buildPlacesWhere(filters);
+  const mix = shouldMixCategories(filters);
   const order = filters.orderSql || orderBySql(filters.sort);
   const limit = filters.limit != null ? Number(filters.limit) : null;
   const offset = Math.max(0, Number(filters.offset) || 0);
@@ -136,7 +160,9 @@ async function searchPlacesPage(filters = {}) {
   const tryRun = async (whereSql, params, qNorm, extra = {}) => {
     const total = await runCount(`SELECT COUNT(*) AS c FROM places p${whereSql}`, params);
     const selectParams = [...params];
-    let sql = `SELECT p.* FROM places p${whereSql}${order}`;
+    let sql = mix
+      ? mixedPopularitySelectSql(whereSql)
+      : `SELECT p.* FROM places p${whereSql}${order}`;
     if (hasLimit) {
       sql += ' LIMIT ? OFFSET ?';
       selectParams.push(limit, offset);
@@ -153,7 +179,9 @@ async function searchPlacesPage(filters = {}) {
       try {
         const total = await runCount(`SELECT COUNT(*) AS c FROM places p${withoutFts.whereSql}`, withoutFts.params);
         const rows = await runSelect(
-          `SELECT p.* FROM places p${withoutFts.whereSql}${order}`,
+          mix
+            ? mixedPopularitySelectSql(withoutFts.whereSql)
+            : `SELECT p.* FROM places p${withoutFts.whereSql}${order}`,
           withoutFts.params,
         );
         return {
@@ -189,6 +217,7 @@ module.exports = {
   buildFtsQuery,
   buildPlacesWhere,
   orderBySql,
+  shouldMixCategories,
   searchPlacesPage,
   searchPlacesRows,
 };
