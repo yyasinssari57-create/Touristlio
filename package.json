@@ -58,6 +58,7 @@
     "verify:v6-adim8": "node server/scripts/verify-v6-adim8.js",
     "verify:v6-adim9": "node server/scripts/verify-v6-adim9.js",
     "verify:v6-adim10": "node server/scripts/verify-v6-adim10.js",
+    "verify:v6-adim12": "node server/scripts/verify-v6-adim12.js",
     "verify:v6": "node server/scripts/verify-v6.js",
     "migrate:v5-adim4-tokens": "node server/scripts/migrate-v5-adim4-token-hash.js",
     "verify:v4-adim2": "node server/scripts/verify-v4-adim2-blog-i18n.js",

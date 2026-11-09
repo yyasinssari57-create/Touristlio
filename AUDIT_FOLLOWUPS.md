@@ -2,6 +2,18 @@
 
 Tüm KRİTİK / sonraki maddeler bitince bunları tek tek doğrula ve düzelt.
 
+## Cursor V6 — Adım 12 (kılavuz + verify:v6)
+
+V6’nin son adımı. Adım 11 (h1 ölçümü, onaylı) skip/bayat — rehberde Adım 13 yok.
+
+- Admin Kılavuz: katalog sayaçları, toplu arşiv/çöp + 15 gün KALICI uyarı, geri yükle, en iyi zaman ayları, konaklama (şehir), slug uyarısı; yeni bölüm `guide-katalog-cop` TOC’ye bağlı; iş akışları + örnekler.
+- `npm run verify:v6` → Adım 1–10 + Adım 12 kilitleri (rehber vurgusu: robots, emoji, EN gizleme, slug 301, kılavuz).
+- `npm run verify:v6-adim12` → kılavuz + aggregator kilitleri.
+
+Kontrol: `npm run verify:v6` → rapor çıktısına bak.
+
+V6 bitti. Yeni V6 adımı yok.
+
 ## Cursor V6 — Adım 2 (Playwright/CDP tarayıcı doğrulama)
 
 Ürün kodu **değiştirilmedi**. `#132/#134–135/#140/#142–143` özellikler 390px + 1280px Chrome CDP ile doğrulandı.

@@ -762,6 +762,7 @@
               <li><a href="#guide-ozet">Özet (Dashboard)</a></li>
               <li><a href="#guide-depolama">Depolama ve yedek</a></li>
               <li><a href="#guide-yerler">Gezilecek Yerler</a></li>
+              <li><a href="#guide-katalog-cop">Katalog sayaçları ve çöp</a></li>
               <li><a href="#guide-yer-duzenle">Yer düzenleme (detay bölümleri)</a></li>
               <li><a href="#guide-sehirler">Şehirler</a></li>
               <li><a href="#guide-kategoriler">Kategoriler</a></li>
@@ -852,6 +853,7 @@
             <p>Günlük rutininizde önce bu kartlara bakarak öncelik sıranızı belirleyin: bekleyen Tiola / blog yüksekse Moderasyon ve İçerik’e; iletişim sayısı arttıysa İletişim sekmesine geçin.</p>
             <p>Yönetici hesabında Özet’in altında <strong>Veritabanı yedeği</strong> paneli de görünür (indirme / doğrulama / geri yükleme). Ayrıntılar için <a href="#guide-depolama">Depolama ve yedek</a> bölümüne bakın.</p>
             <p>Özet ekranının üstünde kırmızı bir uyarı görürseniz kalıcı depolama yoktur — yine aynı bölüme bakın.</p>
+            <p class="adm-guide-tip"><strong>Çöp uyarısı:</strong> Çöp kutusunda yer varsa Özet’te sarı bir bant çıkar («N yer · 15 gün sonra KALICI silinir»). Banttaki düğme doğrudan Çöp listesine gider. Ayrıntı: <a href="#guide-katalog-cop">Katalog sayaçları ve çöp</a>.</p>
           </div>
 
           <div id="guide-depolama" class="admin-card adm-guide-block">
@@ -874,14 +876,14 @@
 
           <div id="guide-yerler" class="admin-card adm-guide-block">
             <h3>Gezilecek Yerler</h3>
-            <p>Sitedeki destinasyon kartlarını (müzeler, parklar, simge yapılar vb.) buradan ekler, listeler ve arşivlersiniz. Detay sayfası bölümleri için <a href="#guide-yer-duzenle">Yer düzenleme</a> bölümüne bakın.</p>
+            <p>Sitedeki destinasyon kartlarını (müzeler, parklar, simge yapılar vb.) buradan ekler, listeler, arşivler veya çöpe alırsınız. Sayaç / çöp güvenliği için <a href="#guide-katalog-cop">Katalog sayaçları ve çöp</a>; detay bölümleri için <a href="#guide-yer-duzenle">Yer düzenleme</a> bölümüne bakın.</p>
             <p><strong>Yeni yer formu (üst kart):</strong></p>
             <ul class="adm-guide-list">
-              <li><strong>Zorunlu çekirdek</strong> — ad, ülke, şehir, kategori kodu (slug)</li>
+              <li><strong>Zorunlu çekirdek</strong> — ad, ülke, şehir, kategori kodu (slug). Örnek: ad <code>Ayasofya</code>, ülke Türkiye, şehir İstanbul, kategori <code>historical</code></li>
               <li><strong>İlçe / bölge</strong> — isteğe bağlı; boşsa şehir değeri kullanılır. Konaklama ortalaması asıl olarak <a href="#guide-sehirler">Şehirler</a> formundan girilir</li>
               <li><strong>Konum metni, arama aliasları</strong> — alias’lar virgülle (ör. <code>Ayasofya, Hagia Sophia</code>)</li>
               <li><strong>Kategori kodu</strong> — Türkçe ad değil; <code>museum</code>, <code>historical</code> gibi teknik kodlar. Keşfet filtreleriyle eşleşir</li>
-              <li><strong>Yayın durumu</strong> — Yayında, Taslak veya Arşiv</li>
+              <li><strong>Yayın durumu</strong> — Yayında, Taslak veya Arşiv (tekil Sil / Toplu sil → Çöp; durum listesinde Çöp kutusu ayrı)</li>
               <li><strong>Kaynak URL</strong> — yayın kapısı için kritik; resmi kaynak veya doğrulanmış referans</li>
               <li><strong>Koordinatlar</strong> — enlem −90…90, boylam −180…180; canlı saat/hava ve harita için gerekir</li>
               <li><strong>Kapak görseli + «Bu görsel bu mekâna ait»</strong> — görsel doğrulama kutusu. Dosya yüklendiğinde doğrulanmış sayılır; harici URL kullanıyorsanız kutuyu bilerek işaretleyin</li>
@@ -889,15 +891,37 @@
               <li><strong>Fotoğraflar</strong> — 16:9 kırpma; en fazla 10 görsel · JPEG/PNG/WebP · dosya başına max 12 MB. Unsplash/harici URL’ler turuncu etiketle işaretlenir</li>
               <li><strong>Açıklama TR / EN</strong> — İngilizce zorunlu değil. EN boşsa sayfa açılır, ziyaretçi Türkçe metni görür; İngilizce sürüm Google’a kapalıdır</li>
             </ul>
-            <p><strong>Yayın kalite kapısı:</strong> «Yayında» seçmek için ad, Türkçe açıklama, koordinat, kategori, <em>doğrulanmış görsel</em> ve kaynak URL (veya doğrulama tarihi) dolu olmalıdır. Kapı başarısız olursa kayıt taslakta kalır; formu düzeltip yeniden kaydedin. Eksik eski yayınlar kendiliğinden taslağa çekilmez.</p>
+            <p><strong>Yayın kalite kapısı:</strong> «Yayında» seçmek için ad, Türkçe açıklama, koordinat, kategori, <em>doğrulanmış görsel</em> ve kaynak URL (veya doğrulama tarihi) dolu olmalıdır. Kapı başarısız olursa kayıt taslakta kalır; formu düzeltip yeniden kaydedin. Eksik eski yayınlar kendiliğinden taslağa çekilmez. Listede eksikler «Yayına hazır değil çünkü: …» satırında özetlenir.</p>
             <p><strong>Yer listesi:</strong></p>
             <ul class="adm-guide-list">
-              <li>Ad / şehir / ülke araması; durum filtresi (Tümü arşiv hariç, Yayında, Taslak, Arşiv); EN çeviri eksik filtresi</li>
+              <li>Üstte <strong>sayaç şeridi</strong> (Yayında · Taslak · Arşiv · Çöp · kalite sayıları) — tıklayınca liste o filtreyle gelir</li>
+              <li>Ad / şehir / ülke araması; durum filtresi (Tümü arşiv hariç, Yayında, Taslak, Arşiv, <strong>Çöp kutusu</strong>); EN çeviri eksik filtresi</li>
               <li>JSON/CSV dışa aktarma ve içe aktarma</li>
               <li><strong>Kalite çubuğu</strong> — koordinat eksik, fotoğraf eksik, görsel doğrulanmamış, FAQ eksik, kısa açıklama filtreleri</li>
               <li><strong>Toplu arşivle</strong> — satır kutucuklarıyla seçim → alt çubuktan arşiv. Kayıtlar kalıcı silinmez; sonra tekrar yayınlanabilir</li>
-              <li><strong>Düzenle / Sil</strong> — silme de arşiv benzeri güvenli akıştır (kalıcı silme değildir)</li>
+              <li><strong>Toplu sil (çöp)</strong> — onayda «15 gün sonra KALICI silinecek» uyarısı ve <strong>Arşivle</strong> önerisi çıkar. Çöp’ten <strong>Geri yükle</strong> ile taslağa döner</li>
+              <li><strong>Düzenle / Sil</strong> — Sil de çöpe taşır (kalıcı silme değildir; 15 gün sonra otomatik temizlenir)</li>
             </ul>
+          </div>
+
+          <div id="guide-katalog-cop" class="admin-card adm-guide-block">
+            <h3>Katalog sayaçları ve çöp</h3>
+            <p>Gezilecek Yerler üstündeki sayaç şeridi ve çöp kutusu, içerik doldururken hangi kayıtların yayına hazır olmadığını ve hangilerinin silinme riski taşıdığını gösterir. İçerik üretmez; yalnızca görünürlük ve yönetim.</p>
+            <p><strong>Sayaç / filtre şeridi</strong> (tıklanınca liste filtrelenir):</p>
+            <ul class="adm-guide-list">
+              <li><strong>Yayında · Taslak · Arşiv · Çöp</strong> — durum sayıları</li>
+              <li><strong>Görseli doğrulanmamış · Kaynak/doğrulama eksik · Koordinat geçersiz · İngilizce eksik</strong> — kalite / eksik sayıları</li>
+              <li>Örnek: «3 Yayında» → yalnızca yayındaki satırlar; «5 Görseli doğrulanmamış» → doğrulama kutusu boş olanlar</li>
+            </ul>
+            <p><strong>Satır uyarısı:</strong> Yayına hazır olmayan kayıtta «Yayına hazır değil çünkü: koordinat · görsel doğrulanmamış» gibi kısa eksik listesi görünür (yayın kalitesi / indexlenebilirlik kurallarıyla aynı kaynak).</p>
+            <p><strong>Çöp güvenliği (15 gün):</strong></p>
+            <ul class="adm-guide-list">
+              <li><strong>Toplu sil (çöp)</strong> veya satır <strong>Sil</strong> → onay penceresinde «Bu yerler 15 gün sonra <em>KALICI</em> silinecek» yazısı ve <strong>Arşivle</strong> seçeneği önerilir</li>
+              <li>Çöp listesinde her satırda <strong>N gün kaldı</strong> rozeti ve <strong>Geri yükle</strong> düğmesi vardır (geri yükleme taslağa alır)</li>
+              <li>Çöpte yer varken Özet’te sarı uyarı bandı çıkar; banttan Çöp listesine gidilir</li>
+              <li>İleride dolduracağınız yerler için <strong>Arşiv</strong> veya <strong>Taslak</strong> kullanın; Çöp’ü yalnızca gerçekten silmek istediğinizde kullanın</li>
+            </ul>
+            <p class="adm-guide-tip">Örnek akış: yanlışlıkla çöpe aldığınız «Galata Kulesi» satırında «12 gün kaldı» + <strong>Geri yükle</strong> → Taslak’a düşer → eksikleri tamamlayıp Yayında yaparsınız. 15 gün dolunca kayıt veritabanından kalıcı silinir (geri dönüş yok).</p>
           </div>
 
           <div id="guide-yer-duzenle" class="admin-card adm-guide-block">
@@ -905,17 +929,18 @@
             <p>Listeden <strong>Düzenle</strong> açıldığında modal, yeni yer formundan daha geniştir. Alttaki <strong>Kaydet</strong> yer bilgilerini yazar; bilgi kutucukları için ayrıca <strong>Bilgileri Kaydet</strong> vardır.</p>
             <p><strong>Detay sayfası bölümleri</strong> (ziyaretçi mekân sayfasında):</p>
             <ul class="adm-guide-list">
-              <li><strong>Yapılacaklar (TR)</strong> — her satır bir madde. Doluysa listelenir</li>
+              <li><strong>Yapılacaklar (TR)</strong> — her satır bir madde. Doluysa listelenir. Örnek: «Müze kartını önceden alın»</li>
               <li><strong>Kültür ve Gastronomi (TR)</strong> — boş bırakılırsa bölüm ziyaretçi sayfasında <em>gizlenir</em> (koşullu)</li>
               <li><strong>Ziyaretçi tavsiyeleri (TR)</strong> — boşsa gizlenir</li>
               <li><strong>En iyi zaman (aylar)</strong> — Ocak–Aralık çoklu seçim. Ardışık aylar sitede «Nisan – Ekim» gibi aralık gösterilir. İsteğe bağlı 1 cümlelik kısa not eklenebilir. Gün/mevsim girişi yok; seçim yoksa bölüm gizlenir</li>
               <li><strong>Sayfa özeti / açıklama (TR + EN)</strong> — sitede görünen özet budur. Özeti ellemezseniz ve açıklamayı değiştirirseniz özet açıklamadan yenilenebilir</li>
             </ul>
+            <p><strong>Slug (URL) uyarısı:</strong> Düzenleme formunda slug alanı yanında şu not vardır: «Yayınlanmış yerin slug'ını değiştirmek eski adresi yönlendirir; mümkünse değiştirme.» Yayınlanmış (veya daha önce yayınlanmış) yerde ad/slug değişince eski adres → yeni slug otomatik 301 kaydı yazılır. Hedef taslak/arşivdeyse yönlendirme çalışmaz; aynı slug ile yeniden yayınlanınca adres geri açılır. Örnek: <code>/places/ayasofya-eski</code> → <code>/places/ayasofya</code>.</p>
             <p><strong>Yan panel kartları</strong> (destinasyon sayfası sağ kolon):</p>
             <ul class="adm-guide-list">
               <li><strong>Hava durumu</strong> — elle yazılmaz; enlem/boylamdan canlı gelir</li>
               <li><strong>Yerel bilgi</strong> — yerel saat otomatik; para birimi kodu/sembolü buradan (ör. TRY / ₺)</li>
-              <li><strong>Günlük bütçe tahmini</strong> — ekonomik ve orta (₺/gün). Boşsa sitede «tahmini» etiketiyle otomatik rakam çıkar. <strong>Konaklama (şehir ortalaması)</strong> Şehirler formundan; yerdeki «bölge otel» alanı yalnızca override. İkisi de boşsa otel satırı gizlenir</li>
+              <li><strong>Günlük bütçe tahmini</strong> — ekonomik ve orta (₺/gün). Boşsa sitede «tahmini» etiketiyle otomatik rakam çıkar. <strong>Konaklama (şehir ortalaması)</strong> Şehirler formundan; yerdeki «bölge otel» alanı yalnızca override. İkisi de boşsa otel satırı gizlenir. Örnek: Şehirler → İstanbul → 2&nbsp;400 ₺/gece</li>
               <li><strong>Bilgiler</strong> — isteğe bağlı kategori gösterim metni ve giriş ücreti kısayolu</li>
             </ul>
             <p><strong>Bilgi kutucukları</strong> (ayrı kutular; boş olanlar sitede yok):</p>
@@ -1190,6 +1215,26 @@
             </div>
 
             <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Toplu çöp ve geri yükleme</p>
+              <ol class="adm-guide-steps">
+                <li>Silinecek satırları işaretleyin → <strong>Toplu sil (çöp)</strong></li>
+                <li>Onayda «15 gün sonra KALICI silinecek» metnini okuyun; emin değilseniz <strong>Arşivle</strong> seçeneğini kullanın</li>
+                <li>Çöp sekmesinde «N gün kaldı» rozetini kontrol edin</li>
+                <li>Geri almak için satırdaki <strong>Geri yükle</strong> (veya toplu Geri yükle) → kayıt Taslak’a döner</li>
+                <li>Özet’teki çöp bandı sıfırlanana kadar Çöp’ü günlük kontrol edin</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
+              <p class="adm-guide-workflow-title">Slug değişikliği (mümkünse yapmayın)</p>
+              <ol class="adm-guide-steps">
+                <li>Yayındaki yerde slug’ı değiştirmeden önce formu okuyun: eski adres yönlendirilir</li>
+                <li>Gerçekten gerekiyorsa kaydedin — sistem eski slug → yeni slug 301 kaydı yazar</li>
+                <li>Yeri taslağa/arşive alırsanız eski adres 404 olur; aynı slug ile yeniden yayınlayınca açılır</li>
+              </ol>
+            </div>
+
+            <div class="adm-guide-workflow">
               <p class="adm-guide-workflow-title">Görsel doğrulama temizliği</p>
               <ol class="adm-guide-steps">
                 <li>Kalite çubuğundan veya Analitik kalite bölümünden <strong>Görsel doğrulanmamış</strong> filtreleyin</li>
@@ -1225,13 +1270,16 @@
               <li>Her gün <strong>Özet</strong> kartlarına (Tiola, blog, iletişim) ve <strong>Analitik</strong> canlı ziyaretçi sayısına bakarak iş yükünüzü planlayın</li>
               <li>Özet’teki kırmızı depolama uyarısı görünürse yöneticiye bildirin — kalıcı DB yoksa veri kaybı riski vardır</li>
               <li>Panelde kalırken logoya tıklamak sizi ana siteye götürmez; bilerek <code>/admin</code>’de tutar</li>
-              <li>Yayına almadan önce yayın kapısını (açıklama, koordinat, doğrulanmış görsel, kaynak URL) kontrol edin</li>
+              <li>Yayına almadan önce yayın kapısını (açıklama, koordinat, doğrulanmış görsel, kaynak URL) kontrol edin; satırdaki «Yayına hazır değil çünkü» listesine bakın</li>
               <li>Boş kültür/gastro, tavsiye veya ay seçimi bırakmak bölümü gizler — bilerek kullanın, rastgele şablon metin doldurmayın</li>
+              <li>En iyi zamanı ay çoklu seçimiyle girin (ör. Nisan–Ekim); gün/mevsim alanı yoktur</li>
               <li>Şehir otel ortalamasını Şehirler formundan girin; yerdeki bölge override yalnızca güvenilir veriniz varsa. Boş bırakmak satırı gizler</li>
+              <li>Yayınlanmış yerin <strong>slug</strong>’ını mümkünse değiştirmeyin; değişirse eski URL 301 ile yönlenir</li>
               <li>Red kararlarında kısa ve net bir neden yazın; kullanıcılar bunu görebilir</li>
               <li>Yer ve kategori eklerken <strong>slug</strong> ile <strong>Türkçe ad</strong> ayrımına dikkat edin</li>
               <li>Görselleri mümkünse yükleyin; harici/Unsplash URL’leri bakım riski taşır</li>
-              <li>Toplu arşiv / toplu Tiola işlemlerinde seçimi iki kez kontrol edin</li>
+              <li>Toplu arşiv / toplu çöp / toplu Tiola işlemlerinde seçimi iki kez kontrol edin; çöp 15 gün sonra kalıcıdır</li>
+              <li>İleride dolduracağınız yerler için Arşiv/Taslak kullanın — Çöp değil</li>
               <li>Şüpheli durumlarda önce şikayet geçmişine ve kullanıcı risk skoruna bakın</li>
               <li>Teknik sorun veya yetki talebi için yöneticinize başvurun</li>
             </ul>
