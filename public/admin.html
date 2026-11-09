@@ -135,6 +135,10 @@
           <button class="btn bp bsm" type="button" id="btnAddPlace" data-act="addPlace" aria-label="Yeni yeri kaydet">Yeri kaydet</button>
         </div>
         <h2 class="adm-h2-spaced">Yer listesi</h2>
+        <div class="admin-card" id="placesCatalogBar" style="margin-bottom:12px" aria-live="polite">
+          <p class="adm-catalog-bar-label">Sayaçlar — filtrelemek için tıklayın</p>
+          <div id="placesCatalogChips" class="adm-catalog-chips"></div>
+        </div>
         <div class="admin-card" id="placesQualityBar" style="margin-bottom:12px;display:none" aria-live="polite"></div>
         <div class="admin-card">
           <div class="admin-form" style="margin-bottom:12px">
@@ -170,7 +174,7 @@
             <button class="btn bo bsm" type="button" data-act="clearPlaceSelection">Seçimi temizle</button>
           </div>
           <p id="placeTrashHint" class="adm-cat-hint" style="display:none" aria-live="polite">
-            Çöp kutusundaki yerler 15 gün sonra otomatik kalıcı silinir. İsterseniz geri yükleyin veya hemen kalıcı silin.
+            Çöp kutusundaki yerler <strong>15 gün sonra KALICI silinir</strong>. İsterseniz geri yükleyin; kalıcı silmek istemiyorsanız Arşiv kullanın.
           </p>
           <div id="placesTableWrap" aria-live="polite"></div>
           <div id="placesPagination" class="adm-pagination" aria-label="Yer listesi sayfalama"></div>
@@ -1362,12 +1366,27 @@ const TIOLA_STATUS_LABELS = { approved: 'Yayında', pending: 'Bekliyor', rejecte
 const MOD_STATUS_LABELS = { approved: 'Onaylandı', rejected: 'Reddedildi', pending: 'Bekliyor' };
 const MOD_ACTION_LABELS = { approve: 'Onayladı', reject: 'Reddetti', remove: 'Kaldırdı' };
 const PLACE_ISSUE_LABELS = {
-  noCoords: 'Koordinat eksik',
+  noCoords: 'Koordinat geçersiz',
+  invalidCoords: 'Koordinat geçersiz',
   noPhoto: 'Fotoğraf eksik',
-  unverifiedImage: 'Görsel doğrulanmamış',
+  unverifiedImage: 'Görseli doğrulanmamış',
+  missingSource: 'Kaynak/doğrulama eksik',
+  enMissing: 'İngilizce eksik',
   noFaq: 'FAQ eksik',
   shortDesc: 'Kısa açıklama',
 };
+const PLACE_STATUS_STRIP = [
+  { key: 'published', label: 'Yayında' },
+  { key: 'draft', label: 'Taslak' },
+  { key: 'archived', label: 'Arşiv' },
+  { key: 'trash', label: 'Çöp' },
+];
+const PLACE_ISSUE_STRIP = [
+  'unverifiedImage',
+  'missingSource',
+  'invalidCoords',
+  'enMissing',
+];
 
 const ROLE_DEFAULT_PERMS = {
   moderator: [
@@ -3563,27 +3582,61 @@ function fromDatetimeLocalValue(val) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+async function loadPlacesCatalogBar() {
+  const host = document.getElementById('placesCatalogChips');
+  if (!host || !hasAdminPerm('admin.places')) return;
+  try {
+    const data = await api('/admin/places/catalog-counts');
+    const status = data.status || {};
+    const issues = data.issues || {};
+    const statusFilter = document.getElementById('placeStatusFilter')?.value || '';
+    const chips = [];
+    for (const s of PLACE_STATUS_STRIP) {
+      const count = Number(status[s.key]) || 0;
+      const active = statusFilter === s.key ? ' is-active' : '';
+      chips.push(`<button type="button" class="adm-catalog-chip${active}" data-act="filterPlacesByStatus" data-arg="${s.key}" aria-pressed="${statusFilter === s.key ? 'true' : 'false'}"><strong>${count}</strong> ${escapeHtml(s.label)}</button>`);
+    }
+    for (const key of PLACE_ISSUE_STRIP) {
+      const val = issues[key];
+      const count = typeof val === 'object' ? Number(val.count) || 0 : Number(val) || 0;
+      const label = (typeof val === 'object' ? val.label : null) || PLACE_ISSUE_LABELS[key] || key;
+      const active = placeQualityFilter === key || (key === 'enMissing' && document.getElementById('placeEnFilter')?.value === 'missing')
+        ? ' is-active' : '';
+      chips.push(`<button type="button" class="adm-catalog-chip${active}" data-act="openPlacesWithQualityFilter" data-arg="${key}" aria-pressed="${active ? 'true' : 'false'}"><strong>${count}</strong> ${escapeHtml(label)}</button>`);
+    }
+    host.innerHTML = chips.join('');
+  } catch {
+    host.innerHTML = '<span style="color:var(--t3);font-size:.8rem">Sayaçlar yüklenemedi</span>';
+  }
+}
+
 async function loadPlacesQualityBar() {
+  await loadPlacesCatalogBar();
   const el = document.getElementById('placesQualityBar');
   if (!el || !hasAdminPerm('admin.places')) return;
-  try {
-    const quality = await api('/analytics/quality');
-    const issues = quality.issues || {};
-    const chips = Object.entries(issues).map(([key, val]) => {
-      const count = typeof val === 'object' ? val.count : val;
-      const label = (typeof val === 'object' ? val.label : null) || PLACE_ISSUE_LABELS[key] || key;
-      if (!count) return '';
-      return `<button type="button" class="btn bo bsm" data-act="openPlacesWithQualityFilter" data-arg="${key}">${count} ${escapeHtml(label)}</button>`;
-    }).filter(Boolean).join(' ');
-    el.style.display = chips ? '' : 'none';
-    el.innerHTML = chips
-      ? `<p style="font-size:.8rem;margin:0 0 8px;color:var(--t2)">Kalite sorunları — listeyi filtrelemek için tıklayın (skor: ${quality.score || 0}%)</p><div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>`
-      : '';
-  } catch { el.style.display = 'none'; }
+  // Eski analytics kalite çubuğu isteğe bağlı; Adım 10 strip ana kaynak.
+  el.style.display = 'none';
+  el.innerHTML = '';
+}
+
+function filterPlacesByStatus(status) {
+  placeQualityFilter = null;
+  const enSel = document.getElementById('placeEnFilter');
+  if (enSel) enSel.value = '';
+  const sel = document.getElementById('placeStatusFilter');
+  if (sel) sel.value = status || '';
+  const btn = document.getElementById('btnClearPlaceFilter');
+  if (btn) btn.style.display = status ? '' : 'none';
+  showAdminSection('places', document.querySelector('[data-section="places"]'));
+  loadPlacesList(1);
 }
 
 function openPlacesWithQualityFilter(issue) {
-  placeQualityFilter = issue;
+  placeQualityFilter = issue === 'enMissing' ? null : issue;
+  const statusSel = document.getElementById('placeStatusFilter');
+  if (statusSel && statusSel.value === 'trash') statusSel.value = '';
+  const enSel = document.getElementById('placeEnFilter');
+  if (enSel) enSel.value = issue === 'enMissing' ? 'missing' : '';
   const btn = document.getElementById('btnClearPlaceFilter');
   if (btn) btn.style.display = '';
   showAdminSection('places', document.querySelector('[data-section="places"]'));
@@ -3592,6 +3645,10 @@ function openPlacesWithQualityFilter(issue) {
 
 function clearPlaceQualityFilter() {
   placeQualityFilter = null;
+  const statusSel = document.getElementById('placeStatusFilter');
+  if (statusSel) statusSel.value = '';
+  const enSel = document.getElementById('placeEnFilter');
+  if (enSel) enSel.value = '';
   const btn = document.getElementById('btnClearPlaceFilter');
   if (btn) btn.style.display = 'none';
   loadPlacesList(1);
@@ -3865,9 +3922,11 @@ function bulkTrashPlaces() {
   if (!ids.length) return showErr('Önce yer seçin');
   openModal('Emin misiniz?', `
     <p><strong>${ids.length}</strong> yer çöp kutusuna taşınacak.</p>
-    <p style="font-size:.8rem;color:var(--t2)">${PLACE_TRASH_DAYS} gün sonra otomatik kalıcı silinir. Bu süre içinde geri yükleyebilirsiniz.</p>`,
+    <p style="font-size:.85rem;color:#b91c1c"><strong>Bu yerler ${PLACE_TRASH_DAYS} gün sonra KALICI silinecek.</strong> Geri dönüşü yoktur.</p>
+    <p style="font-size:.8rem;color:var(--t2)">Kalıcı silmek istemiyorsanız <strong>Arşivle</strong>’yi tercih edin — arşiv silinmez, istediğiniz zaman geri yayınlanır.</p>`,
     [
       { label: 'İptal', onClick: closeModal },
+      { label: 'Arşivle', onClick: () => submitBulkPlaceAction('archive') },
       { label: 'Çöpe taşı', primary: true, onClick: () => submitBulkPlaceAction('trash') },
     ]
   );
@@ -3962,6 +4021,7 @@ async function loadPlacesList(page) {
     if (!rows.length) {
       wrap.innerHTML = `<p style="color:var(--t3)">${inTrash ? 'Çöp kutusu boş.' : 'Kayıtlı yer bulunamadı.'}</p>`;
       renderPagination('placesPagination', placesPage, total, PLACES_PAGE_SIZE, 'loadPlacesList');
+      loadPlacesCatalogBar();
       return;
     }
     const from = (placesPage - 1) * PLACES_PAGE_SIZE + 1;
@@ -3976,8 +4036,16 @@ async function loadPlacesList(page) {
         const statusLabel = p.inTrash || p.deletedAt
           ? 'Çöp'
           : (STATUS_LABELS[p.status] || p.status || 'Yayında');
+        const daysLeft = p.trashDaysLeft != null ? Number(p.trashDaysLeft) : null;
+        const trashDaysNote = inTrash && daysLeft != null
+          ? ` <span class="adm-user-badge warn trashDaysLeft" title="Kalıcı silinmeye kalan süre">${daysLeft} gün kaldı</span>`
+          : '';
         const deletedNote = p.deletedAt
           ? ` <span class="adm-user-badge warn" title="Çöpe alınma">${escapeHtml(String(p.deletedAt).slice(0, 10))}</span>`
+          : '';
+        const reasons = Array.isArray(p.notReadyReasons) ? p.notReadyReasons.filter(Boolean) : [];
+        const notReadyLine = (!inTrash && reasons.length)
+          ? `<div class="adm-place-not-ready">Yayına hazır değil çünkü: ${escapeHtml(reasons.join(', '))}</div>`
           : '';
         const actions = inTrash
           ? `<button class="btn bp bsm" type="button" data-act="restorePlaceOne" data-arg="${p.id}">Geri yükle</button>
@@ -3987,7 +4055,7 @@ async function loadPlacesList(page) {
         return `<tr>
         <td><input type="checkbox" class="place-select-check" data-act="togglePlaceSelect" data-arg="${p.id}" data-arg2="this.checked" data-place-id="${p.id}" aria-label="Yer ${escapeHtml(p.name)} seç"/></td>
         <td>${p.id}</td>
-        <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}${deletedNote}</td>
+        <td>${escapeHtml(p.name)}${p.enTranslationMissing ? ' <span class="adm-user-badge warn">EN çeviri eksik</span>' : ''}${deletedNote}${trashDaysNote}${notReadyLine}</td>
         <td>${escapeHtml(p.city)}</td>
         <td>${escapeHtml(p.country)}</td>
         <td>${escapeHtml(displayLabel(p.category))}</td>
@@ -3995,10 +4063,10 @@ async function loadPlacesList(page) {
         <td class="admin-actions">${actions}</td>
       </tr>`;
       }).join('')}</tbody></table>
-      <p style="font-size:.72rem;color:var(--t3);margin-top:8px">${from}–${to} / ${total}${inTrash ? ` · ${PLACE_TRASH_DAYS} gün sonra otomatik silinir` : ''}${enFilter === 'missing' ? ' · Filtre: EN çeviri eksik' : ''}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
+      <p style="font-size:.72rem;color:var(--t3);margin-top:8px">${from}–${to} / ${total}${inTrash ? ` · ${PLACE_TRASH_DAYS} gün sonra KALICI silinir` : ''}${enFilter === 'missing' ? ' · Filtre: EN çeviri eksik' : ''}${placeQualityFilter ? ` · Filtre: ${escapeHtml(PLACE_ISSUE_LABELS[placeQualityFilter] || placeQualityFilter)}` : ''}</p>`;
     wirePlaceSelection(wrap);
     renderPagination('placesPagination', placesPage, total, PLACES_PAGE_SIZE, 'loadPlacesList');
-    if (!inTrash) loadPlacesQualityBar();
+    loadPlacesCatalogBar();
   } catch (e) {
     wrap.innerHTML = `<p style="color:#b91c1c">${escapeHtml(e.message)}</p>`;
     renderPagination('placesPagination', placesPage, 0, PLACES_PAGE_SIZE, 'loadPlacesList');
@@ -4470,13 +4538,21 @@ async function confirmDeletePlace(id) {
     openModal('Emin misiniz?', `
       <p><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.city)}, ${escapeHtml(p.country)}) çöp kutusuna taşınacak.</p>
       ${tiolaNote}
-      <p style="font-size:.8rem;color:var(--t2)">${PLACE_TRASH_DAYS} gün sonra otomatik kalıcı silinir. Bu süre içinde geri yükleyebilirsiniz.</p>`,
+      <p style="font-size:.85rem;color:#b91c1c"><strong>Bu yer ${PLACE_TRASH_DAYS} gün sonra KALICI silinecek.</strong> Geri dönüşü yoktur.</p>
+      <p style="font-size:.8rem;color:var(--t2)">Kalıcı silmek istemiyorsanız <strong>Arşivle</strong>’yi tercih edin.</p>`,
       [
         { label: 'İptal', onClick: closeModal },
+        { label: 'Arşivle', onClick: () => archivePlaceOne(id) },
         { label: 'Çöpe taşı', primary: true, onClick: () => deletePlace(id) },
       ]
     );
   } catch (e) { showErr(e.message); }
+}
+
+async function archivePlaceOne(id) {
+  placeSelected.clear();
+  placeSelected.add(Number(id));
+  await submitBulkPlaceAction('archive');
 }
 
 async function deletePlace(id) {
@@ -5421,7 +5497,17 @@ async function refresh() {
             (<code>STORAGE_PERSISTENT=true</code> + disk mount — bkz. DEPLOY.md)
           </div>`
         : '';
-      statsRow.innerHTML = `${storageWarn}
+      const trashCount = Number(stats.placesInTrash) || 0;
+      const trashDays = Number(stats.trashRetentionDays) || PLACE_TRASH_DAYS;
+      const trashWarn = trashCount > 0
+        ? `<div id="placesTrashWarnBanner" class="admin-status err adm-trash-warn" style="display:block;margin-bottom:12px" role="alert">
+            <strong>Çöp kutusunda ${trashCount} yer var.</strong>
+            Bu yerler ${trashDays} gün sonra <strong>KALICI silinir</strong>.
+            <button type="button" class="btn bo bsm" style="margin-left:8px" data-act="filterPlacesByStatus" data-arg="trash">Çöp kutusuna git</button>
+            <span style="font-size:.8rem;display:block;margin-top:6px">Kalıcı silmek istemiyorsanız geri yükleyin veya Arşiv’e alın.</span>
+          </div>`
+        : '';
+      statsRow.innerHTML = `${storageWarn}${trashWarn}
         <div class="admin-card"><strong>${stats.places}</strong><br><span style="font-size:.75rem;color:var(--t2)">Yer</span></div>
         <div class="admin-card"><strong>${stats.tiolasPending}</strong><br><span style="font-size:.75rem;color:var(--t2)">Bekleyen Tiola</span></div>
         <div class="admin-card"><strong>${stats.tiolasSpam || 0}</strong><br><span style="font-size:.75rem;color:var(--t2)">Spam Tiola</span></div>
@@ -5950,9 +6036,14 @@ window.bulkTrashPlaces = bulkTrashPlaces;
 window.bulkRestorePlaces = bulkRestorePlaces;
 window.bulkPurgePlaces = bulkPurgePlaces;
 window.confirmDeletePlace = confirmDeletePlace;
+window.archivePlaceOne = archivePlaceOne;
 window.restorePlaceOne = restorePlaceOne;
 window.purgePlaceOne = purgePlaceOne;
 window.loadPlacesList = loadPlacesList;
+window.loadPlacesCatalogBar = loadPlacesCatalogBar;
+window.filterPlacesByStatus = filterPlacesByStatus;
+window.openPlacesWithQualityFilter = openPlacesWithQualityFilter;
+window.clearPlaceQualityFilter = clearPlaceQualityFilter;
 window.downloadDbBackup = downloadDbBackup;
 window.restoreDbBackup = restoreDbBackup;
 window.refreshDbBackupToolsHint = refreshDbBackupToolsHint;

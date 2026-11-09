@@ -28,7 +28,8 @@ const blogDb = require('../lib/blog-db');
 const { blogEnFields } = require('../lib/blog-i18n');
 const settingsService = require('../modules/settings/settings.service');
 const adminPlace = require('../lib/admin-place');
-const { SQL_TOUCH_CREATED_AT } = require('../lib/place-trash');
+const { SQL_TOUCH_CREATED_AT, notDeletedPlaceSql } = require('../lib/place-trash');
+const { getCatalogCounts } = require('../lib/place-catalog');
 const placesService = require('../modules/places/places.service');
 const { ok, fail } = require('../lib/apiResponse');
 const { mapReport } = require('./reports');
@@ -721,6 +722,15 @@ router.get('/places', checkPermission('admin.places'), async (req, res) => {
     });
   } catch (err) {
     return fail(res, err.message || 'Yerler getirilemedi', 500);
+  }
+});
+
+/** V6 Adım 10 — durum + kalite sayaçları (liste filtresi için). /places/:id öncesi. */
+router.get('/places/catalog-counts', checkPermission('admin.places'), async (_req, res) => {
+  try {
+    return ok(res, await getCatalogCounts());
+  } catch (err) {
+    return fail(res, err.message || 'Katalog sayaçları alınamadı', 500);
   }
 });
 
@@ -1642,10 +1652,18 @@ router.get('/roles', requireRole('admin'), async (_req, res) => {
 
 router.get('/stats', checkPermission('admin.dashboard'), async (_req, res) => {
   const { isEphemeralStorage } = require('../db');
+  let placesInTrash = 0;
+  try {
+    placesInTrash = (await db.prepare(
+      `SELECT COUNT(*) AS c FROM places WHERE NOT (${notDeletedPlaceSql('deleted_at')})`
+    ).get()).c;
+  } catch { placesInTrash = 0; }
   const stats = {
     storageEphemeral: isEphemeralStorage(),
     users: (await db.prepare('SELECT COUNT(*) AS c FROM users').get()).c,
     places: (await db.prepare('SELECT COUNT(*) AS c FROM places').get()).c,
+    placesInTrash,
+    trashRetentionDays: adminPlace.TRASH_RETENTION_DAYS,
     tiolasApproved: (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'approved'").get()).c,
     tiolasPending: (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'pending'").get()).c,
     tiolasSpam: (await db.prepare("SELECT COUNT(*) AS c FROM tiolas WHERE status = 'spam'").get()).c,

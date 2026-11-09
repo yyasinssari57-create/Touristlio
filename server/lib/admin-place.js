@@ -18,6 +18,11 @@ const {
   notDeletedPlaceSql,
   normalizeIds,
 } = require('./place-trash');
+const {
+  CATALOG_ISSUE_FILTERS,
+  trashDaysLeft,
+  notReadyReasons,
+} = require('./place-catalog');
 
 const VALID_STATUS = new Set(['published', 'draft', 'archived']);
 
@@ -201,17 +206,14 @@ function mapAdminPlace(row) {
       ? row.deleted_at.toISOString()
       : (row.deleted_at || null),
     inTrash: !!row.deleted_at,
+    trashDaysLeft: row.deleted_at ? trashDaysLeft(row.deleted_at, TRASH_RETENTION_DAYS) : null,
     enTranslationMissing: !placeEnTranslationComplete(row),
+    notReadyReasons: notReadyReasons(row),
   };
 }
 
-const ISSUE_FILTERS = {
-  noCoords: 'lat IS NULL OR lng IS NULL',
-  noPhoto: "photos IS NULL OR photos = '[]' OR photos = ''",
-  unverifiedImage: "image_verified IS NOT TRUE",
-  noFaq: "faq_tr IS NULL OR faq_tr = '[]'",
-  shortDesc: 'length(description) < 80',
-};
+/** @deprecated prefer CATALOG_ISSUE_FILTERS — kept as alias for older callers */
+const ISSUE_FILTERS = CATALOG_ISSUE_FILTERS;
 
 async function listAdminPlaces({
   q, limit = 100, offset = 0, status, issue, enTranslation, includeArchived = false, trash = false,
