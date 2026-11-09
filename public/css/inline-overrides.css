@@ -2592,6 +2592,46 @@ body.admin-body:not(.admin-session) {
   border-radius: var(--r);
   font-size: .82rem;
 }
+.adm-catalog-bar-label {
+  font-size: .8rem;
+  margin: 0 0 8px;
+  color: var(--t2);
+}
+.adm-catalog-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.adm-catalog-chip {
+  appearance: none;
+  border: 1px solid var(--b, #d1d5db);
+  background: #fff;
+  color: var(--t1, #111);
+  border-radius: var(--r);
+  padding: 6px 10px;
+  font-size: .78rem;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.adm-catalog-chip strong {
+  font-weight: 700;
+  margin-right: 2px;
+}
+.adm-catalog-chip.is-active,
+.adm-catalog-chip[aria-pressed="true"] {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+.adm-place-not-ready {
+  font-size: .72rem;
+  color: #b45309;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+.adm-trash-warn {
+  line-height: 1.45;
+}
 .adm-pagination {
   display: flex;
   flex-wrap: wrap;
