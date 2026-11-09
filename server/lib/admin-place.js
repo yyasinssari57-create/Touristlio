@@ -567,7 +567,14 @@ async function updatePlace(id, body) {
     id,
   );
   await persistImageVerification(id, imageMeta);
-  await persistPlaceSlug(id, enriched);
+  const prevSlug = String(row.slug || '').trim();
+  const nextSlug = await persistPlaceSlug(id, enriched);
+  try {
+    const { shouldRecordSlugRedirect, recordPlaceSlugRedirect } = require('./place-redirects');
+    if (shouldRecordSlugRedirect(row.status, prevSlug, nextSlug)) {
+      await recordPlaceSlugRedirect(prevSlug, nextSlug);
+    }
+  } catch { /* redirect table optional until migration 018 */ }
   try {
     const { syncPlaceGeom } = require('./place-geom');
     await syncPlaceGeom(db, id, enriched.lat, enriched.lng);
